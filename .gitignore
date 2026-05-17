@@ -1,0 +1,58 @@
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+yarn.lock
+
+# testing
+/coverage
+
+# production
+/build
+/dist
+
+# misc
+.eslintcache
+.DS_Store
+.idea
+.vscode
+.env
+.env.*
+!.env.example
+!.env.*.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# database dumps and local exports
+*.sql
+*.dump
+*.db
+*.sqlite
+*.sqlite3
+sql/
+
+# local logs, notes, and audit artifacts
+*.log
+audit-screenshots/
+google cloud project api.txt
+IMPORTANT MAINTENANCE_DEPLOYMENT NOTES.txt
+randomnotes.txt
+placeholder.txt
+
+# deployment archives and secrets
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.pem
+*.key
+*.p12
+id_rsa*
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

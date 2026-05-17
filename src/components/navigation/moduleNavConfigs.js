@@ -1,0 +1,50 @@
+export const commercialModuleTabs = [
+  { key: 'invoice', label: 'Invoice', to: '/commercial/invoice' },
+  { key: 'jd14', label: 'JD 14', to: '/commercial/jd14' },
+  { key: 'vendor-loa', label: 'Vendor LOAs', to: '/commercial/vendor-loa' },
+  { key: 'supplier-po', label: 'Supplier POs', to: '/commercial/supplier-po' },
+  { key: 'delivery-order', label: 'Delivery Order', to: '/commercial/delivery-order' },
+]
+
+export const pipelineCrmModuleTabs = [
+  { key: 'find', label: 'Find Clients', to: '/pipeline/find' },
+  { key: 'records', label: 'Call Records', to: '/pipeline/call-records' },
+  { key: 'inquiries', label: 'Inquiries', to: '/pipeline/inquiries' },
+  { key: 'pipeline-entries', label: 'Pipeline Entries', to: '/pipeline/entries' },
+]
+
+export const administrationModuleTabs = [
+  { key: 'meetings', label: 'Meetings', to: '/administration/meetings' },
+  { key: 'procedures', label: 'Procedures', to: '/administration/procedures' },
+  { key: 'sport-time', label: 'Sport Time', to: '/administration/sport-time' },
+]
+
+export const supportModuleTabs = [
+  { key: 'requests', label: 'Request Tool', to: '/support/requests' },
+  { key: 'feedback', label: 'System Feedback', to: '/support/feedback' },
+]
+
+export const vendorModuleTabs = [
+  { key: 'manage', label: 'Manage Vendors', to: '/vendor/manage' },
+  { key: 'pay', label: 'Pay Vendors', to: '/vendor/pay' },
+  { key: 'payment-records', label: 'Payment Records', to: '/vendor/payment-records' },
+]
+
+export const catalogModuleTabs = [
+  { key: 'manage', label: 'Catalog List', to: '/catalog/manage' },
+  { key: 'supplier-po', label: 'Award Supplier PO', to: '/catalog/supplier-po' },
+]
+
+export const staffModuleTabs = [
+  { key: 'manage', label: 'Manage Staff', to: '/staff/manage' },
+  { key: 'tasks', label: 'View Tasks', to: '/staff/tasks' },
+  { key: 'kpi', label: 'Manage KPI', to: '/staff/kpi' },
+  { key: 'leaves', label: 'Leave Records', to: '/staff/leaves' },
+  { key: 'appraise', label: 'Appraise Staff', to: '/staff/appraise' },
+  { key: 'activities', label: 'Activity Logs', to: '/staff/activities' },
+]
+
+export const projectRecordTabs = [
+  { key: 'all-tab', label: 'All' },
+  { key: 'my-tab', label: 'My Project' },
+]

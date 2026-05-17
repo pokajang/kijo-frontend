@@ -1,0 +1,49 @@
+/* Dark mode: override all --app-* tokens */
+[data-coreui-theme='dark'] {
+  // ── Scrollbars ────────────────────────────────────────────────────────────
+  --app-scrollbar-chrome: #444c56;
+  --app-scrollbar-chrome-hover: #545d6a;
+  --app-table-scrollbar-thumb: #444c56;
+  --app-table-scrollbar-thumb-hover: #545d6a;
+
+  // ── Surface ───────────────────────────────────────────────────────────────
+  --app-surface-page: #1c1f23;
+  --app-surface-raised: #23272c;
+  --app-surface-subtle: #2a2e34;
+  --app-surface-muted: #30353b;
+
+  // ── Border ────────────────────────────────────────────────────────────────
+  --app-border: #373d45;
+  --app-border-card: #373d45;
+  --app-border-subtle: #2f3439;
+
+  // ── Text ──────────────────────────────────────────────────────────────────
+  --app-text-strong: #e2e6ea;
+  --app-text-base: #ced4da;
+  --app-text-secondary: #9aa5b4;
+  --app-text-label: #8490a0;
+  --app-text-muted: #7a8694;
+  --app-text-action: #8b949e;
+  --app-text-action-hover: #adb5bd;
+
+  // ── Accent (blue pill / remarks badge) ───────────────────────────────────
+  --app-accent-bg: rgba(71, 114, 196, 0.15);
+  --app-accent-border: rgba(71, 114, 196, 0.32);
+  --app-accent-text: #7aabf0;
+  --app-accent-bg-hover: rgba(71, 114, 196, 0.22);
+  --app-accent-border-hover: rgba(71, 114, 196, 0.42);
+  --app-accent-text-hover: #8cb8f4;
+  --app-accent-bg-active: rgba(71, 114, 196, 0.28);
+  --app-accent-border-active: rgba(71, 114, 196, 0.5);
+  --app-accent-text-active: #9dc4f7;
+
+  // ── Muted action button ───────────────────────────────────────────────────
+  --app-btn-muted-text: #8b949e;
+  --app-btn-muted-text-hover: #adb5bd;
+  --app-btn-muted-bg-hover: rgba(139, 148, 158, 0.1);
+  --app-btn-muted-bg-active: rgba(139, 148, 158, 0.15);
+
+  // ── Shadows ───────────────────────────────────────────────────────────────
+  --app-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --app-shadow-lg: 0 14px 34px rgba(0, 0, 0, 0.65), 0 4px 10px rgba(0, 0, 0, 0.45);
+}

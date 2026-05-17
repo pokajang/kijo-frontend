@@ -1,0 +1,173 @@
+.handbook-accordion {
+  border: 1px solid var(--cui-border-color, #d8dbe0);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.handbook-accordion .accordion-item {
+  border-inline: 0;
+}
+
+.handbook-accordion .accordion-item:first-of-type {
+  border-top: 0;
+}
+
+.handbook-accordion .accordion-item:last-of-type {
+  border-bottom: 0;
+}
+
+.handbook-section-header-wrap {
+  position: relative;
+}
+
+.handbook-section-edit-btn {
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  min-width: 1.45rem;
+  padding: 0;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cui-secondary-color);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.handbook-section-edit-btn:hover,
+.handbook-section-edit-btn:focus,
+.handbook-section-edit-btn:active {
+  color: var(--cui-primary);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.handbook-section-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.handbook-section-title-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: calc(0.85rem + 10px);
+  color: var(--cui-secondary-color);
+  font-size: 1.0625rem;
+  line-height: 1.35;
+}
+
+.handbook-section-title-number {
+  flex: 0 0 auto;
+}
+
+.handbook-section-header-wrap .accordion-header,
+.handbook-section-header-wrap .accordion-button {
+  width: 100%;
+}
+
+.handbook-section-header-wrap .accordion-button {
+  padding-block: 0.55rem;
+  padding-inline-end: 1rem;
+  border-radius: 0;
+}
+
+.handbook-accordion .accordion-item:first-of-type .accordion-button {
+  border-top-left-radius: calc(0.5rem - 1px);
+  border-top-right-radius: calc(0.5rem - 1px);
+}
+
+.handbook-accordion .accordion-item:last-of-type .accordion-button.collapsed {
+  border-bottom-left-radius: calc(0.5rem - 1px);
+  border-bottom-right-radius: calc(0.5rem - 1px);
+}
+
+.handbook-accordion .accordion-item:last-of-type .accordion-collapse,
+.handbook-accordion .accordion-item:last-of-type .accordion-body {
+  border-bottom-left-radius: calc(0.5rem - 1px);
+  border-bottom-right-radius: calc(0.5rem - 1px);
+}
+
+.handbook-section:hover .handbook-section-edit-btn,
+.handbook-section:focus-within .handbook-section-edit-btn,
+.handbook-section--editing .handbook-section-edit-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.handbook-section-document h6 {
+  margin: 1.15rem 0 0.65rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.handbook-section-document h6:first-child {
+  margin-top: 0;
+}
+
+.handbook-section-document p {
+  margin-bottom: 0.85rem;
+}
+
+.handbook-section-document ul,
+.handbook-section-document ol {
+  padding-left: 1.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.handbook-section-document li {
+  padding-left: 0.15rem;
+  margin-bottom: 0.35rem;
+}
+
+.handbook-section-document li > ul,
+.handbook-section-document li > ol {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.handbook-section-document .table-responsive {
+  margin: 0.75rem 0 1rem;
+}
+
+.handbook-acknowledgement-records-table.data-table-shell,
+.handbook-acknowledgement-records-table.records-table-shell,
+.handbook-change-log-table.data-table-shell,
+.handbook-change-log-table.records-table-shell,
+.handbook-version-history-table.data-table-shell,
+.handbook-version-history-table.records-table-shell {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+  background: var(--cui-card-bg, var(--app-surface-page));
+}
+
+.handbook-acknowledgement-records-utilities:empty,
+.handbook-acknowledgement-records-mobile-utilities:empty,
+.handbook-change-log-utilities:empty,
+.handbook-change-log-mobile-utilities:empty,
+.handbook-version-history-utilities:empty,
+.handbook-version-history-mobile-utilities:empty {
+  display: none !important;
+}
+
+.handbook-version-detail-meta {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+  background: var(--cui-card-bg, var(--app-surface-page));
+  padding: 0.75rem;
+}
+
+.handbook-version-detail-meta-item {
+  min-width: 0;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .handbook-section-edit-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

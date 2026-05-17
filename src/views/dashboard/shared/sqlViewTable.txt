@@ -1,0 +1,116 @@
+DROP VIEW IF EXISTS all_quotes;
+CREATE OR REPLACE VIEW all_quotes AS
+
+/* ───────── Training quotes ───────── */
+SELECT
+  q.id                   AS quote_id,
+  'Training'             AS service_group,
+  q.training_title       AS service_title,
+  q.created_at           AS created_at,
+  q.award_date           AS award_date,
+  q.created_by_id        AS staff_id,
+  q.created_by_name      AS staff_name,
+  q.created_by_code      AS staff_code,
+  q.client_id            AS client_id,
+  q.client_name          AS client_name,
+  q.status               AS quote_status,
+  q.grand_total          AS value,
+  qis.source             AS inquiry_source,
+  qis.remarks            AS inquiry_remarks
+FROM quotes_training AS q
+LEFT JOIN quote_inquiry_sources AS qis
+  ON qis.quote_id     = q.id
+ AND qis.service_type = 'Training'
+
+UNION ALL
+
+/* ───────── Industrial Hygiene quotes ───────── */
+SELECT
+  q.id                   AS quote_id,
+  'Industrial Hygiene'   AS service_group,
+  q.service_title        AS service_title,
+  q.created_at           AS created_at,
+  q.award_date           AS award_date,
+  q.created_by_id        AS staff_id,
+  q.created_by_name      AS staff_name,
+  q.created_by_code      AS staff_code,
+  q.client_id            AS client_id,
+  q.client_name          AS client_name,
+  q.status               AS quote_status,
+  q.grand_total          AS value,
+  qis.source             AS inquiry_source,
+  qis.remarks            AS inquiry_remarks
+FROM quotes_ih AS q
+LEFT JOIN quote_inquiry_sources AS qis
+  ON qis.quote_id     = q.id
+ AND qis.service_type = 'Industrial Hygiene'
+
+UNION ALL
+
+/* ───────── Equipment Supply quotes ───────── */
+SELECT
+  q.id                   AS quote_id,
+  'Equipment Supply'     AS service_group,
+  'Equipment Supply'     AS service_title,
+  q.created_at           AS created_at,
+  q.award_date           AS award_date,
+  q.created_by_id        AS staff_id,
+  q.created_by_name      AS staff_name,
+  q.created_by_code      AS staff_code,
+  q.client_id            AS client_id,
+  q.client_name          AS client_name,
+  q.status               AS quote_status,
+  q.grand_total          AS value,
+  qis.source             AS inquiry_source,
+  qis.remarks            AS inquiry_remarks
+FROM quotes_equipment AS q
+LEFT JOIN quote_inquiry_sources AS qis
+  ON qis.quote_id     = q.id
+ AND qis.service_type = 'Equipment Supply'
+
+UNION ALL
+
+/* ───────── Manpower Supply quotes ───────── */
+SELECT
+  q.id                   AS quote_id,
+  'Manpower Supply'      AS service_group,
+  q.service_title        AS service_title,
+  q.created_at           AS created_at,
+  q.award_date           AS award_date,
+  q.created_by_id        AS staff_id,
+  q.created_by_name      AS staff_name,
+  q.created_by_code      AS staff_code,
+  q.client_id            AS client_id,
+  q.client_name          AS client_name,
+  q.status               AS quote_status,
+  q.grand_total          AS value,
+  qis.source             AS inquiry_source,
+  qis.remarks            AS inquiry_remarks
+FROM quotes_manpower AS q
+LEFT JOIN quote_inquiry_sources AS qis
+  ON qis.quote_id     = q.id
+ AND qis.service_type = 'Manpower Supply'
+
+UNION ALL
+
+/* ───────── Special Service quotes ───────── */
+SELECT
+  q.id                   AS quote_id,
+  'Special Service'      AS service_group,
+  q.service_title        AS service_title,
+  q.created_at           AS created_at,
+  q.award_date           AS award_date,
+  q.created_by_id        AS staff_id,
+  q.created_by_name      AS staff_name,
+  q.created_by_code      AS staff_code,
+  q.client_id            AS client_id,
+  q.client_name          AS client_name,
+  q.status               AS quote_status,
+  q.grand_total          AS value,
+  qis.source             AS inquiry_source,
+  qis.remarks            AS inquiry_remarks
+FROM quotes_special AS q
+LEFT JOIN quote_inquiry_sources AS qis
+  ON qis.quote_id     = q.id
+ AND qis.service_type = 'Special Service'
+;

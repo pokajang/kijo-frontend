@@ -1,0 +1,197 @@
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { CButton, CCard, CCardHeader, CCol, CRow } from '@coreui/react'
+import { getDateOnly } from '../utils/recordFilters'
+import ChangeToFailModal from '../modals/shared/ChangeToFailModal.jsx'
+import ChangeToSuccessModal from '../modals/shared/ChangeToSuccessModal.jsx'
+import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
+import FollowUpModal from '../modals/shared/FollowUpModal.jsx'
+import RecordDetailsActions from '../details/RecordDetailsActions'
+import RecordDetailsCard from '../details/RecordDetailsCard'
+import { getStatusColor, useRecordDetailsData } from '../hooks/useRecordDetailsData'
+import { useRecordDetailsActions } from '../hooks/useRecordDetailsActions'
+
+const RecordDetailsPage = () => {
+  const navigate = useNavigate()
+  const {
+    serviceTab,
+    serviceConfig,
+    returnTo,
+    loading,
+    record,
+    error,
+    loadRecord,
+    amountDisplay,
+    subject,
+    quotationAgeDays,
+    isAwarded,
+  } = useRecordDetailsData()
+
+  const {
+    handlers,
+    showFailModal,
+    setShowFailModal,
+    showSuccessModal,
+    setShowSuccessModal,
+    showFollowUpModal,
+    setShowFollowUpModal,
+    failureReason,
+    setFailureReason,
+    successReason,
+    setSuccessReason,
+    awardDate,
+    setAwardDate,
+    description,
+    setDescription,
+    clientLoaRefNo,
+    setClientLoaRefNo,
+    followUpRemarks,
+    setFollowUpRemarks,
+    followUpDate,
+    setFollowUpDate,
+    successActionType,
+    currentUserName,
+    currentUserEmail,
+    isFailSubmitting,
+    isSuccessSubmitting,
+    isFollowUpSubmitting,
+    isSyncingClient,
+    showEmailConfirmModal,
+    setShowEmailConfirmModal,
+    emailDraftSubject,
+    setEmailDraftSubject,
+    emailDraftBody,
+    setEmailDraftBody,
+    isEmailSending,
+    emailSendError,
+    handleFailConfirm,
+    handleSuccessConfirm,
+    handleFollowUpSubmit,
+    handleFollowUp,
+    handleChangeToFail,
+    handleChangeToSuccess,
+    handleReAward,
+    handleUnAward,
+    handleDelete,
+    handleSyncClient,
+    handleEmail,
+    handleEmailPreviewPdf,
+    handleEmailOpenGmailDraft,
+    handleEmailConfirm,
+    handleSharePdf,
+  } = useRecordDetailsActions({
+    serviceTab,
+    record,
+    returnTo,
+    loadRecord,
+  })
+
+  return (
+    <CRow>
+      <CCol xs={12}>
+        <CCard className="mb-4">
+          <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+            <strong>Quotation Details</strong>
+            <CButton
+              size="sm"
+              color="secondary"
+              variant="outline"
+              onClick={() => navigate(returnTo)}
+            >
+              Back
+            </CButton>
+          </CCardHeader>
+          <RecordDetailsCard
+            loading={loading}
+            error={error}
+            serviceLabel={serviceConfig?.label}
+            record={record}
+            subject={subject}
+            amountDisplay={amountDisplay}
+            quotationAgeDays={quotationAgeDays}
+            getDateOnly={getDateOnly}
+            statusColor={getStatusColor}
+          />
+          {!loading && !error && record ? (
+            <RecordDetailsActions
+              handlers={handlers}
+              record={record}
+              isAwarded={isAwarded}
+              isSyncingClient={isSyncingClient}
+              onFollowUp={handleFollowUp}
+              onSharePdf={handleSharePdf}
+              onUnAward={handleUnAward}
+              onReAward={handleReAward}
+              onChangeToSuccess={handleChangeToSuccess}
+              onChangeToFail={handleChangeToFail}
+              onSyncClient={handleSyncClient}
+              onDelete={handleDelete}
+              onEmail={handleEmail}
+            />
+          ) : null}
+        </CCard>
+      </CCol>
+
+      <ChangeToFailModal
+        visible={showFailModal}
+        onCancel={() => {
+          if (!isFailSubmitting) setShowFailModal(false)
+        }}
+        onConfirm={handleFailConfirm}
+        value={failureReason}
+        onChange={setFailureReason}
+        isSubmitting={isFailSubmitting}
+      />
+
+      <ChangeToSuccessModal
+        visible={showSuccessModal}
+        onCancel={() => {
+          if (!isSuccessSubmitting) setShowSuccessModal(false)
+        }}
+        onConfirm={handleSuccessConfirm}
+        value={successReason}
+        onChange={setSuccessReason}
+        awardDate={awardDate}
+        onAwardDateChange={setAwardDate}
+        description={description}
+        onDescriptionChange={setDescription}
+        loaRefNo={clientLoaRefNo}
+        onLoaChange={setClientLoaRefNo}
+        mode={successActionType}
+        isSubmitting={isSuccessSubmitting}
+      />
+
+      <FollowUpModal
+        visible={showFollowUpModal}
+        onCancel={() => {
+          if (!isFollowUpSubmitting) setShowFollowUpModal(false)
+        }}
+        onConfirm={handleFollowUpSubmit}
+        remarks={followUpRemarks}
+        onRemarksChange={setFollowUpRemarks}
+        followUpDate={followUpDate}
+        onDateChange={setFollowUpDate}
+        isSubmitting={isFollowUpSubmitting}
+      />
+
+      <EmailSendConfirmModal
+        visible={showEmailConfirmModal}
+        record={record}
+        userName={currentUserName}
+        userEmail={currentUserEmail}
+        onCancel={() => setShowEmailConfirmModal(false)}
+        draftSubject={emailDraftSubject}
+        onDraftSubjectChange={setEmailDraftSubject}
+        draftBody={emailDraftBody}
+        onDraftBodyChange={setEmailDraftBody}
+        sendError={emailSendError}
+        onPreviewPdf={handleEmailPreviewPdf}
+        onOpenGmailDraft={handleEmailOpenGmailDraft}
+        onConfirm={handleEmailConfirm}
+        isSubmitting={isEmailSending}
+      />
+    </CRow>
+  )
+}
+
+export default RecordDetailsPage

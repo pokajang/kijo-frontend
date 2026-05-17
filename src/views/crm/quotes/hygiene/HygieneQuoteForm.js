@@ -1,0 +1,281 @@
+﻿// src/views/crm/quotes/hygiene/HygieneQuotationForm.js
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+import HygieneDetailsCard from './HygieneDetailsCard'
+import PricingCard from './PricingCard'
+import ReviewHygieneQuotationCard from './ReviewHygieneQuotationCard'
+import { handleQuoteSuccess } from '../quoteSuccessHandler'
+import { clearQuoteMainDraft } from '../quoteMainDrafts'
+import { normalizeQuoteResult, quoteSaveMethod, quoteServiceUrl } from '../quoteApi'
+import { buildPicPayload } from '../quoteContactUtils'
+import { getRecordListPath } from '../../records/config/recordTabs'
+import dialog from '../../../../components/dialog/dialogService'
+import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+
+const isSuccess = (payload) =>
+  payload?.status === 'success' || payload?.success === true || payload?.ok === true
+
+export default function HygieneQuotationForm({
+  selectedClient,
+  initialFormData = null,
+  isEditMode = false,
+  quoteId = null,
+  proposalLanguage = 'en',
+}) {
+  const navigate = useNavigate()
+  const hasPriceExceptionRequestId = Boolean(
+    new URLSearchParams(window.location.search).get('priceExceptionRequestId'),
+  )
+
+  const toNumber = (value, fallback = 0) => {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : fallback
+  }
+
+  const toInteger = (value, fallback = 0) => {
+    const n = parseInt(value, 10)
+    return Number.isFinite(n) ? n : fallback
+  }
+
+  // Helper to build default address
+  const buildSiteAddress = useCallback((client) => {
+    if (!client) return ''
+    const { address, zip, city, state } = client
+    const parts = [address, zip && city ? `${zip} ${city}` : zip || city, state].filter(Boolean)
+    return parts.join(', ')
+  }, [])
+
+  // Default form shape
+  const defaultForm = useMemo(
+    () => ({
+      serviceId: null,
+      serviceTitle: '',
+      serviceCode: '',
+      siteAddress: buildSiteAddress(selectedClient),
+      travelCharge: 0,
+      sampleCounts: 0,
+      sampleUnit: 'sample(s)',
+      numWorkUnits: '',
+      inquiryRemarks: '',
+      unitPrice: 500,
+      discount: 300,
+      priceExceptionRequestId: '',
+      sstPercent: 8,
+      sstAmount: '0.00',
+      subTotal: '0.00',
+      grandTotal: '0.00',
+      attachProposal: true,
+      proposalLanguage,
+    }),
+    [buildSiteAddress, selectedClient, proposalLanguage],
+  )
+
+  // Load draft in create mode
+  const loadDraft = () => {
+    if (isEditMode || hasPriceExceptionRequestId) return null
+    try {
+      return JSON.parse(localStorage.getItem('draftHygieneQuote'))
+    } catch {
+      return null
+    }
+  }
+
+  const draft = loadDraft()
+  const [formData, setFormData] = useState({ ...defaultForm, ...(draft || {}) })
+
+  // Persist draft on change (create mode only)
+  useEffect(() => {
+    if (!isEditMode && !hasPriceExceptionRequestId) {
+      localStorage.setItem('draftHygieneQuote', JSON.stringify(formData))
+    }
+  }, [formData, isEditMode, hasPriceExceptionRequestId])
+
+  useEffect(() => {
+    if (isEditMode || hasPriceExceptionRequestId) {
+      localStorage.removeItem('draftHygieneQuote')
+    }
+  }, [isEditMode, hasPriceExceptionRequestId])
+
+  // Populate in edit mode
+  useEffect(() => {
+    if (isEditMode && initialFormData) {
+      setFormData({
+        ...defaultForm,
+        ...initialFormData,
+        siteAddress: initialFormData.siteAddress ?? defaultForm.siteAddress,
+        sampleCounts: initialFormData.sampleCounts ?? defaultForm.sampleCounts,
+        sampleUnit: initialFormData.sampleUnit ?? defaultForm.sampleUnit,
+        numWorkUnits:
+          Number(initialFormData.numWorkUnits) > 0
+            ? initialFormData.numWorkUnits
+            : defaultForm.numWorkUnits,
+        discount: initialFormData.discount ?? defaultForm.discount,
+        priceExceptionRequestId: '',
+        sstPercent: initialFormData.sstPercent ?? defaultForm.sstPercent,
+        sstAmount: initialFormData.sstAmount ?? defaultForm.sstAmount,
+        subTotal: initialFormData.subTotal ?? defaultForm.subTotal,
+        grandTotal: initialFormData.grandTotal ?? defaultForm.grandTotal,
+        serviceTitle: initialFormData.serviceTitle ?? defaultForm.serviceTitle,
+        serviceCode: initialFormData.serviceCode ?? defaultForm.serviceCode,
+        attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
+        proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
+      })
+    }
+  }, [defaultForm, initialFormData, isEditMode, proposalLanguage])
+
+  // Update siteAddress if client changes (and not in edit mode)
+  useEffect(() => {
+    if (!isEditMode && selectedClient) {
+      setFormData((prev) => ({
+        ...prev,
+        siteAddress: buildSiteAddress(selectedClient),
+      }))
+    }
+  }, [buildSiteAddress, selectedClient, isEditMode])
+
+  useEffect(() => {
+    if (isEditMode) return
+    setFormData((prev) => ({
+      ...prev,
+      proposalLanguage,
+      serviceId: null,
+      serviceTitle: '',
+      serviceCode: '',
+      sampleCounts: 0,
+      numWorkUnits: '',
+      travelCharge: 0,
+      unitPrice: defaultForm.unitPrice,
+      discount: defaultForm.discount,
+      sstPercent: defaultForm.sstPercent,
+      sstAmount: defaultForm.sstAmount,
+      subTotal: defaultForm.subTotal,
+      grandTotal: defaultForm.grandTotal,
+    }))
+  }, [defaultForm, proposalLanguage, isEditMode])
+
+  const handleSaveQuote = async () => {
+    const { primaryPIC, pic_name, pic_email, pic_phone, pic_position } =
+      buildPicPayload(selectedClient)
+    if (!primaryPIC) {
+      dialog.alert('Please select at least one client contact (PIC) before saving.')
+      return
+    }
+
+    const url = quoteServiceUrl('ih', isEditMode ? quoteId : null)
+
+    const normalizedSampleCounts = Math.max(0, toInteger(formData.sampleCounts, 0))
+    const hasWorkUnitsInput = String(formData.numWorkUnits ?? '').trim() !== ''
+    const normalizedNumWorkUnits = hasWorkUnitsInput
+      ? Math.max(1, toInteger(formData.numWorkUnits, 1))
+      : 0
+    const totals = calculateHygieneTotals({
+      sampleCounts: normalizedSampleCounts,
+      numWorkUnits: normalizedNumWorkUnits,
+      unitPrice: formData.unitPrice,
+      travelCharge: formData.travelCharge,
+      discount: formData.discount,
+      sstPercent: formData.sstPercent,
+    })
+    const payload = {
+      ...(isEditMode && { id: quoteId }),
+      isRevision: new URLSearchParams(window.location.search).get('isRevision') === 'true',
+      client_id: selectedClient.company_id,
+      client_name: selectedClient.company_name,
+      client_ssm: selectedClient.ssm_number,
+      client_address: selectedClient.address,
+      client_city: selectedClient.city,
+      client_state: selectedClient.state,
+      client_zip: selectedClient.zip,
+      pic_name,
+      pic_email,
+      pic_phone,
+      pic_position,
+      service_id: formData.serviceId,
+      service_title: formData.serviceTitle,
+      service_code: formData.serviceCode,
+      site_address: formData.siteAddress,
+      travel_charge: toNumber(formData.travelCharge, 0),
+      sample_counts: normalizedSampleCounts,
+      sample_unit: formData.sampleUnit,
+      num_work_units: normalizedNumWorkUnits,
+      inquiry_remarks: formData.inquiryRemarks,
+      unit_price: toNumber(formData.unitPrice, 0),
+      discount: toNumber(formData.discount, 0),
+      price_exception_request_id: null,
+      sst_percent: toNumber(formData.sstPercent, 0),
+      sst_amount: totals.sstAmount,
+      sub_total: totals.subtotalBeforeDiscount,
+      grand_total: totals.grandTotal,
+      attach_proposal: formData.attachProposal ? 1 : 0,
+      proposal_language: formData.proposalLanguage || proposalLanguage,
+    }
+
+    try {
+      const res = await fetch(url, {
+        method: quoteSaveMethod(isEditMode),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const result = normalizeQuoteResult(await res.json())
+
+      if (isSuccess(result)) {
+        await handleQuoteSuccess(result)
+        // Clear draft only on create success
+        if (!isEditMode) {
+          clearQuoteMainDraft('ih')
+          localStorage.removeItem('draftHygieneQuote')
+          sessionStorage.removeItem('quoteInquirySource')
+        }
+        const goToList = await dialog.confirm(
+          `Quotation ${isEditMode ? 'updated' : 'created'} successfully. Go to quote records?`,
+          {
+            title: isEditMode ? 'Quotation Updated' : 'Quotation Created',
+            confirmText: 'Go to list',
+            cancelText: isEditMode ? 'Stay here' : 'Create another',
+          },
+        )
+        if (goToList) {
+          navigate(getRecordListPath('ih-tab'), { replace: true })
+        } else if (!isEditMode) {
+          window.location.href = '/crm/quotes'
+        }
+      } else {
+        dialog.alert(result.message || 'Failed to save quotation.')
+      }
+    } catch (err) {
+      console.error('Save error:', err)
+      dialog.alert('An error occurred while saving the quotation.')
+    }
+  }
+
+  return (
+    <>
+      <HygieneDetailsCard
+        formData={formData}
+        setFormData={setFormData}
+        selectedClient={selectedClient}
+        isEditMode={isEditMode}
+        proposalLanguage={proposalLanguage}
+      />
+
+      {toInteger(formData.sampleCounts, 0) > 0 && (
+        <>
+          <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
+
+          {selectedClient && formData.serviceCode && (
+            <ReviewHygieneQuotationCard
+              selectedClient={selectedClient}
+              formData={formData}
+              setFormData={setFormData}
+              onSave={handleSaveQuote}
+              isEditMode={isEditMode}
+              quoteId={quoteId}
+            />
+          )}
+        </>
+      )}
+    </>
+  )
+}

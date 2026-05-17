@@ -1,0 +1,441 @@
+// src/views/feedback/FeedbackTable.jsx
+import React, { useMemo, useState } from 'react'
+import { CCard, CCardBody, CCardHeader, CCol, CFormLabel, CFormSelect } from '@coreui/react'
+import {
+  DataTableRecordControls,
+  DataTableRecordList,
+  DataTableStatusBadge,
+  DataTableTextCell,
+  getAdvancedFilterCount,
+} from '../../components/datatable'
+import {
+  PeriodRangeSelector,
+  getPeriodRangeLabel,
+  getPeriodRangePreset,
+  getPeriodRangeScopeLabel,
+  isDateInPeriodRange,
+  isDefaultPeriodRange,
+} from '../../components/filters'
+import { StatsStrip } from '../../components/stats'
+import { countByPredicate, formatCount, getTopGroupByCount } from '../../utils/stats/formatStats'
+
+const normalize = (value) => (value ?? '').toString().trim().toLowerCase()
+
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'fixed', label: 'Fixed' },
+]
+
+const dataColumns = [
+  {
+    key: 'feedbackText',
+    label: 'Feedback',
+    width: '180px',
+    sortable: true,
+    sortType: 'string',
+    getExportValue: (feedback) => feedback.feedbackText || '-',
+    textMode: 'expandable',
+    cellMaxWidth: '180px',
+    previewCharThreshold: 32,
+  },
+  {
+    key: 'reportedBy',
+    label: 'Reported by',
+    width: '130px',
+    sortable: true,
+    sortType: 'string',
+    getExportValue: (feedback) => feedback.reportedBy || '-',
+    shrinkToFit: true,
+    textMode: 'plain',
+    cellMaxWidth: '130px',
+  },
+  {
+    key: 'dateReported',
+    label: 'Date Reported',
+    width: '112px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    getExportValue: (feedback) => feedback.dateReported || '-',
+    shrinkToFit: true,
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    width: '120px',
+    sortable: true,
+    sortType: 'string',
+    align: 'center',
+    getExportValue: (feedback) => feedback.status || '-',
+    shrinkToFit: true,
+  },
+  {
+    key: 'actionDate',
+    label: 'Action Date',
+    width: '112px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    getExportValue: (feedback) => feedback.actionDate || '-',
+    shrinkToFit: true,
+  },
+  {
+    key: 'remarks',
+    label: 'Remarks',
+    width: '220px',
+    sortable: true,
+    sortType: 'string',
+    getExportValue: (feedback) => feedback.remarks || '-',
+    textMode: 'expandable',
+    cellMaxWidth: '220px',
+    previewCharThreshold: 34,
+  },
+]
+
+const defaultVisibleColumns = {
+  feedbackText: true,
+  reportedBy: true,
+  dateReported: true,
+  status: true,
+  actionDate: true,
+  remarks: false,
+}
+
+const requiredColumns = new Set(['feedbackText', 'status'])
+
+const getStatusTone = (status) => {
+  const normalized = normalize(status)
+  if (normalized.includes('fix')) return 'success'
+  if (normalized.includes('pend')) return 'warning'
+  return 'info'
+}
+
+const FeedbackTable = ({
+  allFeedbacks,
+  loading = false,
+  isAdmin,
+  currentStaffId,
+  onEditFeedback,
+  onUpdateFix,
+  onDeleteFeedback,
+  onViewFeedback,
+}) => {
+  const desktopToolsId = 'feedback-table-tools'
+  const mobileToolsId = 'feedback-mobile-table-tools'
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [reportedByFilter, setReportedByFilter] = useState('all')
+  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+
+  const isOwnerFeedback = (feedback) => {
+    const ownerId = Number(feedback?.reported_by_id)
+    const myId = Number(currentStaffId)
+    return Number.isFinite(ownerId) && Number.isFinite(myId) && ownerId === myId
+  }
+
+  const reporterOptions = useMemo(() => {
+    const names = Array.from(
+      new Set(
+        (allFeedbacks || [])
+          .map((feedback) => feedback?.reported_by)
+          .filter(Boolean)
+          .map((name) => name.toString().trim()),
+      ),
+    ).sort((left, right) => left.localeCompare(right))
+    return ['all', ...names]
+  }, [allFeedbacks])
+
+  const statusLabel =
+    STATUS_OPTIONS.find((option) => option.value === statusFilter)?.label || statusFilter
+
+  const activeChips = useMemo(
+    () =>
+      [
+        searchTerm.trim() ? { key: 'search', label: `Search: ${searchTerm.trim()}` } : null,
+        statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusLabel}` } : null,
+        reportedByFilter !== 'all'
+          ? { key: 'reportedBy', label: `Reported by: ${reportedByFilter}` }
+          : null,
+        periodRange && !isDefaultPeriodRange(periodRange)
+          ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+          : null,
+      ].filter(Boolean),
+    [periodRange, reportedByFilter, searchTerm, statusFilter, statusLabel],
+  )
+
+  const activeFilterCount = getAdvancedFilterCount(activeChips)
+
+  const clearChip = (key) => {
+    if (key === 'search') setSearchTerm('')
+    if (key === 'status') setStatusFilter('all')
+    if (key === 'reportedBy') setReportedByFilter('all')
+    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+  }
+
+  const filteredFeedbacks = useMemo(
+    () =>
+      (allFeedbacks || []).filter((feedback) => {
+        const term = searchTerm.trim().toLowerCase()
+        const status = normalize(feedback?.status)
+        const reporter = normalize(feedback?.reported_by)
+        const searchableText = [
+          feedback?.feedback,
+          feedback?.reported_by,
+          feedback?.date_reported,
+          feedback?.status,
+          feedback?.action_date,
+          feedback?.remarks,
+        ]
+          .map((value) => String(value || '').toLowerCase())
+          .join(' ')
+
+        let passStatus = true
+        if (statusFilter === 'pending') passStatus = status.includes('pend')
+        else if (statusFilter === 'fixed') passStatus = status.includes('fix')
+
+        let passReporter = true
+        if (reportedByFilter !== 'all') {
+          passReporter = reporter === normalize(reportedByFilter)
+        }
+
+        const passSearch = term === '' || searchableText.includes(term)
+        const passPeriod = isDateInPeriodRange(feedback?.date_reported, periodRange)
+
+        return passSearch && passStatus && passReporter && passPeriod
+      }),
+    [allFeedbacks, searchTerm, statusFilter, reportedByFilter, periodRange],
+  )
+
+  const rows = useMemo(
+    () =>
+      filteredFeedbacks.map((feedback) => ({
+        ...feedback,
+        feedbackText: feedback.feedback || '',
+        reportedBy: feedback.reported_by || '-',
+        dateReported: feedback.date_reported || '',
+        status: feedback.status || '-',
+        actionDate: feedback.action_date || '',
+        remarks: feedback.remarks || '',
+      })),
+    [filteredFeedbacks],
+  )
+
+  const statsItems = useMemo(() => {
+    const pendingCount = countByPredicate(rows, (feedback) =>
+      normalize(feedback.status).includes('pend'),
+    )
+    const fixedRows = rows.filter((feedback) => normalize(feedback.status).includes('fix'))
+    const topReporter = getTopGroupByCount(rows, (feedback) => feedback.reportedBy)
+
+    return [
+      {
+        key: 'feedback',
+        label: 'Feedback',
+        value: formatCount(rows.length),
+        tone: 'primary',
+      },
+      {
+        key: 'pending',
+        label: 'Pending',
+        value: formatCount(pendingCount),
+        tone: pendingCount ? 'warning' : 'secondary',
+      },
+      {
+        key: 'fixed',
+        label: 'Fixed',
+        value: formatCount(fixedRows.length),
+        tone: 'success',
+      },
+      {
+        key: 'top-reporter',
+        label: 'Top Reporter',
+        value: topReporter.value,
+        sublabel: `${formatCount(topReporter.count)} reports`,
+        tone: 'secondary',
+      },
+    ]
+  }, [rows])
+
+  const resetFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setReportedByFilter('all')
+    setPeriodRange(getPeriodRangePreset('ytd'))
+  }
+
+  const getActions = (feedback) => {
+    if (isAdmin) {
+      return [
+        { key: 'edit', label: 'Edit', onClick: () => onEditFeedback?.(feedback) },
+        { key: 'update-fix', label: 'Update Fix', onClick: () => onUpdateFix?.(feedback) },
+        {
+          key: 'delete',
+          label: 'Delete',
+          danger: true,
+          dividerBefore: true,
+          onClick: () => onDeleteFeedback?.(feedback),
+        },
+      ]
+    }
+
+    const isOwner = isOwnerFeedback(feedback)
+    return [
+      {
+        key: 'edit',
+        label: 'Edit',
+        disabled: !isOwner,
+        tooltip: !isOwner ? 'You can only edit your own feedback.' : undefined,
+        onClick: isOwner ? () => onEditFeedback?.(feedback) : undefined,
+      },
+      {
+        key: 'delete',
+        label: 'Delete',
+        danger: true,
+        disabled: !isOwner,
+        tooltip: !isOwner ? 'You can only delete your own feedback.' : undefined,
+        dividerBefore: true,
+        onClick: isOwner ? () => onDeleteFeedback?.(feedback) : undefined,
+      },
+    ]
+  }
+
+  const renderCell = (feedback, column) => {
+    if (column.key === 'feedbackText') {
+      return (
+        <DataTableTextCell
+          value={feedback.feedbackText}
+          emptyText="-"
+          maxWidth="180px"
+          title="Feedback"
+          mode="expandable"
+          previewCharThreshold={32}
+        />
+      )
+    }
+    if (column.key === 'remarks') {
+      return (
+        <DataTableTextCell
+          value={feedback.remarks}
+          maxWidth="220px"
+          title="Remarks"
+          mode="expandable"
+          previewCharThreshold={34}
+        />
+      )
+    }
+    if (column.key === 'status') {
+      return (
+        <DataTableStatusBadge tone={getStatusTone(feedback.status)}>
+          {feedback.status}
+        </DataTableStatusBadge>
+      )
+    }
+    return feedback[column.key] || '-'
+  }
+
+  return (
+    <CCard className="mt-4">
+      <CCardHeader>
+        <strong>All Feedbacks</strong>
+      </CCardHeader>
+      <CCardBody>
+        <StatsStrip
+          loading={loading}
+          items={statsItems}
+          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        />
+        <DataTableRecordControls
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search feedback, reporter, status, remarks..."
+          searchAriaLabel="Search feedback records"
+          showAdvancedFilters={showAdvancedFilters}
+          setShowAdvancedFilters={setShowAdvancedFilters}
+          activeFilterCount={activeFilterCount}
+          activeChips={activeChips}
+          clearChip={clearChip}
+          resetFilters={resetFilters}
+          loading={loading}
+          desktopToolsId={desktopToolsId}
+          mobileToolsId={mobileToolsId}
+        >
+          <CCol xs={12} md={3} lg={2}>
+            <CFormLabel htmlFor="feedback-filter-status">Status</CFormLabel>
+            <CFormSelect
+              id="feedback-filter-status"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </CFormSelect>
+          </CCol>
+
+          <CCol xs={12} md={3} lg={2}>
+            <CFormLabel htmlFor="feedback-filter-reporter">Reported by</CFormLabel>
+            <CFormSelect
+              id="feedback-filter-reporter"
+              value={reportedByFilter}
+              onChange={(event) => setReportedByFilter(event.target.value)}
+            >
+              {reporterOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option === 'all' ? 'All reporters' : option}
+                </option>
+              ))}
+            </CFormSelect>
+          </CCol>
+        </DataTableRecordControls>
+
+        <DataTableRecordList
+          rows={rows}
+          dataColumns={dataColumns}
+          defaultVisibleColumns={defaultVisibleColumns}
+          requiredColumns={requiredColumns}
+          storageKey="feedback.records.visible-columns.v3"
+          idPrefix="feedback-record"
+          emptyMessage="No feedbacks match the current filters."
+          exportFilename={`feedback-records-${new Date().toISOString().slice(0, 10)}.csv`}
+          loading={loading}
+          loadingMessage="Loading feedback records..."
+          getRowKey={(feedback, index) => feedback.id || index}
+          renderCell={renderCell}
+          getActions={getActions}
+          onRowOpen={onViewFeedback}
+          getMobileTitle={(feedback) => feedback.feedbackText || '-'}
+          getMobileSubtitle={(feedback) => feedback.reportedBy}
+          getMobileMeta={(feedback) => feedback.dateReported || '-'}
+          getMobileStatus={(feedback) => feedback.status}
+          getMobileStatusTone={(feedback) => getStatusTone(feedback.status)}
+          mobileFieldKeys={{
+            title: 'feedbackText',
+            subtitle: 'reportedBy',
+            meta: 'dateReported',
+            status: 'status',
+          }}
+          initialSortField="dateReported"
+          initialSortDir="desc"
+          initialSortDirByField={{ dateReported: 'desc', actionDate: 'desc' }}
+          renderQuickFilters={() => (
+            <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
+          )}
+          resetDeps={[filteredFeedbacks, searchTerm, statusFilter, reportedByFilter, periodRange]}
+          actionColumnWidth="56px"
+          desktopUtilityPlacement="portal"
+          desktopUtilityPortalId={desktopToolsId}
+          mobileUtilityPlacement="portal"
+          mobileUtilityPortalId={mobileToolsId}
+          showMobileUtilityRow={false}
+        />
+      </CCardBody>
+    </CCard>
+  )
+}
+
+export default FeedbackTable

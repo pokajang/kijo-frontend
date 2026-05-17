@@ -1,0 +1,67 @@
+:root {
+  // ── Scrollbars ────────────────────────────────────────────────────────────
+  --app-scrollbar-size: 8px;
+  --app-sidebar-scrollbar-size: 7px;
+  --app-table-scrollbar-size: 6px;
+  --app-table-scrollbar-thumb: #c7ced8;
+  --app-table-scrollbar-thumb-hover: #b8c0cb;
+  --app-scrollbar-chrome: #c4cad3;
+  --app-scrollbar-chrome-hover: #b6bdc7;
+
+  // ── Surface ───────────────────────────────────────────────────────────────
+  --app-surface-page: #ffffff;      // page bg, card bg, white fills
+  --app-surface-raised: #f6f8fa;    // table headers, matrix/tfoot, raised panels
+  --app-surface-subtle: #f3f5f8;    // status badge bg, light fills
+  --app-surface-muted: #eef1f5;     // kbd bg, deepest subtle surface
+
+  // ── Border ────────────────────────────────────────────────────────────────
+  --app-border: #d8dee6;            // table header borders, badge borders
+  --app-border-card: #d8dbe0;       // card/shell/mobile-list borders
+  --app-border-subtle: #e5e7eb;     // footer dividers, light separators
+
+  // ── Text ──────────────────────────────────────────────────────────────────
+  --app-text-strong: #343a40;       // table header text, strong labels
+  --app-text-base: #1f2937;         // body text, color-mix dark anchor
+  --app-text-secondary: #495057;    // secondary text, badge/kbd text
+  --app-text-label: #566174;        // form labels, kv keys
+  --app-text-muted: #5b6677;        // very muted supplementary text
+  --app-text-action: #6c757d;       // action toggle icons
+  --app-text-action-hover: #495057; // action toggle hover
+
+  // ── Accent (blue pill / remarks badge) ───────────────────────────────────
+  --app-accent-bg: #eef4ff;
+  --app-accent-border: #cddbf8;
+  --app-accent-text: #335a9c;
+  --app-accent-bg-hover: #e5efff;
+  --app-accent-border-hover: #bed1f3;
+  --app-accent-text-hover: #2d4f89;
+  --app-accent-bg-active: #dde9ff;
+  --app-accent-border-active: #b6caf1;
+  --app-accent-text-active: #2a4a81;
+
+  // ── Muted action button ───────────────────────────────────────────────────
+  --app-btn-muted-text: #7b8794;
+  --app-btn-muted-text-hover: #5c6773;
+  --app-btn-muted-bg-hover: rgba(123, 135, 148, 0.08);
+  --app-btn-muted-bg-active: rgba(123, 135, 148, 0.12);
+
+  // ── Border radius ─────────────────────────────────────────────────────────
+  --app-radius-sm: 0.25rem;   // kbd, small chips
+  --app-radius-md: 0.45rem;   // mobile lists, page-card headers
+  --app-radius-lg: 0.5rem;    // shells, main cards, tables
+  --app-radius-xl: 0.6rem;    // nav active states, large panels
+  --app-radius-pill: 999px;   // pills, scrollbar thumbs, badges
+
+  // ── Shadows ───────────────────────────────────────────────────────────────
+  --app-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --app-shadow-lg: 0 14px 34px rgba(15, 23, 42, 0.22), 0 4px 10px rgba(15, 23, 42, 0.14);
+
+  // ── Type scale ────────────────────────────────────────────────────────────
+  --app-font-size-2xs: 0.65rem;        // nav section titles, tiny caps
+  --app-font-size-nav-label: 0.68rem;  // bottom nav bar labels
+  --app-font-size-xs: 0.72rem;         // badges, kbd, small utility text
+  --app-font-size-sm: 0.8rem;          // form labels, secondary text
+  --app-font-size-base: 0.9rem;        // body (matches style.scss $font-size-base)
+  --app-font-size-md: 0.9375rem;       // widget names, slightly above base
+  --app-font-size-lg: 1.0625rem;       // section/panel titles
+}

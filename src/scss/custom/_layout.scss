@@ -1,0 +1,87 @@
+/* App shell background: force full page layout to white */
+body,
+.wrapper,
+.body,
+.header,
+.header > .container-fluid,
+.sidebar,
+.sidebar-header,
+.sidebar-footer,
+.footer,
+.c-footer {
+  --cui-footer-bg: var(--app-surface-page) !important;
+  background-color: var(--app-surface-page) !important;
+}
+
+// Custom dropdown menu for Quote.js Company Name / Full Name field
+.custom-dropdown {
+  position: absolute;
+  background-color: var(--app-surface-page);
+  border: 1px solid var(--app-border-card);
+  border-radius: 4px;
+  box-shadow: var(--app-shadow-sm);
+  width: 97%;
+  z-index: 1000;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+  color: var(--app-text-strong);
+
+  &:hover,
+  &.highlighted {
+    background-color: #deebff;
+    color: #000;
+  }
+}
+
+// Hide blinking caret on non-input containers site-wide
+div,
+section,
+article,
+main,
+aside,
+header,
+footer,
+table,
+tr,
+td,
+th {
+  caret-color: transparent;
+}
+
+/* Re-enable caret for input fields and textareas */
+input,
+textarea,
+select {
+  caret-color: auto;
+}
+
+.app-header-icon-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border-radius: var(--app-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Global dropdown menu defaults */
+.dropdown-menu {
+  --cui-dropdown-zindex: 1060;
+  --cui-dropdown-font-size: 0.8125rem;
+  --cui-dropdown-item-padding-y: 0.3rem;
+  --cui-dropdown-item-padding-x: 0.6rem;
+  max-height: min(70vh, calc(100dvh - 1rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dropdown-menu .dropdown-item {
+  line-height: 1.15;
+}

@@ -1,0 +1,15 @@
+.whats-new-record-row {
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.whats-new-record-row:hover,
+.whats-new-record-row:focus-visible {
+  background-color: var(--cui-secondary-bg) !important;
+  box-shadow: 0 0 0 1px var(--cui-border-color);
+  transform: translateY(-1px);
+  outline: 0;
+}

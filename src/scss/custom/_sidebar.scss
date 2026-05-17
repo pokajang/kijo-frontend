@@ -1,0 +1,164 @@
+/* Smaller sidebar icons */
+.sidebar .nav-icon {
+  width: 1rem !important;
+  height: 1rem !important;
+  font-size: 1rem !important;
+  flex: 0 0 1rem !important;
+  margin-right: calc(var(--cui-sidebar-nav-link-icon-margin, 0.75rem) + 5px) !important;
+}
+
+.sidebar .nav-icon svg {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/* Compact vertical density overrides for CoreUI sidebar */
+.sidebar .nav-title {
+  padding-top: 0.6rem;
+  padding-bottom: 0.2rem;
+  font-size: var(--app-font-size-2xs);
+  letter-spacing: 0.06em;
+}
+
+.sidebar .sidebar-nav .nav-link {
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+  line-height: 1.3;
+}
+
+.sidebar .sidebar-nav .nav-group-toggle {
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+  line-height: 1.3;
+}
+
+.sidebar .sidebar-nav .nav-group.show > .nav-group-items {
+  padding-top: 0.1rem;
+  padding-bottom: 0.1rem;
+}
+
+.custom-sidebar-link {
+  padding: 0.35rem 0.8rem !important;
+  display: flex;
+  align-items: center;
+  font-family: var(--cui-body-font-family);
+  font-size: var(--cui-body-font-size);
+  font-weight: var(--cui-body-font-weight);
+}
+
+.custom-sidebar-link.custom-sidebar-link--child {
+  padding-left: 1.75rem !important;
+}
+
+.custom-sidebar-link.active {
+  background-color: rgba(var(--cui-primary-rgb), 0.12) !important;
+  font-weight: 600;
+  color: var(--cui-primary) !important;
+  border-radius: var(--app-radius-xl);
+}
+
+.custom-sidebar-link:hover {
+  color: var(--cui-primary) !important;
+  background-color: rgba(var(--cui-primary-rgb), 0.08) !important;
+}
+
+.custom-sidebar-link:hover .nav-icon-bullet,
+.custom-sidebar-link:hover svg,
+.custom-sidebar-link:hover .nav-icon {
+  color: var(--cui-primary) !important;
+}
+
+.custom-sidebar-link.active .nav-icon-bullet,
+.custom-sidebar-link.active svg,
+.custom-sidebar-link.active .nav-icon {
+  color: var(--cui-primary) !important;
+}
+
+.custom-sidebar-link--child .nav-icon,
+.custom-sidebar-link--child .icon {
+  display: none;
+}
+
+.custom-sidebar-link--child .create-action-badge {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: var(--app-radius-pill);
+  background-color: var(--cui-primary);
+  margin-left: 0;
+  margin-right: 0.3rem !important;
+}
+
+.custom-sidebar-link--child .create-action-badge .create-action-icon {
+  width: 0.5rem;
+  height: 0.5rem;
+  color: #fff !important;
+}
+
+.custom-sidebar-link--child .nav-icon-bullet {
+  display: inline-block;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background-color: var(--cui-secondary);
+  margin-right: 0.75rem;
+  opacity: 0.7;
+}
+
+.c-sidebar-nav-link.active .nav-icon-bullet,
+.c-sidebar-nav-link.active svg {
+  color: #fff;
+}
+
+/* Main sidebar: mini, light-gray vertical scrollbar */
+.sidebar .sidebar-nav .simplebar-track.simplebar-vertical {
+  width: var(--app-sidebar-scrollbar-size);
+}
+
+.sidebar .sidebar-nav .simplebar-track.simplebar-vertical .simplebar-scrollbar {
+  width: var(--app-sidebar-scrollbar-size);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sidebar .sidebar-nav .simplebar-track.simplebar-vertical {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .sidebar:hover .sidebar-nav .simplebar-track.simplebar-vertical,
+  .sidebar:focus-within .sidebar-nav .simplebar-track.simplebar-vertical {
+    opacity: 1;
+  }
+}
+
+.sidebar .sidebar-nav .simplebar-scrollbar:before {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--app-scrollbar-chrome);
+  border: 1px solid transparent;
+  background-clip: content-box;
+  opacity: 1;
+}
+
+.sidebar .sidebar-nav .simplebar-track.simplebar-vertical .simplebar-scrollbar:before {
+  border-radius: var(--app-radius-pill);
+}
+
+.sidebar .sidebar-nav .simplebar-track.simplebar-vertical .simplebar-scrollbar:hover:before,
+.sidebar
+  .sidebar-nav
+  .simplebar-track.simplebar-vertical
+  .simplebar-scrollbar.simplebar-visible:before {
+  background-color: var(--app-scrollbar-chrome-hover);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .sidebar-nav .simplebar-track.simplebar-vertical {
+    transition: none;
+  }
+}
