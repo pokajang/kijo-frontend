@@ -44,7 +44,7 @@ const ClientsList = () => {
         }
 
         rows.push(...(Array.isArray(result.data) ? result.data : []))
-        lastPage = Number(result.meta?.last_page || page)
+        lastPage = Number(result.pagination?.last_page || result.meta?.last_page || page)
         page += 1
       } while (page <= lastPage)
 

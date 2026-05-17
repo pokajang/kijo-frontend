@@ -24,7 +24,6 @@ import {
   getPeriodRangePreset,
   getPeriodRangeScopeLabel,
   isDateInPeriodRange,
-  isDefaultPeriodRange,
 } from '../../../../components/filters'
 import { StatsStrip } from '../../../../components/stats'
 import { formatCount, getTopGroupByCount } from '../../../../utils/stats/formatStats'
@@ -173,6 +172,8 @@ const joinPicValues = (pics, key) =>
 const getClientScopeDate = (client) =>
   client?.created_at || client?.createdAt || client?.date_created || client?.updated_at || ''
 
+const defaultPeriodRange = getPeriodRangePreset('all')
+
 const renderTruncated = (value, column, fallbackTitle = 'Details', fallbackMaxWidth = '180px') => (
   <DataTableTextCell
     value={value || emptyValue}
@@ -225,7 +226,7 @@ const ClientListTableCard = ({
   onCreateClient,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [periodRange, setPeriodRange] = useState(() => defaultPeriodRange)
 
   const periodFilteredClients = useMemo(
     () =>
@@ -313,7 +314,7 @@ const ClientListTableCard = ({
     searchTerm.trim() ? { key: 'search', label: `Search: ${searchTerm.trim()}` } : null,
     statusFilter ? { key: 'status', label: `Status: ${statusFilterLabel(statusFilter)}` } : null,
     branchFilter ? { key: 'branch', label: `Branches: ${branchFilterLabel(branchFilter)}` } : null,
-    periodRange && !isDefaultPeriodRange(periodRange)
+    periodRange && periodRange.preset !== defaultPeriodRange.preset
       ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
       : null,
   ].filter(Boolean)
@@ -323,14 +324,14 @@ const ClientListTableCard = ({
     onSearchChange('')
     onStatusFilterChange('')
     onBranchFilterChange('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    setPeriodRange(defaultPeriodRange)
   }
 
   const clearChip = (key) => {
     if (key === 'search') onSearchChange('')
     if (key === 'status') onStatusFilterChange('')
     if (key === 'branch') onBranchFilterChange('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') setPeriodRange(defaultPeriodRange)
   }
 
   const getActions = (client) => [
