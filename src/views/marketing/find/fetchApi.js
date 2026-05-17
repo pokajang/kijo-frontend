@@ -2,7 +2,9 @@ import { API_BASE } from './constants'
 
 export const fetchApi = {
   async loadGrid() {
-    const res = await fetch(`${API_BASE}google/places/unregistered?_=${Date.now()}`)
+    const res = await fetch(`${API_BASE}google/places/unregistered?_=${Date.now()}`, {
+      credentials: 'include',
+    })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data?.message || 'Failed to load places.')
     return Array.isArray(data?.rows) ? data.rows : []
@@ -27,6 +29,9 @@ export const fetchApi = {
   async fetchPlaceDetails(place_id) {
     const res = await fetch(
       `${API_BASE}google/place-details?place_id=${encodeURIComponent(place_id)}`,
+      {
+        credentials: 'include',
+      },
     )
     const data = await res.json().catch(() => ({}))
     if (!res.ok || data?.success === false || data?.error) {
