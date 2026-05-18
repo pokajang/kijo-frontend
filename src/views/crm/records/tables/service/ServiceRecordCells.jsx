@@ -3,6 +3,7 @@ import { CTableDataCell, CBadge, CTooltip } from '@coreui/react'
 import RemarksCell from '../shared/RemarksCell'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 import RecordActionMenu from '../shared/RecordActionMenu'
+import { getProjectOutcomeLabel, getStatusLabel } from '../../utils/allRecordsTableUtils'
 
 export const formatServiceRecordAmount = (value) =>
   Number(value).toLocaleString('en-MY', {
@@ -134,13 +135,16 @@ export const ServiceRecordPicCell = ({ record, columnWidths, truncateStyle }) =>
 
 export const ServiceRecordStatusCell = ({ record, columnWidths }) => (
   <CTableDataCell style={{ minWidth: columnWidths.status }} className="text-center text-nowrap">
-    <CBadge
-      className={`records-status-badge records-status-badge--${getStatusTone(record.status)}`}
-    >
-      {record.status === 'Awarded' && Number(record?.awardCount ?? 0) > 1
-        ? `Awarded (x${Number(record.awardCount)})`
-        : record.status}
-    </CBadge>
+    <div className="d-inline-flex flex-column align-items-center gap-1">
+      <CBadge
+        className={`records-status-badge records-status-badge--${getStatusTone(record.status)}`}
+      >
+        {getStatusLabel(record)}
+      </CBadge>
+      {getProjectOutcomeLabel(record) && (
+        <span className="small text-muted">{getProjectOutcomeLabel(record)}</span>
+      )}
+    </div>
   </CTableDataCell>
 )
 

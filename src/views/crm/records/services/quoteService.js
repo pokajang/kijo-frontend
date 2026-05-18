@@ -47,6 +47,57 @@ const toBool = (value) => {
   return false
 }
 
+const normalizeProjectStatus = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase()
+
+const isRealizedProjectStatus = (status) =>
+  ['active', 'completed'].includes(normalizeProjectStatus(status))
+
+const buildAwardHistoryMap = (rows = []) =>
+  rows.reduce((acc, r) => {
+    const qid = Number(r.quote_id)
+    if (!acc[qid]) acc[qid] = []
+    acc[qid].push({
+      id: Number(r.id),
+      awardDate: r.award_date || null,
+      createdAt: r.created_at || null,
+      status: r.status || '',
+      quoteValue: Number(r.quote_value || 0),
+    })
+    return acc
+  }, {})
+
+const getProjectOutcomeFields = (awardHistory = []) => {
+  const counts = awardHistory.reduce(
+    (acc, project) => {
+      const status = normalizeProjectStatus(project.status)
+      acc.total += 1
+      if (status === 'active') acc.active += 1
+      if (status === 'completed') acc.completed += 1
+      if (status === 'terminated') acc.terminated += 1
+      return acc
+    },
+    { active: 0, completed: 0, terminated: 0, total: 0 },
+  )
+  const terminatedProjectValue = awardHistory
+    .filter((project) => normalizeProjectStatus(project.status) === 'terminated')
+    .reduce((sum, project) => sum + Number(project.quoteValue || 0), 0)
+  const realizedProjectValue = awardHistory
+    .filter((project) => isRealizedProjectStatus(project.status))
+    .reduce((sum, project) => sum + Number(project.quoteValue || 0), 0)
+
+  return {
+    projectStatusCounts: counts,
+    project_status_counts: counts,
+    terminatedProjectValue,
+    terminated_project_value: terminatedProjectValue,
+    realizedProjectValue,
+    realized_project_value: realizedProjectValue,
+  }
+}
+
 export async function fetchTrainingQuotes() {
   try {
     const payload = await fetchJsonCompat(`${import.meta.env.VITE_API_BASE}quote-records/training`)
@@ -71,16 +122,7 @@ export async function fetchTrainingQuotes() {
       return acc
     }, {})
 
-    const ahMap = ahRows.reduce((acc, r) => {
-      const qid = Number(r.quote_id)
-      if (!acc[qid]) acc[qid] = []
-      acc[qid].push({
-        id: Number(r.id),
-        awardDate: r.award_date || null,
-        createdAt: r.created_at || null,
-      })
-      return acc
-    }, {})
+    const ahMap = buildAwardHistoryMap(ahRows)
 
     const formatted = rows.map((row) => {
       const id = Number(row.id)
@@ -169,6 +211,7 @@ export async function fetchTrainingQuotes() {
         // Attach ALL follow-ups (array; newest first)
         followUps,
         awardHistory,
+        ...getProjectOutcomeFields(awardHistory),
       }
     })
 
@@ -206,16 +249,7 @@ export async function fetchIHQuotes() {
       return acc
     }, {})
 
-    const ahMap = ahRows.reduce((acc, r) => {
-      const qid = Number(r.quote_id)
-      if (!acc[qid]) acc[qid] = []
-      acc[qid].push({
-        id: Number(r.id),
-        awardDate: r.award_date || null,
-        createdAt: r.created_at || null,
-      })
-      return acc
-    }, {})
+    const ahMap = buildAwardHistoryMap(ahRows)
 
     const formatted = rows.map((row) => {
       const id = Number(row.id)
@@ -296,6 +330,7 @@ export async function fetchIHQuotes() {
         // attach ALL follow-ups (array, newest first)
         followUps,
         awardHistory,
+        ...getProjectOutcomeFields(awardHistory),
       }
     })
 
@@ -331,16 +366,7 @@ export async function fetchManpowerQuotes() {
       return acc
     }, {})
 
-    const ahMap = ahRows.reduce((acc, r) => {
-      const qid = Number(r.quote_id)
-      if (!acc[qid]) acc[qid] = []
-      acc[qid].push({
-        id: Number(r.id),
-        awardDate: r.award_date || null,
-        createdAt: r.created_at || null,
-      })
-      return acc
-    }, {})
+    const ahMap = buildAwardHistoryMap(ahRows)
 
     const formatted = rows.map((row) => {
       const id = Number(row.id)
@@ -422,6 +448,7 @@ export async function fetchManpowerQuotes() {
         // attach ALL follow-ups (array, newest first)
         followUps,
         awardHistory,
+        ...getProjectOutcomeFields(awardHistory),
       }
     })
 
@@ -457,16 +484,7 @@ export async function fetchSpecialQuotes() {
       return acc
     }, {})
 
-    const ahMap = ahRows.reduce((acc, r) => {
-      const qid = Number(r.quote_id)
-      if (!acc[qid]) acc[qid] = []
-      acc[qid].push({
-        id: Number(r.id),
-        awardDate: r.award_date || null,
-        createdAt: r.created_at || null,
-      })
-      return acc
-    }, {})
+    const ahMap = buildAwardHistoryMap(ahRows)
 
     return rows.map((row) => {
       const id = Number(row.id)
@@ -553,6 +571,7 @@ export async function fetchSpecialQuotes() {
         // --- Attach ALL follow-ups (array, newest first) ---
         followUps,
         awardHistory,
+        ...getProjectOutcomeFields(awardHistory),
       }
     })
   } catch (error) {
@@ -587,16 +606,7 @@ export async function fetchEquipmentQuotes() {
       return acc
     }, {})
 
-    const ahMap = ahRows.reduce((acc, r) => {
-      const qid = Number(r.quote_id)
-      if (!acc[qid]) acc[qid] = []
-      acc[qid].push({
-        id: Number(r.id),
-        awardDate: r.award_date || null,
-        createdAt: r.created_at || null,
-      })
-      return acc
-    }, {})
+    const ahMap = buildAwardHistoryMap(ahRows)
 
     return rows.map((row) => {
       const id = Number(row.id)
@@ -685,6 +695,7 @@ export async function fetchEquipmentQuotes() {
         // --- Attach ALL follow-ups (array, newest first) ---
         followUps,
         awardHistory,
+        ...getProjectOutcomeFields(awardHistory),
       }
     })
   } catch (error) {

@@ -19,6 +19,7 @@ export default function ManageProject() {
   const [deletingProjectId, setDeletingProjectId] = useState(null)
 
   const [selected, setSelected] = useState(null)
+  const [selectedCloseType, setSelectedCloseType] = useState('Completed')
   const [modals, setModals] = useState({
     close: false,
     invoice: false,
@@ -42,8 +43,11 @@ export default function ManageProject() {
     loadProjects()
   }, [])
 
-  const open = (name, project) => {
+  const open = (name, project, options = {}) => {
     setSelected(project)
+    if (name === 'close') {
+      setSelectedCloseType(options.closeType || 'Completed')
+    }
     setModals((m) => ({ ...m, [name]: true }))
   }
   const close = (name) => setModals((m) => ({ ...m, [name]: false }))
@@ -70,7 +74,7 @@ export default function ManageProject() {
           const nameSlug = slugify(p.project_name) || 'details'
           navigate(`/project/manage/${p.id}/${typeSlug}/${nameSlug}`, { state: { project: p } })
         }}
-        onClose={(p) => open('close', p)}
+        onClose={(p, closeType) => open('close', p, { closeType })}
         onGenerateInvoice={(p) => open('invoice', p)}
         onGenerateDO={(p) => open('do', p)}
         onGenerateJD14={(p) => open('jd14', p)}
@@ -82,6 +86,7 @@ export default function ManageProject() {
         <CloseProjectModal
           visible
           project={selected}
+          initialCloseType={selectedCloseType}
           onClose={() => close('close')}
           onConfirm={() => {
             close('close')

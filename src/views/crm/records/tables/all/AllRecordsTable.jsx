@@ -12,7 +12,11 @@ import {
   columnWidths,
 } from '../../config/allRecordsTableConfig'
 import { recordsDesktopBreakpoint, recordsTruncateStyle } from '../../config/recordsTableUiShared'
-import { escapeCsvValue, truncateFront } from '../../utils/allRecordsTableUtils'
+import {
+  escapeCsvValue,
+  getProjectOutcomeLabel,
+  truncateFront,
+} from '../../utils/allRecordsTableUtils'
 import { useRecordTableState } from '../../hooks/useRecordTableState'
 import { useDerivedRecords } from '../../hooks/useDerivedRecords'
 import { useColumnPreferences } from '../../../../../hooks/datatable'
@@ -430,10 +434,14 @@ const AllRecordsTable = ({
 
     if (column.key === 'status') {
       const statusTone = record?.__tableMeta?.statusTone
+      const outcomeLabel = getProjectOutcomeLabel(record)
       return (
-        <CBadge className={`records-status-badge records-status-badge--${statusTone}`}>
-          {record?.__tableMeta?.statusLabel}
-        </CBadge>
+        <div className="d-inline-flex flex-column align-items-center gap-1">
+          <CBadge className={`records-status-badge records-status-badge--${statusTone}`}>
+            {record?.__tableMeta?.statusLabel}
+          </CBadge>
+          {outcomeLabel && <span className="small text-muted">{outcomeLabel}</span>}
+        </div>
       )
     }
 
@@ -512,6 +520,15 @@ const AllRecordsTable = ({
         label: record?.__tableMeta?.statusLabel,
         tone: record?.__tableMeta?.statusTone || 'info',
       },
+      ...(getProjectOutcomeLabel(record)
+        ? [
+            {
+              key: 'project-outcome',
+              label: getProjectOutcomeLabel(record),
+              tone: 'secondary',
+            },
+          ]
+        : []),
     ],
     subtitle: (record) => {
       const subjectText = record?.__tableMeta?.subject || '-'

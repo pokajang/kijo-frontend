@@ -23,7 +23,7 @@ const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`
 const RoiCalculationPopoverContent = ({ awardedValue, targetValue, roi }) => (
   <div className="small">
     <div className="d-flex justify-content-between gap-3">
-      <span className="text-muted">Awarded</span>
+      <span className="text-muted">Realized</span>
       <span className="fw-semibold">{formatCurrency(awardedValue)}</span>
     </div>
     <div className="d-flex justify-content-between gap-3">
@@ -56,7 +56,8 @@ const AwardedValueBreakdownCard = ({
       <CCardHeader>
         <CRow className="align-items-center">
           <CCol className="text-nowrap">
-            <strong>Awarded Value</strong> <small className="text-muted">By {dimensionLabel}</small>
+            <strong>Realized Value</strong>{' '}
+            <small className="text-muted">By {dimensionLabel}</small>
           </CCol>
         </CRow>
       </CCardHeader>
@@ -77,7 +78,7 @@ const AwardedValueBreakdownCard = ({
                 <CCol xs={12}>
                   <div className="d-flex flex-wrap align-items-baseline justify-content-between gap-2">
                     <div className="text-muted text-start">
-                      Total awarded for period ({periodRangeLabel})
+                      Total realized for period ({periodRangeLabel})
                     </div>
                     <div className="h2 mb-0 text-success text-end ms-auto">
                       {formatCurrency(totalAwarded)}

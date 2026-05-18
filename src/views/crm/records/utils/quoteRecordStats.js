@@ -41,6 +41,10 @@ export const buildQuoteRecordStatsItems = (records = [], options = {}) => {
     const tone = String(getStatusTone(record) || '').toLowerCase()
     return tone === 'success' || label.includes('award') || label.includes('success')
   })
+  const terminatedAfterAwardValue = sumBy(
+    awardedRows,
+    (record) => record?.terminatedProjectValue ?? record?.terminated_project_value ?? 0,
+  )
 
   const pendingFollowUpRows = rows.filter((record) => {
     const label = String(getStatusLabel(record) || '').toLowerCase()
@@ -90,7 +94,12 @@ export const buildQuoteRecordStatsItems = (records = [], options = {}) => {
       key: 'awarded',
       label: 'Awarded',
       value: formatCount(awardedRows.length),
-      sublabel: formatMoney(sumBy(awardedRows, getAmount)),
+      sublabel:
+        terminatedAfterAwardValue > 0
+          ? `${formatMoney(sumBy(awardedRows, getAmount))} | Terminated after award: ${formatMoney(
+              terminatedAfterAwardValue,
+            )}`
+          : formatMoney(sumBy(awardedRows, getAmount)),
       tone: 'success',
     },
     {

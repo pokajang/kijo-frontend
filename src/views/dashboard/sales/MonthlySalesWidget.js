@@ -90,8 +90,12 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
   const labels = monthlySales.map((ms) => formatMonthLabel(ms.month))
   const valuePoints = monthlySales.map((ms) => Number(ms.amount) || 0)
   const quotePoints = monthlySales.map((ms) => Number(ms.count) || 0)
+  const terminatedPoints = monthlySales.map((ms) => Number(ms.terminatedAmount) || 0)
+  const terminatedCountPoints = monthlySales.map((ms) => Number(ms.terminatedCount) || 0)
   const periodTotal = valuePoints.reduce((sum, value) => sum + value, 0)
   const periodQuoteTotal = quotePoints.reduce((sum, value) => sum + value, 0)
+  const terminatedTotal = terminatedPoints.reduce((sum, value) => sum + value, 0)
+  const terminatedCountTotal = terminatedCountPoints.reduce((sum, value) => sum + value, 0)
   const showDetailTable = monthlySales.length > 1 && (showValueSeries || showCountSeries)
   const periodRangeLabel = formatDateRangeLabel(startDate, endDate)
 
@@ -122,7 +126,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
     ...(showCountSeries
       ? [
           {
-            label: 'Closed',
+            label: 'Realized Jobs',
             backgroundColor: 'transparent',
             borderColor: '#f9b115',
             pointBackgroundColor: '#f9b115',
@@ -137,7 +141,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
     <CCard className="mb-4">
       <CCardHeader className="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-          <strong>Monthly Sales &amp; Closed</strong>
+          <strong>Monthly Sales &amp; Realized Jobs</strong>
         </div>
         <div className="d-none d-md-flex align-items-center gap-3">
           <CFormCheck
@@ -149,7 +153,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
           />
           <CFormCheck
             id="toggleSalesCountSeries"
-            label="Closed"
+            label="Realized Jobs"
             checked={showCountSeries}
             onChange={(e) => handleSeriesToggle('count', e.target.checked)}
             disabled={showCountSeries && !showValueSeries}
@@ -174,7 +178,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                 />
                 <CFormCheck
                   id="toggleSalesCountSeriesMobile"
-                  label="Closed"
+                  label="Realized Jobs"
                   checked={showCountSeries}
                   onChange={(e) => handleSeriesToggle('count', e.target.checked)}
                   disabled={showCountSeries && !showValueSeries}
@@ -201,10 +205,16 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                   )}
                   {showCountSeries && (
                     <div className="h4 mb-1 text-warning">
-                      Closed: {periodQuoteTotal.toLocaleString()}
+                      Realized Jobs: {periodQuoteTotal.toLocaleString()}
                     </div>
                   )}
                 </div>
+                {terminatedTotal > 0 && (
+                  <div className="small text-muted">
+                    Excludes terminated: RM {terminatedTotal.toLocaleString()} across{' '}
+                    {terminatedCountTotal.toLocaleString()} jobs
+                  </div>
+                )}
               </div>
               <div className="position-relative w-100 flex-grow-1" style={{ minHeight: '260px' }}>
                 <CChartLine
@@ -310,7 +320,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                               className="text-end"
                               style={{ borderBottom: '1px solid var(--app-surface-page)' }}
                             >
-                              Closed
+                              Realized Jobs
                             </CTableHeaderCell>
                           )}
                         </CTableRow>
@@ -320,6 +330,12 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                           <CTableRow key={row.month} className="table-light">
                             <CTableDataCell className="border-0">
                               {formatMonthLabel(row.month)}
+                              {Number(row.terminatedAmount || 0) > 0 && (
+                                <div className="small text-muted">
+                                  Excl. terminated RM{' '}
+                                  {Number(row.terminatedAmount || 0).toLocaleString()}
+                                </div>
+                              )}
                             </CTableDataCell>
                             {showValueSeries && (
                               <CTableDataCell className="text-end border-0">

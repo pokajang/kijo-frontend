@@ -14,16 +14,24 @@ import {
   CFormLabel,
   CFormInput,
   CFormCheck,
-  CFormSelect,
 } from '@coreui/react'
 import dialog from '../../../components/dialog/dialogService'
 
-const CloseProjectModal = ({ visible, project, onClose, onConfirm }) => {
+const validCloseTypes = new Set(['Completed', 'Terminated'])
+
+const CloseProjectModal = ({
+  visible,
+  project,
+  initialCloseType = 'Completed',
+  onClose,
+  onConfirm,
+}) => {
   const today = new Date().toISOString().split('T')[0]
+  const selectedCloseType = validCloseTypes.has(initialCloseType) ? initialCloseType : 'Completed'
 
   const [payload, setPayload] = useState({
     closeDate: today,
-    closeType: 'Completed',
+    closeType: selectedCloseType,
     reason: '',
   })
 
@@ -32,6 +40,18 @@ const CloseProjectModal = ({ visible, project, onClose, onConfirm }) => {
     vendors: false,
     services: false,
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!visible) return
+    setPayload({
+      closeDate: today,
+      closeType: selectedCloseType,
+      reason: '',
+    })
+    setChecks({ claims: false, vendors: false, services: false })
+    setIsSubmitting(false)
+  }, [project?.id, selectedCloseType, today, visible])
 
   useEffect(() => {
     if (payload.closeType === 'Terminated') {
@@ -54,59 +74,83 @@ const CloseProjectModal = ({ visible, project, onClose, onConfirm }) => {
     payload.closeType === 'Terminated'
       ? hasRemarks
       : Object.values(checks).every(Boolean) && hasRemarks
+  const isTermination = payload.closeType === 'Terminated'
+  const actionLabel = isTermination ? 'Terminate Project' : 'Complete Project'
+  const remarksLabel = isTermination ? 'Termination Cause' : 'Closure Remarks'
+  const remarksTitle = isTermination ? 'Termination Details' : 'Closure Remarks'
+  const remarksPlaceholder = isTermination
+    ? 'e.g. Project was terminated due to budget cuts from client.'
+    : 'e.g. Project completed and all deliverables were accepted.'
+  const handleCancel = () => {
+    if (!isSubmitting) onClose()
+  }
 
   const handleCloseProject = async () => {
-    const confirmed = await dialog.confirm(`Are you sure you want to close this project.`)
+    if (isSubmitting) return
 
-    if (confirmed) {
-      const finalPayload = {
-        project_id: project.id,
-        closeDate: payload.closeDate,
-        closeType: payload.closeType,
-        reason: payload.reason,
-        claims: checks.claims,
-        vendors: checks.vendors,
-        services: checks.services,
+    const confirmed = await dialog.confirm(
+      isTermination
+        ? 'Are you sure you want to terminate this project?'
+        : 'Are you sure you want to complete this project?',
+    )
+
+    if (!confirmed) return
+
+    const finalPayload = {
+      project_id: project.id,
+      closeDate: payload.closeDate,
+      closeType: payload.closeType,
+      reason: payload.reason,
+      claims: checks.claims,
+      vendors: checks.vendors,
+      services: checks.services,
+    }
+
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(project.id)}/close`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(finalPayload),
+        },
+      )
+      const data = await res.json()
+
+      if (data.status === 'success') {
+        dialog.alert(
+          isTermination ? 'Project terminated successfully.' : 'Project completed successfully.',
+        )
+        onConfirm()
+      } else {
+        dialog.alert('Failed to close project: ' + data.message)
+        setIsSubmitting(false)
       }
-
-      fetch(`${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(project.id)}/close`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(finalPayload),
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.status === 'success') {
-            dialog.alert('Project closed successfully.')
-            onConfirm()
-          } else {
-            dialog.alert('Failed to close project: ' + data.message)
-          }
-        })
-        .catch((err) => {
-          console.error('Error closing project:', err)
-          dialog.alert('Server error occurred.')
-        })
+    } catch (err) {
+      console.error('Error closing project:', err)
+      dialog.alert('Server error occurred.')
+      setIsSubmitting(false)
     }
   }
 
   return (
     <CModal
       visible={visible}
-      onClose={onClose}
+      onClose={handleCancel}
       size="lg"
       alignment="center"
       backdrop="static"
       scrollable
     >
       <CModalHeader>
-        <CModalTitle>Close Project</CModalTitle>
+        <CModalTitle>{actionLabel}</CModalTitle>
       </CModalHeader>
       <CModalBody>
         <CCard>
           <CCardHeader>
-            <strong>Close Project</strong>
+            <strong>{actionLabel}</strong>
           </CCardHeader>
           <CCardBody>
             <CRow className="g-3">
@@ -122,15 +166,7 @@ const CloseProjectModal = ({ visible, project, onClose, onConfirm }) => {
               </CCol>
               <CCol md={6}>
                 <CFormLabel htmlFor="closeType">Closure Type</CFormLabel>
-                <CFormSelect
-                  id="closeType"
-                  name="closeType"
-                  value={payload.closeType}
-                  onChange={handlePayloadChange}
-                >
-                  <option value="Completed">Completed</option>
-                  <option value="Terminated">Terminated</option>
-                </CFormSelect>
+                <CFormInput id="closeType" name="closeType" value={payload.closeType} disabled />
               </CCol>
 
               {payload.closeType === 'Completed' && (
@@ -165,14 +201,14 @@ const CloseProjectModal = ({ visible, project, onClose, onConfirm }) => {
           </CCardBody>
 
           <CCardHeader>
-            <strong>Closure Remarks</strong>
+            <strong>{remarksTitle}</strong>
           </CCardHeader>
           <CCardBody>
-            <CFormLabel htmlFor="reason">Remarks or Termination Cause</CFormLabel>
+            <CFormLabel htmlFor="reason">{remarksLabel}</CFormLabel>
             <CFormInput
               id="reason"
               name="reason"
-              placeholder="e.g. Project was terminated due to budget cuts from client."
+              placeholder={remarksPlaceholder}
               value={payload.reason}
               onChange={handlePayloadChange}
             />
@@ -180,11 +216,16 @@ const CloseProjectModal = ({ visible, project, onClose, onConfirm }) => {
         </CCard>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" size="sm" onClick={onClose}>
+        <CButton color="secondary" size="sm" onClick={handleCancel} disabled={isSubmitting}>
           Cancel
         </CButton>
-        <CButton color="danger" size="sm" disabled={!isFormValid} onClick={handleCloseProject}>
-          Close Project
+        <CButton
+          color={isTermination ? 'danger' : 'primary'}
+          size="sm"
+          disabled={!isFormValid || isSubmitting}
+          onClick={handleCloseProject}
+        >
+          {isSubmitting ? 'Submitting...' : actionLabel}
         </CButton>
       </CModalFooter>
     </CModal>

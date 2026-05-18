@@ -2,6 +2,7 @@ import React from 'react'
 import { CAlert, CBadge, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 import { DataTableLoadingState } from '../../../../components/datatable'
 import RemarksCell from '../tables/shared/RemarksCell'
+import { getProjectOutcomeLabel, getStatusLabel } from '../utils/allRecordsTableUtils'
 
 const renderField = (label, value, options = {}) => {
   const { mobileInline = false, valueClassName = '' } = options
@@ -71,11 +72,12 @@ const RecordDetailsCard = ({
         <CCol xs={12} md={3}>
           {renderField(
             'Status',
-            <CBadge color={statusColor(record?.status)}>
-              {record?.status === 'Awarded' && Number(record?.awardCount ?? 0) > 1
-                ? `Awarded (x${Number(record.awardCount)})`
-                : record?.status || '-'}
-            </CBadge>,
+            <div className="d-flex flex-column align-items-start gap-1">
+              <CBadge color={statusColor(record?.status)}>{getStatusLabel(record)}</CBadge>
+              {getProjectOutcomeLabel(record) && (
+                <span className="small text-muted">{getProjectOutcomeLabel(record)}</span>
+              )}
+            </div>,
             { mobileInline: true },
           )}
         </CCol>

@@ -54,6 +54,7 @@ const emptyValue = '-'
 const columnStorageKey = 'project.manage.visible-columns.v5'
 const actionColumnWidth = '56px'
 const maxUpdatePreviewChars = 34
+const excludedValueStatuses = new Set(['terminated'])
 
 const defaultVisibleColumns = {
   client: true,
@@ -216,6 +217,21 @@ const ProjectUpdateCell = ({ text }) => {
       </CModal>
     </>
   )
+}
+
+const getNormalizedProjectStatus = (project = {}) =>
+  String(project?.status || '')
+    .trim()
+    .toLowerCase()
+
+const isProjectActive = (project = {}) => {
+  const status = getNormalizedProjectStatus(project)
+  return status === 'active' && !project?.closed
+}
+
+const shouldIncludeProjectValue = (project = {}) => {
+  const status = getNormalizedProjectStatus(project)
+  return !excludedValueStatuses.has(status)
 }
 
 export default function ProjectTable({
@@ -411,19 +427,21 @@ export default function ProjectTable({
 
   const statsItems = useMemo(() => {
     const nowTime = Date.now()
-    const activeRows = normalizedProjects.filter((project) => {
-      const status = String(project.status || '').toLowerCase()
-      return !status.includes('closed') && !status.includes('cancel') && !project.closed
-    })
-    const needsUpdateRows = normalizedProjects.filter((project) => {
+    const activeRows = normalizedProjects.filter(isProjectActive)
+    const valueRows = normalizedProjects.filter(shouldIncludeProjectValue)
+    const terminatedValue = sumBy(
+      normalizedProjects.filter((project) => getNormalizedProjectStatus(project) === 'terminated'),
+      (project) => project.value,
+    )
+    const needsUpdateRows = activeRows.filter((project) => {
       if (!project.update) return true
       const updateDate = new Date(project.update)
       if (Number.isNaN(updateDate.getTime())) return true
       return nowTime - updateDate.getTime() > 14 * 86400000
     })
-    const missingUpdateRows = normalizedProjects.filter((project) => !project.update)
+    const missingUpdateRows = activeRows.filter((project) => !project.update)
     const topLeader = getTopGroupBySum(
-      normalizedProjects,
+      valueRows,
       (project) => project.owner,
       (project) => project.value,
     )
@@ -432,7 +450,8 @@ export default function ProjectTable({
       {
         key: 'total-value',
         label: 'Total Value',
-        value: formatMoney(sumBy(normalizedProjects, (project) => project.value)),
+        value: formatMoney(sumBy(valueRows, (project) => project.value)),
+        sublabel: terminatedValue > 0 ? `Excludes terminated: ${formatMoney(terminatedValue)}` : '',
         tone: 'primary',
       },
       {
@@ -464,8 +483,11 @@ export default function ProjectTable({
     return 'info'
   }
 
-  const getActions = (project) =>
-    [
+  const getActions = (project) => {
+    const status = getNormalizedProjectStatus(project)
+    const isClosedProject = status === 'completed' || status === 'terminated' || status === 'closed'
+
+    return [
       project.project_type === 'Training'
         ? {
             key: 'jd14',
@@ -484,11 +506,19 @@ export default function ProjectTable({
         onClick: () => onGenerateDO(project),
       },
       {
-        key: 'close',
-        label: 'Close Project',
-        disabled: project.status === 'Closed',
-        tooltip: project.status === 'Closed' ? 'Project is already closed.' : undefined,
-        onClick: () => onClose(project),
+        key: 'complete',
+        label: 'Complete Project',
+        disabled: isClosedProject,
+        tooltip: isClosedProject ? 'Project is already closed.' : undefined,
+        onClick: () => onClose(project, 'Completed'),
+      },
+      {
+        key: 'terminate',
+        label: 'Terminate Project',
+        disabled: isClosedProject,
+        tooltip: isClosedProject ? 'Project is already closed.' : undefined,
+        danger: true,
+        onClick: () => onClose(project, 'Terminated'),
       },
       {
         key: 'delete',
@@ -498,6 +528,7 @@ export default function ProjectTable({
         onClick: () => onDelete(project),
       },
     ].filter(Boolean)
+  }
 
   const renderTextCell = (value) => (
     <DataTableTextCell value={value || emptyValue} maxWidth="180px" title="Project Detail" />

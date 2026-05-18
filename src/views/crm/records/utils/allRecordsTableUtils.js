@@ -28,10 +28,41 @@ export const getStatusTone = (status) => {
   return 'info'
 }
 
+export const getProjectStatusCounts = (record) => {
+  const counts = record?.projectStatusCounts || record?.project_status_counts || {}
+  return {
+    active: Number(counts.active || 0),
+    completed: Number(counts.completed || 0),
+    terminated: Number(counts.terminated || 0),
+    total: Number(counts.total || 0),
+  }
+}
+
+export const isAwardedWithAllProjectsTerminated = (record) => {
+  if (record?.status !== 'Awarded') return false
+  const counts = getProjectStatusCounts(record)
+  return counts.total > 0 && counts.terminated === counts.total
+}
+
+export const getProjectOutcomeLabel = (record) => {
+  if (record?.status !== 'Awarded') return ''
+  const counts = getProjectStatusCounts(record)
+  if (counts.total <= 0 || counts.terminated <= 0) return ''
+  if (counts.terminated === counts.total) return 'Projects Terminated'
+
+  const parts = []
+  if (counts.active > 0) parts.push(`Active ${counts.active}`)
+  if (counts.completed > 0) parts.push(`Completed ${counts.completed}`)
+  if (counts.terminated > 0) parts.push(`Terminated ${counts.terminated}`)
+  return parts.length ? `Projects: ${parts.join(' / ')}` : ''
+}
+
 export const getStatusLabel = (record) =>
-  record?.status === 'Awarded' && Number(record?.awardCount ?? 0) > 1
-    ? `Awarded (x${Number(record.awardCount)})`
-    : record?.status || '-'
+  isAwardedWithAllProjectsTerminated(record)
+    ? 'Awarded - Projects Terminated'
+    : record?.status === 'Awarded' && Number(record?.awardCount ?? 0) > 1
+      ? `Awarded (x${Number(record.awardCount)})`
+      : record?.status || '-'
 
 export const getInitialPageSize = () => {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 991.98px)').matches) {

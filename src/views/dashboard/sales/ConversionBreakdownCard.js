@@ -188,7 +188,7 @@ const ConversionBreakdownCard = ({
                       className="text-end"
                       style={{ borderBottom: '1px solid var(--app-surface-page)' }}
                     >
-                      Won / Total
+                      Realized / Total
                     </CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>

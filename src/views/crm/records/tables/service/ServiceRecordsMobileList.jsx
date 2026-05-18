@@ -3,7 +3,7 @@ import { CBadge, CButton, CFormSelect, CTooltip } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilCaretLeft, cilCaretRight } from '@coreui/icons'
 import { PAGE_SIZE_OPTIONS } from '../../config/allRecordsTableConfig'
-import { truncateFront } from '../../utils/allRecordsTableUtils'
+import { getProjectOutcomeLabel, truncateFront } from '../../utils/allRecordsTableUtils'
 import RecordActionMenu from '../shared/RecordActionMenu'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 
@@ -124,6 +124,9 @@ const ServiceRecordsMobileList = ({
                       >
                         {meta.statusLabel || record?.status || '-'}
                       </CBadge>
+                      {getProjectOutcomeLabel(record) && (
+                        <CBadge color="secondary">{getProjectOutcomeLabel(record)}</CBadge>
+                      )}
                     </div>
                     {isColumnVisible('subject') && (
                       <div className="records-mobile-subtitle mt-1">
