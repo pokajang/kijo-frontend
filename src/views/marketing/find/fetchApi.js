@@ -1,5 +1,26 @@
 import { API_BASE } from './constants'
 
+const buildGooglePlacesError = (
+  data = {},
+  fallback = 'Unable to fetch phone details right now.',
+) => {
+  const message = data?.message || data?.error || fallback
+  const googleStatus = data?.google_status || data?.raw?.status || ''
+  const googleMessage =
+    data?.google_error_message || data?.google_error || data?.raw?.error_message || ''
+  const parts = [message]
+
+  if (googleStatus && !String(message).includes(googleStatus)) {
+    parts.push(`Google Places status: ${googleStatus}.`)
+  }
+
+  if (googleMessage && !String(message).includes(googleMessage)) {
+    parts.push(`Google says: ${googleMessage}`)
+  }
+
+  return parts.filter(Boolean).join(' ')
+}
+
 export const fetchApi = {
   async loadGrid() {
     const res = await fetch(`${API_BASE}google/places/unregistered?_=${Date.now()}`, {
@@ -22,7 +43,7 @@ export const fetchApi = {
       credentials: 'include',
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data?.error || 'Failed to generate places.')
+    if (!res.ok) throw new Error(buildGooglePlacesError(data, 'Failed to generate places.'))
     return data
   },
 
@@ -35,7 +56,7 @@ export const fetchApi = {
     )
     const data = await res.json().catch(() => ({}))
     if (!res.ok || data?.success === false || data?.error) {
-      throw new Error(data?.message || data?.error || 'Unable to fetch phone details right now.')
+      throw new Error(buildGooglePlacesError(data))
     }
     return data
   },

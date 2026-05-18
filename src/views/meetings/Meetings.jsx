@@ -36,6 +36,8 @@ import {
 } from '../../components/filters'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { administrationModuleTabs } from '../../components/navigation/moduleNavConfigs'
+import { useAuth } from '../../auth/AuthProvider'
+import { extractRolesFromSession, hasAnyAllowedRole } from '../../utils/roles'
 import { ALERT_AUTO_HIDE_MS, API_BASE, MEETING_TYPE_OPTIONS } from './utils/meetingConstants'
 import { toDateOnlyValue } from './utils/meetingDateUtils'
 import { normalizeActionStatus, parseActionItems } from './utils/meetingActionItems'
@@ -45,6 +47,7 @@ import { filterMeetings, normalizeMeetingRows } from './utils/meetingsRecordUtil
 export default function Meetings() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
 
   const [meetings, setMeetings] = useState([])
   const [loadingMeetings, setLoadingMeetings] = useState(true)
@@ -55,7 +58,13 @@ export default function Meetings() {
   const [recordSearch, setRecordSearch] = useState('')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [staff, setStaff] = useState([])
-  const [sessionUser, setSessionUser] = useState({ staffId: 0 })
+  const sessionUser = useMemo(
+    () => ({
+      staffId: Number(user?.staff_id || 0),
+      roles: extractRolesFromSession({ user }),
+    }),
+    [user],
+  )
   const [actionModal, setActionModal] = useState({
     visible: false,
     meeting: null,
@@ -128,24 +137,6 @@ export default function Meetings() {
     }
   }
 
-  const fetchSessionUser = async () => {
-    try {
-      const res = await fetch(`${API_BASE}auth/session`, {
-        credentials: 'include',
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data?.status !== 'success') {
-        throw new Error('Failed to load session info.')
-      }
-      const user = data?.user || {}
-      setSessionUser({
-        staffId: Number(user?.staff_id || 0),
-      })
-    } catch {
-      setSessionUser({ staffId: 0 })
-    }
-  }
-
   useEffect(() => {
     const toastMessage = location.state?.toast
     if (toastMessage) {
@@ -154,7 +145,6 @@ export default function Meetings() {
     }
     fetchMeetings()
     fetchStaff()
-    fetchSessionUser()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -232,7 +222,20 @@ export default function Meetings() {
     })
   }
 
+  const isSystemAdmin = hasAnyAllowedRole(sessionUser.roles, ['System Admin'])
+  const getDeleteRestriction = (item) => {
+    if (isSystemAdmin) return ''
+
+    const currentStaffId = Number(sessionUser.staffId || 0)
+    const creatorId = Number(item?.created_by || 0)
+    if (currentStaffId > 0 && creatorId > 0 && currentStaffId === creatorId) return ''
+
+    return 'Delete disabled: this is not your meeting record.'
+  }
+
   const getActions = (item) => {
+    const deleteRestriction = getDeleteRestriction(item)
+
     if (item.isDraft) {
       return [
         {
@@ -245,6 +248,8 @@ export default function Meetings() {
           label: 'Discard Draft',
           danger: true,
           dividerBefore: true,
+          disabled: Boolean(deleteRestriction),
+          tooltip: deleteRestriction || undefined,
           onClick: () => handleDelete(item.id, true),
         },
       ]
@@ -278,6 +283,8 @@ export default function Meetings() {
         label: 'Delete',
         danger: true,
         dividerBefore: true,
+        disabled: Boolean(deleteRestriction),
+        tooltip: deleteRestriction || undefined,
         onClick: () => handleDelete(item.id),
       },
     ]

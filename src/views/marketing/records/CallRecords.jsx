@@ -12,6 +12,7 @@ import dialog from '../../../components/dialog/dialogService'
 import { getAdvancedFilterCount } from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { pipelineCrmModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { useAuth } from '../../../auth/AuthProvider'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
@@ -20,7 +21,6 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 
-const API_BASE = import.meta.env.VITE_API_BASE
 const YEAR_RE = /^\d{4}$/
 
 const extractYear = (dateValue) => {
@@ -50,6 +50,7 @@ const matchesPeriodRange = (dateValue, periodRange) => {
 
 const CallRecords = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const currentYear = String(new Date().getFullYear())
   const desktopToolsId = 'call-records-table-tools'
   const mobileToolsId = 'call-records-mobile-table-tools'
@@ -77,12 +78,14 @@ const CallRecords = () => {
   const [showEditContact, setShowEditContact] = useState(false)
   const [selectedContact, setSelectedContact] = useState(null)
 
-  // Current session user (used for delete-control visibility in UI)
-  const [currentUser, setCurrentUser] = useState(() => ({
-    id: null,
-    code: null,
-    roles: [],
-  }))
+  const currentUser = useMemo(
+    () => ({
+      id: user?.staff_id ?? null,
+      code: user?.name_code ?? null,
+      roles: Array.isArray(user?.roles) ? user.roles : [],
+    }),
+    [user],
+  )
 
   const yearOptions = useMemo(() => {
     const yearSet = new Set()
@@ -153,25 +156,6 @@ const CallRecords = () => {
     if (selectedYear === 'all' || yearOptions.includes(selectedYear)) return
     setSelectedYear('all')
   }, [yearOptions, selectedYear])
-
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const res = await fetch(`${API_BASE}auth/session`, { credentials: 'include' })
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok || data?.status !== 'success') return
-        const user = data?.user || {}
-        setCurrentUser({
-          id: user?.staff_id ?? null,
-          code: user?.name_code ?? null,
-          roles: Array.isArray(user?.roles) ? user.roles : [],
-        })
-      } catch {
-        // keep fallback anonymous values
-      }
-    }
-    loadSession()
-  }, [])
 
   //  Caller list (for dropdown)
   const availableCallers = useMemo(() => {

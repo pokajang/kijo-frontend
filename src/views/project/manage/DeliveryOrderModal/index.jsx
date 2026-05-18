@@ -15,8 +15,14 @@ import DeliveryDetails from './DeliveryDetails'
 import ProjectDetails from './ProjectDetails'
 import ItemsDetails from './ItemsDetails'
 import dialog from '../../../../components/dialog/dialogService'
+import {
+  confirmExistingCommercialDocs,
+  ProjectCommercialDocsNotice,
+  useProjectCommercialDocs,
+} from '../commercialDocsWarning'
 export default function DeliveryOrderModal({ visible, onClose, project }) {
   const navigate = useNavigate()
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
 
   // 1) State for each section
   const [clientDetails, setClientDetails] = useState({
@@ -181,7 +187,19 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
   }
 
   // 4) Submit handler (unchanged)
-  const handleGenerateDO = async (forceCreate = false) => {
+  const handleGenerateDO = async (forceCreate = false, skipExistingDocsConfirm = false) => {
+    if (!skipExistingDocsConfirm && !(await confirmExistingCommercialDocs(commercialDocs))) {
+      return
+    }
+
+    const hasExistingDo = commercialDocs.groups.some(
+      (group) =>
+        group.key === 'delivery-orders' && Array.isArray(group.items) && group.items.length,
+    )
+    if (!forceCreate && hasExistingDo) {
+      return handleGenerateDO(true, true)
+    }
+
     const payload = prepareDeliveryOrderData(forceCreate)
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE}delivery-orders`, {
@@ -195,7 +213,7 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
         const confirm = await dialog.confirm(
           `A DO already exists (DO: ${result.existing_do_number}). Create another?`,
         )
-        if (confirm) return handleGenerateDO(true)
+        if (confirm) return handleGenerateDO(true, true)
       } else if (result.status === 'success') {
         const goToList = await dialog.confirm(`DO ${result.do_number} created. Go to list?`, {
           title: 'Delivery Order Created',
@@ -230,6 +248,11 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
         <CModalTitle>Generate Delivery Order</CModalTitle>
       </CModalHeader>
       <CModalBody>
+        <ProjectCommercialDocsNotice
+          groups={commercialDocs.groups}
+          loading={commercialDocs.loading}
+          error={commercialDocs.error}
+        />
         <CCard>
           <DeliveryDetails
             client={clientDetails}
@@ -248,7 +271,7 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
         <CButton
           color="primary"
           size="sm"
-          disabled={items.length === 0}
+          disabled={items.length === 0 || commercialDocs.loading}
           onClick={() => handleGenerateDO(false)}
         >
           Generate DO

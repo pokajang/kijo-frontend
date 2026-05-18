@@ -4,6 +4,7 @@ import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow, CSpinner } 
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import dialog from '../../../components/dialog/dialogService'
 import { DataTableActionButtonGroup, DataTableStatusBadge } from '../../../components/datatable'
+import { useAuth } from '../../../auth/AuthProvider'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 
 const formatDate = (s) => {
@@ -16,12 +17,14 @@ export default function ViewProcedure() {
   const navigate = useNavigate()
   const { id: routeId } = useParams()
   const [params] = useSearchParams()
+  const { user } = useAuth()
   const id = routeId || params.get('id')
 
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [currentStaffId, setCurrentStaffId] = useState(null)
+  const currentStaffId =
+    user?.staff_id != null && Number.isFinite(Number(user.staff_id)) ? Number(user.staff_id) : null
 
   useEffect(() => {
     if (!id) {
@@ -56,23 +59,6 @@ export default function ViewProcedure() {
 
     fetchOne()
   }, [id])
-
-  useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}auth/session`, {
-          credentials: 'include',
-        })
-        const data = await res.json().catch(() => ({}))
-        if (res.ok && data?.status === 'success' && data?.user?.staff_id) {
-          setCurrentStaffId(Number(data.user.staff_id))
-        }
-      } catch {
-        // Backend enforces permissions.
-      }
-    }
-    fetchMe()
-  }, [])
 
   const pdfUrl = useMemo(() => {
     if (!item?.file_path) return ''

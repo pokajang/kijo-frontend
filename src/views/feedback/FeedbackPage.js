@@ -22,9 +22,11 @@ import {
 import dialog from '../../components/dialog/dialogService'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { supportModuleTabs } from '../../components/navigation/moduleNavConfigs'
+import { useAuth } from '../../auth/AuthProvider'
 
 const FeedbackPage = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [allFeedbacks, setAllFeedbacks] = useState([])
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
@@ -48,7 +50,7 @@ const FeedbackPage = () => {
     async function load() {
       setLoading(true)
       try {
-        const { isAdmin, staffId } = await fetchSessionInfo()
+        const { isAdmin, staffId } = await fetchSessionInfo(user)
         setIsAdmin(isAdmin)
         setCurrentStaffId(staffId)
 
@@ -62,7 +64,7 @@ const FeedbackPage = () => {
     }
 
     load()
-  }, [])
+  }, [user])
 
   const isOwnerFeedback = (fb) => {
     const ownerId = Number(fb?.reported_by_id)

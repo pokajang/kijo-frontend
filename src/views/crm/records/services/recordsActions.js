@@ -28,6 +28,107 @@ export const endpointsByService = {
   'equipment-tab': quoteRecordRoutes('equipment'),
 }
 
+const safeArray = (value) => (Array.isArray(value) ? value : [])
+
+const buildRelatedRecordGroups = (related = {}) => {
+  const groups = []
+  const projects = safeArray(related.projects)
+  const invoices = safeArray(related.invoices)
+  const deliveryOrders = safeArray(related.delivery_orders)
+  const jd14 = safeArray(related.jd14)
+  const vendorLoas = safeArray(related.vendor_loas)
+  const vendorPayments = safeArray(related.vendor_payments)
+
+  if (projects.length) {
+    groups.push({
+      key: 'projects',
+      label: 'Linked Projects',
+      items: projects.map((project) => ({
+        key: `project-${project.id}`,
+        label: `Project #${project.id}: ${project.project_name || project.project_type || '-'}`,
+        secondary: project.project_type || undefined,
+        href: `/project/manage/${encodeURIComponent(project.id)}`,
+      })),
+    })
+  }
+
+  if (invoices.length) {
+    groups.push({
+      key: 'invoices',
+      label: 'Invoices',
+      items: invoices.map((invoice) => ({
+        key: `invoice-${invoice.id}`,
+        label: invoice.invoice_ref_no || `Invoice #${invoice.id}`,
+        secondary: invoice.receipt_no ? `Receipt: ${invoice.receipt_no}` : undefined,
+        href: `/commercial/invoice/${encodeURIComponent(invoice.id)}`,
+      })),
+    })
+  }
+
+  if (deliveryOrders.length) {
+    groups.push({
+      key: 'delivery-orders',
+      label: 'Delivery Orders',
+      items: deliveryOrders.map((deliveryOrder) => ({
+        key: `do-${deliveryOrder.id}`,
+        label: deliveryOrder.do_number || `DO #${deliveryOrder.id}`,
+        href: `/commercial/delivery-order/${encodeURIComponent(deliveryOrder.id)}`,
+      })),
+    })
+  }
+
+  if (jd14.length) {
+    groups.push({
+      key: 'jd14',
+      label: 'JD14 Forms',
+      items: jd14.map((form) => ({
+        key: `jd14-${form.id}`,
+        label: form.approval_no || `JD14 #${form.id}`,
+        href: `/commercial/jd14/${encodeURIComponent(form.id)}`,
+      })),
+    })
+  }
+
+  if (vendorLoas.length) {
+    groups.push({
+      key: 'vendor-loas',
+      label: 'Vendor LOAs',
+      items: vendorLoas.map((loa) => ({
+        key: `loa-${loa.id}`,
+        label: loa.loa_ref_no || `Vendor LOA #${loa.id}`,
+        secondary: loa.vendor_name || undefined,
+        href: `/commercial/vendor-loa/${encodeURIComponent(loa.id)}`,
+      })),
+    })
+  }
+
+  if (vendorPayments.length) {
+    groups.push({
+      key: 'vendor-payments',
+      label: 'Vendor Payments',
+      items: vendorPayments.map((payment) => ({
+        key: `vendor-payment-${payment.id}`,
+        label: `Vendor payment #${payment.id}${payment.status ? ` (${payment.status})` : ''}`,
+        secondary: payment.loa_ref_no
+          ? `LOA: ${payment.loa_ref_no}`
+          : payment.payment_type || payment.payment_context || undefined,
+        href: payment.vendor_loa_id
+          ? `/commercial/vendor-loa/${encodeURIComponent(payment.vendor_loa_id)}`
+          : undefined,
+      })),
+    })
+  }
+
+  return groups
+}
+
+const hasUnAwardBlockers = (related = {}) =>
+  safeArray(related.invoices).length > 0 ||
+  safeArray(related.delivery_orders).length > 0 ||
+  safeArray(related.jd14).length > 0 ||
+  safeArray(related.vendor_loas).length > 0 ||
+  safeArray(related.vendor_payments).length > 0
+
 export const createHandlers = ({
   serviceKey,
   fetchQuotes,
@@ -54,6 +155,48 @@ export const createHandlers = ({
     }
     const parsed = new Date(dateValue)
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0]
+  }
+
+  const showUnAwardBlockedNotice = async (id, message) => {
+    let groups = []
+    if (urls.syncClientDiscover) {
+      try {
+        const relatedPayload = await fetchJsonCompat(urls.syncClientDiscover(id), {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        if (isSuccess(relatedPayload)) {
+          groups = buildRelatedRecordGroups(relatedPayload.data || {})
+        }
+      } catch (relatedErr) {
+        console.error('Failed to discover un-award blockers:', relatedErr)
+      }
+    }
+
+    if (!groups.length) {
+      return dialog.alert(message || 'Unable to un-award this quotation.')
+    }
+
+    return dialog.alert(
+      'This quote cannot be un-awarded because its linked project already has commercial records.\n\nIf this awarded job did not materialise, terminate the project instead of un-awarding the quote.',
+      {
+        title: 'Cannot Un-Award Quote',
+        alert: {
+          color: 'warning',
+          message: message || 'Linked commercial records must be reviewed first.',
+        },
+        relatedRecords: { groups },
+      },
+    )
+  }
+
+  const fetchRelatedDocsForQuote = async (id) => {
+    if (!urls.syncClientDiscover) return null
+    const relatedPayload = await fetchJsonCompat(urls.syncClientDiscover(id), {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    return isSuccess(relatedPayload) ? relatedPayload.data || {} : null
   }
 
   return {
@@ -214,7 +357,7 @@ export const createHandlers = ({
         }
       } catch (err) {
         console.error('Re-award error:', err)
-        dialog.alert('An error occurred while re-awarding.')
+        dialog.alert(err?.message || 'An error occurred while re-awarding.')
         return false
       }
     },
@@ -225,11 +368,41 @@ export const createHandlers = ({
         dialog.alert('Un-Award is not available for this service yet.')
         return
       }
-      if (
-        !(await dialog.confirm(
-          'Are you sure you want to Un-Award this quotation?\n\nImportant: If there are multiple awarded projects for this quotation, only the most recent one will be un-awarded.',
-        ))
-      ) {
+
+      let relatedDocs = null
+      let relatedGroups = []
+      let blockedByRelatedDocs = false
+      try {
+        relatedDocs = await fetchRelatedDocsForQuote(id)
+        relatedGroups = buildRelatedRecordGroups(relatedDocs || {})
+        blockedByRelatedDocs = hasUnAwardBlockers(relatedDocs || {})
+      } catch (err) {
+        console.error('Failed to discover un-award related docs:', err)
+      }
+
+      const confirmMessage = blockedByRelatedDocs
+        ? 'This quote cannot be un-awarded because its linked project already has commercial records.\n\nIf this awarded job did not materialise, terminate the project instead of un-awarding the quote.'
+        : 'Are you sure you want to Un-Award this quotation?\n\nImportant: If there are multiple awarded projects for this quotation, only the most recent one will be un-awarded.'
+
+      const confirmed = await dialog.confirm(confirmMessage, {
+        title: blockedByRelatedDocs ? 'Cannot Un-Award Quote' : 'Confirmation',
+        confirmText: blockedByRelatedDocs ? 'Un-Award Blocked' : 'Confirm',
+        cancelText: blockedByRelatedDocs ? 'Close' : 'Cancel',
+        confirmDisabled: blockedByRelatedDocs,
+        confirmDisabledReason: blockedByRelatedDocs
+          ? 'Review or remove linked commercial records before un-awarding.'
+          : undefined,
+        confirmColor: blockedByRelatedDocs ? 'secondary' : 'primary',
+        alert: blockedByRelatedDocs
+          ? {
+              color: 'warning',
+              message: 'Review the linked records below before taking the next action.',
+            }
+          : undefined,
+        relatedRecords: relatedGroups.length ? { groups: relatedGroups } : undefined,
+      })
+
+      if (!confirmed || blockedByRelatedDocs) {
         return
       }
 
@@ -248,7 +421,7 @@ export const createHandlers = ({
         }
       } catch (err) {
         console.error('Un-Award error:', err)
-        dialog.alert('An error occurred while Un-Awarding.')
+        await showUnAwardBlockedNotice(id, err?.message || 'An error occurred while Un-Awarding.')
       }
     },
 
@@ -503,7 +676,7 @@ export const createHandlers = ({
         }
       } catch (err) {
         console.error('Sync client details error:', err)
-        dialog.alert('An error occurred while syncing client details.')
+        dialog.alert(err?.message || 'An error occurred while syncing client details.')
       }
     },
   }

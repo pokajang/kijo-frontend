@@ -109,6 +109,16 @@ export const getProjectFinanceData = (projectId, { signal } = {}) =>
     signal,
   }).then(normalizeProjectFinance)
 
+export const getProjectCrmDetails = (projectId, { signal } = {}) =>
+  requestJson(`projects/${enc(projectId)}/crm`, {
+    signal,
+  })
+
+export const getProjectCommercialDocs = (projectId, { signal } = {}) =>
+  requestJson(`projects/${enc(projectId)}/commercial-docs`, {
+    signal,
+  })
+
 export const reloadProjectPoNumber = (projectId) =>
   requestJson(`projects/${enc(projectId)}/reload-po`, {
     method: 'POST',

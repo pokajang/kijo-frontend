@@ -1,6 +1,7 @@
 const API_EVENT = 'kijo:api'
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 const SILENT_PATHS = ['auth/session', 'auth/logout']
+const AUTH_LOGIN_PATH = 'auth/login'
 
 let activeRequests = 0
 let unauthorizedHandler = null
@@ -74,6 +75,40 @@ const normalizeMethod = (init = {}) => String(init?.method || 'GET').toUpperCase
 
 const isUnsafeMethod = (init = {}) => UNSAFE_METHODS.has(normalizeMethod(init))
 
+const getApiPath = (input) => {
+  if (typeof window === 'undefined') return ''
+
+  try {
+    const raw = typeof input === 'string' ? input : input?.url
+    const url = new URL(raw, window.location.origin)
+    const base = new URL(API_BASE, window.location.origin)
+
+    if (url.origin !== base.origin) return ''
+    if (!url.pathname.startsWith(base.pathname)) return ''
+
+    return url.pathname.slice(base.pathname.length).replace(/^\/+/, '')
+  } catch {
+    return ''
+  }
+}
+
+const isApiRequest = (input) => getApiPath(input) !== ''
+
+const withApiDefaults = (input, init = {}) => {
+  if (!isApiRequest(input)) return init
+
+  const headers = new Headers(init.headers || {})
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json')
+  }
+
+  return {
+    ...init,
+    credentials: init.credentials ?? 'include',
+    headers,
+  }
+}
+
 const withCsrfHeader = (init = {}, { force = false } = {}) => {
   if (!csrfToken || !isUnsafeMethod(init)) return init
 
@@ -138,10 +173,21 @@ export const apiClientEvents = {
 
 export async function apiFetch(input, init = {}) {
   const originalFetch = window.__kijoOriginalFetch || window.fetch
-  let requestInit = withCsrfHeader(init)
+  let requestInit = withApiDefaults(input, init)
 
   setBusyDelta(1)
   try {
+    const apiPath = getApiPath(input)
+    if (
+      isUnsafeMethod(requestInit) &&
+      !csrfToken &&
+      apiPath &&
+      !apiPath.startsWith(AUTH_LOGIN_PATH)
+    ) {
+      await refreshCsrfToken(originalFetch)
+    }
+
+    requestInit = withCsrfHeader(requestInit)
     let response = await originalFetch(input, requestInit)
 
     await captureCsrfToken(response)
@@ -188,8 +234,16 @@ export async function apiJson(input, init = {}) {
 }
 
 export function installApiClient({ onUnauthorized } = {}) {
-  if (typeof window === 'undefined' || window.__kijoApiClientInstalled) {
+  if (typeof window === 'undefined') {
     return () => {}
+  }
+
+  unauthorizedHandler = onUnauthorized
+
+  if (window.__kijoApiClientInstalled) {
+    return () => {
+      unauthorizedHandler = null
+    }
   }
 
   const originalFetch = window.fetch
@@ -197,7 +251,6 @@ export function installApiClient({ onUnauthorized } = {}) {
 
   window.__kijoOriginalFetch = originalFetch
   window.__kijoApiClientInstalled = true
-  unauthorizedHandler = onUnauthorized
 
   window.fetch = async (input, init = {}) => {
     return apiFetch(input, init)

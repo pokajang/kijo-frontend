@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CButton,
   CAlert,
@@ -17,6 +18,7 @@ import {
 import { registerDialogImpl } from './dialogService'
 
 const AppDialogProvider = ({ children }) => {
+  const navigate = useNavigate()
   const queueRef = useRef([])
   const currentRef = useRef(null)
 
@@ -173,11 +175,19 @@ const AppDialogProvider = ({ children }) => {
   const checklistGroups = Array.isArray(currentOptions.checklist?.groups)
     ? currentOptions.checklist.groups
     : []
+  const relatedRecordGroups = Array.isArray(currentOptions.relatedRecords?.groups)
+    ? currentOptions.relatedRecords.groups
+    : []
   const showChecklist = currentType === 'confirm' && checklistGroups.length > 0
+  const showRelatedRecords = relatedRecordGroups.some(
+    (group) => Array.isArray(group?.items) && group.items.length > 0,
+  )
   const checklistLabel = currentOptions.checklist?.label || 'Select documents'
   const acknowledgeLabel = currentOptions.acknowledge?.label || ''
   const acknowledgeRequired = Boolean(currentOptions.acknowledge?.required)
-  const disableConfirm = currentType === 'confirm' && acknowledgeRequired && !ackChecked
+  const disableConfirm =
+    currentType === 'confirm' &&
+    ((acknowledgeRequired && !ackChecked) || Boolean(currentOptions.confirmDisabled))
   const hasAsyncConfirm =
     currentType === 'confirm' && typeof currentOptions.onConfirm === 'function'
   const asyncActionActive = asyncAction.status === 'loading' || asyncAction.status === 'success'
@@ -236,6 +246,30 @@ const AppDialogProvider = ({ children }) => {
     }
   }, [closeWithResult, serializeConfirmPayload])
 
+  const openRelatedRecord = useCallback(
+    (event, href) => {
+      if (!href) return
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return
+      }
+      event.preventDefault()
+      closeWithResult(undefined)
+      if (String(href).startsWith('/')) {
+        navigate(href)
+        return
+      }
+      window.location.assign(href)
+    },
+    [closeWithResult, navigate],
+  )
+
   return (
     <>
       {children}
@@ -276,6 +310,40 @@ const AppDialogProvider = ({ children }) => {
                 <span>{asyncAction.message}</span>
               </div>
             </CAlert>
+          ) : null}
+
+          {showRelatedRecords ? (
+            <div className="mt-3 d-flex flex-column gap-2">
+              {relatedRecordGroups.map((group) => {
+                const items = Array.isArray(group.items) ? group.items : []
+                if (!items.length) return null
+                return (
+                  <div key={group.key || group.label} className="small text-break">
+                    <span className="fw-semibold">{group.label}: </span>
+                    {items.map((item, index) => (
+                      <React.Fragment
+                        key={`${group.key || group.label}-${item.key || item.href || item.label}`}
+                      >
+                        {index > 0 ? <span>, </span> : null}
+                        {item.href ? (
+                          <a
+                            href={item.href}
+                            onClick={(event) => openRelatedRecord(event, item.href)}
+                          >
+                            {item.label || item.href}
+                          </a>
+                        ) : (
+                          <span>{item.label || '-'}</span>
+                        )}
+                        {item.secondary ? (
+                          <span className="text-muted"> - {item.secondary}</span>
+                        ) : null}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
           ) : null}
 
           {showSelect && selectMode === 'card' ? (
@@ -463,6 +531,7 @@ const AppDialogProvider = ({ children }) => {
                 color={confirmColor}
                 disabled={disableConfirm || asyncActionActive}
                 onClick={submitConfirm}
+                title={currentOptions.confirmDisabledReason || undefined}
               >
                 {hasAsyncConfirm && asyncAction.status === 'loading' ? 'Working...' : confirmText}
               </CButton>

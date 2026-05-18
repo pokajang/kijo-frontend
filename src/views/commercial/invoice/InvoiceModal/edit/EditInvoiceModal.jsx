@@ -102,6 +102,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
     const controller = new AbortController()
     fetch(`${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(projectId)}`, {
       signal: controller.signal,
+      credentials: 'include',
     })
       .then((res) => res.json())
       .then((result) => {

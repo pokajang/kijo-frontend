@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -13,8 +13,14 @@ import {
 import EmployerDetails from './EmployerDetails'
 import TrainingDetails from './TrainingDetails'
 import dialog from '../../../../components/dialog/dialogService'
+import {
+  confirmExistingCommercialDocs,
+  ProjectCommercialDocsNotice,
+  useProjectCommercialDocs,
+} from '../commercialDocsWarning'
 const Jd14Modal = ({ visible, onClose, project }) => {
   const navigate = useNavigate()
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
 
   // — Employer state (starts empty, then syncs from `project`) —
   const [employerDetails, setEmployerDetails] = useState({
@@ -44,8 +50,10 @@ const Jd14Modal = ({ visible, onClose, project }) => {
     setEmployerCode(employerDetails.approvalNo.split('_')[0] || '')
   }, [employerDetails.approvalNo])
 
-  const handleEmployerChange = (field) => (e) =>
-    setEmployerDetails((prev) => ({ ...prev, [field]: e.target.value }))
+  const handleEmployerChange = useCallback(
+    (field) => (e) => setEmployerDetails((prev) => ({ ...prev, [field]: e.target.value })),
+    [],
+  )
 
   // — Training state (starts empty/defaults, adjust sync as needed) —
   const [trainingDetails, setTrainingDetails] = useState({
@@ -73,8 +81,15 @@ const Jd14Modal = ({ visible, onClose, project }) => {
     }
   }, [project])
 
-  const handleTrainingChange = (field) => (e) =>
-    setTrainingDetails((prev) => ({ ...prev, [field]: e.target.value }))
+  const handleTrainingChange = useCallback(
+    (field) => (e) =>
+      setTrainingDetails((prev) => {
+        const nextValue = e.target.value
+        if (prev[field] === nextValue) return prev
+        return { ...prev, [field]: nextValue }
+      }),
+    [],
+  )
 
   // Build payload for backend
   const prepareJd14Data = () => ({
@@ -95,6 +110,10 @@ const Jd14Modal = ({ visible, onClose, project }) => {
   })
 
   const handleSubmitJd14 = async () => {
+    if (!(await confirmExistingCommercialDocs(commercialDocs))) {
+      return
+    }
+
     const payload = prepareJd14Data()
 
     try {
@@ -140,6 +159,11 @@ const Jd14Modal = ({ visible, onClose, project }) => {
         <CModalTitle>Generate JD14</CModalTitle>
       </CModalHeader>
       <CModalBody>
+        <ProjectCommercialDocsNotice
+          groups={commercialDocs.groups}
+          loading={commercialDocs.loading}
+          error={commercialDocs.error}
+        />
         <CCard>
           <EmployerDetails
             employerDetails={employerDetails}
@@ -157,7 +181,12 @@ const Jd14Modal = ({ visible, onClose, project }) => {
         <CButton color="secondary" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" size="sm" onClick={handleSubmitJd14}>
+        <CButton
+          color="primary"
+          size="sm"
+          onClick={handleSubmitJd14}
+          disabled={commercialDocs.loading}
+        >
           Generate JD14
         </CButton>
       </CModalFooter>

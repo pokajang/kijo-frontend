@@ -53,10 +53,12 @@ import {
 } from './utils/meetingDraftUtils'
 import { formatChangedFieldLabels } from './utils/meetingHistoryUtils'
 import { hasMeetingVerificationRole, normalizeApprovalStatus } from './utils/meetingApprovalUtils'
+import { useAuth } from '../../auth/AuthProvider'
 
 export default function MeetingMinuteForm() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { id: routeMeetingId } = useParams()
   const searchParams = new URLSearchParams(location.search || '')
   const rawMeetingId = routeMeetingId || searchParams.get('id') || ''
@@ -80,8 +82,13 @@ export default function MeetingMinuteForm() {
   const [approvalSubmitting, setApprovalSubmitting] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [actionStatusUpdatingKey, setActionStatusUpdatingKey] = useState('')
-  const [sessionRoles, setSessionRoles] = useState([])
-  const [sessionStaffId, setSessionStaffId] = useState(0)
+  const rawSessionRoles = user?.roles
+  const sessionRoles = Array.isArray(rawSessionRoles)
+    ? rawSessionRoles
+    : rawSessionRoles
+      ? [rawSessionRoles]
+      : []
+  const sessionStaffId = Number(user?.staff_id || 0)
   const [alert, setAlert] = useState({ color: 'info', text: '' })
   const [validationErrors, setValidationErrors] = useState({})
   const [draftKey, setDraftKey] = useState('')
@@ -159,25 +166,6 @@ export default function MeetingMinuteForm() {
       setStaff([])
     } finally {
       setLoadingStaff(false)
-    }
-  }
-
-  const fetchSessionUser = async () => {
-    try {
-      const res = await fetch(`${API_BASE}auth/session`, {
-        credentials: 'include',
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data?.status !== 'success') {
-        throw new Error(data?.message || 'Failed to load session info.')
-      }
-      const rawRoles = data?.user?.roles
-      const roles = Array.isArray(rawRoles) ? rawRoles : rawRoles ? [rawRoles] : []
-      setSessionRoles(roles)
-      setSessionStaffId(Number(data?.user?.staff_id || 0))
-    } catch {
-      setSessionRoles([])
-      setSessionStaffId(0)
     }
   }
 
@@ -260,7 +248,6 @@ export default function MeetingMinuteForm() {
 
   useEffect(() => {
     fetchStaff()
-    fetchSessionUser()
   }, [])
 
   useEffect(() => {

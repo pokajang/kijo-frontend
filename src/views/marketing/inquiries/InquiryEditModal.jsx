@@ -103,8 +103,12 @@ const InquiryEditModal = ({ visible, inquiry, onClose, onSaved }) => {
     const fetchDuplicateDatasets = async () => {
       try {
         const [companyRes, picRes] = await Promise.all([
-          fetch(`${import.meta.env.VITE_API_BASE}client-companies/basic`),
-          fetch(`${import.meta.env.VITE_API_BASE}client-pics`),
+          fetch(`${import.meta.env.VITE_API_BASE}client-companies/basic`, {
+            credentials: 'include',
+          }),
+          fetch(`${import.meta.env.VITE_API_BASE}client-pics`, {
+            credentials: 'include',
+          }),
         ])
         const [companyResult, picResult] = await Promise.all([companyRes.json(), picRes.json()])
         if (companyResult.status === 'success') setClientDatabase(companyResult.data || [])

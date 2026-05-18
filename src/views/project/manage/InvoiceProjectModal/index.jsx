@@ -14,15 +14,20 @@ import {
 import InvoiceFormShell from '../../../../shared/invoice/InvoiceFormShell'
 
 import {
-  useTrainingQuoteData,
-  useEquipmentQuoteData,
-  useManpowerQuoteData,
-  useSpecialQuoteData,
-  useHygieneQuoteData,
-  useJD14ApprovalNo,
+  useTrainingQuoteData as fetchTrainingQuoteData,
+  useEquipmentQuoteData as fetchEquipmentQuoteData,
+  useManpowerQuoteData as fetchManpowerQuoteData,
+  useSpecialQuoteData as fetchSpecialQuoteData,
+  useHygieneQuoteData as fetchHygieneQuoteData,
+  useJD14ApprovalNo as fetchJD14ApprovalNo,
   createInvoiceForType,
 } from './actionHandlers'
 import dialog from '../../../../components/dialog/dialogService'
+import {
+  confirmExistingCommercialDocs,
+  ProjectCommercialDocsNotice,
+  useProjectCommercialDocs,
+} from '../commercialDocsWarning'
 
 const getLocalISODate = () => {
   const now = new Date()
@@ -54,6 +59,7 @@ const fetchersByType = {
 
 export default function InvoiceProjectModal({ visible, project, onClose, onSubmit }) {
   const navigate = useNavigate()
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
   const fetchedRef = useRef(false)
   const draftAppliedRef = useRef(false)
   const isSupportedType = Boolean(fetchersByType[project?.project_type])
@@ -330,6 +336,10 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
       return
     }
 
+    if (!(await confirmExistingCommercialDocs(commercialDocs))) {
+      return
+    }
+
     const result = await createInvoiceForType(project.project_type, {
       project,
       quoteDetails,
@@ -375,6 +385,11 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
         <CModalTitle>Generate Invoice</CModalTitle>
       </CModalHeader>
       <CModalBody>
+        <ProjectCommercialDocsNotice
+          groups={commercialDocs.groups}
+          loading={commercialDocs.loading}
+          error={commercialDocs.error}
+        />
         <CCard>
           <InvoiceFormShell
             mode="create"
@@ -414,7 +429,11 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
           size="sm"
           onClick={handleGenerateInvoice}
           disabled={
-            !project || !isSupportedType || (requiresQuote && !quoteDetails) || missingTrainingDates
+            !project ||
+            !isSupportedType ||
+            (requiresQuote && !quoteDetails) ||
+            missingTrainingDates ||
+            commercialDocs.loading
           }
         >
           Create Invoice

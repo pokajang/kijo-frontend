@@ -463,11 +463,13 @@ export const useRecordsController = () => {
     records: scopedQuotes,
     loading: quotesLoading,
     activeTab,
-    onOpen: (record) => {
-      const targetTab = record?.serviceTab || (!isAggregateTab ? activeTab : null)
-      if (!targetTab) return
-      navigate(getRecordListPath(targetTab), { replace: true })
-    },
+    onOpen: isAggregateTab
+      ? (record) => {
+          const targetTab = record?.serviceTab || null
+          if (!targetTab) return
+          navigate(getRecordListPath(targetTab), { replace: true })
+        }
+      : undefined,
     onView: navigateToRecordDetails,
     onEdit: isAggregateTab
       ? (record) => runByRecordService(record, 'handleEdit', record)

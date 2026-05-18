@@ -1,6 +1,7 @@
 // src/components/ProtectedRoute.jsx
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from './auth/AuthProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from './utils/roles'
 
 /**
@@ -15,46 +16,21 @@ import { extractRolesFromSession, hasAnyAllowedRole } from './utils/roles'
  */
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const location = useLocation()
-  const [state, setState] = useState({
-    loading: true,
-    isLoggedIn: false,
-    roles: [],
-  })
+  const { user, status, isAuthenticated } = useAuth()
+  const roles = extractRolesFromSession({ user })
 
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE}auth/session`, {
-      credentials: 'include',
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === 'success') {
-          const roles = extractRolesFromSession(data)
-          setState({ loading: false, isLoggedIn: true, roles })
-        } else {
-          setState({ loading: false, isLoggedIn: false, roles: [] })
-        }
-      })
-      .catch(() => {
-        setState({ loading: false, isLoggedIn: false, roles: [] })
-      })
-  }, [])
-
-  if (state.loading) {
-    // Or return a spinner if you have one
+  if (status === 'loading') {
     return null
   }
 
-  if (!state.isLoggedIn) {
-    // Not logged in → send to login, preserve where they wanted to go
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  if (Array.isArray(allowedRoles) && !hasAnyAllowedRole(state.roles, allowedRoles)) {
-    // Logged in but lacks the role → send to dashboard
+  if (Array.isArray(allowedRoles) && !hasAnyAllowedRole(roles, allowedRoles)) {
     return <Navigate to="/dashboard" replace />
   }
 
-  // All good → render the protected component(s)
   return <>{children}</>
 }
 

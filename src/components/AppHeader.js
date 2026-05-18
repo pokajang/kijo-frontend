@@ -32,6 +32,7 @@ import {
   cilSun,
 } from '@coreui/icons'
 import { AppHeaderDropdown } from './header/index'
+import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
 import PersonalSignature from './signature/PersonalSignature'
@@ -62,7 +63,7 @@ const AppHeader = () => {
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
-  const [sessionUser, setSessionUser] = useState(null)
+  const { user: sessionUser } = useAuth()
   const [ticketModalVisible, setTicketModalVisible] = useState(false)
   const [ticketMessage, setTicketMessage] = useState('')
   const [ticketSubmitting, setTicketSubmitting] = useState(false)
@@ -78,17 +79,6 @@ const AppHeader = () => {
     }
     document.addEventListener('scroll', onScroll)
     return () => document.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE}auth/session`, {
-      credentials: 'include',
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setSessionUser(data.status === 'success' ? data.user : null)
-      })
-      .catch(() => setSessionUser(null))
   }, [])
 
   const loadSignatureStatus = React.useCallback(

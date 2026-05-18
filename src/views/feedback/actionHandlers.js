@@ -4,20 +4,28 @@ import { fetchAllPagedRecords } from '../../utils/detailPages'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
+const getSessionInfoFromUser = (user) => {
+  const rawStaffId = Number(user?.staff_id)
+  return {
+    isAdmin: Array.isArray(user?.roles) && user.roles.includes('System Admin'),
+    staffId: Number.isFinite(rawStaffId) ? rawStaffId : null,
+  }
+}
+
 /**
  * Fetch session info to determine if current user is a System Admin.
  * @returns {Promise<{ isAdmin: boolean, staffId: number | null }>}
  */
-export async function fetchSessionInfo() {
+export async function fetchSessionInfo(sessionUser = null) {
+  if (sessionUser) {
+    return getSessionInfoFromUser(sessionUser)
+  }
+
   const res = await fetch(`${API_BASE}auth/session`, {
     credentials: 'include',
   })
   const data = await res.json()
-  const rawStaffId = Number(data.user?.staff_id)
-  return {
-    isAdmin: Array.isArray(data.user?.roles) && data.user.roles.includes('System Admin'),
-    staffId: Number.isFinite(rawStaffId) ? rawStaffId : null,
-  }
+  return getSessionInfoFromUser(data.user)
 }
 
 /**

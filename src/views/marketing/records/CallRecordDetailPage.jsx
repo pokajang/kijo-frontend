@@ -7,8 +7,7 @@ import AddCallModal from './AddCallModal'
 import EditContactModal from './EditContactModal'
 import CallStackCell from './CallStackCell'
 import { fetchApi } from './fetchApi'
-
-const API_BASE = import.meta.env.VITE_API_BASE
+import { useAuth } from '../../../auth/AuthProvider'
 
 const valueOrDash = (value) => (String(value || '').trim() ? value : '-')
 
@@ -24,6 +23,7 @@ const DetailField = ({ label, value, children }) => (
 const CallRecordDetailPage = () => {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { user } = useAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -31,11 +31,14 @@ const CallRecordDetailPage = () => {
   const [info, setInfo] = useState('')
   const [showAddCall, setShowAddCall] = useState(false)
   const [showEditContact, setShowEditContact] = useState(false)
-  const [currentUser, setCurrentUser] = useState(() => ({
-    id: null,
-    code: null,
-    roles: [],
-  }))
+  const currentUser = useMemo(
+    () => ({
+      id: user?.staff_id ?? null,
+      code: user?.name_code ?? null,
+      roles: Array.isArray(user?.roles) ? user.roles : [],
+    }),
+    [user],
+  )
 
   const loadContacts = useCallback(async () => {
     setLoading(true)
@@ -78,25 +81,6 @@ const CallRecordDetailPage = () => {
   useEffect(() => {
     loadContacts()
   }, [loadContacts])
-
-  useEffect(() => {
-    const loadSession = async () => {
-      try {
-        const res = await fetch(`${API_BASE}auth/session`)
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok || data?.status !== 'success') return
-        const user = data?.user || {}
-        setCurrentUser({
-          id: user?.staff_id ?? null,
-          code: user?.name_code ?? null,
-          roles: Array.isArray(user?.roles) ? user.roles : [],
-        })
-      } catch {
-        // keep anonymous defaults
-      }
-    }
-    loadSession()
-  }, [])
 
   const contact = useMemo(
     () => contacts.find((row) => String(row?.id) === String(id)) || null,

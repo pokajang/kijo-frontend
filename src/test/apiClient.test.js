@@ -37,6 +37,24 @@ describe('apiClient', () => {
     )
   })
 
+  it('defaults API requests to include credentials and accept JSON', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'success' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const apiBase = import.meta.env.VITE_API_BASE || '/'
+    await apiFetch(`${apiBase}client-pics`)
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.credentials).toBe('include')
+    expect(init.headers).toBeInstanceOf(Headers)
+    expect(init.headers.get('Accept')).toBe('application/json')
+  })
+
   it('throws API messages from JSON error responses', async () => {
     vi.stubGlobal(
       'fetch',
@@ -85,6 +103,39 @@ describe('apiClient', () => {
     expect(init.headers).toBeInstanceOf(Headers)
     expect(init.headers.get('X-CSRF-TOKEN')).toBe('csrf-123')
     expect(init.headers.get('Content-Type')).toBe('application/json')
+  })
+
+  it('refreshes csrf before unsafe API requests when no token is cached', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'success', csrf_token: 'fresh-csrf' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'success' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const apiBase = import.meta.env.VITE_API_BASE || '/'
+    await apiFetch(`${apiBase}feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedback: 'Test' }),
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0][0]).toBe(`${apiBase}auth/session`)
+
+    const [, writeInit] = fetchMock.mock.calls[1]
+    expect(writeInit.credentials).toBe('include')
+    expect(writeInit.headers.get('X-CSRF-TOKEN')).toBe('fresh-csrf')
   })
 
   it('refreshes csrf token and retries unsafe requests once after a 419', async () => {

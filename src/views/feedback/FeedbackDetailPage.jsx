@@ -23,6 +23,7 @@ import {
   fetchSessionInfo,
   updateFeedback,
 } from './actionHandlers'
+import { useAuth } from '../../auth/AuthProvider'
 
 const ADMIN_STATUS_OPTIONS = ['Pending', 'Fixed Pending Pushed', 'In Progress', 'Fixed Completed']
 
@@ -55,6 +56,7 @@ const FeedbackDetailPage = () => {
   const { feedbackId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
   const returnTo = location.state?.returnTo || '/support/feedback'
   const [feedback, setFeedback] = useState(location.state?.record || null)
   const [loading, setLoading] = useState(!location.state?.record)
@@ -81,7 +83,7 @@ const FeedbackDetailPage = () => {
     setError('')
     try {
       const [{ isAdmin: admin, staffId }, records] = await Promise.all([
-        fetchSessionInfo(),
+        fetchSessionInfo(user),
         fetchAllFeedbacks(),
       ])
       setIsAdmin(admin)
@@ -94,7 +96,7 @@ const FeedbackDetailPage = () => {
     } finally {
       setLoading(false)
     }
-  }, [feedbackId])
+  }, [feedbackId, user])
 
   useEffect(() => {
     loadFeedback()

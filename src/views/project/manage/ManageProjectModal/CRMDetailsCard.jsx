@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { CCardHeader, CCardBody, CRow, CCol, CFormLabel } from '@coreui/react'
 
+import { getProjectCrmDetails } from '../projectApi'
+
 const CRMDetailsCard = ({ project }) => {
   const [crmDetails, setCrmDetails] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -15,20 +17,16 @@ const CRMDetailsCard = ({ project }) => {
       return
     }
 
+    const controller = new AbortController()
+
     const fetchCrmDetails = async () => {
       setLoading(true)
       setError('')
 
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(project.id)}/crm`,
-        )
-        if (!res.ok) {
-          throw new Error(`Server responded with status ${res.status}`)
-        }
-        const data = await res.json()
+        const data = await getProjectCrmDetails(project.id, { signal: controller.signal })
 
-        // Handle PHP‐level errors or missing expected fields:
+        // Handle backend-level errors or missing expected fields.
         if (data.status === 'error' || !data.quote_ref_no) {
           setCrmDetails(null)
           setError(data.message || 'No CRM details found.')
@@ -36,6 +34,7 @@ const CRMDetailsCard = ({ project }) => {
           setCrmDetails(data)
         }
       } catch (err) {
+        if (err.name === 'AbortError') return
         console.error('Fetch failed:', err)
         setError('Failed to load CRM details.')
         setCrmDetails(null)
@@ -45,6 +44,10 @@ const CRMDetailsCard = ({ project }) => {
     }
 
     fetchCrmDetails()
+
+    return () => {
+      controller.abort()
+    }
   }, [project?.id])
 
   return (
@@ -55,7 +58,7 @@ const CRMDetailsCard = ({ project }) => {
 
       <CCardBody>
         {loading ? (
-          <p>Loading CRM details…</p>
+          <p>Loading CRM details...</p>
         ) : error ? (
           <p className="text-danger">{error}</p>
         ) : !crmDetails ? (

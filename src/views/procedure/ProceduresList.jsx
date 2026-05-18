@@ -30,6 +30,7 @@ import {
 } from '../../components/filters'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { administrationModuleTabs } from '../../components/navigation/moduleNavConfigs'
+import { useAuth } from '../../auth/AuthProvider'
 
 const dataColumns = [
   { key: 'title', label: 'Title', width: '220px', sortable: true, sortType: 'string' },
@@ -108,6 +109,7 @@ const displayCategory = (cat) => {
 
 export default function ProceduresList() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -117,7 +119,8 @@ export default function ProceduresList() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [periodRange, setPeriodRange] = useState(() => defaultPeriodRange)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [currentStaffId, setCurrentStaffId] = useState(null)
+  const currentStaffId =
+    user?.staff_id != null && Number.isFinite(Number(user.staff_id)) ? Number(user.staff_id) : null
 
   const activeChips = [
     q.trim() ? { key: 'search', label: `Search: ${q.trim()}` } : null,
@@ -165,23 +168,8 @@ export default function ProceduresList() {
     }
   }
 
-  const fetchMe = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}auth/session`, {
-        credentials: 'include',
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data?.status === 'success' && data?.user?.staff_id) {
-        setCurrentStaffId(Number(data.user.staff_id))
-      }
-    } catch {
-      /* backend enforces permissions */
-    }
-  }
-
   useEffect(() => {
     fetchList()
-    fetchMe()
   }, [])
 
   const filtered = useMemo(() => {

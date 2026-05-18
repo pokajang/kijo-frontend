@@ -19,12 +19,11 @@ const TrainingDetails = ({ trainingDetails, onChange, employerAddress }) => {
 
   // whenever the radio changes, update the field
   useEffect(() => {
-    if (venueOption === 'same') {
-      onChange('trainingVenue')({ target: { value: employerAddress } })
-    } else {
-      onChange('trainingVenue')({ target: { value: '' } })
-    }
-  }, [venueOption, employerAddress, onChange])
+    const nextVenue = venueOption === 'same' ? employerAddress : ''
+    if (trainingDetails.trainingVenue === nextVenue) return
+
+    onChange('trainingVenue')({ target: { value: nextVenue } })
+  }, [venueOption, employerAddress, onChange, trainingDetails.trainingVenue])
 
   return (
     <>

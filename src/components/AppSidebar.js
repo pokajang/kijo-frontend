@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import {
@@ -12,6 +12,7 @@ import {
 import CIcon from '@coreui/icons-react'
 
 import { AppSidebarNav } from './AppSidebarNav'
+import { useAuth } from '../auth/AuthProvider'
 import navigation from '../_nav' // your _nav.js with allowedRoles
 import { extractRolesFromSession, hasAnyAllowedRole } from '../utils/roles'
 import { quoteApiUrl } from '../views/crm/quotes/quoteApi'
@@ -50,26 +51,11 @@ const AppSidebar = () => {
   const location = useLocation()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
+  const { user } = useAuth()
 
-  // Local state for roles
-  const [roles, setRoles] = useState([])
   const [priceExceptionPendingCount, setPriceExceptionPendingCount] = useState(0)
   const [priceExceptionBadgeScope, setPriceExceptionBadgeScope] = useState('')
-
-  // Fetch session info (and roles) once on mount
-  useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE}auth/session`, { credentials: 'include' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === 'success') {
-          const userRoles = extractRolesFromSession(data)
-          setRoles(userRoles)
-        } else {
-          setRoles([])
-        }
-      })
-      .catch(() => setRoles([]))
-  }, [])
+  const roles = useMemo(() => extractRolesFromSession({ user }), [user])
 
   const fetchPriceExceptionPendingCount = useCallback(() => {
     fetch(quoteApiUrl('quote-price-exceptions/pending-count'), {

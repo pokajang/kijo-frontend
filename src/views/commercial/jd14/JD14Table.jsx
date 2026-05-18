@@ -172,6 +172,7 @@ const JD14Table = ({
         {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
         },
       )
 

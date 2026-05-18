@@ -1,5 +1,7 @@
 import React from 'react'
-import { CButton, CCardBody, CCardHeader } from '@coreui/react'
+import { CButton, CCardBody, CCardHeader, CTooltip } from '@coreui/react'
+import { useAuth } from '../../../../auth/AuthProvider'
+import { getQuoteDeleteRestriction } from '../utils/recordOwnership'
 
 const RecordDetailsActions = ({
   handlers,
@@ -15,82 +17,102 @@ const RecordDetailsActions = ({
   onChangeToFail,
   onSyncClient,
   onDelete,
-}) => (
-  <>
-    <CCardHeader>
-      <strong>Actions</strong>
-    </CCardHeader>
-    <CCardBody>
-      <div className="d-flex flex-wrap gap-2">
-        <CButton size="sm" color="primary" variant="outline" onClick={onFollowUp}>
-          Follow Up
-        </CButton>
-        {record?.clientDetails?.email ? (
-          <CButton size="sm" color="primary" variant="outline" onClick={onEmail}>
-            Email
-          </CButton>
-        ) : null}
-        <CButton size="sm" color="primary" variant="outline" onClick={onSharePdf}>
-          Share PDF
-        </CButton>
-        <CButton
-          size="sm"
-          color="primary"
-          variant="outline"
-          onClick={() => handlers?.handleGeneratePdf?.(record)}
-        >
-          Generate Quote
-        </CButton>
-        <CButton
-          size="sm"
-          color="secondary"
-          variant="outline"
-          onClick={() => handlers?.handleEdit?.(record)}
-        >
-          Edit
-        </CButton>
-        <CButton
-          size="sm"
-          color="secondary"
-          variant="outline"
-          onClick={() => handlers?.handleRevise?.(record)}
-        >
-          Revise
-        </CButton>
+}) => {
+  const { user } = useAuth()
+  const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
+  const deleteButton = (
+    <CButton
+      size="sm"
+      color="danger"
+      variant="outline"
+      onClick={deleteRestriction ? undefined : onDelete}
+      disabled={Boolean(deleteRestriction)}
+    >
+      Delete
+    </CButton>
+  )
 
-        {isAwarded ? (
-          <>
-            <CButton size="sm" color="success" variant="outline" onClick={onUnAward}>
-              Un-Award
-            </CButton>
-            <CButton size="sm" color="success" variant="outline" onClick={onReAward}>
-              Re-Award
-            </CButton>
-          </>
-        ) : (
-          <CButton size="sm" color="success" variant="outline" onClick={onChangeToSuccess}>
-            Awarded
+  return (
+    <>
+      <CCardHeader>
+        <strong>Actions</strong>
+      </CCardHeader>
+      <CCardBody>
+        <div className="d-flex flex-wrap gap-2">
+          <CButton size="sm" color="primary" variant="outline" onClick={onFollowUp}>
+            Follow Up
           </CButton>
-        )}
+          {record?.clientDetails?.email ? (
+            <CButton size="sm" color="primary" variant="outline" onClick={onEmail}>
+              Email
+            </CButton>
+          ) : null}
+          <CButton size="sm" color="primary" variant="outline" onClick={onSharePdf}>
+            Share PDF
+          </CButton>
+          <CButton
+            size="sm"
+            color="primary"
+            variant="outline"
+            onClick={() => handlers?.handleGeneratePdf?.(record)}
+          >
+            Generate Quote
+          </CButton>
+          <CButton
+            size="sm"
+            color="secondary"
+            variant="outline"
+            onClick={() => handlers?.handleEdit?.(record)}
+          >
+            Edit
+          </CButton>
+          <CButton
+            size="sm"
+            color="secondary"
+            variant="outline"
+            onClick={() => handlers?.handleRevise?.(record)}
+          >
+            Revise
+          </CButton>
 
-        <CButton size="sm" color="warning" variant="outline" onClick={onChangeToFail}>
-          Failed
-        </CButton>
-        <CButton
-          size="sm"
-          color="info"
-          variant="outline"
-          onClick={onSyncClient}
-          disabled={isSyncingClient}
-        >
-          {isSyncingClient ? 'Syncing...' : 'Sync Client'}
-        </CButton>
-        <CButton size="sm" color="danger" variant="outline" onClick={onDelete}>
-          Delete
-        </CButton>
-      </div>
-    </CCardBody>
-  </>
-)
+          {isAwarded ? (
+            <>
+              <CButton size="sm" color="success" variant="outline" onClick={onUnAward}>
+                Un-Award
+              </CButton>
+              <CButton size="sm" color="success" variant="outline" onClick={onReAward}>
+                Re-Award
+              </CButton>
+            </>
+          ) : (
+            <CButton size="sm" color="success" variant="outline" onClick={onChangeToSuccess}>
+              Awarded
+            </CButton>
+          )}
+
+          <CButton size="sm" color="warning" variant="outline" onClick={onChangeToFail}>
+            Failed
+          </CButton>
+          <CButton
+            size="sm"
+            color="info"
+            variant="outline"
+            onClick={onSyncClient}
+            disabled={isSyncingClient}
+          >
+            {isSyncingClient ? 'Syncing...' : 'Sync Client'}
+          </CButton>
+          {deleteRestriction ? (
+            <CTooltip content={deleteRestriction} placement="top">
+              <span>{deleteButton}</span>
+            </CTooltip>
+          ) : (
+            deleteButton
+          )}
+        </div>
+      </CCardBody>
+    </>
+  )
+}
 
 export default RecordDetailsActions

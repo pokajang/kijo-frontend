@@ -2,7 +2,7 @@ import React from 'react'
 import { DataTableActionMenu } from '../../../../../components/datatable'
 import { useAuth } from '../../../../../auth/AuthProvider'
 import { getRecordEmailAddress } from '../../utils/recordEmail'
-import { isQuoteOwnedByUser } from '../../utils/recordOwnership'
+import { getQuoteDeleteRestriction, isQuoteOwnedByUser } from '../../utils/recordOwnership'
 import { canRecordTabRequestNegotiation } from '../../config/recordTabs'
 
 const canRequestNegotiation = (record, user) => {
@@ -45,6 +45,7 @@ const RecordActionMenu = ({
   const isAwarded = record?.status === 'Awarded'
   const hasEmail = Boolean(getRecordEmailAddress(record))
   const negotiationAllowed = canRequestNegotiation(record, user)
+  const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
 
   const actions = [
     { key: 'view', label: 'View', onClick: onView, hidden: !onView },
@@ -97,6 +98,8 @@ const RecordActionMenu = ({
       label: 'Delete',
       onClick: onDelete,
       hidden: !onDelete,
+      disabled: Boolean(deleteRestriction),
+      tooltip: deleteRestriction || undefined,
       danger: true,
       dividerBefore: true,
     },

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import dialog from '../../components/dialog/dialogService'
+import { useAuth } from '../../auth/AuthProvider'
 import { fetchAllPagedRecords } from '../../utils/detailPages'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -12,7 +13,7 @@ const getSessionStaffIds = (sessionUser) =>
     .filter((value) => Number.isFinite(value))
 
 export function useToolRequestActions() {
-  const [sessionUser, setSessionUser] = useState(null)
+  const { user: sessionUser, checkSession } = useAuth()
   const [records, setRecords] = useState([])
   const [recordsLoading, setRecordsLoading] = useState(true)
   const [requestData, setRequestData] = useState({
@@ -39,21 +40,8 @@ export function useToolRequestActions() {
   }, [records, sessionUser])
 
   useEffect(() => {
-    fetchSession()
     fetchRecords()
   }, [])
-
-  const fetchSession = async () => {
-    try {
-      const res = await fetch(`${API_BASE}auth/session`, {
-        credentials: 'include',
-      })
-      const data = await res.json()
-      if (data.status === 'success') setSessionUser(data.user)
-    } catch (err) {
-      console.error('Session fetch error:', err)
-    }
-  }
 
   const fetchRecords = async () => {
     setRecordsLoading(true)
@@ -165,7 +153,7 @@ export function useToolRequestActions() {
     showModal,
     modalRecord,
     newAchievement,
-    fetchSession,
+    fetchSession: checkSession,
     fetchRecords,
     handleChange,
     handleSubmitClick,

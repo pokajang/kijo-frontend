@@ -33,6 +33,7 @@ export default function Manage() {
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}`,
+        { credentials: 'include' },
       )
       const result = await res.json()
       if (result.status === 'success') {
@@ -59,6 +60,7 @@ export default function Manage() {
         `${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}/terminate`,
         {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ staff_id: staffId }),
         },
