@@ -41,7 +41,10 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
 
     try {
       setDeletingExpenseId(expenseId)
-      const result = await deleteProjectExpense(expenseId)
+      const result = await deleteProjectExpense({
+        project_id: project.id,
+        expense_id: expenseId,
+      })
       if (result.status === 'success') {
         onDataRefresh?.()
       } else {

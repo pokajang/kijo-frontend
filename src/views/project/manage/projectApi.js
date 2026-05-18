@@ -125,11 +125,17 @@ export const reloadProjectPoNumber = (projectId) =>
     body: { project_id: projectId },
   })
 
-export const updateProjectDetails = (project) =>
-  requestJson(`projects/${enc(project.project_id ?? project.id)}`, {
+export const updateProjectDetails = (project) => {
+  const projectId = project.project_id ?? project.id
+
+  return requestJson(`projects/${enc(projectId)}`, {
     method: 'PUT',
-    body: project,
+    body: {
+      ...project,
+      project_id: projectId,
+    },
   })
+}
 
 export const deleteProject = (projectId) =>
   requestJson(`projects/${enc(projectId)}`, {
@@ -210,8 +216,8 @@ export const addProjectExpense = (formData) =>
     body: formData,
   })
 
-export const deleteProjectExpense = (expenseId) =>
-  requestJson(`projects/0/expenses/${enc(expenseId)}`, {
+export const deleteProjectExpense = (payload) =>
+  requestJson(`projects/${enc(payload.project_id)}/expenses/${enc(payload.expense_id)}`, {
     method: 'DELETE',
-    body: { expense_id: expenseId },
+    body: payload,
   })

@@ -6,8 +6,10 @@ import {
   normalizeProjectProgress,
   normalizeProjectVendors,
   normalizeStaffList,
+  deleteProjectExpense,
   requestJson,
   toFiniteNumber,
+  updateProjectDetails,
 } from '../projectApi'
 
 afterEach(() => {
@@ -60,6 +62,40 @@ describe('projectApi normalizers', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('projects'),
       expect.objectContaining({ credentials: 'include' }),
+    )
+  })
+
+  it('includes project_id when updating project details', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success' }),
+    })
+
+    await updateProjectDetails({ id: 158, project_name: 'A' })
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('projects/158'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"project_id":158'),
+      }),
+    )
+  })
+
+  it('deletes project expenses through the real project route', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success' }),
+    })
+
+    await deleteProjectExpense({ project_id: 158, expense_id: 7 })
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('projects/158/expenses/7'),
+      expect.objectContaining({
+        method: 'DELETE',
+        body: JSON.stringify({ project_id: 158, expense_id: 7 }),
+      }),
     )
   })
 })
