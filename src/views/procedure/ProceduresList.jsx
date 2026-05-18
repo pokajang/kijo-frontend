@@ -27,7 +27,6 @@ import {
   getPeriodRangeLabel,
   getPeriodRangePreset,
   isDateInPeriodRange,
-  isDefaultPeriodRange,
 } from '../../components/filters'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { administrationModuleTabs } from '../../components/navigation/moduleNavConfigs'
@@ -81,6 +80,7 @@ const defaultVisibleColumns = {
 }
 
 const requiredColumns = new Set(['title', 'category'])
+const defaultPeriodRange = getPeriodRangePreset('all')
 
 const formatDate = (s) => {
   if (!s) return '-'
@@ -115,7 +115,7 @@ export default function ProceduresList() {
   const [q, setQ] = useState('')
   const [createdByFilter, setCreatedByFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [periodRange, setPeriodRange] = useState(() => defaultPeriodRange)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [currentStaffId, setCurrentStaffId] = useState(null)
 
@@ -127,7 +127,7 @@ export default function ProceduresList() {
     categoryFilter
       ? { key: 'category', label: `Category: ${displayCategory(categoryFilter)}` }
       : null,
-    periodRange && !isDefaultPeriodRange(periodRange)
+    periodRange && periodRange.preset !== defaultPeriodRange.preset
       ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
       : null,
   ].filter(Boolean)
@@ -136,13 +136,13 @@ export default function ProceduresList() {
     setQ('')
     setCreatedByFilter('')
     setCategoryFilter('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    setPeriodRange(defaultPeriodRange)
   }
   const clearChip = (key) => {
     if (key === 'search') setQ('')
     if (key === 'createdBy') setCreatedByFilter('')
     if (key === 'category') setCategoryFilter('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') setPeriodRange(defaultPeriodRange)
   }
 
   const fetchList = async () => {
