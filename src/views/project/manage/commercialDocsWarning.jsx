@@ -15,6 +15,11 @@ const emptyDocs = {
 }
 
 const safeArray = (value) => (Array.isArray(value) ? value : [])
+const normalizeGroupKeys = (groupKeys) => {
+  if (!groupKeys) return null
+  return Array.isArray(groupKeys) ? groupKeys.filter(Boolean) : [groupKeys]
+}
+
 const money = (value) => {
   const parsed = Number.parseFloat(value)
   return Number.isFinite(parsed) && parsed > 0 ? `RM ${parsed.toFixed(2)}` : ''
@@ -102,7 +107,13 @@ export const buildProjectCommercialDocGroups = (docs = emptyDocs) => {
 export const hasProjectCommercialDocGroups = (groups = []) =>
   groups.some((group) => safeArray(group.items).length > 0)
 
-export const useProjectCommercialDocs = (projectId, visible) => {
+export const filterProjectCommercialDocGroups = (groups = [], groupKeys = null) => {
+  const allowedKeys = normalizeGroupKeys(groupKeys)
+  if (!allowedKeys) return safeArray(groups)
+  return safeArray(groups).filter((group) => allowedKeys.includes(group.key))
+}
+
+export const useProjectCommercialDocs = (projectId, visible, groupKeys = null) => {
   const [docs, setDocs] = useState(emptyDocs)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -136,7 +147,10 @@ export const useProjectCommercialDocs = (projectId, visible) => {
     return () => controller.abort()
   }, [projectId, visible])
 
-  const groups = useMemo(() => buildProjectCommercialDocGroups(docs), [docs])
+  const groups = useMemo(() => {
+    const nextGroups = buildProjectCommercialDocGroups(docs)
+    return filterProjectCommercialDocGroups(nextGroups, groupKeys)
+  }, [docs, groupKeys])
   const hasExistingDocs = hasProjectCommercialDocGroups(groups)
 
   return { docs, groups, hasExistingDocs, loading, error }
@@ -171,7 +185,13 @@ const RelatedRows = ({ groups, onOpen }) => (
   </div>
 )
 
-export const ProjectCommercialDocsNotice = ({ groups, loading, error }) => {
+export const ProjectCommercialDocsNotice = ({
+  groups,
+  loading,
+  error,
+  recordLabel = 'commercial records',
+  createLabel = 'another document',
+}) => {
   const navigate = useNavigate()
   const hasDocs = hasProjectCommercialDocGroups(groups)
 
@@ -197,7 +217,7 @@ export const ProjectCommercialDocsNotice = ({ groups, loading, error }) => {
     return (
       <CAlert color="info" className="mb-3 d-flex align-items-center gap-2">
         <CSpinner size="sm" />
-        <span>Checking existing commercial records...</span>
+        <span>Checking existing {recordLabel}...</span>
       </CAlert>
     )
   }
@@ -205,8 +225,8 @@ export const ProjectCommercialDocsNotice = ({ groups, loading, error }) => {
   if (error) {
     return (
       <CAlert color="warning" className="mb-3">
-        Unable to check existing commercial records. You can continue, but review the commercial
-        lists if this project may already have documents.
+        Unable to check existing {recordLabel}. You can continue, but review the relevant commercial
+        list if this project may already have records.
       </CAlert>
     )
   }
@@ -216,30 +236,36 @@ export const ProjectCommercialDocsNotice = ({ groups, loading, error }) => {
   return (
     <CAlert color="warning" className="mb-3">
       <div>
-        Existing commercial records found for this project. Review before creating another document.
+        Existing {recordLabel} found for this project. Review before creating {createLabel}.
       </div>
       <RelatedRows groups={groups} onOpen={openRecord} />
     </CAlert>
   )
 }
 
-export const confirmExistingCommercialDocs = async ({ groups, loading }) => {
+export const confirmExistingCommercialDocs = async ({
+  groups,
+  loading,
+  recordLabel = 'commercial records',
+  createLabel = 'this document',
+  title = 'Existing Commercial Records',
+}) => {
   if (loading) {
-    await dialog.alert('Still checking existing commercial records. Please try again in a moment.')
+    await dialog.alert(`Still checking existing ${recordLabel}. Please try again in a moment.`)
     return false
   }
 
   if (!hasProjectCommercialDocGroups(groups)) return true
 
   return dialog.confirm(
-    'This project already has commercial records. Continue creating this document?',
+    `This project already has ${recordLabel}. Continue creating ${createLabel}?`,
     {
-      title: 'Existing Commercial Records',
+      title,
       confirmText: 'Continue',
       cancelText: 'Cancel',
       alert: {
         color: 'warning',
-        message: 'Review the linked records before creating another document.',
+        message: `Review the linked ${recordLabel} before creating ${createLabel}.`,
       },
       relatedRecords: { groups },
     },

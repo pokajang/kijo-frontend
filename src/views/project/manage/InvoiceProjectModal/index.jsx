@@ -59,7 +59,7 @@ const fetchersByType = {
 
 export default function InvoiceProjectModal({ visible, project, onClose, onSubmit }) {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible, 'invoices')
   const fetchedRef = useRef(false)
   const draftAppliedRef = useRef(false)
   const isSupportedType = Boolean(fetchersByType[project?.project_type])
@@ -336,7 +336,14 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
       return
     }
 
-    if (!(await confirmExistingCommercialDocs(commercialDocs))) {
+    if (
+      !(await confirmExistingCommercialDocs({
+        ...commercialDocs,
+        recordLabel: 'invoices',
+        createLabel: 'another invoice',
+        title: 'Existing Invoices',
+      }))
+    ) {
       return
     }
 
@@ -389,6 +396,8 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
           groups={commercialDocs.groups}
           loading={commercialDocs.loading}
           error={commercialDocs.error}
+          recordLabel="invoices"
+          createLabel="another invoice"
         />
         <CCard>
           <InvoiceFormShell

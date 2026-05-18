@@ -20,7 +20,7 @@ import {
 } from '../commercialDocsWarning'
 const Jd14Modal = ({ visible, onClose, project }) => {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible, 'jd14')
 
   // — Employer state (starts empty, then syncs from `project`) —
   const [employerDetails, setEmployerDetails] = useState({
@@ -110,7 +110,14 @@ const Jd14Modal = ({ visible, onClose, project }) => {
   })
 
   const handleSubmitJd14 = async () => {
-    if (!(await confirmExistingCommercialDocs(commercialDocs))) {
+    if (
+      !(await confirmExistingCommercialDocs({
+        ...commercialDocs,
+        recordLabel: 'JD14 forms',
+        createLabel: 'another JD14 form',
+        title: 'Existing JD14 Forms',
+      }))
+    ) {
       return
     }
 
@@ -163,6 +170,8 @@ const Jd14Modal = ({ visible, onClose, project }) => {
           groups={commercialDocs.groups}
           loading={commercialDocs.loading}
           error={commercialDocs.error}
+          recordLabel="JD14 forms"
+          createLabel="another JD14 form"
         />
         <CCard>
           <EmployerDetails

@@ -22,7 +22,7 @@ import {
 } from '../commercialDocsWarning'
 export default function DeliveryOrderModal({ visible, onClose, project }) {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible, 'delivery-orders')
 
   // 1) State for each section
   const [clientDetails, setClientDetails] = useState({
@@ -188,7 +188,15 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
 
   // 4) Submit handler (unchanged)
   const handleGenerateDO = async (forceCreate = false, skipExistingDocsConfirm = false) => {
-    if (!skipExistingDocsConfirm && !(await confirmExistingCommercialDocs(commercialDocs))) {
+    if (
+      !skipExistingDocsConfirm &&
+      !(await confirmExistingCommercialDocs({
+        ...commercialDocs,
+        recordLabel: 'delivery orders',
+        createLabel: 'another delivery order',
+        title: 'Existing Delivery Orders',
+      }))
+    ) {
       return
     }
 
@@ -252,6 +260,8 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
           groups={commercialDocs.groups}
           loading={commercialDocs.loading}
           error={commercialDocs.error}
+          recordLabel="delivery orders"
+          createLabel="another delivery order"
         />
         <CCard>
           <DeliveryDetails
