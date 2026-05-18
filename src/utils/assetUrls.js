@@ -1,11 +1,34 @@
 export const resolveAssetUrl = (value) => {
   const raw = String(value || '').trim()
   if (!raw) return ''
-  if (/^(https?:|data:|blob:)/i.test(raw) || raw.startsWith('//')) return raw
+
+  const apiBase = String(import.meta.env.VITE_API_BASE || '/').replace(/\/+$/, '')
+
+  if (/^https?:/i.test(raw)) {
+    try {
+      const url = new URL(raw)
+      const shouldProxyPrivateFile =
+        apiBase.startsWith('/') &&
+        !apiBase.startsWith('//') &&
+        url.pathname.startsWith('/files/private/')
+
+      if (shouldProxyPrivateFile) {
+        const path = `/${[apiBase.replace(/^\/+/, ''), url.pathname.replace(/^\/+/, '')]
+          .filter(Boolean)
+          .join('/')}${url.search}${url.hash}`
+        return new URL(path, window.location.origin).toString()
+      }
+    } catch {
+      return raw
+    }
+
+    return raw
+  }
+
+  if (/^(data:|blob:)/i.test(raw) || raw.startsWith('//')) return raw
 
   const legacyUploadsPrefix = /^\/?(?:backend(?:-legacy)?\/)?uploads\//i
   const cleanPath = raw.replace(/^\/+/, '')
-  const apiBase = String(import.meta.env.VITE_API_BASE || '/').replace(/\/+$/, '')
   const apiBasePath = apiBase.replace(/^\/+/, '')
   if (raw.startsWith('/') && apiBasePath && cleanPath.startsWith(`${apiBasePath}/`)) {
     try {

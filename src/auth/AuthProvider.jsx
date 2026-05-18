@@ -73,11 +73,12 @@ const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  const checkSession = useCallback(async () => {
+  const checkSession = useCallback(async ({ signal, suppressAbortLog = false } = {}) => {
     setStatus((prev) => (prev === 'authenticated' ? prev : 'loading'))
     try {
       const res = await fetch(`${API_BASE}auth/session`, {
         credentials: 'include',
+        signal,
       })
 
       if (res.status === 401 || res.status === 403) {
@@ -96,6 +97,15 @@ const AuthProvider = ({ children }) => {
       handleUnauthorized()
       return false
     } catch (err) {
+      const isSuppressedAbort =
+        signal?.aborted ||
+        err?.name === 'AbortError' ||
+        (err instanceof TypeError && String(err.message || '').includes('Failed to fetch'))
+
+      if (suppressAbortLog && isSuppressedAbort) {
+        return false
+      }
+
       console.error('Session validation failed:', err)
       // Do not force logout on transient errors; keep current state
       setStatus((prev) => (prev === 'authenticated' ? prev : 'unauthenticated'))
@@ -129,7 +139,8 @@ const AuthProvider = ({ children }) => {
       return undefined
     }
 
-    checkSession()
+    const controller = new AbortController()
+    checkSession({ signal: controller.signal, suppressAbortLog: true })
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -141,6 +152,7 @@ const AuthProvider = ({ children }) => {
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
+      controller.abort()
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
