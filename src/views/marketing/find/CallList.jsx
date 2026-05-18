@@ -27,11 +27,11 @@ import {
   getPeriodRangeLabel,
   getPeriodRangePreset,
   isDateInPeriodRange,
-  isDefaultPeriodRange,
 } from '../../../components/filters'
 
-const DEFAULT_STATE_FILTER = 'Selangor'
+const DEFAULT_STATE_FILTER = ''
 const DEFAULT_LIMIT = 10
+const DEFAULT_PERIOD_RANGE = getPeriodRangePreset('all')
 
 const getFactoryScopeDate = (record) =>
   record?.created_at || record?.createdAt || record?.updated_at || record?.updatedAt || ''
@@ -44,7 +44,7 @@ export default function CallList() {
   const [q, setQ] = useState('')
   const [stateFilter, setStateFilter] = useState(DEFAULT_STATE_FILTER)
   const [limit, setLimit] = useState(DEFAULT_LIMIT)
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [periodRange, setPeriodRange] = useState(() => DEFAULT_PERIOD_RANGE)
   const [details, setDetails] = useState({})
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
@@ -120,7 +120,7 @@ export default function CallList() {
       ? { key: 'state', label: `Region: ${stateFilter || 'Malaysia (All)'}` }
       : null,
     Number(limit) !== DEFAULT_LIMIT ? { key: 'limit', label: `Count: ${limit}` } : null,
-    periodRange && !isDefaultPeriodRange(periodRange)
+    periodRange && periodRange.preset !== DEFAULT_PERIOD_RANGE.preset
       ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
       : null,
   ].filter(Boolean)
@@ -131,14 +131,14 @@ export default function CallList() {
     setQ('')
     setStateFilter(DEFAULT_STATE_FILTER)
     setLimit(DEFAULT_LIMIT)
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    setPeriodRange(DEFAULT_PERIOD_RANGE)
   }
 
   const clearChip = (key) => {
     if (key === 'search') setQ('')
     if (key === 'state') setStateFilter(DEFAULT_STATE_FILTER)
     if (key === 'limit') setLimit(DEFAULT_LIMIT)
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') setPeriodRange(DEFAULT_PERIOD_RANGE)
   }
 
   //  Render
