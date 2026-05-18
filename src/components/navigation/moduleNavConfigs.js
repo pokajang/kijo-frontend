@@ -1,5 +1,6 @@
 export const commercialModuleTabs = [
   { key: 'invoice', label: 'Invoice', to: '/commercial/invoice' },
+  { key: 'debtors', label: 'Debtors', to: '/commercial/debtors' },
   { key: 'jd14', label: 'JD 14', to: '/commercial/jd14' },
   { key: 'vendor-loa', label: 'Vendor LOAs', to: '/commercial/vendor-loa' },
   { key: 'supplier-po', label: 'Supplier POs', to: '/commercial/supplier-po' },

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   normalizeCollaborators,
   normalizeProjectFinance,
+  normalizeProjectDetails,
   normalizeProjectList,
   normalizeProjectProgress,
   normalizeProjectVendors,
@@ -33,6 +34,10 @@ describe('projectApi normalizers', () => {
     expect(normalizeProjectProgress({ status: 'success', data: rows })).toEqual(rows)
     expect(normalizeCollaborators({ collaborators: rows })).toEqual(rows)
     expect(normalizeStaffList({ data: { data: rows } })).toEqual(rows)
+  })
+
+  it('normalizes missing project details to null', () => {
+    expect(normalizeProjectDetails({ status: 'success', data: null })).toBeNull()
   })
 
   it('normalizes finance payloads with empty fallbacks', () => {

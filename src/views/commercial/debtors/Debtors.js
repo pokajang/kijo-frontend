@@ -1,0 +1,536 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
+  CCol,
+  CFormInput,
+  CFormLabel,
+  CFormSelect,
+  CRow,
+} from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import { cilPlus } from '@coreui/icons'
+import {
+  DataTableRecordControls,
+  DataTableRecordList,
+  DataTableStatusBadge,
+} from '../../../components/datatable'
+import dialog from '../../../components/dialog/dialogService'
+import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
+import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { StatsStrip } from '../../../components/stats'
+import { fetchJson } from '../../../utils/detailPages'
+import DebtorMarkPaidModal from './DebtorMarkPaidModal'
+import {
+  emptyValue,
+  formatCount,
+  formatMoney,
+  getAgeTone,
+  getStatusTone,
+  getTodayDate,
+  isOpenStatus,
+  normalizeDebtorRow,
+} from './debtorUtils'
+
+const columnStorageKey = 'commercial.debtors.visible-columns.v1'
+
+const defaultVisibleColumns = {
+  invoice: true,
+  client: true,
+  pic: true,
+  serviceType: true,
+  purpose: false,
+  invoiceDate: true,
+  age: true,
+  total: true,
+  status: true,
+  source: true,
+}
+
+const requiredColumns = new Set(['invoice', 'client', 'status'])
+
+const dataColumns = [
+  {
+    key: 'source',
+    label: 'Source',
+    width: '140px',
+    sortable: true,
+    sortType: 'string',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => getSourceLabel(row),
+  },
+  { key: 'invoice', label: 'Invoice', width: '160px', sortable: true, sortType: 'string' },
+  { key: 'client', label: 'Client', width: '220px', sortable: true, sortType: 'string' },
+  {
+    key: 'age',
+    label: 'Age',
+    width: '90px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+  },
+  { key: 'pic', label: 'PIC', width: '160px', sortable: true, sortType: 'string' },
+  { key: 'serviceType', label: 'Service', width: '140px', sortable: true, sortType: 'string' },
+  {
+    key: 'purpose',
+    label: 'Remarks',
+    width: '240px',
+    sortable: true,
+    sortType: 'string',
+    textMode: 'expandable',
+    cellMaxWidth: '220px',
+    previewCharThreshold: 34,
+  },
+  {
+    key: 'invoiceDate',
+    label: 'Invoice Date',
+    width: '130px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    shrinkToFit: true,
+  },
+  {
+    key: 'total',
+    label: 'Total',
+    width: '140px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    width: '120px',
+    sortable: true,
+    sortType: 'string',
+    align: 'center',
+    shrinkToFit: true,
+  },
+]
+
+const getSourceLabel = (debtor) =>
+  debtor?.sourceType === 'manual' ? 'Manual Entry' : 'System Invoice'
+
+const getSourceTone = (debtor) => (debtor?.sourceType === 'manual' ? 'warning' : 'info')
+
+const getInvoiceCountLabel = (count) => `${formatCount(count)} invoice${count === 1 ? '' : 's'}`
+
+const sumGrandTotal = (items) => items.reduce((sum, row) => sum + Number(row.grandTotal || 0), 0)
+
+const Debtors = () => {
+  const navigate = useNavigate()
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('open')
+  const [sourceFilter, setSourceFilter] = useState('all')
+  const [asOfDate, setAsOfDate] = useState(getTodayDate)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [selectedDebtor, setSelectedDebtor] = useState(null)
+  const [markPaidVisible, setMarkPaidVisible] = useState(false)
+  const [submittingPayment, setSubmittingPayment] = useState(false)
+
+  const fetchDebtors = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        status: statusFilter,
+        source: sourceFilter,
+        as_of_date: asOfDate,
+      })
+      if (searchTerm.trim()) params.set('q', searchTerm.trim())
+      const payload = await fetchJson(
+        `${import.meta.env.VITE_API_BASE}debtors?${params.toString()}`,
+      )
+      setRows(Array.isArray(payload?.debtors) ? payload.debtors.map(normalizeDebtorRow) : [])
+    } catch (error) {
+      console.error('Debtors fetch error:', error)
+      dialog.alert(error?.message || 'Unable to load debtors.')
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [asOfDate, searchTerm, sourceFilter, statusFilter])
+
+  useEffect(() => {
+    fetchDebtors()
+  }, [fetchDebtors])
+
+  const statsItems = useMemo(() => {
+    const openRows = rows.filter((row) => isOpenStatus(row.status))
+    const overThirtyRows = openRows.filter((row) => Number(row.ageDays || 0) > 30)
+    const thirtyOneToSixtyRows = openRows.filter((row) => {
+      const ageDays = Number(row.ageDays || 0)
+      return ageDays >= 31 && ageDays <= 60
+    })
+    const sixtyOnePlusRows = openRows.filter((row) => Number(row.ageDays || 0) >= 61)
+
+    return [
+      {
+        key: 'open-receivables',
+        label: 'Open Receivables',
+        value: formatMoney(sumGrandTotal(openRows)),
+        tone: 'warning',
+        size: 'md',
+      },
+      {
+        key: 'over-30',
+        label: 'More Than 30 Days',
+        value: formatMoney(sumGrandTotal(overThirtyRows)),
+        sublabel: getInvoiceCountLabel(overThirtyRows.length),
+        tone: overThirtyRows.length ? 'danger' : 'secondary',
+        size: 'md',
+      },
+      {
+        key: '31-60',
+        label: '31-60 Days',
+        value: formatMoney(sumGrandTotal(thirtyOneToSixtyRows)),
+        sublabel: getInvoiceCountLabel(thirtyOneToSixtyRows.length),
+        tone: thirtyOneToSixtyRows.length ? 'warning' : 'secondary',
+        size: 'md',
+      },
+      {
+        key: '61-plus',
+        label: '61+ Days',
+        value: formatMoney(sumGrandTotal(sixtyOnePlusRows)),
+        sublabel: getInvoiceCountLabel(sixtyOnePlusRows.length),
+        tone: sixtyOnePlusRows.length ? 'danger' : 'secondary',
+        size: 'md',
+      },
+    ]
+  }, [rows])
+
+  const activeFilterCount = [statusFilter !== 'open', sourceFilter !== 'all'].filter(Boolean).length
+  const activeChips = [
+    searchTerm.trim() ? { key: 'search', label: `Search: ${searchTerm.trim()}` } : null,
+    statusFilter !== 'open' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
+    sourceFilter !== 'all' ? { key: 'source', label: `Source: ${sourceFilter}` } : null,
+    asOfDate !== getTodayDate() ? { key: 'asOf', label: `As of: ${asOfDate}` } : null,
+  ].filter(Boolean)
+
+  const clearChip = (key) => {
+    if (key === 'search') setSearchTerm('')
+    if (key === 'status') setStatusFilter('open')
+    if (key === 'source') setSourceFilter('all')
+    if (key === 'asOf') setAsOfDate(getTodayDate())
+  }
+
+  const resetFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('open')
+    setSourceFilter('all')
+    setAsOfDate(getTodayDate())
+    setShowAdvancedFilters(false)
+  }
+
+  const openMarkPaid = (debtor) => {
+    setSelectedDebtor(debtor)
+    setMarkPaidVisible(true)
+  }
+
+  const handleConfirmPaid = async (paymentData) => {
+    if (!selectedDebtor) return
+    setSubmittingPayment(true)
+    try {
+      const endpoint =
+        selectedDebtor.sourceType === 'manual'
+          ? `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(selectedDebtor.sourceId)}/mark-paid`
+          : `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(selectedDebtor.sourceId)}/mark-paid`
+      await fetchJson(endpoint, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          id: selectedDebtor.sourceId,
+          ...paymentData,
+        }),
+      })
+      setMarkPaidVisible(false)
+      setSelectedDebtor(null)
+      await fetchDebtors()
+    } catch (error) {
+      dialog.alert(error?.message || 'Unable to mark debtor as paid.')
+    } finally {
+      setSubmittingPayment(false)
+    }
+  }
+
+  const handleReopenManual = async (debtor) => {
+    if (!(await dialog.confirm(`Mark ${debtor.invoiceRef} as Open?`))) return
+    try {
+      await fetchJson(
+        `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(debtor.sourceId)}/mark-open`,
+        { method: 'PATCH', body: JSON.stringify({}) },
+      )
+      await fetchDebtors()
+    } catch (error) {
+      dialog.alert(error?.message || 'Unable to reopen manual debtor.')
+    }
+  }
+
+  const handleDeleteManual = async (debtor) => {
+    if (!(await dialog.confirm(`Delete manual debtor ${debtor.invoiceRef}?`))) return
+    try {
+      await fetchJson(
+        `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(debtor.sourceId)}`,
+        {
+          method: 'DELETE',
+        },
+      )
+      await fetchDebtors()
+    } catch (error) {
+      dialog.alert(error?.message || 'Unable to delete manual debtor.')
+    }
+  }
+
+  const getActions = (debtor) => {
+    const actions = [
+      debtor.sourceType === 'invoice'
+        ? {
+            key: 'open-invoice',
+            label: 'Open Invoice',
+            onClick: (record) => navigate(`/commercial/invoice/${record.sourceId}`),
+          }
+        : {
+            key: 'edit',
+            label: 'Edit',
+            onClick: (record) => navigate(`/commercial/debtors/manual/${record.sourceId}/edit`),
+          },
+      debtor.sourceType === 'invoice'
+        ? {
+            key: 'pdf',
+            label: 'PDF Invoice',
+            onClick: (record) =>
+              window.open(
+                `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(record.sourceId)}/pdf`,
+                '_blank',
+              ),
+          }
+        : null,
+      debtor.sourceType === 'manual' && debtor.attachmentUrl
+        ? {
+            key: 'attachment',
+            label: 'Attachment',
+            onClick: (record) => window.open(record.attachmentUrl, '_blank'),
+          }
+        : null,
+      isOpenStatus(debtor.status)
+        ? {
+            key: 'mark-paid',
+            label: 'Mark Paid',
+            onClick: openMarkPaid,
+          }
+        : debtor.sourceType === 'manual'
+          ? {
+              key: 'reopen',
+              label: 'Mark Open',
+              onClick: handleReopenManual,
+            }
+          : null,
+      debtor.sourceType === 'manual'
+        ? {
+            key: 'delete',
+            label: 'Delete',
+            danger: true,
+            dividerBefore: true,
+            onClick: handleDeleteManual,
+          }
+        : null,
+    ]
+
+    return actions.filter(Boolean)
+  }
+
+  const renderCell = (debtor, column) => {
+    if (column.key === 'invoice') return debtor.invoiceRef
+    if (column.key === 'client') return debtor.client
+    if (column.key === 'age') {
+      return (
+        <DataTableStatusBadge tone={getAgeTone(debtor.ageDays)}>
+          {debtor.ageDays}d
+        </DataTableStatusBadge>
+      )
+    }
+    if (column.key === 'total') return formatMoney(debtor.grandTotal)
+    if (column.key === 'source') {
+      return (
+        <DataTableStatusBadge tone={getSourceTone(debtor)}>
+          {getSourceLabel(debtor)}
+        </DataTableStatusBadge>
+      )
+    }
+    if (column.key === 'status') {
+      return (
+        <DataTableStatusBadge tone={getStatusTone(debtor.status)}>
+          {debtor.status}
+        </DataTableStatusBadge>
+      )
+    }
+    return debtor[column.key] || emptyValue
+  }
+
+  return (
+    <>
+      <CRow>
+        <CCol xs={12}>
+          <ModuleNavStrip tabs={commercialModuleTabs} ariaLabel="Commercial sections" />
+        </CCol>
+        <CCol xs={12}>
+          <CCard className="mb-4">
+            <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+              <strong>Debtors</strong>
+              <CButton
+                color="primary"
+                size="sm"
+                onClick={() => navigate('/commercial/debtors/create')}
+              >
+                <CIcon icon={cilPlus} className="me-1" />
+                Add Debtor
+              </CButton>
+            </CCardHeader>
+            <CCardBody>
+              <StatsStrip
+                items={statsItems}
+                scopeLabel={`As of ${asOfDate}`}
+                loading={loading}
+                layout="balanced"
+              />
+              <DataTableRecordControls
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+                searchPlaceholder="Type to search..."
+                showAdvancedFilters={showAdvancedFilters}
+                setShowAdvancedFilters={setShowAdvancedFilters}
+                activeFilterCount={activeFilterCount}
+                activeChips={activeChips}
+                clearChip={clearChip}
+                resetFilters={resetFilters}
+                desktopToolsId="debtors-table-tools"
+                mobileToolsId="debtors-mobile-table-tools"
+                loading={loading}
+              >
+                <CCol xs={12} md={4} lg={3}>
+                  <CFormLabel>Status</CFormLabel>
+                  <CFormSelect
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                  >
+                    <option value="open">Open</option>
+                    <option value="paid">Paid</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="all">All</option>
+                  </CFormSelect>
+                </CCol>
+                <CCol xs={12} md={4} lg={3}>
+                  <CFormLabel>Source</CFormLabel>
+                  <CFormSelect
+                    value={sourceFilter}
+                    onChange={(event) => setSourceFilter(event.target.value)}
+                  >
+                    <option value="all">All</option>
+                    <option value="invoice">System Invoices</option>
+                    <option value="manual">Manual Debtors</option>
+                  </CFormSelect>
+                </CCol>
+                <CCol xs={12} md={4} lg={3}>
+                  <CFormLabel>As Of</CFormLabel>
+                  <CFormInput
+                    type="date"
+                    value={asOfDate}
+                    onChange={(event) => setAsOfDate(event.target.value)}
+                  />
+                </CCol>
+              </DataTableRecordControls>
+
+              <DataTableRecordList
+                rows={rows}
+                loading={loading}
+                loadingMessage="Loading debtors..."
+                dataColumns={dataColumns}
+                defaultVisibleColumns={defaultVisibleColumns}
+                requiredColumns={requiredColumns}
+                storageKey={columnStorageKey}
+                idPrefix="debtor-record"
+                emptyMessage="No debtor records found."
+                exportFilename={`debtors-${new Date().toISOString().slice(0, 10)}.csv`}
+                showDesktopSummary={false}
+                desktopUtilityPlacement="portal"
+                desktopUtilityPortalId="debtors-table-tools"
+                mobileUtilityPlacement="portal"
+                mobileUtilityPortalId="debtors-mobile-table-tools"
+                showMobileUtilityRow={false}
+                getRowKey={(debtor) => `${debtor.sourceType}-${debtor.sourceId}`}
+                rowProps={(debtor) => ({
+                  className: debtor.sourceType === 'manual' ? 'commercial-debtors-row--manual' : '',
+                })}
+                renderCell={renderCell}
+                getActions={getActions}
+                onRowOpen={(debtor) =>
+                  debtor.sourceType === 'invoice'
+                    ? navigate(`/commercial/invoice/${debtor.sourceId}`)
+                    : navigate(`/commercial/debtors/manual/${debtor.sourceId}/edit`)
+                }
+                getMobileTitle={(debtor) => debtor.invoiceRef}
+                getMobileSubtitle={(debtor) => debtor.client}
+                getMobileMeta={(debtor) =>
+                  `${debtor.invoiceDate || '-'} | ${formatMoney(debtor.grandTotal)}`
+                }
+                mobileRecord={{
+                  title: (debtor) => debtor.invoiceRef,
+                  subtitle: (debtor) => debtor.client,
+                  meta: (debtor) =>
+                    `${debtor.invoiceDate || '-'} | ${formatMoney(debtor.grandTotal)}`,
+                  badges: (debtor) => [
+                    {
+                      key: 'status',
+                      label: debtor.status,
+                      tone: getStatusTone(debtor.status),
+                    },
+                    {
+                      key: 'source',
+                      label: getSourceLabel(debtor),
+                      tone: getSourceTone(debtor),
+                    },
+                  ],
+                }}
+                mobileFieldKeys={{
+                  title: 'invoice',
+                  subtitle: 'client',
+                  meta: ['invoiceDate', 'total'],
+                  status: 'status',
+                }}
+                initialSortField="invoiceDate"
+                initialSortDir="asc"
+                initialSortDirByField={{ invoiceDate: 'asc', total: 'desc', age: 'desc' }}
+                getSortValue={(debtor, field) => {
+                  if (field === 'invoice') return debtor.invoiceRef
+                  if (field === 'age') return debtor.ageDays
+                  if (field === 'total') return debtor.grandTotal
+                  if (field === 'source') return debtor.sourceType
+                  return debtor[field] || ''
+                }}
+                resetDeps={[rows]}
+                actionColumnWidth="56px"
+              />
+            </CCardBody>
+          </CCard>
+        </CCol>
+      </CRow>
+
+      <DebtorMarkPaidModal
+        visible={markPaidVisible}
+        debtor={selectedDebtor}
+        submitting={submittingPayment}
+        onClose={() => setMarkPaidVisible(false)}
+        onConfirm={handleConfirmPaid}
+      />
+    </>
+  )
+}
+
+export default Debtors

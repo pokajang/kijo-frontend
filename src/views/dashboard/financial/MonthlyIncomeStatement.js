@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
-import { DataTableRecordList } from '../../../components/datatable'
+import { DataTableRecordList, DataTableStatusBadge } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { formatMoney } from '../../../utils/stats/formatStats'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { recordsDesktopBreakpoint } from '../../crm/records/config/recordsTableUiShared'
+import { getAgeTone } from '../../commercial/debtors/debtorUtils'
 
 // Helper: format date as "01 Jan 2025"
 const formatDisplayDate = (date) => {
@@ -97,6 +98,16 @@ const debtorTableColumns = [
     getExportValue: getInvoiceDebtor,
   },
   {
+    key: 'age',
+    label: 'Age',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    width: '4rem',
+    shrinkToFit: true,
+    getExportValue: (invoice) => computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate),
+  },
+  {
     key: 'invoiceDate',
     label: 'Invoice Date',
     sortable: true,
@@ -115,16 +126,6 @@ const debtorTableColumns = [
     truncateCharThreshold: 32,
     textMode: 'tooltip',
     getExportValue: getInvoiceProject,
-  },
-  {
-    key: 'age',
-    label: 'Age',
-    sortable: true,
-    sortType: 'number',
-    align: 'center',
-    width: '4rem',
-    shrinkToFit: true,
-    getExportValue: (invoice) => computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate),
   },
   {
     key: 'amount',
@@ -355,7 +356,12 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                   if (column.key === 'invoiceDate') return formatDisplayDate(invoice.invoice_date)
                   if (column.key === 'project') return getInvoiceProject(invoice)
                   if (column.key === 'age') {
-                    return computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate)
+                    const ageDays = getInvoiceAgeDays(invoice)
+                    return (
+                      <DataTableStatusBadge tone={getAgeTone(ageDays)}>
+                        {computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate)}
+                      </DataTableStatusBadge>
+                    )
                   }
                   if (column.key === 'amount') {
                     return `RM ${formatInvoiceAmount(invoice.grand_total)}`
@@ -372,7 +378,7 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                   return invoice?.[field] || ''
                 }}
                 initialSortField="invoiceDate"
-                initialSortDir="desc"
+                initialSortDir="asc"
                 controlledPageSize={debtorPageSize}
                 controlledSetPageSize={() => {}}
                 controlledCurrentPage={1}
@@ -402,7 +408,11 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                     {
                       key: 'age',
                       label: 'Age',
-                      value: computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate),
+                      value: (
+                        <DataTableStatusBadge tone={getAgeTone(getInvoiceAgeDays(invoice))}>
+                          {computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate)}
+                        </DataTableStatusBadge>
+                      ),
                     },
                     {
                       key: 'amount',

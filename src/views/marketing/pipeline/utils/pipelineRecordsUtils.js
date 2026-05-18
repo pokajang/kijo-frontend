@@ -1,10 +1,5 @@
 import { getPeriodRangeLabel, isDefaultPeriodRange } from '../../../../components/filters'
-import {
-  formatCount,
-  formatMoney,
-  getTopGroupBySum,
-  sumBy,
-} from '../../../../utils/stats/formatStats'
+import { formatCount, getTopGroupByCount } from '../../../../utils/stats/formatStats'
 import {
   classificationLabel,
   classificationTypes,
@@ -189,44 +184,41 @@ export const normalizePipelineRecord = (entry) => ({
 })
 
 export const buildPipelineRecordStats = (normalizedEntries) => {
-  const qualifiedRows = normalizedEntries.filter((entry) =>
-    ['qualified', 'proposal'].includes(String(entry.entryType || '').toLowerCase()),
+  const getEntryType = (entry) => String(entry.entryType || '').toLowerCase()
+  const leadRows = normalizedEntries.filter((entry) => getEntryType(entry) === 'lead')
+  const qualifiedRows = normalizedEntries.filter((entry) => getEntryType(entry) === 'qualified')
+  const meetingRows = normalizedEntries.filter(
+    (entry) => getEntryType(entry) === 'meeting_pitching',
   )
-  const closedRows = normalizedEntries.filter(
-    (entry) => String(entry.entryType || '').toLowerCase() === 'closed',
-  )
-  const topOwner = getTopGroupBySum(
-    normalizedEntries,
-    (entry) => entry.ownerStaffCode,
-    (entry) => entry.estimatedRm,
-  )
+  const topLeadOwner = getTopGroupByCount(leadRows, (entry) => entry.ownerStaffCode)
 
   return [
     {
-      key: 'estimated',
-      label: 'Estimated Value',
-      value: formatMoney(sumBy(normalizedEntries, (entry) => entry.estimatedRm)),
+      key: 'total-leads',
+      label: 'Total Leads',
+      value: formatCount(leadRows.length),
+      sublabel: 'Lead entries',
       tone: 'info',
     },
     {
-      key: 'qualified',
-      label: 'Qualified/Proposal',
+      key: 'total-qualified',
+      label: 'Total Qualified',
       value: formatCount(qualifiedRows.length),
-      sublabel: formatMoney(sumBy(qualifiedRows, (entry) => entry.estimatedRm)),
+      sublabel: 'Qualified entries',
       tone: 'warning',
     },
     {
-      key: 'closed',
-      label: 'Closed',
-      value: formatCount(closedRows.length),
-      sublabel: formatMoney(sumBy(closedRows, (entry) => entry.estimatedRm)),
+      key: 'total-meetings',
+      label: 'Total Meetings',
+      value: formatCount(meetingRows.length),
+      sublabel: 'Meeting/Pitching',
       tone: 'success',
     },
     {
-      key: 'top-owner',
-      label: 'Top Owner',
-      value: topOwner.value,
-      sublabel: `${formatMoney(topOwner.total)} across ${formatCount(topOwner.count)} entries`,
+      key: 'top-leads',
+      label: 'Top Leads',
+      value: topLeadOwner.value,
+      sublabel: `${formatCount(topLeadOwner.count)} leads`,
       tone: 'secondary',
     },
   ]

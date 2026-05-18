@@ -20,9 +20,9 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
-export default function DeliveryOrderModal({ visible, onClose, project }) {
+export default function DeliveryOrderModal({ visible, onClose, onCreated, project }) {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible, 'delivery-orders')
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
 
   // 1) State for each section
   const [clientDetails, setClientDetails] = useState({
@@ -192,9 +192,9 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
       !skipExistingDocsConfirm &&
       !(await confirmExistingCommercialDocs({
         ...commercialDocs,
-        recordLabel: 'delivery orders',
+        recordLabel: 'commercial records',
         createLabel: 'another delivery order',
-        title: 'Existing Delivery Orders',
+        title: 'Existing Commercial Records',
       }))
     ) {
       return
@@ -223,6 +223,7 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
         )
         if (confirm) return handleGenerateDO(true, true)
       } else if (result.status === 'success') {
+        onCreated?.(result)
         const goToList = await dialog.confirm(`DO ${result.do_number} created. Go to list?`, {
           title: 'Delivery Order Created',
           confirmText: 'Go to list',
@@ -260,7 +261,7 @@ export default function DeliveryOrderModal({ visible, onClose, project }) {
           groups={commercialDocs.groups}
           loading={commercialDocs.loading}
           error={commercialDocs.error}
-          recordLabel="delivery orders"
+          recordLabel="commercial records"
           createLabel="another delivery order"
         />
         <CCard>

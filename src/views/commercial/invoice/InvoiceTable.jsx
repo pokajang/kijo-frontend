@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react'
 import { DataTableRecordList, DataTableStatusBadge } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { getAgeTone } from '../debtors/debtorUtils'
 
 const emptyValue = '-'
-const columnStorageKey = 'commercial.invoices.visible-columns.v3'
+const columnStorageKey = 'commercial.invoices.visible-columns.v4'
 
 const defaultVisibleColumns = {
   invoice: true,
@@ -17,7 +18,7 @@ const defaultVisibleColumns = {
   servicePeriod: false,
   purpose: false,
   issued: true,
-  age: false,
+  age: true,
   total: true,
   status: true,
 }
@@ -48,6 +49,16 @@ const dataColumns = [
     getExportValue: (inv) => inv.hrdClaimRefDisplay,
   },
   { key: 'client', label: 'Client', width: '210px', sortable: true, sortType: 'string' },
+  {
+    key: 'age',
+    label: 'Age',
+    width: '90px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (inv) => inv.ageDisplay,
+  },
   {
     key: 'pic',
     label: 'PIC',
@@ -104,16 +115,6 @@ const dataColumns = [
     align: 'center',
     shrinkToFit: true,
     getExportValue: (inv) => inv.issuedDisplay,
-  },
-  {
-    key: 'age',
-    label: 'Age',
-    width: '90px',
-    sortable: true,
-    sortType: 'number',
-    align: 'center',
-    shrinkToFit: true,
-    getExportValue: (inv) => inv.ageDisplay,
   },
   {
     key: 'total',
@@ -314,7 +315,11 @@ const InvoiceTable = ({
   const renderCell = (inv, column) => {
     if (column.key === 'hrdClaimRef') return renderHrdClaimRefCell(inv)
     if (column.key === 'issued') return inv.issuedDisplay
-    if (column.key === 'age') return inv.ageDisplay
+    if (column.key === 'age') {
+      return (
+        <DataTableStatusBadge tone={getAgeTone(inv.age)}>{inv.ageDisplay}</DataTableStatusBadge>
+      )
+    }
     if (column.key === 'total') return inv.totalDisplay
     if (column.key === 'status') {
       return (

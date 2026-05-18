@@ -41,13 +41,13 @@ describe('pipeline record utilities', () => {
   it('builds stats from normalized pipeline entries', () => {
     const rows = [
       normalizePipelineRecord({
-        entryType: 'proposal',
+        entryType: 'lead',
         prospectName: 'Alpha',
         ownerStaffCode: 'AA',
         estimatedRm: 1000,
       }),
       normalizePipelineRecord({
-        entryType: 'closed',
+        entryType: 'lead',
         prospectName: 'Beta',
         ownerStaffCode: 'AA',
         estimatedRm: 2000,
@@ -58,13 +58,19 @@ describe('pipeline record utilities', () => {
         ownerStaffCode: 'BB',
         estimatedRm: 5000,
       }),
+      normalizePipelineRecord({
+        entryType: 'meeting_pitching',
+        prospectName: 'Delta',
+        ownerStaffCode: 'CC',
+        estimatedRm: 0,
+      }),
     ]
 
     const stats = buildPipelineRecordStats(rows)
-    expect(stats.find((item) => item.key === 'estimated')?.value).toBe('RM 8,000.00')
-    expect(stats.find((item) => item.key === 'qualified')?.value).toBe('2')
-    expect(stats.find((item) => item.key === 'closed')?.value).toBe('1')
-    expect(stats.find((item) => item.key === 'top-owner')?.value).toBe('BB')
+    expect(stats.find((item) => item.key === 'total-leads')?.value).toBe('2')
+    expect(stats.find((item) => item.key === 'total-qualified')?.value).toBe('1')
+    expect(stats.find((item) => item.key === 'total-meetings')?.value).toBe('1')
+    expect(stats.find((item) => item.key === 'top-leads')?.value).toBe('AA')
   })
 
   it('builds active chips for search, filters, and custom period range', () => {

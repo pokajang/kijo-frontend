@@ -97,6 +97,8 @@ const PoList = React.lazy(() => import('./views/commercial/supplier-po/PoList'))
 const SupplierPoDetailPage = React.lazy(
   () => import('./views/commercial/supplier-po/SupplierPoDetailPage'),
 )
+const Debtors = React.lazy(() => import('./views/commercial/debtors/Debtors'))
+const DebtorFormPage = React.lazy(() => import('./views/commercial/debtors/DebtorFormPage'))
 
 // Internal Tools Pages
 const Handbook = React.lazy(() => import('./views/handbook/Handbook'))
@@ -691,6 +693,13 @@ const routes = [
     element: SupplierPoDetailPage,
   },
   { path: '/commercial/supplier-po', name: 'PO List', element: PoList },
+  { path: '/commercial/debtors/create', name: 'Create Manual Debtor', element: DebtorFormPage },
+  {
+    path: '/commercial/debtors/manual/:id/edit',
+    name: 'Edit Manual Debtor',
+    element: DebtorFormPage,
+  },
+  { path: '/commercial/debtors', name: 'Debtors', element: Debtors },
 
   // Internal tools path
 

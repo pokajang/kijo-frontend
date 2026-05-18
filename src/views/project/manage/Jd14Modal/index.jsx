@@ -18,9 +18,9 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
-const Jd14Modal = ({ visible, onClose, project }) => {
+const Jd14Modal = ({ visible, onClose, onCreated, project }) => {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible, 'jd14')
+  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
 
   // — Employer state (starts empty, then syncs from `project`) —
   const [employerDetails, setEmployerDetails] = useState({
@@ -113,9 +113,9 @@ const Jd14Modal = ({ visible, onClose, project }) => {
     if (
       !(await confirmExistingCommercialDocs({
         ...commercialDocs,
-        recordLabel: 'JD14 forms',
+        recordLabel: 'commercial records',
         createLabel: 'another JD14 form',
-        title: 'Existing JD14 Forms',
+        title: 'Existing Commercial Records',
       }))
     ) {
       return
@@ -134,6 +134,7 @@ const Jd14Modal = ({ visible, onClose, project }) => {
       const result = await res.json()
 
       if (result.status === 'success') {
+        onCreated?.(result)
         const goToList = await dialog.confirm('JD14 created. Go to list?', {
           title: 'JD14 Created',
           confirmText: 'Go to list',
@@ -170,7 +171,7 @@ const Jd14Modal = ({ visible, onClose, project }) => {
           groups={commercialDocs.groups}
           loading={commercialDocs.loading}
           error={commercialDocs.error}
-          recordLabel="JD14 forms"
+          recordLabel="commercial records"
           createLabel="another JD14 form"
         />
         <CCard>

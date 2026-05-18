@@ -158,6 +158,6 @@ describe('release UI behavior', () => {
     await waitFor(() => {
       expect(screen.queryByText('Signature missing.')).not.toBeInTheDocument()
     })
-    expect(window.sessionStorage.getItem('kijo:signature-warning:dismissed:11')).toBe('1')
+    expect(window.sessionStorage.getItem('kijo:signature-warning:dismissed:7')).toBe('1')
   })
 })

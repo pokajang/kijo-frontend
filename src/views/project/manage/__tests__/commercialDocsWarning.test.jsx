@@ -41,4 +41,15 @@ describe('commercialDocsWarning group filtering', () => {
       filterProjectCommercialDocGroups(groups, 'delivery-orders').map((group) => group.key),
     ).toEqual(['delivery-orders'])
   })
+
+  it('builds document links for commercial detail routes', () => {
+    const groups = buildProjectCommercialDocGroups(docs)
+    const firstItemByGroup = Object.fromEntries(groups.map((group) => [group.key, group.items[0]]))
+
+    expect(firstItemByGroup.invoices.href).toBe('/commercial/invoice/1')
+    expect(firstItemByGroup['delivery-orders'].href).toBe('/commercial/delivery-order/2')
+    expect(firstItemByGroup.jd14.href).toBe('/commercial/jd14/3')
+    expect(firstItemByGroup['vendor-loas'].href).toBe('/commercial/vendor-loa/4')
+    expect(firstItemByGroup['supplier-pos'].href).toBe('/commercial/supplier-po/6')
+  })
 })

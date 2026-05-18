@@ -113,7 +113,7 @@ export const filterProjectCommercialDocGroups = (groups = [], groupKeys = null) 
   return safeArray(groups).filter((group) => allowedKeys.includes(group.key))
 }
 
-export const useProjectCommercialDocs = (projectId, visible, groupKeys = null) => {
+export const useProjectCommercialDocs = (projectId, visible, groupKeys = null, refreshKey = 0) => {
   const [docs, setDocs] = useState(emptyDocs)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -145,7 +145,7 @@ export const useProjectCommercialDocs = (projectId, visible, groupKeys = null) =
       })
 
     return () => controller.abort()
-  }, [projectId, visible])
+  }, [projectId, visible, refreshKey])
 
   const groups = useMemo(() => {
     const nextGroups = buildProjectCommercialDocGroups(docs)

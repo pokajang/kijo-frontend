@@ -34,6 +34,7 @@ export const normalizeProjectList = (payload) =>
   normalizeListPayload(payload, ['data', 'projects', 'records']).filter(Boolean)
 
 export const normalizeProjectDetails = (payload) => {
+  if (payload?.status === 'success' && payload?.data === null) return null
   if (payload?.status === 'success' && payload?.data && typeof payload.data === 'object') {
     return payload.data
   }

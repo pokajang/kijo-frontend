@@ -9,11 +9,15 @@ import { linkInquiryClient } from '../../marketing/inquiries/inquiryUtils'
 const CreateClient = () => {
   const navigate = useNavigate()
   const [cameFromQuote, setCameFromQuote] = useState(false)
+  const [cameFromDebtor, setCameFromDebtor] = useState(false)
   const [cameFromInquiryId, setCameFromInquiryId] = useState('')
 
   useEffect(() => {
     if (sessionStorage.getItem('cameFromQuote') === 'true') {
       setCameFromQuote(true)
+    }
+    if (sessionStorage.getItem('cameFromDebtor') === 'true') {
+      setCameFromDebtor(true)
     }
     fetchClientCompanies()
     fetchPICs()
@@ -311,16 +315,20 @@ const CreateClient = () => {
         const goToDestination = await dialog.confirm(
           cameFromInquiryId
             ? 'Client created successfully. Return to inquiry?'
-            : cameFromQuote
-              ? 'Client created successfully. Return to quotation?'
-              : 'Client created successfully. Go to client list?',
+            : cameFromDebtor
+              ? 'Client created successfully. Return to debtor?'
+              : cameFromQuote
+                ? 'Client created successfully. Return to quotation?'
+                : 'Client created successfully. Go to client list?',
           {
             title: 'Client Created',
             confirmText: cameFromInquiryId
               ? 'Go to inquiry'
-              : cameFromQuote
-                ? 'Go to quotation'
-                : 'Go to list',
+              : cameFromDebtor
+                ? 'Go to debtor'
+                : cameFromQuote
+                  ? 'Go to quotation'
+                  : 'Go to list',
             cancelText: 'Create another',
           },
         )
@@ -330,6 +338,9 @@ const CreateClient = () => {
             navigate(`/pipeline/inquiries/${cameFromInquiryId}`, {
               state: { inquiryMessage: 'Client created and linked to inquiry.' },
             })
+          } else if (cameFromDebtor) {
+            sessionStorage.removeItem('cameFromDebtor')
+            navigate('/commercial/debtors/create')
           } else if (cameFromQuote) {
             sessionStorage.removeItem('cameFromQuote')
             navigate('/crm/quotes')
@@ -374,6 +385,10 @@ const CreateClient = () => {
     }
     if (cameFromQuote) {
       navigate('/crm/quotes')
+      return
+    }
+    if (cameFromDebtor) {
+      navigate('/commercial/debtors/create')
       return
     }
     navigate('/client/manage')

@@ -333,6 +333,8 @@
 
 .data-table-action-cell {
   padding: 0 !important;
+  background-color: var(--cui-card-bg, var(--app-surface-page)) !important;
+  box-shadow: -1px 0 0 var(--cui-border-color, var(--app-border-card));
 }
 
 .data-table-action-cell .data-table-action-dropdown {
@@ -360,6 +362,25 @@
 .data-table-action-toggle:hover,
 .data-table-action-toggle:focus {
   color: var(--app-text-action-hover) !important;
+}
+
+tr.commercial-debtors-row--manual > * {
+  background-color: rgba(var(--cui-warning-rgb), 0.045) !important;
+}
+
+tr.commercial-debtors-row--manual > .data-table-action-cell {
+  background:
+    linear-gradient(rgba(var(--cui-warning-rgb), 0.045), rgba(var(--cui-warning-rgb), 0.045)),
+    var(--cui-card-bg, var(--app-surface-page)) !important;
+}
+
+tr.commercial-debtors-row--manual > :first-child {
+  box-shadow: inset 3px 0 0 rgba(var(--cui-warning-rgb), 0.85);
+}
+
+.records-mobile-item.commercial-debtors-row--manual {
+  background-color: rgba(var(--cui-warning-rgb), 0.045);
+  box-shadow: inset 3px 0 0 rgba(var(--cui-warning-rgb), 0.85);
 }
 
 .training-history-table,
