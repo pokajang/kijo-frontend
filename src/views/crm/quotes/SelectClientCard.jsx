@@ -12,6 +12,7 @@ import {
   CFormCheck,
 } from '@coreui/react'
 import { contactKey, getSelectedContacts } from './quoteContactUtils'
+import { fetchAllPagedRecords } from '../../../utils/detailPages'
 
 const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Client', onBack }) => {
   const navigate = useNavigate()
@@ -204,15 +205,15 @@ const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Clie
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}client-companies`, {
-          credentials: 'include',
+        const clients = await fetchAllPagedRecords({
+          url: `${import.meta.env.VITE_API_BASE}client-companies`,
+          dataKeys: ['data'],
+          perPage: 200,
         })
-        const result = await res.json()
-
-        if (result.status === 'success') {
+        if (Array.isArray(clients)) {
           const grouped = new Map()
 
-          result.data.forEach((client) => {
+          clients.forEach((client) => {
             const id = client.company_id
             const rowPics = extractPics(client)
 

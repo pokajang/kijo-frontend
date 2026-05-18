@@ -29,7 +29,7 @@ import {
   isDefaultPeriodRange,
 } from '../../components/filters'
 import { StatsStrip } from '../../components/stats'
-import { formatCount, getTopGroupByCount } from '../../utils/stats/formatStats'
+import { formatCount } from '../../utils/stats/formatStats'
 
 const emptyValue = '-'
 
@@ -270,8 +270,15 @@ export default function RequestTable({
     }
     const activeRows = normalizedRecords.filter(isActiveLoan)
     const completedRows = normalizedRecords.filter((record) => Boolean(record.achievement))
-    const topStaffRows = activeRows.length ? activeRows : normalizedRecords
-    const topStaff = getTopGroupByCount(topStaffRows, (record) => record.staff)
+    const loanDaysByStaff = normalizedRecords.reduce((totals, record) => {
+      const staff = record.staff || emptyValue
+      const duration = Math.max(0, Number(record.duration) || 0)
+      totals.set(staff, (totals.get(staff) || 0) + duration)
+      return totals
+    }, new Map())
+    const topLoanDaysStaff = Array.from(loanDaysByStaff.entries()).sort(
+      ([, leftDays], [, rightDays]) => rightDays - leftDays,
+    )[0]
 
     return [
       {
@@ -294,10 +301,10 @@ export default function RequestTable({
         tone: 'success',
       },
       {
-        key: 'top-staff',
-        label: 'Top Staff',
-        value: topStaff.value,
-        sublabel: `${formatCount(topStaff.count)} ${activeRows.length ? 'active' : 'total'} requests`,
+        key: 'loan-days',
+        label: 'Top Loan Days',
+        value: topLoanDaysStaff?.[0] || emptyValue,
+        sublabel: `${formatCount(topLoanDaysStaff?.[1] || 0)} days loaned`,
         tone: 'secondary',
       },
     ]

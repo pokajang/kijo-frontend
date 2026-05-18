@@ -73,45 +73,48 @@ const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  const checkSession = useCallback(async ({ signal, suppressAbortLog = false } = {}) => {
-    setStatus((prev) => (prev === 'authenticated' ? prev : 'loading'))
-    try {
-      const res = await fetch(`${API_BASE}auth/session`, {
-        credentials: 'include',
-        signal,
-      })
+  const checkSession = useCallback(
+    async ({ signal, suppressAbortLog = false } = {}) => {
+      setStatus((prev) => (prev === 'authenticated' ? prev : 'loading'))
+      try {
+        const res = await fetch(`${API_BASE}auth/session`, {
+          credentials: 'include',
+          signal,
+        })
 
-      if (res.status === 401 || res.status === 403) {
+        if (res.status === 401 || res.status === 403) {
+          handleUnauthorized()
+          return false
+        }
+
+        const data = await res.json()
+        setCsrfToken(data?.csrf_token)
+        if (data?.status === 'success' && data.user?.staff_id) {
+          setUser(data.user)
+          setStatus('authenticated')
+          return true
+        }
+
         handleUnauthorized()
         return false
-      }
+      } catch (err) {
+        const isSuppressedAbort =
+          signal?.aborted ||
+          err?.name === 'AbortError' ||
+          (err instanceof TypeError && String(err.message || '').includes('Failed to fetch'))
 
-      const data = await res.json()
-      setCsrfToken(data?.csrf_token)
-      if (data?.status === 'success' && data.user?.staff_id) {
-        setUser(data.user)
-        setStatus('authenticated')
-        return true
-      }
+        if (suppressAbortLog && isSuppressedAbort) {
+          return false
+        }
 
-      handleUnauthorized()
-      return false
-    } catch (err) {
-      const isSuppressedAbort =
-        signal?.aborted ||
-        err?.name === 'AbortError' ||
-        (err instanceof TypeError && String(err.message || '').includes('Failed to fetch'))
-
-      if (suppressAbortLog && isSuppressedAbort) {
+        console.error('Session validation failed:', err)
+        // Do not force logout on transient errors; keep current state
+        setStatus((prev) => (prev === 'authenticated' ? prev : 'unauthenticated'))
         return false
       }
-
-      console.error('Session validation failed:', err)
-      // Do not force logout on transient errors; keep current state
-      setStatus((prev) => (prev === 'authenticated' ? prev : 'unauthenticated'))
-      return false
-    }
-  }, [handleUnauthorized])
+    },
+    [handleUnauthorized],
+  )
 
   const login = useCallback(async (credentials) => {
     const res = await fetch(`${API_BASE}auth/login`, {
