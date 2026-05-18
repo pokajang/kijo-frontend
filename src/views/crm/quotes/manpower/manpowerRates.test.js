@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import manpowerRateConfig from '../../../../../../shared/config/manpowerRates.json'
+import manpowerRateConfig from '../config/manpowerRates.json'
 import {
   calculateManpowerTotals,
   getManpowerRate,

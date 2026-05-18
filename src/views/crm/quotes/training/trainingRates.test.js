@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import trainingRateConfig from '../../../../../../shared/config/trainingRates.json'
+import trainingRateConfig from '../config/trainingRates.json'
 import {
   getTrainingRateOption,
   getTrainingTravelRegion,

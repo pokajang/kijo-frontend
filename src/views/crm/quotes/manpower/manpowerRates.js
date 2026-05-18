@@ -1,4 +1,4 @@
-import manpowerRateConfig from '../../../../../../shared/config/manpowerRates.json'
+import manpowerRateConfig from '../config/manpowerRates.json'
 
 export const MANPOWER_RATE_TYPES = manpowerRateConfig.rateTypes
 

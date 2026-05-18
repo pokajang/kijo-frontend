@@ -1,4 +1,4 @@
-import trainingRateConfig from '../../../../../../shared/config/trainingRates.json'
+import trainingRateConfig from '../config/trainingRates.json'
 
 export const TRAINING_RATE_TYPES = trainingRateConfig.rateTypes || {}
 
