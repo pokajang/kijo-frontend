@@ -3,6 +3,28 @@ export const resolveAssetUrl = (value) => {
   if (!raw) return ''
 
   const apiBase = String(import.meta.env.VITE_API_BASE || '/').replace(/\/+$/, '')
+  const apiBaseUrl = (() => {
+    try {
+      return /^https?:/i.test(apiBase) ? new URL(`${apiBase}/`) : null
+    } catch {
+      return null
+    }
+  })()
+  const toApiAssetUrl = (path) => {
+    const clean = String(path || '').replace(/^\/+/, '')
+    if (!clean) return ''
+    if (apiBaseUrl) {
+      return new URL(clean, apiBaseUrl).toString()
+    }
+
+    const relativeApiBase = apiBase.replace(/^\/+/, '')
+    const nextPath = `/${[relativeApiBase, clean].filter(Boolean).join('/')}`
+    try {
+      return new URL(nextPath, window.location.origin).toString()
+    } catch {
+      return nextPath
+    }
+  }
 
   if (/^https?:/i.test(raw)) {
     try {
@@ -17,6 +39,15 @@ export const resolveAssetUrl = (value) => {
           .filter(Boolean)
           .join('/')}${url.search}${url.hash}`
         return new URL(path, window.location.origin).toString()
+      }
+
+      if (
+        apiBaseUrl &&
+        typeof window !== 'undefined' &&
+        url.origin === window.location.origin &&
+        url.pathname.startsWith('/storage/')
+      ) {
+        return toApiAssetUrl(`${url.pathname.replace(/^\/+/, '')}${url.search}${url.hash}`)
       }
     } catch {
       return raw
@@ -45,11 +76,5 @@ export const resolveAssetUrl = (value) => {
       : raw.startsWith('/')
         ? cleanPath
         : `storage/${cleanPath}`
-  const path = `/${[apiBase.replace(/^\/+/, ''), storagePath].filter(Boolean).join('/')}`
-
-  try {
-    return new URL(path, window.location.origin).toString()
-  } catch {
-    return path
-  }
+  return toApiAssetUrl(storagePath)
 }
