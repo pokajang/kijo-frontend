@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useLocation } from 'react-router-dom'
 import {
   CCloseButton,
   CSidebar,
@@ -15,9 +14,8 @@ import { AppSidebarNav } from './AppSidebarNav'
 import { applySidebarBadges } from './appSidebarBadges'
 import { useAuth } from '../auth/AuthProvider'
 import navigation from '../_nav' // your _nav.js with allowedRoles
-import { useClientVendorRegistrationAttentionCount } from '../hooks/useClientVendorRegistrationAttentionCount'
+import { useAppNotifications } from '../notifications/AppNotificationProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../utils/roles'
-import { quoteApiUrl } from '../views/crm/quotes/quoteApi'
 
 import logoUrl from 'src/assets/brand/logo.svg'
 import sygnetUrl from 'src/assets/brand/sygnet.svg'
@@ -50,56 +48,14 @@ const filterNav = (items, roles) =>
 
 const AppSidebar = () => {
   const dispatch = useDispatch()
-  const location = useLocation()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { user } = useAuth()
-
-  const [priceExceptionPendingCount, setPriceExceptionPendingCount] = useState(0)
-  const [priceExceptionBadgeScope, setPriceExceptionBadgeScope] = useState('')
-  const { count: vendorRegistrationExpiredCount } = useClientVendorRegistrationAttentionCount({
-    refreshKey: location.pathname,
-  })
+  const { getRouteGroupCount } = useAppNotifications()
   const roles = useMemo(() => extractRolesFromSession({ user }), [user])
 
-  const fetchPriceExceptionPendingCount = useCallback(() => {
-    fetch(quoteApiUrl('quote-price-exceptions/pending-count'), {
-      credentials: 'include',
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setPriceExceptionPendingCount(Number(data?.count || 0))
-        setPriceExceptionBadgeScope(data?.scope || '')
-      })
-      .catch(() => {
-        setPriceExceptionPendingCount(0)
-        setPriceExceptionBadgeScope('')
-      })
-  }, [])
-
-  useEffect(() => {
-    fetchPriceExceptionPendingCount()
-  }, [fetchPriceExceptionPendingCount, location.pathname])
-
-  useEffect(() => {
-    const refresh = () => fetchPriceExceptionPendingCount()
-    const intervalId = window.setInterval(refresh, 60000)
-    window.addEventListener('focus', refresh)
-    window.addEventListener('quote-price-exceptions:changed', refresh)
-
-    return () => {
-      window.clearInterval(intervalId)
-      window.removeEventListener('focus', refresh)
-      window.removeEventListener('quote-price-exceptions:changed', refresh)
-    }
-  }, [fetchPriceExceptionPendingCount])
-
   // Now filter _and clean_ your nav items
-  const navigationWithBadges = applySidebarBadges(navigation, {
-    priceExceptionPendingCount,
-    priceExceptionBadgeScope,
-    vendorRegistrationExpiredCount,
-  })
+  const navigationWithBadges = applySidebarBadges(navigation, { getRouteGroupCount })
   const filteredNav = filterNav(navigationWithBadges, roles)
 
   return (

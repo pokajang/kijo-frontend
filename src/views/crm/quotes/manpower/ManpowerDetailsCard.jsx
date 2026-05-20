@@ -15,8 +15,9 @@ import {
 } from '@coreui/react'
 import ProjectDetailsCard from './ProjectDetailsCard'
 import PricingCard from './PricingCard'
-import { quoteApiUrl } from '../quoteApi'
+import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
 import { getManpowerRate, inferManpowerRateType } from './manpowerRates'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 
 export default function ManpowerDetailsCard({
   formData,
@@ -28,6 +29,7 @@ export default function ManpowerDetailsCard({
 }) {
   const [templates, setTemplates] = useState([])
   const navigate = useNavigate()
+  const { isRevision } = useQuoteRouteParams()
 
   // load manpower‐template list
   useEffect(() => {
@@ -38,7 +40,7 @@ export default function ManpowerDetailsCard({
       .then((r) => r.json())
       .then((json) => {
         const rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
-        if (json?.status === 'success' || json?.success === true || Array.isArray(json)) {
+        if (isQuoteResultSuccess(json)) {
           setTemplates(rows)
         } else {
           console.error('Unexpected response format', json)
@@ -108,7 +110,7 @@ export default function ManpowerDetailsCard({
                 {isEditMode && (
                   <CAlert color="primary">
                     <strong>
-                      {new URLSearchParams(window.location.search).get('isRevision') === 'true'
+                      {isRevision
                         ? 'You are revising the existing quotation. The quotation number will be appended with Rev xx.'
                         : "You are editing the existing quotation. This won't change the quotation number."}
                     </strong>
@@ -130,7 +132,11 @@ export default function ManpowerDetailsCard({
                 ) : (
                   <Select
                     options={reactSelectOptions}
-                    value={reactSelectOptions.find((opt) => opt.value === formData.mpId) || null}
+                    value={
+                      reactSelectOptions.find(
+                        (opt) => String(opt.value) === String(formData.mpId),
+                      ) || null
+                    }
                     onChange={handleTemplateSelect}
                     placeholder="Select manpower service..."
                     isClearable

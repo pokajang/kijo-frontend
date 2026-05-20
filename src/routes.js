@@ -592,6 +592,14 @@ const routes = [
     ),
   },
   {
+    path: '/staff/leaves/workflow',
+    element: (
+      <ProtectedRoute allowedRoles={staffAllowedRoles}>
+        <ManageLeaves routeSection="workflow" />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/staff/leaves/entitlements/:entitlementId/edit',
     element: (
       <ProtectedRoute allowedRoles={staffAllowedRoles}>

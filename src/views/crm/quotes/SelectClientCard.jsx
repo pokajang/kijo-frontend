@@ -13,6 +13,13 @@ import {
 } from '@coreui/react'
 import { contactKey, getSelectedContacts } from './quoteContactUtils'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { quoteApiUrl } from './quoteApi'
+import {
+  clearPendingCreatedClient,
+  hasPendingCreatedClient,
+  markCameFromQuote,
+  readPendingCreatedClient,
+} from './quoteClientHandoff'
 
 const SelectClientCard = ({
   selectedClient,
@@ -29,12 +36,8 @@ const SelectClientCard = ({
   const [hasTyped, setHasTyped] = useState(false)
   const [selectedPicKeys, setSelectedPicKeys] = useState([])
   const [loadingClients, setLoadingClients] = useState(true)
-  const [autoSelectingCreatedClient, setAutoSelectingCreatedClient] = useState(() =>
-    Boolean(
-      sessionStorage.getItem('lastCreatedClientId') ||
-        sessionStorage.getItem('lastCreatedClientName'),
-    ),
-  )
+  const [autoSelectingCreatedClient, setAutoSelectingCreatedClient] =
+    useState(hasPendingCreatedClient)
   const [loadingBranches, setLoadingBranches] = useState(false)
 
   useEffect(() => {
@@ -157,12 +160,9 @@ const SelectClientCard = ({
 
   const fetchCompanyBranches = useCallback(
     async (companyId) => {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE}client-companies/${companyId}/branches`,
-        {
-          credentials: 'include',
-        },
-      )
+      const response = await fetch(quoteApiUrl(`client-companies/${companyId}/branches`), {
+        credentials: 'include',
+      })
       const result = await response.json()
       if (result.status !== 'success' || !Array.isArray(result.data)) {
         return []
@@ -225,18 +225,15 @@ const SelectClientCard = ({
     let cancelled = false
 
     const fetchClients = async () => {
-      const hasPendingCreatedClient = Boolean(
-        sessionStorage.getItem('lastCreatedClientId') ||
-          sessionStorage.getItem('lastCreatedClientName'),
-      )
+      const hasPendingClient = hasPendingCreatedClient()
       if (!cancelled) {
         setLoadingClients(true)
-        setAutoSelectingCreatedClient(hasPendingCreatedClient)
+        setAutoSelectingCreatedClient(hasPendingClient)
       }
 
       try {
         const clients = await fetchAllPagedRecords({
-          url: `${import.meta.env.VITE_API_BASE}client-companies`,
+          url: quoteApiUrl('client-companies'),
           dataKeys: ['data'],
           perPage: 200,
         })
@@ -288,8 +285,8 @@ const SelectClientCard = ({
           setClientOptions(formatted)
 
           const currentSelectedClient = selectedClientRef.current
-          const lastCreatedClientId = sessionStorage.getItem('lastCreatedClientId')
-          const lastCreatedClientName = sessionStorage.getItem('lastCreatedClientName')
+          const { id: lastCreatedClientId, name: lastCreatedClientName } =
+            readPendingCreatedClient()
           if (lastCreatedClientId || lastCreatedClientName) {
             const match = formatted.find((opt) =>
               lastCreatedClientId
@@ -308,8 +305,7 @@ const SelectClientCard = ({
                 onClientChangeRef.current(enriched)
               }
             }
-            sessionStorage.removeItem('lastCreatedClientId')
-            sessionStorage.removeItem('lastCreatedClientName')
+            clearPendingCreatedClient()
             return
           }
 
@@ -508,7 +504,7 @@ const SelectClientCard = ({
                         onCreateClient()
                         return
                       }
-                      sessionStorage.setItem('cameFromQuote', 'true')
+                      markCameFromQuote()
                       navigate('/client/create')
                     }}
                   >

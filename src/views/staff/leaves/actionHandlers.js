@@ -1,5 +1,7 @@
 // src/actionHandlers.js
 
+import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
+
 const API_BASE = `${import.meta.env.VITE_API_BASE}`.replace(/\/+$/, '')
 
 // VIEW ALL LEAVES SECTION - 1ST SECTION
@@ -29,9 +31,25 @@ export async function leaveAction(id, action, remarks) {
   })
   const result = await res.json()
   if (result.status === 'success') {
+    dispatchAppNotificationsChanged()
     return result
   }
   throw new Error(result.message || 'Leave action failed')
+}
+
+export async function cancelLeave(id) {
+  const res = await fetch(`${API_BASE}/hr/leaves/${encodeURIComponent(id)}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ id }),
+  })
+  const result = await res.json()
+  if (result.status === 'success') {
+    dispatchAppNotificationsChanged()
+    return result
+  }
+  throw new Error(result.message || 'Leave cancellation failed')
 }
 
 // LEAVE ENTITLEMENT SECTION
@@ -105,4 +123,30 @@ export async function updateEntitlement(payload) {
     return result
   }
   throw new Error(result.message || 'Failed to update entitlement')
+}
+
+export async function getLeaveWorkflowRecipients() {
+  const res = await fetch(`${API_BASE}/hr/leaves/workflow-recipients`, {
+    credentials: 'include',
+  })
+  const result = await res.json()
+  if (result.status === 'success') {
+    return Array.isArray(result.stages) ? result.stages : []
+  }
+  throw new Error(result.message || 'Failed to fetch leave workflow recipients')
+}
+
+export async function updateLeaveWorkflowRecipients(stages) {
+  const res = await fetch(`${API_BASE}/hr/leaves/workflow-recipients`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ stages }),
+  })
+  const result = await res.json()
+  if (result.status === 'success') {
+    dispatchAppNotificationsChanged()
+    return result
+  }
+  throw new Error(result.message || 'Failed to update leave workflow recipients')
 }

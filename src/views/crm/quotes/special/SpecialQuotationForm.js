@@ -1,38 +1,24 @@
 // src/views/crm/quotes/special/SpecialQuotationForm.js
 
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import SpecialDetailsCard from './SpecialDetailsCard'
 import PricingCard from './PricingCard'
 import ReviewSpecialQuoteCard from './ReviewSpecialQuoteCard'
-import { handleQuoteSuccess } from '../quoteSuccessHandler'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
-import { normalizeQuoteResult, quoteSaveMethod, quoteServiceUrl } from '../quoteApi'
+import {
+  LEGACY_QUOTE_SERVICE_DRAFT_KEYS,
+  clearQuoteServiceDraft,
+  readQuoteServiceDraft,
+  writeQuoteServiceDraft,
+} from '../quoteMainDrafts'
 import { buildPicPayload } from '../quoteContactUtils'
-import { getRecordListPath } from '../../records/config/recordTabs'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 
-const isSuccess = (payload) =>
-  payload?.status === 'success' || payload?.success === true || payload?.ok === true
+export const SPECIAL_QUOTE_DRAFT_KEY = LEGACY_QUOTE_SERVICE_DRAFT_KEYS.special
 
-export const SPECIAL_QUOTE_DRAFT_KEY = 'draftSpecialQuote'
-
-export const loadSpecialQuoteDraft = (
-  storage = typeof localStorage !== 'undefined' ? localStorage : null,
-) => {
-  if (!storage || typeof storage.getItem !== 'function') return null
-
-  try {
-    const raw = storage.getItem(SPECIAL_QUOTE_DRAFT_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
-  } catch {
-    if (typeof storage.removeItem === 'function') {
-      storage.removeItem(SPECIAL_QUOTE_DRAFT_KEY)
-    }
-    return null
-  }
+export const loadSpecialQuoteDraft = (storage) => {
+  return readQuoteServiceDraft({ serviceKey: 'special', storage })
 }
 
 export default function SpecialQuotationForm({
@@ -42,10 +28,23 @@ export default function SpecialQuotationForm({
   quoteId = null,
   proposalLanguage = 'en',
 }) {
-  const navigate = useNavigate()
-  const hasPriceExceptionRequestId = Boolean(
-    new URLSearchParams(window.location.search).get('priceExceptionRequestId'),
+  const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
+  const hasPriceExceptionRequestId = Boolean(priceExceptionRequestId)
+  const draftContext = useMemo(
+    () => ({
+      clientId: selectedClient?.company_id,
+      language: proposalLanguage,
+    }),
+    [proposalLanguage, selectedClient?.company_id],
   )
+  const saveQuote = useQuoteSave({
+    serviceKey: 'special',
+    quoteId,
+    isEditMode,
+    recordTabKey: 'special-tab',
+    draftContext,
+    successMessage: `Quotation ${isEditMode ? 'updated' : 'created'}. Go to quote records?`,
+  })
 
   // Default form structure
   const defaultForm = {
@@ -74,24 +73,28 @@ export default function SpecialQuotationForm({
     proposalLanguage,
   }
 
-  // Load draft from localStorage (only in create mode)
-  const draft = !isEditMode && !hasPriceExceptionRequestId ? loadSpecialQuoteDraft() : null
+  // Load draft from shared draft storage (only in create mode)
+  const draft =
+    !isEditMode &&
+    !hasPriceExceptionRequestId &&
+    readQuoteServiceDraft({ serviceKey: 'special', ...draftContext })
   const [formData, setFormData] = useState(draft || defaultForm)
+  const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
   const [initialized, setInitialized] = useState(false)
 
   // Persist draft on any change
   useEffect(() => {
     if (!isEditMode && !hasPriceExceptionRequestId) {
-      localStorage.setItem(SPECIAL_QUOTE_DRAFT_KEY, JSON.stringify(formData))
+      writeQuoteServiceDraft({ serviceKey: 'special', ...draftContext, draft: formData })
     }
-  }, [formData, isEditMode, hasPriceExceptionRequestId])
+  }, [draftContext, formData, isEditMode, hasPriceExceptionRequestId])
 
   // Clear draft when switching to edit mode
   useEffect(() => {
     if (isEditMode || hasPriceExceptionRequestId) {
-      localStorage.removeItem(SPECIAL_QUOTE_DRAFT_KEY)
+      clearQuoteServiceDraft({ serviceKey: 'special', ...draftContext })
     }
-  }, [isEditMode, hasPriceExceptionRequestId])
+  }, [draftContext, isEditMode, hasPriceExceptionRequestId])
 
   // Populate formData in edit mode once
   useEffect(() => {
@@ -138,6 +141,9 @@ export default function SpecialQuotationForm({
 
   useEffect(() => {
     if (isEditMode) return
+    if (previousProposalLanguageRef.current === proposalLanguage) return
+    previousProposalLanguageRef.current = proposalLanguage
+
     setFormData((prev) => ({
       ...prev,
       proposalLanguage,
@@ -158,8 +164,6 @@ export default function SpecialQuotationForm({
       dialog.alert('Please choose a Special Service type.')
       return
     }
-
-    const url = quoteServiceUrl('special', isEditMode ? quoteId : null)
 
     const subTotal = parseFloat(formData.subTotal || 0)
     const sstAmount = parseFloat(formData.sstAmount || 0)
@@ -214,49 +218,16 @@ export default function SpecialQuotationForm({
     const payload = {
       ...(isEditMode && {
         id: quoteId,
-        isRevision: new URLSearchParams(window.location.search).get('isRevision') === 'true',
+        isRevision,
       }),
       ...clientPayload,
       ...corePayload,
     }
-    console.log('🔔 Saving quote payload:', payload)
 
-    try {
-      const res = await fetch(url, {
-        method: quoteSaveMethod(isEditMode),
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      const rawResult = await res.json()
-      const result = normalizeQuoteResult(rawResult)
-
-      if (isSuccess(result)) {
-        await handleQuoteSuccess(result)
-        // Clear drafts
-        localStorage.removeItem('draftSpecialQuote')
-        clearQuoteMainDraft('special')
-        sessionStorage.removeItem('quoteInquirySource')
-        const goToList = await dialog.confirm(
-          `Quotation ${isEditMode ? 'updated' : 'created'}. Go to quote records?`,
-          {
-            title: isEditMode ? 'Quotation Updated' : 'Quotation Created',
-            confirmText: 'Go to list',
-            cancelText: isEditMode ? 'Stay here' : 'Create another',
-          },
-        )
-        if (goToList) {
-          navigate(getRecordListPath('special-tab'), { replace: true })
-        } else if (!isEditMode) {
-          window.location.href = '/crm/quotes'
-        }
-      } else {
-        dialog.alert(result.message || '❌ Save failed.')
-      }
-    } catch (err) {
-      console.error('❌ Save error:', err)
-      dialog.alert('❌ Error saving quotation.')
-    }
+    await saveQuote(payload, {
+      failureMessage: 'Save failed.',
+      networkErrorMessage: 'Error saving quotation.',
+    })
   }
 
   // Determine render gates

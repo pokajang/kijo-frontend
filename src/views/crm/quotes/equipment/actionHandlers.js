@@ -1,16 +1,20 @@
 // src/views/crm/quotes/equipment/actionHandlers.js
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { handleQuoteSuccess } from '../quoteSuccessHandler'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
-import { normalizeQuoteResult, quoteSaveMethod, quoteServiceUrl } from '../quoteApi'
+import {
+  clearQuoteMainDraft,
+  clearQuoteServiceDraft,
+  readQuoteServiceDraft,
+  writeQuoteServiceDraft,
+} from '../quoteMainDrafts'
+import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
+import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { buildPicPayload } from '../quoteContactUtils'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { useQuoteSave } from '../helpers/useQuoteSave'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import dialog from '../../../../components/dialog/dialogService'
-
-const isSuccess = (payload) =>
-  payload?.status === 'success' || payload?.success === true || payload?.ok === true
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -23,12 +27,29 @@ const pick = (obj, ...keys) => {
 // Hook for Equipment quotation form, now supports create & edit modes
 export function useEquipmentForm(
   selectedClient,
-  { initialFormData = null, isEditMode = false, quoteId = null } = {},
+  { initialFormData = null, isEditMode = false, quoteId = null, proposalLanguage = 'en' } = {},
 ) {
   const navigate = useNavigate()
-  const hasPriceExceptionRequestId = Boolean(
-    new URLSearchParams(window.location.search).get('priceExceptionRequestId'),
+  const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
+  const hasPriceExceptionRequestId = Boolean(priceExceptionRequestId)
+  const draftContext = useMemo(
+    () => ({
+      clientId: selectedClient?.company_id,
+      language: proposalLanguage,
+    }),
+    [proposalLanguage, selectedClient?.company_id],
   )
+  const saveQuote = useQuoteSave({
+    serviceKey: 'equipment',
+    quoteId,
+    isEditMode,
+    recordTabKey: 'equipment-tab',
+    draftContext,
+    successMessage: ({ result }) => {
+      const quoteRef = result.quote_ref_no ? `: ${result.quote_ref_no}` : ''
+      return `Equipment quotation ${isEditMode ? 'updated' : 'created'}${quoteRef}. Go to quote records?`
+    },
+  })
 
   // ─── form data state ──────────────────────────────────────────────────────
   const defaultForm = {
@@ -41,46 +62,41 @@ export function useEquipmentForm(
     discount: 0,
     priceExceptionRequestId: '',
     sstPercent: 0,
+    attachProposal: true,
+    proposalLanguage,
   }
 
   const readDraft = () => {
     if (isEditMode || hasPriceExceptionRequestId) return null
-    const raw = localStorage.getItem('draftEquipmentQuote')
-    if (!raw) return null
-    try {
-      return JSON.parse(raw)
-    } catch (err) {
-      console.warn('Invalid draftEquipmentQuote; ignoring.', err)
-      return null
-    }
+    return readQuoteServiceDraft({ serviceKey: 'equipment', ...draftContext })
   }
 
   // Load draft in create mode, otherwise use default
   const draft = readDraft()
 
-  const [formData, setFormData] = useState(draft || defaultForm)
+  const [formData, setFormData] = useState({ ...defaultForm, ...(draft || {}) })
 
   // Persist draft on every change (create mode only)
   useEffect(() => {
     if (!isEditMode && !hasPriceExceptionRequestId) {
-      localStorage.setItem('draftEquipmentQuote', JSON.stringify(formData))
+      writeQuoteServiceDraft({ serviceKey: 'equipment', ...draftContext, draft: formData })
     }
-  }, [formData, isEditMode, hasPriceExceptionRequestId])
+  }, [draftContext, formData, isEditMode, hasPriceExceptionRequestId])
 
   // Clear draft when entering edit mode
   useEffect(() => {
     if (isEditMode || hasPriceExceptionRequestId) {
-      localStorage.removeItem('draftEquipmentQuote')
+      clearQuoteServiceDraft({ serviceKey: 'equipment', ...draftContext })
     }
-  }, [isEditMode, hasPriceExceptionRequestId])
+  }, [draftContext, isEditMode, hasPriceExceptionRequestId])
 
   // ─── catalog fetch & options ───────────────────────────────────────────────
   const [catalogItems, setCatalogItems] = useState([])
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_BASE}catalog/items`, { credentials: 'include' })
+    fetch(quoteApiUrl('catalog/items'), { credentials: 'include' })
       .then((res) => res.json())
       .then((json) => {
-        if (json.status === 'success') {
+        if (isQuoteResultSuccess(json)) {
           setCatalogItems(json.data)
         } else {
           console.error('Failed to load catalog items', json)
@@ -146,9 +162,11 @@ export function useEquipmentForm(
         discount: getNumber('discount'),
         priceExceptionRequestId: '',
         sstPercent: getNumber('sstPercent', 'sst_percent'),
+        attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
+        proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
       })
     }
-  }, [isEditMode, initialFormData])
+  }, [defaultForm.attachProposal, isEditMode, initialFormData, proposalLanguage])
 
   // ─── handlers ───────────────────────────────────────────────────────────────
   const handleSelectChange = (opts) => {
@@ -233,7 +251,7 @@ export function useEquipmentForm(
     })
     const payload = {
       ...(isEditMode && { id: quoteId }),
-      isRevision: new URLSearchParams(window.location.search).get('isRevision') === 'true',
+      isRevision,
       client_id: selectedClient.company_id,
       client_name: selectedClient.company_name,
       client_ssm: selectedClient.ssm_number,
@@ -255,45 +273,13 @@ export function useEquipmentForm(
       subtotal: parseFloat(subtotal.toFixed(2)),
       sst_amount: parseFloat(sstAmount.toFixed(2)),
       grand_total: parseFloat(grandTotal.toFixed(2)),
+      attach_proposal: formData.attachProposal ? 1 : 0,
+      proposal_language: formData.proposalLanguage || proposalLanguage,
     }
-    const endpoint = quoteServiceUrl('equipment', isEditMode ? quoteId : null)
-    try {
-      const res = await fetch(endpoint, {
-        method: quoteSaveMethod(isEditMode),
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      const rawResult = await res.json()
-      const result = normalizeQuoteResult(rawResult)
-      if (isSuccess(result)) {
-        await handleQuoteSuccess(result)
-        if (!isEditMode) {
-          clearQuoteMainDraft('equipment')
-          localStorage.removeItem('draftEquipmentQuote')
-          sessionStorage.removeItem('quoteInquirySource')
-        }
-        const quoteRef = result.quote_ref_no ? `: ${result.quote_ref_no}` : ''
-        const goToList = await dialog.confirm(
-          `Equipment quotation ${isEditMode ? 'updated' : 'created'}${quoteRef}. Go to quote records?`,
-          {
-            title: isEditMode ? 'Quotation Updated' : 'Quotation Created',
-            confirmText: 'Go to list',
-            cancelText: isEditMode ? 'Stay here' : 'Create another',
-          },
-        )
-        if (goToList) {
-          navigate(getRecordListPath('equipment-tab'), { replace: true })
-        } else if (!isEditMode) {
-          window.location.href = '/crm/quotes'
-        }
-      } else {
-        dialog.alert('Error: ' + (result.message || 'Failed to save quotation.'))
-      }
-    } catch (err) {
-      console.error(err)
-      dialog.alert('Error: Network or server error while saving quotation.')
-    }
+    await saveQuote(payload, {
+      failureMessage: 'Error: Failed to save quotation.',
+      networkErrorMessage: 'Error: Network or server error while saving quotation.',
+    })
   }
 
   const handleCancel = () => {
@@ -301,9 +287,9 @@ export function useEquipmentForm(
       navigate(getRecordListPath('equipment-tab'), { replace: true })
     } else {
       clearQuoteMainDraft('equipment')
-      localStorage.removeItem('draftEquipmentQuote')
-      sessionStorage.removeItem('quoteInquirySource')
-      window.location.href = '/crm/quotes'
+      clearQuoteServiceDraft({ serviceKey: 'equipment', ...draftContext })
+      removeQuoteInquirySource()
+      navigate('/crm/quotes', { replace: true, state: { quoteResetToken: Date.now() } })
     }
   }
 
@@ -330,6 +316,8 @@ export function useEquipmentForm(
     setDiscount: (v) => setFormData((f) => ({ ...f, discount: v })),
     sstPercent: formData.sstPercent,
     setSstPercent: (v) => setFormData((f) => ({ ...f, sstPercent: v })),
+    attachProposal: formData.attachProposal,
+    setAttachProposal: (v) => setFormData((f) => ({ ...f, attachProposal: v })),
 
     // totals
     itemsTotal,

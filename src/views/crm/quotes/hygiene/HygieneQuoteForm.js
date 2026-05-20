@@ -1,20 +1,19 @@
 ﻿// src/views/crm/quotes/hygiene/HygieneQuotationForm.js
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import HygieneDetailsCard from './HygieneDetailsCard'
 import PricingCard from './PricingCard'
 import ReviewHygieneQuotationCard from './ReviewHygieneQuotationCard'
-import { handleQuoteSuccess } from '../quoteSuccessHandler'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
-import { normalizeQuoteResult, quoteSaveMethod, quoteServiceUrl } from '../quoteApi'
+import {
+  clearQuoteServiceDraft,
+  readQuoteServiceDraft,
+  writeQuoteServiceDraft,
+} from '../quoteMainDrafts'
 import { buildPicPayload } from '../quoteContactUtils'
-import { getRecordListPath } from '../../records/config/recordTabs'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
-
-const isSuccess = (payload) =>
-  payload?.status === 'success' || payload?.success === true || payload?.ok === true
 
 export default function HygieneQuotationForm({
   selectedClient,
@@ -23,10 +22,22 @@ export default function HygieneQuotationForm({
   quoteId = null,
   proposalLanguage = 'en',
 }) {
-  const navigate = useNavigate()
-  const hasPriceExceptionRequestId = Boolean(
-    new URLSearchParams(window.location.search).get('priceExceptionRequestId'),
+  const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
+  const hasPriceExceptionRequestId = Boolean(priceExceptionRequestId)
+  const draftContext = useMemo(
+    () => ({
+      clientId: selectedClient?.company_id,
+      language: proposalLanguage,
+    }),
+    [proposalLanguage, selectedClient?.company_id],
   )
+  const saveQuote = useQuoteSave({
+    serviceKey: 'ih',
+    quoteId,
+    isEditMode,
+    recordTabKey: 'ih-tab',
+    draftContext,
+  })
 
   const toNumber = (value, fallback = 0) => {
     const n = Number(value)
@@ -74,28 +85,25 @@ export default function HygieneQuotationForm({
   // Load draft in create mode
   const loadDraft = () => {
     if (isEditMode || hasPriceExceptionRequestId) return null
-    try {
-      return JSON.parse(localStorage.getItem('draftHygieneQuote'))
-    } catch {
-      return null
-    }
+    return readQuoteServiceDraft({ serviceKey: 'ih', ...draftContext })
   }
 
   const draft = loadDraft()
   const [formData, setFormData] = useState({ ...defaultForm, ...(draft || {}) })
+  const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
 
   // Persist draft on change (create mode only)
   useEffect(() => {
     if (!isEditMode && !hasPriceExceptionRequestId) {
-      localStorage.setItem('draftHygieneQuote', JSON.stringify(formData))
+      writeQuoteServiceDraft({ serviceKey: 'ih', ...draftContext, draft: formData })
     }
-  }, [formData, isEditMode, hasPriceExceptionRequestId])
+  }, [draftContext, formData, isEditMode, hasPriceExceptionRequestId])
 
   useEffect(() => {
     if (isEditMode || hasPriceExceptionRequestId) {
-      localStorage.removeItem('draftHygieneQuote')
+      clearQuoteServiceDraft({ serviceKey: 'ih', ...draftContext })
     }
-  }, [isEditMode, hasPriceExceptionRequestId])
+  }, [draftContext, isEditMode, hasPriceExceptionRequestId])
 
   // Populate in edit mode
   useEffect(() => {
@@ -127,15 +135,21 @@ export default function HygieneQuotationForm({
   // Update siteAddress if client changes (and not in edit mode)
   useEffect(() => {
     if (!isEditMode && selectedClient) {
-      setFormData((prev) => ({
-        ...prev,
-        siteAddress: buildSiteAddress(selectedClient),
-      }))
+      setFormData((prev) => {
+        if (prev.siteAddress) return prev
+        return {
+          ...prev,
+          siteAddress: buildSiteAddress(selectedClient),
+        }
+      })
     }
   }, [buildSiteAddress, selectedClient, isEditMode])
 
   useEffect(() => {
     if (isEditMode) return
+    if (previousProposalLanguageRef.current === proposalLanguage) return
+    previousProposalLanguageRef.current = proposalLanguage
+
     setFormData((prev) => ({
       ...prev,
       proposalLanguage,
@@ -162,8 +176,6 @@ export default function HygieneQuotationForm({
       return
     }
 
-    const url = quoteServiceUrl('ih', isEditMode ? quoteId : null)
-
     const normalizedSampleCounts = Math.max(0, toInteger(formData.sampleCounts, 0))
     const hasWorkUnitsInput = String(formData.numWorkUnits ?? '').trim() !== ''
     const normalizedNumWorkUnits = hasWorkUnitsInput
@@ -179,7 +191,7 @@ export default function HygieneQuotationForm({
     })
     const payload = {
       ...(isEditMode && { id: quoteId }),
-      isRevision: new URLSearchParams(window.location.search).get('isRevision') === 'true',
+      isRevision,
       client_id: selectedClient.company_id,
       client_name: selectedClient.company_name,
       client_ssm: selectedClient.ssm_number,
@@ -211,43 +223,7 @@ export default function HygieneQuotationForm({
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
 
-    try {
-      const res = await fetch(url, {
-        method: quoteSaveMethod(isEditMode),
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      const result = normalizeQuoteResult(await res.json())
-
-      if (isSuccess(result)) {
-        await handleQuoteSuccess(result)
-        // Clear draft only on create success
-        if (!isEditMode) {
-          clearQuoteMainDraft('ih')
-          localStorage.removeItem('draftHygieneQuote')
-          sessionStorage.removeItem('quoteInquirySource')
-        }
-        const goToList = await dialog.confirm(
-          `Quotation ${isEditMode ? 'updated' : 'created'} successfully. Go to quote records?`,
-          {
-            title: isEditMode ? 'Quotation Updated' : 'Quotation Created',
-            confirmText: 'Go to list',
-            cancelText: isEditMode ? 'Stay here' : 'Create another',
-          },
-        )
-        if (goToList) {
-          navigate(getRecordListPath('ih-tab'), { replace: true })
-        } else if (!isEditMode) {
-          window.location.href = '/crm/quotes'
-        }
-      } else {
-        dialog.alert(result.message || 'Failed to save quotation.')
-      }
-    } catch (err) {
-      console.error('Save error:', err)
-      dialog.alert('An error occurred while saving the quotation.')
-    }
+    await saveQuote(payload)
   }
 
   return (

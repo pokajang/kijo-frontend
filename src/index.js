@@ -6,6 +6,7 @@ import 'core-js'
 import App from './App'
 import store from './store'
 import { installApiClient } from './api/apiClient'
+import { registerAppServiceWorker } from './lib/serviceWorkerRegistration'
 
 installApiClient()
 
@@ -14,3 +15,9 @@ createRoot(document.getElementById('root')).render(
     <App />
   </Provider>,
 )
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    registerAppServiceWorker().catch(() => {})
+  })
+}

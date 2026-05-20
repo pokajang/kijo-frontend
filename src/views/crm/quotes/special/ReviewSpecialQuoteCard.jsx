@@ -1,7 +1,8 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
+import { clearQuoteMainDraft, clearQuoteServiceDraft } from '../quoteMainDrafts'
+import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import {
   QuoteClientSummary,
@@ -19,14 +20,18 @@ export default function ReviewSpecialQuoteCard({
   const navigate = useNavigate()
 
   const handleCancel = () => {
-    localStorage.removeItem('draftSpecialQuote')
     clearQuoteMainDraft('special')
-    sessionStorage.removeItem('quoteInquirySource')
+    clearQuoteServiceDraft({
+      serviceKey: 'special',
+      clientId: selectedClient?.company_id,
+      language: formData?.proposalLanguage,
+    })
+    removeQuoteInquirySource()
 
     if (isEditMode) {
       navigate(getRecordListPath('special-tab'))
     } else {
-      window.location.href = '/crm/quotes'
+      navigate('/crm/quotes', { replace: true, state: { quoteResetToken: Date.now() } })
     }
   }
 

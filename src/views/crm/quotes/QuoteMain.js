@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
+  CAlert,
   CButton,
   CCard,
   CCardBody,
@@ -27,8 +28,14 @@ import {
   removeQuoteInquirySource,
   writeQuoteInquirySource,
 } from './quoteInquirySource'
-import { clearQuoteMainDraft, readQuoteMainDraft, writeQuoteMainDraft } from './quoteMainDrafts'
-import dialog from '../../../components/dialog/dialogService'
+import {
+  clearQuoteMainDraft,
+  clearQuoteServiceDraft,
+  readQuoteMainDraft,
+  writeQuoteMainDraft,
+} from './quoteMainDrafts'
+import { isQuoteResultSuccess, readQuoteResultRow } from './quoteApi'
+import { useQuoteRouteParams } from './helpers/quoteRouteParams'
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -36,25 +43,6 @@ const pick = (obj, ...keys) => {
     if (value !== undefined && value !== null) return value
   }
   return undefined
-}
-
-const isSuccess = (payload) =>
-  payload?.status === 'success' ||
-  payload?.success === true ||
-  payload?.ok === true ||
-  Array.isArray(payload) ||
-  (payload &&
-    typeof payload === 'object' &&
-    (payload.id || payload.quote_ref_no || payload.quoteRefNo))
-
-const unwrapQuoteRow = (payload) => {
-  if (Array.isArray(payload)) return payload[0] || null
-  if (Array.isArray(payload?.data)) return payload.data[0] || null
-  if (Array.isArray(payload?.result)) return payload.result[0] || null
-  if (payload?.data && typeof payload.data === 'object') return payload.data
-  if (payload?.result && typeof payload.result === 'object') return payload.result
-  if (payload && typeof payload === 'object') return payload
-  return null
 }
 
 const getInitialInquiryData = (inquirySource, draftMain, explicitServiceKey) => {
@@ -71,17 +59,22 @@ const getInitialInquiryData = (inquirySource, draftMain, explicitServiceKey) => 
 const QuoteMain = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const query = new URLSearchParams(location.search)
-  const quoteId = query.get('quoteId')
-  const isEditMode = query.get('edit') === 'true'
-  const isNegotiationApply = Boolean(query.get('priceExceptionRequestId'))
-  const serviceQueryParam = query.get('service')
+  const {
+    quoteId,
+    isEditMode,
+    priceExceptionRequestId,
+    service: serviceQueryParam,
+  } = useQuoteRouteParams()
+  const isNegotiationApply = Boolean(priceExceptionRequestId)
   const serviceParam = normalizeQuoteServiceKey(serviceQueryParam)
   const hasInvalidServiceParam = Boolean(serviceQueryParam && !serviceParam)
   const initialServiceParam = serviceQueryParam || location.state?.initialService || ''
+  const quoteResetToken = location.state?.quoteResetToken
   const returnTo = location.state?.returnTo || '/crm/records'
   const explicitServiceKey = normalizeQuoteServiceKey(initialServiceParam)
   const [editFormData, setEditFormData] = useState(null)
+  const [editLoadError, setEditLoadError] = useState('')
+  const [isEditLoading, setIsEditLoading] = useState(false)
   const draftMain = hasInvalidServiceParam
     ? null
     : readQuoteMainDraft({
@@ -105,6 +98,22 @@ const QuoteMain = () => {
   const [proposalLanguage, setProposalLanguage] = useState(draftMain?.proposalLanguage || 'en')
   const inquirySourcePendingRef = useRef(Boolean(inquirySource))
 
+  useEffect(() => {
+    if (!quoteResetToken || isEditMode || isNegotiationApply) return
+
+    clearQuoteMainDraft()
+    clearQuoteServiceDraft()
+    removeQuoteInquirySource()
+    inquirySourcePendingRef.current = false
+    setSelectedClient(null)
+    setSelectedService('')
+    setInquiryData({ source: '', remarks: '' })
+    setProposalLanguage('en')
+    setEditFormData(null)
+    setEditLoadError('')
+    setIsEditLoading(false)
+  }, [isEditMode, isNegotiationApply, quoteResetToken])
+
   // Create-mode handlers
   const handleClientChange = useCallback((client) => {
     setSelectedClient((previousClient) => {
@@ -117,6 +126,7 @@ const QuoteMain = () => {
 
       // Keep selected service/source when only PIC/address changes for the same client.
       if (hasCompanyChanged || hasClientCleared) {
+        clearQuoteServiceDraft()
         if (inquirySourcePendingRef.current) {
           inquirySourcePendingRef.current = false
         } else {
@@ -150,7 +160,7 @@ const QuoteMain = () => {
     setInquiryData((prev) => ({ ...prev, [name]: value }))
   }
 
-  // Save to localStorage on every change
+  // Save the main quote draft on every change.
   useEffect(() => {
     if (!isEditMode && !isNegotiationApply) {
       try {
@@ -176,14 +186,24 @@ const QuoteMain = () => {
   // Clear draft if switching to edit mode
   useEffect(() => {
     if (isEditMode || isNegotiationApply) {
-      clearQuoteMainDraft()
+      clearQuoteMainDraft(serviceParam || explicitServiceKey || selectedService)
+      removeQuoteInquirySource()
     }
-  }, [isEditMode, isNegotiationApply])
+  }, [explicitServiceKey, isEditMode, isNegotiationApply, selectedService, serviceParam])
 
   // Edit-mode: fetch existing quote
   useEffect(() => {
-    if (!isEditMode || !quoteId) {
+    if (!isEditMode) {
       setEditFormData(null)
+      setEditLoadError('')
+      setIsEditLoading(false)
+      return undefined
+    }
+
+    if (!quoteId) {
+      setEditFormData(null)
+      setEditLoadError('Missing quotation id. Open the quotation from the records list again.')
+      setIsEditLoading(false)
       return undefined
     }
 
@@ -191,10 +211,16 @@ const QuoteMain = () => {
     const config = getQuoteService(serviceParam)
     if (!config) {
       setEditFormData(null)
+      setEditLoadError(
+        'Missing or unsupported quotation service. Open the quotation from the records list again.',
+      )
+      setIsEditLoading(false)
       return undefined
     }
 
     setEditFormData(null)
+    setEditLoadError('')
+    setIsEditLoading(true)
 
     fetch(config.getEditEndpoint(quoteId), {
       credentials: 'include',
@@ -206,8 +232,10 @@ const QuoteMain = () => {
       })
       .then((result) => {
         if (controller.signal.aborted) return
-        if (!isSuccess(result)) throw new Error(result?.message || 'Failed to load quotation')
-        const row = unwrapQuoteRow(result)
+        if (!isQuoteResultSuccess(result)) {
+          throw new Error(result?.message || 'Failed to load quotation')
+        }
+        const row = readQuoteResultRow(result)
         if (!row) throw new Error('No quotation data found')
 
         const selectedPic = {
@@ -235,7 +263,12 @@ const QuoteMain = () => {
       .catch((err) => {
         if (err.name === 'AbortError') return
         console.error(err)
-        dialog.alert('Error loading quotation data.')
+        setEditLoadError(err.message || 'Error loading quotation data.')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsEditLoading(false)
+        }
       })
 
     return () => controller.abort()
@@ -316,8 +349,20 @@ const QuoteMain = () => {
     { label: 'OSH Practitioners Group', value: 'OSH Practitioners Group' },
   ]
 
+  const routeError = hasInvalidServiceParam
+    ? `Unsupported quote service "${serviceQueryParam}". Select a valid service to continue.`
+    : ''
+
   return (
     <CRow>
+      {routeError && (
+        <CCol xs={12}>
+          <CAlert color="warning" className="mb-4">
+            {routeError}
+          </CAlert>
+        </CCol>
+      )}
+
       {isEditMode && (
         <CCol xs={12}>
           <CCard className="mb-4">
@@ -333,6 +378,22 @@ const QuoteMain = () => {
               </CButton>
             </CCardHeader>
           </CCard>
+        </CCol>
+      )}
+
+      {isEditMode && isEditLoading && (
+        <CCol xs={12}>
+          <CAlert color="info" className="mb-4">
+            Loading quotation data...
+          </CAlert>
+        </CCol>
+      )}
+
+      {isEditMode && editLoadError && (
+        <CCol xs={12}>
+          <CAlert color="danger" className="mb-4">
+            {editLoadError}
+          </CAlert>
         </CCol>
       )}
 
@@ -421,7 +482,7 @@ const QuoteMain = () => {
         </>
       )}
 
-      {isEditMode && editFormData && renderEditForm()}
+      {isEditMode && !editLoadError && editFormData && renderEditForm()}
     </CRow>
   )
 }

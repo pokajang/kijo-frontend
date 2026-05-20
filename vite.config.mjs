@@ -4,26 +4,42 @@ import path from 'node:path'
 import fs from 'node:fs'
 import autoprefixer from 'autoprefixer'
 
-const resolveMetaVersion = (metaPath) => {
+const resolveMeta = (metaPath) => {
   try {
     const raw = fs.readFileSync(metaPath, 'utf8')
-    const parsed = JSON.parse(raw)
-    return parsed?.version || null
+    return JSON.parse(raw)
   } catch {
-    return null
+    return {}
   }
 }
 
 export default defineConfig(({ command }) => {
   const isBuild = command === 'build'
   const metaPath = path.resolve(__dirname, 'public', 'meta.json')
+  const existingMeta = resolveMeta(metaPath)
   const envVersion = process.env.VITE_APP_VERSION || process.env.VITE_COMMIT_SHA || null
-  const version =
-    envVersion || (isBuild ? new Date().toISOString() : resolveMetaVersion(metaPath) || 'dev')
+  const version = envVersion || (isBuild ? new Date().toISOString() : existingMeta.version || 'dev')
+
+  const buildMeta = {
+    ...existingMeta,
+    version,
+  }
+
+  if (process.env.VITE_MINIMUM_SUPPORTED_VERSION) {
+    buildMeta.minimum_supported_version = process.env.VITE_MINIMUM_SUPPORTED_VERSION
+  }
+
+  if (process.env.VITE_FORCE_RELOAD) {
+    buildMeta.force_reload = process.env.VITE_FORCE_RELOAD === 'true'
+  }
+
+  if (process.env.VITE_FORCE_RELOAD_MESSAGE) {
+    buildMeta.message = process.env.VITE_FORCE_RELOAD_MESSAGE
+  }
 
   if (isBuild) {
     try {
-      fs.writeFileSync(metaPath, JSON.stringify({ version }, null, 2))
+      fs.writeFileSync(metaPath, JSON.stringify(buildMeta, null, 2))
     } catch {
       // ignore write failures; build can still proceed
     }

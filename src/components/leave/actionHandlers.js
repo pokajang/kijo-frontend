@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import dialog from '../dialog/dialogService'
+import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
 
 const formatMalaysiaDate = (dateInput) =>
   new Date(dateInput).toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' })
@@ -159,6 +160,7 @@ export const useApplyLeaveHandlers = ({ onNotify, onSubmitted } = {}) => {
         method: 'POST',
         body: JSON.stringify(payload),
       })
+      dispatchAppNotificationsChanged()
 
       if (result.mail_sent === true) {
         notify('success', 'Your leave application was submitted and recipients were notified.', {

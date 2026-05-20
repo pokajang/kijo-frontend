@@ -33,6 +33,7 @@ import { StatsStrip } from '../../../components/stats'
 import { useAuth } from '../../../auth/AuthProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
 import { quoteApiUrl } from '../quotes/quoteApi'
+import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
 
 const serviceOptions = [
   { value: 'all', label: 'All services' },
@@ -404,6 +405,7 @@ const Negotiation = () => {
         throw new Error(result?.message || 'Failed to update request.')
       }
       window.dispatchEvent(new Event('quote-price-exceptions:changed'))
+      dispatchAppNotificationsChanged()
       setDecision(null)
       await fetchRows()
     } catch (error) {

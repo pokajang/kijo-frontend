@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import Select from '../../../../components/forms/ThemedSelect'
 import { useNavigate } from 'react-router-dom'
 import { CRow, CButton, CCol, CFormLabel, CFormInput } from '@coreui/react'
-import { quoteApiUrl } from '../quoteApi'
+import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
 
 /**
  * IH Service selector.
@@ -25,7 +25,7 @@ const ServiceTypeCard = ({
       .then((res) => res.json())
       .then((result) => {
         const rows = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : []
-        if (result?.status === 'success' || result?.success === true || Array.isArray(result)) {
+        if (isQuoteResultSuccess(result)) {
           setOptions(rows)
         } else {
           console.error('Failed to load IH services', result)

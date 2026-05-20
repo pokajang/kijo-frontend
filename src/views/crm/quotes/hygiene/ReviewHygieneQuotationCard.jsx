@@ -2,7 +2,8 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
+import { clearQuoteMainDraft, clearQuoteServiceDraft } from '../quoteMainDrafts'
+import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
 import {
@@ -30,9 +31,13 @@ const ReviewHygieneQuotationCard = ({
       navigate(getRecordListPath('ih-tab'))
     } else {
       clearQuoteMainDraft('ih')
-      localStorage.removeItem('draftHygieneQuote')
-      sessionStorage.removeItem('quoteInquirySource')
-      window.location.href = '/crm/quotes'
+      clearQuoteServiceDraft({
+        serviceKey: 'ih',
+        clientId: selectedClient?.company_id,
+        language: formData?.proposalLanguage,
+      })
+      removeQuoteInquirySource()
+      navigate('/crm/quotes', { replace: true, state: { quoteResetToken: Date.now() } })
     }
   }
 

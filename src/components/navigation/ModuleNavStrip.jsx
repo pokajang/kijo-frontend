@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom'
 import { CBadge, CButton } from '@coreui/react'
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
+import { getTabNotificationBadge } from '../../notifications/notificationRegistry'
 
 const normalizePath = (path) => {
   if (!path) return ''
@@ -47,6 +49,7 @@ const ModuleNavStripShell = ({
   const stickyGap = 8
   const [stickyTop, setStickyTop] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
+  const { getTabCount } = useAppNotifications()
 
   const inferredActiveTab = useMemo(() => {
     if (activeTab) return activeTab
@@ -128,6 +131,20 @@ const ModuleNavStripShell = ({
         >
           {tabs.map((tab) => {
             const isActive = inferredActiveTab === tab.key
+            const notificationCount = tab.notificationTabKey
+              ? getTabCount(tab.notificationTabKey)
+              : 0
+            const notificationBadgeConfig = tab.notificationTabKey
+              ? getTabNotificationBadge(tab.notificationTabKey)
+              : null
+            const badge =
+              tab.badge ||
+              (notificationCount > 0 && notificationBadgeConfig
+                ? {
+                    ...notificationBadgeConfig,
+                    text: String(notificationCount),
+                  }
+                : null)
 
             return (
               <CButton
@@ -146,13 +163,13 @@ const ModuleNavStripShell = ({
               >
                 <span className="d-inline-flex align-items-center gap-2">
                   <span>{tab.label}</span>
-                  {tab.badge ? (
+                  {badge ? (
                     <CBadge
-                      color={tab.badge.color || 'primary'}
+                      color={badge.color || 'primary'}
                       className="rounded-pill"
-                      title={tab.badge.title || undefined}
+                      title={badge.title || undefined}
                     >
-                      {tab.badge.text}
+                      {badge.text}
                     </CBadge>
                   ) : null}
                 </span>
@@ -189,6 +206,7 @@ ModuleNavStripShell.propTypes = {
       }),
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
+      notificationTabKey: PropTypes.string,
       to: PropTypes.string,
     }),
   ).isRequired,

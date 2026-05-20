@@ -27,6 +27,7 @@ import { useRecordsFetch } from './useRecordsFetch'
 import { useRecordsModalWorkflow } from './useRecordsModalWorkflow'
 import { useRecordsTabRouting } from './useRecordsTabRouting'
 import { quoteApiUrl } from '../../quotes/quoteApi'
+import { dispatchAppNotificationsChanged } from '../../../../notifications/appNotificationEvents'
 
 const toNavigationStateValue = (value, seen = new WeakSet()) => {
   if (value == null) return value
@@ -450,6 +451,7 @@ export const useRecordsController = () => {
         throw new Error(getMessage(result, 'Failed to submit negotiation request.'))
       }
       window.dispatchEvent(new Event('quote-price-exceptions:changed'))
+      dispatchAppNotificationsChanged()
       dialog.alert('Negotiation request submitted for approval.')
       setNegotiationRecord(null)
     } catch (error) {

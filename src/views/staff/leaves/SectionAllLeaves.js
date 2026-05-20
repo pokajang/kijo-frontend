@@ -40,6 +40,27 @@ import * as AH from './actionHandlers'
 
 const dataColumns = [
   {
+    key: 'status',
+    label: 'Status',
+    width: '120px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (record) => record.status || '',
+  },
+  {
+    key: 'workflow',
+    label: 'Workflow',
+    width: '260px',
+    sortable: true,
+    sortType: 'string',
+    textMode: 'expandable',
+    cellMaxWidth: '260px',
+    previewCharThreshold: 42,
+    getExportValue: (record) => record.workflow || '',
+  },
+  {
     key: 'appliedAt',
     label: 'Applied',
     width: '140px',
@@ -95,38 +116,17 @@ const dataColumns = [
     shrinkToFit: true,
     getExportValue: (record) => record.duration || '',
   },
-  {
-    key: 'status',
-    label: 'Status',
-    width: '120px',
-    sortable: true,
-    sortType: 'string',
-    align: 'center',
-    shrinkToFit: true,
-    getExportValue: (record) => record.status || '',
-  },
-  {
-    key: 'workflow',
-    label: 'Workflow',
-    width: '260px',
-    sortable: true,
-    sortType: 'string',
-    textMode: 'expandable',
-    cellMaxWidth: '260px',
-    previewCharThreshold: 42,
-    getExportValue: (record) => record.workflow || '',
-  },
 ]
 
 const defaultVisibleColumns = {
+  status: true,
+  workflow: true,
   appliedAt: true,
   staff: true,
   leave: true,
   reason: true,
   period: true,
   duration: true,
-  status: true,
-  workflow: false,
 }
 
 const requiredColumns = new Set(['staff', 'status'])
@@ -155,11 +155,92 @@ const getStatusTone = (status) => {
 export const getLeaveApplicationScopeDate = (record = {}) =>
   record.applied_at || record.start_date || null
 
+const buildWorkflowStep = ({ label, person, at, status, remarks }) =>
+  [
+    `${label}: ${status || '-'}`,
+    person ? `by ${person}` : '',
+    at ? `at ${at}` : '',
+    remarks ? `Remarks: ${remarks}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+export const getLeaveWorkflowHistoryText = (
+  record = {},
+  reviewer = '',
+  approver = '',
+  canceller = '',
+) => {
+  const hasReviewed = Boolean(record.reviewed_by)
+  const hasApproved = Boolean(record.approved_by)
+  const hasCancelled = Boolean(
+    record.cancelled_by || record.cancelled_at || record.status === 'Cancelled',
+  )
+
+  return [
+    hasReviewed
+      ? buildWorkflowStep({
+          label: 'Review',
+          person: reviewer,
+          at: record.reviewed_at,
+          status: record.reviewed_status,
+          remarks: record.reviewed_remarks,
+        })
+      : '',
+    hasApproved
+      ? buildWorkflowStep({
+          label: 'Approval',
+          person: approver,
+          at: record.approved_at,
+          status: record.approved_status,
+          remarks: record.approved_remarks,
+        })
+      : '',
+    hasCancelled
+      ? buildWorkflowStep({
+          label: 'Cancellation',
+          person: canceller,
+          at: record.cancelled_at,
+          status: 'Cancelled',
+        })
+      : '',
+  ].filter(Boolean)
+}
+
+export const getLeaveWorkflowText = (record = {}, reviewer = '', approver = '', canceller = '') => {
+  const hasReviewed = Boolean(record.reviewed_by)
+  const steps = getLeaveWorkflowHistoryText(record, reviewer, approver, canceller)
+
+  if (record.status === 'Pending') {
+    steps.push(
+      hasReviewed ? 'Next: Approve or Reject' : 'Next: Recommend or Reject > Approve or Reject',
+    )
+  }
+
+  return steps.join('\n')
+}
+
+export const getLeaveStatusSortPriority = (status) => {
+  switch (status) {
+    case 'Pending':
+      return 0
+    case 'Approved':
+      return 1
+    case 'Rejected':
+      return 2
+    case 'Cancelled':
+      return 3
+    default:
+      return 4
+  }
+}
+
 const SectionAllLeaves = ({
   allLeaveRecords = [],
   fetchAllLeaveRecords,
   onManageEntitlements,
   onAssignLeave,
+  onManageWorkflow,
   onViewRecord,
 }) => {
   const [searchText, setSearchText] = useState('')
@@ -206,6 +287,8 @@ const SectionAllLeaves = ({
         return 'approved'
       case 'reject':
         return 'rejected'
+      case 'revoke':
+        return 'revoked'
       default:
         return `${action}ed`
     }
@@ -225,7 +308,11 @@ const SectionAllLeaves = ({
     if (!actionModal.leaveId || !actionModal.action) return
     try {
       setIsSubmittingAction(true)
-      await AH.leaveAction(actionModal.leaveId, actionModal.action, remarks)
+      if (actionModal.action === 'revoke') {
+        await AH.cancelLeave(actionModal.leaveId)
+      } else {
+        await AH.leaveAction(actionModal.leaveId, actionModal.action, remarks)
+      }
       closeActionModal(true)
       showResponseModal(
         'Action Completed',
@@ -287,6 +374,8 @@ const SectionAllLeaves = ({
           record.reviewer_code,
           record.approver_name,
           record.approver_code,
+          record.canceller_name,
+          record.canceller_code,
           record.reviewed_status,
           record.approved_status,
         ]
@@ -314,23 +403,15 @@ const SectionAllLeaves = ({
         const approver = record.approver_code
           ? `${record.approver_name || 'Approver'} (${record.approver_code})`
           : ''
+        const canceller = record.canceller_code
+          ? `${record.canceller_name || 'Canceller'} (${record.canceller_code})`
+          : ''
         const period = `${record.start_date || '-'} ${formatTime(
           record.start_time,
         )} to ${record.end_date || '-'} ${formatTime(record.end_time)}`
-        const workflow = [
-          reviewer
-            ? `Reviewer: ${reviewer}${record.reviewed_at ? ` at ${record.reviewed_at}` : ''}${
-                record.reviewed_status ? ` - ${record.reviewed_status}` : ''
-              }${record.reviewed_remarks ? ` (${record.reviewed_remarks})` : ''}`
-            : '',
-          approver
-            ? `Approver: ${approver}${record.approved_at ? ` at ${record.approved_at}` : ''}${
-                record.approved_status ? ` - ${record.approved_status}` : ''
-              }${record.approved_remarks ? ` (${record.approved_remarks})` : ''}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join('\n')
+        const workflowSteps = getLeaveWorkflowHistoryText(record, reviewer, approver, canceller)
+        const workflowHistory = workflowSteps.join('\n')
+        const workflow = getLeaveWorkflowText(record, reviewer, approver, canceller)
 
         return {
           ...record,
@@ -341,12 +422,15 @@ const SectionAllLeaves = ({
           duration: Number(record.duration_days || 0),
           durationDisplay: `${record.duration_days || 0} days`,
           reason: record.reason || '',
+          workflowSteps,
+          workflowHistory,
           workflow,
           mobileMeta: [
             `${record.duration_days || 0} days`,
             period,
             reviewer ? `Reviewer: ${record.reviewer_code}` : '',
             approver ? `Approver: ${record.approver_code}` : '',
+            canceller ? `Cancelled by: ${record.canceller_code}` : '',
           ]
             .filter(Boolean)
             .join(' | '),
@@ -398,6 +482,7 @@ const SectionAllLeaves = ({
 
   const getActions = (record) => {
     const isPending = record.status === 'Pending'
+    const isApproved = record.status === 'Approved'
     const hasReviewed = Boolean(record.reviewed_by)
     return [
       {
@@ -420,7 +505,116 @@ const SectionAllLeaves = ({
         dividerBefore: true,
         onClick: () => openActionModal(record.id, 'reject'),
       },
+      {
+        key: 'revoke',
+        label: 'Revoke Leave',
+        danger: true,
+        disabled: !isApproved,
+        dividerBefore: true,
+        onClick: () => openActionModal(record.id, 'revoke'),
+      },
     ]
+  }
+
+  const sortComparators = useMemo(
+    () => ({
+      status: (_leftValue, _rightValue, leftRecord, rightRecord) => {
+        const priorityCompare =
+          getLeaveStatusSortPriority(leftRecord.status) -
+          getLeaveStatusSortPriority(rightRecord.status)
+
+        if (priorityCompare !== 0) return priorityCompare
+
+        const rightApplied = Date.parse(rightRecord.appliedAt || '') || 0
+        const leftApplied = Date.parse(leftRecord.appliedAt || '') || 0
+        return rightApplied - leftApplied
+      },
+    }),
+    [],
+  )
+
+  const renderWorkflowCell = (record) => {
+    const isPending = record.status === 'Pending'
+
+    if (!isPending) {
+      const steps = record.workflowSteps?.length ? record.workflowSteps : [record.workflow]
+
+      return steps.length ? (
+        <div className="d-flex flex-column gap-1" style={{ maxWidth: '260px' }}>
+          {steps.map((step, index) => (
+            <DataTableTextCell
+              key={`${record.id || 'workflow'}-${index}`}
+              value={step}
+              maxWidth="260px"
+              title="Workflow"
+              mode="expandable"
+              previewCharThreshold={62}
+              className="small text-muted"
+            />
+          ))}
+        </div>
+      ) : (
+        <DataTableTextCell
+          value={record.workflow}
+          maxWidth="260px"
+          title="Workflow"
+          mode="expandable"
+          previewCharThreshold={62}
+          className="small text-muted"
+        />
+      )
+    }
+
+    const hasReviewed = Boolean(record.reviewed_by)
+    const primaryAction = hasReviewed
+      ? { action: 'approve', label: 'Approve', color: 'success' }
+      : { action: 'recommend', label: 'Recommend', color: 'primary' }
+
+    const openPendingAction = (event, action) => {
+      event.stopPropagation()
+      openActionModal(record.id, action)
+    }
+
+    return (
+      <div className="small text-muted" style={{ maxWidth: '260px' }}>
+        {record.workflowHistory && (
+          <div className="mb-1">
+            <DataTableTextCell
+              value={record.workflowHistory}
+              maxWidth="260px"
+              title="Workflow"
+              mode="expandable"
+              previewCharThreshold={44}
+              className="small text-muted"
+            />
+          </div>
+        )}
+        <div className="d-flex align-items-center flex-wrap gap-1">
+          <CButton
+            color={primaryAction.color}
+            size="sm"
+            variant="outline"
+            className="py-0 px-2"
+            data-no-row-open="true"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => openPendingAction(event, primaryAction.action)}
+          >
+            {primaryAction.label}
+          </CButton>
+          <CButton
+            color="danger"
+            size="sm"
+            variant="outline"
+            className="py-0 px-2"
+            data-no-row-open="true"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => openPendingAction(event, 'reject')}
+          >
+            Reject
+          </CButton>
+        </div>
+      </div>
+    )
   }
 
   const renderCell = (record, column) => {
@@ -439,15 +633,7 @@ const SectionAllLeaves = ({
       return record.durationDisplay
     }
     if (column.key === 'workflow') {
-      return (
-        <DataTableTextCell
-          value={record.workflow}
-          maxWidth="260px"
-          title="Workflow"
-          mode="expandable"
-          previewCharThreshold={42}
-        />
-      )
+      return renderWorkflowCell(record)
     }
     if (column.key === 'status') {
       return (
@@ -464,7 +650,7 @@ const SectionAllLeaves = ({
       <CCard className="mb-4">
         <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
           <strong>All Leave Records</strong>
-          {(onManageEntitlements || onAssignLeave) && (
+          {(onManageEntitlements || onAssignLeave || onManageWorkflow) && (
             <CDropdown alignment="end">
               <CDropdownToggle color="primary" size="sm">
                 Actions
@@ -475,6 +661,9 @@ const SectionAllLeaves = ({
                 )}
                 {onAssignLeave && (
                   <CDropdownItem onClick={onAssignLeave}>Assign Leave</CDropdownItem>
+                )}
+                {onManageWorkflow && (
+                  <CDropdownItem onClick={onManageWorkflow}>Email Workflow</CDropdownItem>
                 )}
               </CDropdownMenu>
             </CDropdown>
@@ -536,7 +725,7 @@ const SectionAllLeaves = ({
             dataColumns={dataColumns}
             defaultVisibleColumns={defaultVisibleColumns}
             requiredColumns={requiredColumns}
-            storageKey="staff.leaves.all.visible-columns.v5"
+            storageKey="staff.leaves.all.visible-columns.v6"
             idPrefix="staff-leave-all"
             emptyMessage="No matching leave records found."
             exportFilename={`all-leave-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -575,9 +764,10 @@ const SectionAllLeaves = ({
                 },
               ],
             }}
-            initialSortField="appliedAt"
-            initialSortDir="desc"
-            initialSortDirByField={{ appliedAt: 'desc', duration: 'desc' }}
+            initialSortField="status"
+            initialSortDir="asc"
+            initialSortDirByField={{ appliedAt: 'desc', duration: 'desc', status: 'asc' }}
+            sortComparators={sortComparators}
             resetDeps={[filteredRecords, searchText, periodRange, filterType, filterStatus]}
             desktopUtilityPlacement="portal"
             desktopUtilityPortalId="all-leaves-table-tools"
@@ -605,16 +795,25 @@ const SectionAllLeaves = ({
           <CModalTitle>{actionModal.label} Leave</CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <p className="mb-3">
-            Confirm to {actionModal.label.toLowerCase()} this leave and provide remarks.
-          </p>
-          <CFormTextarea
-            rows={4}
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            placeholder="Enter remarks"
-            disabled={isSubmittingAction}
-          />
+          {actionModal.action === 'revoke' ? (
+            <p className="mb-0">
+              Confirm to revoke this approved leave. This will cancel the leave and reverse used
+              days where applicable.
+            </p>
+          ) : (
+            <>
+              <p className="mb-3">
+                Confirm to {actionModal.label.toLowerCase()} this leave and provide remarks.
+              </p>
+              <CFormTextarea
+                rows={4}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Enter remarks"
+                disabled={isSubmittingAction}
+              />
+            </>
+          )}
         </CModalBody>
         <CModalFooter>
           <CButton

@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import { getLeaveApplicationScopeDate } from './SectionAllLeaves'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  default as SectionAllLeaves,
+  getLeaveApplicationScopeDate,
+  getLeaveStatusSortPriority,
+  getLeaveWorkflowText,
+} from './SectionAllLeaves'
+
+afterEach(() => {
+  cleanup()
+})
 
 describe('SectionAllLeaves', () => {
   it('filters leave applications by applied date before leave start date', () => {
@@ -13,5 +23,74 @@ describe('SectionAllLeaves', () => {
 
   it('falls back to start date for legacy records without applied date', () => {
     expect(getLeaveApplicationScopeDate({ start_date: '2026-08-01' })).toBe('2026-08-01')
+  })
+
+  it('prioritizes pending leave records before completed statuses', () => {
+    expect(getLeaveStatusSortPriority('Pending')).toBeLessThan(
+      getLeaveStatusSortPriority('Approved'),
+    )
+    expect(getLeaveStatusSortPriority('Approved')).toBeLessThan(
+      getLeaveStatusSortPriority('Rejected'),
+    )
+  })
+
+  it('shows pending workflow path before review', () => {
+    expect(getLeaveWorkflowText({ status: 'Pending' })).toBe(
+      'Next: Recommend or Reject > Approve or Reject',
+    )
+  })
+
+  it('surfaces review and approval remarks in workflow text', () => {
+    const workflow = getLeaveWorkflowText(
+      {
+        status: 'Approved',
+        reviewed_by: 20,
+        reviewed_status: 'Recommended',
+        reviewed_remarks: 'Coverage checked',
+        approved_by: 30,
+        approved_status: 'Approved',
+        approved_remarks: 'Approved by management',
+      },
+      'HR User (HR1)',
+      'Manager User (MGR1)',
+    )
+
+    expect(workflow).toContain('Review: Recommended by HR User (HR1)')
+    expect(workflow).toContain('Remarks: Coverage checked')
+    expect(workflow).toContain('Approval: Approved by Manager User (MGR1)')
+    expect(workflow).toContain('Remarks: Approved by management')
+  })
+
+  it('shows cancellation in workflow text when leave is cancelled before review', () => {
+    const workflow = getLeaveWorkflowText(
+      {
+        status: 'Cancelled',
+        cancelled_by: 10,
+        cancelled_at: '2026-05-20 10:30:00',
+      },
+      '',
+      '',
+      'Employee One (EMP1)',
+    )
+
+    expect(workflow).toBe('Cancellation: Cancelled by Employee One (EMP1) at 2026-05-20 10:30:00')
+  })
+
+  it('shows email workflow in the module actions menu', () => {
+    const onManageWorkflow = vi.fn()
+    render(
+      <SectionAllLeaves
+        allLeaveRecords={[]}
+        fetchAllLeaveRecords={vi.fn()}
+        onManageEntitlements={vi.fn()}
+        onAssignLeave={vi.fn()}
+        onManageWorkflow={onManageWorkflow}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /actions/i }))
+    fireEvent.click(screen.getByText('Email Workflow'))
+
+    expect(onManageWorkflow).toHaveBeenCalledTimes(1)
   })
 })

@@ -23,6 +23,8 @@ export default function ReviewQuotation({
   subtotal,
   sstAmount,
   grandTotal,
+  attachProposal,
+  onAttachProposalChange,
   onCancel,
   onSave,
   isEditMode = false,
@@ -33,6 +35,9 @@ export default function ReviewQuotation({
       onCancel={onCancel}
       onSave={onSave}
       isEditMode={isEditMode}
+      attachProposal={attachProposal}
+      attachProposalLabel="Attach Proposal PDF"
+      onAttachProposalChange={onAttachProposalChange}
     >
       <CRow>
         <CCol xs={12}>

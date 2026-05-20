@@ -26,6 +26,8 @@ const quoteServiceAliases = {
   special: 'special',
   'special-tab': 'special',
   'special service': 'special',
+  'special-service': 'special',
+  special_service: 'special',
 }
 
 const toInt = (value, fallback = 0) => {
@@ -60,6 +62,13 @@ const pick = (obj, ...keys) => {
 
 const parseDate = (value) => {
   if (!value) return null
+  if (typeof value === 'string') {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch
+      return new Date(Number(year), Number(month) - 1, Number(day))
+    }
+  }
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
@@ -295,14 +304,18 @@ export const serviceConfig = {
 
 // Helpers to map between displayName and key
 export const getServiceKeyByName = (displayName) =>
-  Object.keys(serviceConfig).find((key) => serviceConfig[key].displayName === displayName)
+  Object.keys(serviceConfig).find(
+    (key) => serviceConfig[key].displayName.toLowerCase() === String(displayName).toLowerCase(),
+  )
 
 export const normalizeQuoteServiceKey = (value) => {
   if (!value) return ''
   const raw = String(value).trim()
   if (serviceConfig[raw]) return raw
 
-  const alias = quoteServiceAliases[raw.toLowerCase()]
+  const lower = raw.toLowerCase()
+  const normalizedAlias = lower.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ')
+  const alias = quoteServiceAliases[lower] || quoteServiceAliases[normalizedAlias]
   if (alias) return alias
 
   return getServiceKeyByName(raw) || ''

@@ -1,10 +1,13 @@
-﻿import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-const DEFAULT_POLL_MS = 5 * 60 * 1000
+import { applyAppUpdate, getAppServiceWorkerRegistration } from './serviceWorkerRegistration'
+import { normalizeMetaPayload, parsePollMs, shouldForceUpdate } from './versionCheckUtils'
+
 const VERSION_URL = import.meta.env.VITE_VERSION_URL || '/meta.json'
 const CURRENT_VERSION =
   import.meta.env.VITE_APP_VERSION || import.meta.env.VITE_COMMIT_SHA || '0.0.0-local'
 const STORAGE_KEY = 'app_version'
+const FORCE_ATTEMPT_PREFIX = 'forced_update_attempt:'
 
 const resolveInitialVersion = () => {
   if (CURRENT_VERSION && CURRENT_VERSION !== '0.0.0-local') {
@@ -17,27 +20,55 @@ const resolveInitialVersion = () => {
   }
 }
 
-const parsePollMs = (value) => {
-  const num = Number(value)
-  return Number.isFinite(num) && num > 0 ? num : DEFAULT_POLL_MS
-}
-
 const useVersionCheck = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [latestVersion, setLatestVersion] = useState(null)
   const [currentVersion, setCurrentVersion] = useState(resolveInitialVersion)
+  const [forceUpdate, setForceUpdate] = useState(false)
+  const [message, setMessage] = useState(null)
+  const [isReloading, setIsReloading] = useState(false)
+  const latestVersionRef = useRef(null)
   const pollMs = parsePollMs(import.meta.env.VITE_VERSION_POLL_MS)
+
+  useEffect(() => {
+    latestVersionRef.current = latestVersion
+  }, [latestVersion])
+
+  const reload = useCallback(async () => {
+    const version = latestVersionRef.current
+
+    if (version) {
+      try {
+        localStorage.setItem(STORAGE_KEY, version)
+      } catch {
+        // ignore storage failures
+      }
+    }
+
+    setIsReloading(true)
+
+    try {
+      await applyAppUpdate(version)
+    } finally {
+      window.setTimeout(() => setIsReloading(false), 5000)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
     const check = async () => {
       try {
+        const registration = await getAppServiceWorkerRegistration()
+        if (registration?.waiting && !cancelled) {
+          setUpdateAvailable(true)
+        }
+
         const res = await fetch(VERSION_URL, { cache: 'no-store' })
         if (!res.ok) return
 
-        const data = await res.json()
-        const remoteVersion = data?.version
+        const data = normalizeMetaPayload(await res.json())
+        const remoteVersion = data.version
 
         if (!remoteVersion || cancelled) return
 
@@ -51,9 +82,25 @@ const useVersionCheck = () => {
           return
         }
 
-        if (remoteVersion !== currentVersion) {
+        const nextForceUpdate = shouldForceUpdate({
+          currentVersion,
+          latestVersion: remoteVersion,
+          minimumSupportedVersion: data.minimumSupportedVersion,
+          forceReload: data.forceReload,
+        })
+
+        setForceUpdate(nextForceUpdate)
+        setMessage(data.message)
+
+        if (remoteVersion !== currentVersion || nextForceUpdate || registration?.waiting) {
           setLatestVersion(remoteVersion)
           setUpdateAvailable(true)
+          return
+        }
+
+        setLatestVersion(null)
+        if (!registration?.waiting) {
+          setUpdateAvailable(false)
         }
       } catch (err) {
         console.error('Version check failed:', err)
@@ -79,21 +126,30 @@ const useVersionCheck = () => {
     }
   }, [pollMs, currentVersion])
 
+  useEffect(() => {
+    if (!forceUpdate || !latestVersion || isReloading) return
+
+    const attemptKey = `${FORCE_ATTEMPT_PREFIX}${latestVersion}`
+
+    try {
+      if (sessionStorage.getItem(attemptKey)) {
+        return
+      }
+      sessionStorage.setItem(attemptKey, '1')
+    } catch {
+      // ignore storage failures
+    }
+
+    reload()
+  }, [forceUpdate, latestVersion, isReloading, reload])
+
   return {
     updateAvailable,
     latestVersion,
-    reload: () => {
-      if (latestVersion) {
-        try {
-          localStorage.setItem(STORAGE_KEY, latestVersion)
-        } catch {
-          // ignore storage failures
-        }
-      }
-      const url = new URL(window.location.href)
-      url.searchParams.set('v', latestVersion || String(Date.now()))
-      window.location.replace(url.toString())
-    },
+    forceUpdate,
+    message,
+    isReloading,
+    reload,
   }
 }
 

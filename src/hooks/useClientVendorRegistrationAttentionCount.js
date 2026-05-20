@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { dispatchAppNotificationsChanged } from '../notifications/appNotificationEvents'
 
 export const CLIENT_VENDOR_REGISTRATION_CHANGED_EVENT = 'client-vendor-registrations:changed'
 
 export const dispatchClientVendorRegistrationChanged = () => {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new Event(CLIENT_VENDOR_REGISTRATION_CHANGED_EVENT))
+  dispatchAppNotificationsChanged()
 }
 
 export const fetchClientVendorRegistrationAttentionCount = async () => {

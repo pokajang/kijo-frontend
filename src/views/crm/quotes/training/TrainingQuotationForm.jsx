@@ -1,14 +1,21 @@
 // TrainingQuotationForm.jsx
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { CCol } from '@coreui/react'
 
 import TrainingDetailsCard from './TrainingDetailsCard'
 import PricingDetailsCard from './PricingDetailsCard'
 import ReviewQuotationCard from './ReviewQuotationCard'
-import { quoteApiUrl } from '../quoteApi'
+import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
+import {
+  LEGACY_QUOTE_SERVICE_DRAFT_KEYS,
+  clearQuoteServiceDraft,
+  readQuoteServiceDraft,
+  writeQuoteServiceDraft,
+} from '../quoteMainDrafts'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
-import { fetchPriceException, getPriceExceptionRequestId } from '../priceException'
+import { fetchPriceException } from '../priceException'
 
 const durationMap = {
   halfday_am: 'half day (AM)',
@@ -18,24 +25,10 @@ const durationMap = {
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
-export const TRAINING_QUOTE_DRAFT_KEY = 'draftTrainingQuote'
+export const TRAINING_QUOTE_DRAFT_KEY = LEGACY_QUOTE_SERVICE_DRAFT_KEYS.training
 
-export const loadTrainingQuoteDraft = (
-  storage = typeof localStorage !== 'undefined' ? localStorage : null,
-) => {
-  if (!storage || typeof storage.getItem !== 'function') return null
-
-  try {
-    const raw = storage.getItem(TRAINING_QUOTE_DRAFT_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
-  } catch {
-    if (typeof storage.removeItem === 'function') {
-      storage.removeItem(TRAINING_QUOTE_DRAFT_KEY)
-    }
-    return null
-  }
+export const loadTrainingQuoteDraft = (storage) => {
+  return readQuoteServiceDraft({ serviceKey: 'training', storage })
 }
 
 const toNumberOrEmpty = (value) => {
@@ -54,6 +47,14 @@ const TrainingQuotationForm = ({
   quoteId,
   proposalLanguage = 'en',
 }) => {
+  const { priceExceptionRequestId } = useQuoteRouteParams()
+  const draftContext = useMemo(
+    () => ({
+      clientId: selectedClient?.company_id,
+      language: proposalLanguage,
+    }),
+    [proposalLanguage, selectedClient?.company_id],
+  )
   const defaultForm = {
     trainingId: '',
     trainingTitle: '',
@@ -73,7 +74,7 @@ const TrainingQuotationForm = ({
     pricingBasis: 'per_session',
     trainingRateType: 'client_site_normal',
     travelRegion: 'none',
-    priceExceptionRequestId: getPriceExceptionRequestId(),
+    priceExceptionRequestId,
     unitPrice: 4500,
     travelCharge: 0,
     mealsProvided: 'No',
@@ -86,7 +87,10 @@ const TrainingQuotationForm = ({
     proposalLanguage,
   }
 
-  const draft = !isEditMode && !getPriceExceptionRequestId() ? loadTrainingQuoteDraft() : null
+  const draft =
+    !isEditMode &&
+    !priceExceptionRequestId &&
+    readQuoteServiceDraft({ serviceKey: 'training', ...draftContext })
 
   const hydratedDraft = {
     ...defaultForm,
@@ -104,6 +108,7 @@ const TrainingQuotationForm = ({
   const [formData, setFormData] = useState({
     ...hydratedDraft,
   })
+  const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
   const [appliedPriceException, setAppliedPriceException] = useState(null)
 
   useEffect(() => {
@@ -123,7 +128,8 @@ const TrainingQuotationForm = ({
         pricingBasis: initialFormData.pricingBasis || 'per_session',
         trainingRateType: initialFormData.trainingRateType || 'client_site_normal',
         travelRegion: initialFormData.travelRegion || 'none',
-        priceExceptionRequestId: getPriceExceptionRequestId() || '',
+        priceExceptionRequestId:
+          priceExceptionRequestId || initialFormData.priceExceptionRequestId || '',
         unitPrice: parseFloat(initialFormData.unitPrice) || 0,
         travelCharge: parseFloat(initialFormData.travelCharge) || 0,
         mealPrice: parseFloat(initialFormData.mealPrice) || '',
@@ -142,10 +148,10 @@ const TrainingQuotationForm = ({
         proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
       }))
     }
-  }, [initialFormData, proposalLanguage])
+  }, [initialFormData, priceExceptionRequestId, proposalLanguage])
 
   useEffect(() => {
-    const requestId = getPriceExceptionRequestId()
+    const requestId = priceExceptionRequestId
     if (!requestId) return
 
     fetchPriceException(requestId)
@@ -161,11 +167,11 @@ const TrainingQuotationForm = ({
         }))
       })
       .catch((error) => dialog.alert(error?.message || 'Failed to apply price exception.'))
-  }, [])
+  }, [priceExceptionRequestId])
 
   useEffect(() => {
     if (!appliedPriceException) return
-    const requestId = getPriceExceptionRequestId()
+    const requestId = priceExceptionRequestId
     const approvedDiscount = getApprovedNegotiationDiscount(appliedPriceException)
 
     setFormData((prev) => {
@@ -184,19 +190,19 @@ const TrainingQuotationForm = ({
         discountValue: approvedDiscount,
       }
     })
-  }, [appliedPriceException])
+  }, [appliedPriceException, priceExceptionRequestId])
 
   useEffect(() => {
-    if (!isEditMode && !getPriceExceptionRequestId()) {
-      localStorage.setItem(TRAINING_QUOTE_DRAFT_KEY, JSON.stringify(formData))
+    if (!isEditMode && !priceExceptionRequestId) {
+      writeQuoteServiceDraft({ serviceKey: 'training', ...draftContext, draft: formData })
     }
-  }, [formData, isEditMode])
+  }, [draftContext, formData, isEditMode, priceExceptionRequestId])
 
   useEffect(() => {
-    if (isEditMode || getPriceExceptionRequestId()) {
-      localStorage.removeItem(TRAINING_QUOTE_DRAFT_KEY)
+    if (isEditMode || priceExceptionRequestId) {
+      clearQuoteServiceDraft({ serviceKey: 'training', ...draftContext })
     }
-  }, [isEditMode])
+  }, [draftContext, isEditMode, priceExceptionRequestId])
 
   const [trainingOptions, setTrainingOptions] = useState([])
 
@@ -209,8 +215,7 @@ const TrainingQuotationForm = ({
         })
         const result = await res.json()
         const rows = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : []
-        const ok = result?.status === 'success' || result?.success === true || Array.isArray(result)
-        if (ok) {
+        if (isQuoteResultSuccess(result)) {
           const options = rows.map((item) => ({
             value: item.id,
             proposal_id: item.id,
@@ -229,6 +234,9 @@ const TrainingQuotationForm = ({
 
   useEffect(() => {
     if (isEditMode) return
+    if (previousProposalLanguageRef.current === proposalLanguage) return
+    previousProposalLanguageRef.current = proposalLanguage
+
     setFormData((prev) => ({
       ...prev,
       proposalLanguage,

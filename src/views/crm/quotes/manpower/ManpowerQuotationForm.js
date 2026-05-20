@@ -1,32 +1,22 @@
 ﻿// src/views/crm/quotes/manpower/ManpowerQuotationForm.js
 
-import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import ManpowerDetailsCard from './ManpowerDetailsCard'
 import ReviewManpowerQuoteCard from './ReviewManpowerQuoteCard'
-import { handleQuoteSuccess } from '../quoteSuccessHandler'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
-import { normalizeQuoteResult, quoteApiUrl, quoteSaveMethod, quoteServiceUrl } from '../quoteApi'
+import {
+  clearQuoteServiceDraft,
+  readQuoteServiceDraft,
+  writeQuoteServiceDraft,
+} from '../quoteMainDrafts'
 import { buildPicPayload } from '../quoteContactUtils'
-import { getRecordListPath } from '../../records/config/recordTabs'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 import { getManpowerRate, getManpowerRateOption, inferManpowerRateType } from './manpowerRates'
-import { fetchPriceException, getPriceExceptionRequestId } from '../priceException'
-
-const isSuccess = (payload) =>
-  payload?.status === 'success' || payload?.success === true || payload?.ok === true
+import { fetchPriceException } from '../priceException'
 
 const getApprovedNegotiationDiscount = (row) =>
   Number(row?.approved_discount_amount || row?.requested_discount_amount || 0)
-
-const readDraft = () => {
-  try {
-    return JSON.parse(localStorage.getItem('draftManpowerQuote'))
-  } catch {
-    localStorage.removeItem('draftManpowerQuote')
-    return null
-  }
-}
 
 export default function ManpowerQuotationForm({
   selectedClient,
@@ -35,7 +25,21 @@ export default function ManpowerQuotationForm({
   quoteId = null,
   proposalLanguage = 'en',
 }) {
-  const navigate = useNavigate()
+  const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
+  const draftContext = useMemo(
+    () => ({
+      clientId: selectedClient?.company_id,
+      language: proposalLanguage,
+    }),
+    [proposalLanguage, selectedClient?.company_id],
+  )
+  const saveQuote = useQuoteSave({
+    serviceKey: 'manpower',
+    quoteId,
+    isEditMode,
+    recordTabKey: 'manpower-tab',
+    draftContext,
+  })
 
   // Default form structure
   const defaultForm = {
@@ -52,7 +56,7 @@ export default function ManpowerQuotationForm({
     noOfPax: 0,
     unitCost: 0,
     discount: 0,
-    priceExceptionRequestId: getPriceExceptionRequestId(),
+    priceExceptionRequestId,
     sstPercent: 0,
     subTotal: '0.00',
     sstAmount: '0.00',
@@ -63,10 +67,13 @@ export default function ManpowerQuotationForm({
   }
 
   // Load draft if in create mode
-  const draft = !isEditMode && !getPriceExceptionRequestId() && readDraft()
+  const draft =
+    !isEditMode &&
+    !priceExceptionRequestId &&
+    readQuoteServiceDraft({ serviceKey: 'manpower', ...draftContext })
   const [formData, setFormData] = useState(draft || defaultForm)
   const [appliedPriceException, setAppliedPriceException] = useState(null)
-  const previousProposalLanguageRef = useRef(proposalLanguage)
+  const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
 
   useEffect(() => {
     if (!formData.manpowerRateType) return
@@ -109,17 +116,17 @@ export default function ManpowerQuotationForm({
 
   // Persist draft whenever formData changes (create mode only)
   useEffect(() => {
-    if (!isEditMode && !getPriceExceptionRequestId()) {
-      localStorage.setItem('draftManpowerQuote', JSON.stringify(formData))
+    if (!isEditMode && !priceExceptionRequestId) {
+      writeQuoteServiceDraft({ serviceKey: 'manpower', ...draftContext, draft: formData })
     }
-  }, [formData, isEditMode])
+  }, [draftContext, formData, isEditMode, priceExceptionRequestId])
 
   // Clear draft on entering edit mode
   useEffect(() => {
-    if (isEditMode || getPriceExceptionRequestId()) {
-      localStorage.removeItem('draftManpowerQuote')
+    if (isEditMode || priceExceptionRequestId) {
+      clearQuoteServiceDraft({ serviceKey: 'manpower', ...draftContext })
     }
-  }, [isEditMode])
+  }, [draftContext, isEditMode, priceExceptionRequestId])
 
   // Populate formData in edit mode
   useEffect(() => {
@@ -163,7 +170,8 @@ export default function ManpowerQuotationForm({
       inquiryRemarks: initialFormData.inquiryRemarks || '',
       unitCost: initialFormData.unitCost ?? 0,
       discount: initialFormData.discount ?? 0,
-      priceExceptionRequestId: getPriceExceptionRequestId() || '',
+      priceExceptionRequestId:
+        priceExceptionRequestId || initialFormData.priceExceptionRequestId || '',
       sstPercent: initialFormData.sstPercent ?? 0,
       subTotal: initialFormData.subTotal ?? '0.00',
       sstAmount: initialFormData.sstAmount ?? '0.00',
@@ -171,10 +179,10 @@ export default function ManpowerQuotationForm({
       attachProposal: initialFormData.attachProposal ?? true,
       proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
     })
-  }, [initialFormData, isEditMode, proposalLanguage])
+  }, [initialFormData, isEditMode, priceExceptionRequestId, proposalLanguage])
 
   useEffect(() => {
-    const requestId = getPriceExceptionRequestId()
+    const requestId = priceExceptionRequestId
     if (!requestId) return
 
     fetchPriceException(requestId)
@@ -189,11 +197,11 @@ export default function ManpowerQuotationForm({
         }))
       })
       .catch((error) => dialog.alert(error?.message || 'Failed to apply price exception.'))
-  }, [])
+  }, [priceExceptionRequestId])
 
   useEffect(() => {
     if (!appliedPriceException) return
-    const requestId = getPriceExceptionRequestId()
+    const requestId = priceExceptionRequestId
     const approvedDiscount = getApprovedNegotiationDiscount(appliedPriceException)
 
     setFormData((prev) => {
@@ -210,7 +218,7 @@ export default function ManpowerQuotationForm({
         discount: approvedDiscount,
       }
     })
-  }, [appliedPriceException])
+  }, [appliedPriceException, priceExceptionRequestId])
 
   useEffect(() => {
     if (isEditMode) return
@@ -248,7 +256,7 @@ export default function ManpowerQuotationForm({
     }
 
     const hasApprovedOverride =
-      Boolean(getPriceExceptionRequestId()) || Boolean(initialFormData?.priceExceptionRequestId)
+      Boolean(priceExceptionRequestId) || Boolean(initialFormData?.priceExceptionRequestId)
     if (formData.requiresManagementApproval && !hasApprovedOverride) {
       dialog.alert(
         'Special Manpower Supply requires an approved override request before quotation.',
@@ -299,11 +307,9 @@ export default function ManpowerQuotationForm({
       return
     }
 
-    const url = quoteServiceUrl('manpower', isEditMode ? quoteId : null)
-
     const payload = {
       ...(isEditMode && { id: quoteId }),
-      isRevision: new URLSearchParams(window.location.search).get('isRevision') === 'true',
+      isRevision,
       client_id: selectedClient.company_id,
       client_name: selectedClient.company_name,
       client_ssm: selectedClient.ssm_number,
@@ -329,7 +335,11 @@ export default function ManpowerQuotationForm({
       inquiry_remarks: formData.inquiryRemarks,
       unit_cost: formData.unitCost,
       discount: formData.discount,
-      price_exception_request_id: getPriceExceptionRequestId() || null,
+      price_exception_request_id:
+        priceExceptionRequestId ||
+        formData.priceExceptionRequestId ||
+        initialFormData?.priceExceptionRequestId ||
+        null,
       sst_percent: formData.sstPercent,
       sub_total: formData.subTotal,
       sst_amount: formData.sstAmount,
@@ -338,42 +348,7 @@ export default function ManpowerQuotationForm({
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
 
-    try {
-      const res = await fetch(url, {
-        method: quoteSaveMethod(isEditMode),
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      const rawResult = await res.json()
-      const result = normalizeQuoteResult(rawResult)
-
-      if (isSuccess(result)) {
-        await handleQuoteSuccess(result)
-        // Clear drafts on success
-        localStorage.removeItem('draftManpowerQuote')
-        clearQuoteMainDraft('manpower')
-        sessionStorage.removeItem('quoteInquirySource')
-        const goToList = await dialog.confirm(
-          `Quotation ${isEditMode ? 'updated' : 'created'} successfully. Go to quote records?`,
-          {
-            title: isEditMode ? 'Quotation Updated' : 'Quotation Created',
-            confirmText: 'Go to list',
-            cancelText: isEditMode ? 'Stay here' : 'Create another',
-          },
-        )
-        if (goToList) {
-          navigate(getRecordListPath('manpower-tab'), { replace: true })
-        } else if (!isEditMode) {
-          window.location.href = '/crm/quotes'
-        }
-      } else {
-        dialog.alert(result.message || 'Failed to save quotation.')
-      }
-    } catch (err) {
-      console.error('Error saving quote:', err)
-      dialog.alert('An error occurred while saving the quotation.')
-    }
+    await saveQuote(payload)
   }
 
   return (

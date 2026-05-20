@@ -2,10 +2,11 @@ import React from 'react'
 
 import { CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
-import { handleQuoteSuccess } from '../quoteSuccessHandler'
-import { clearQuoteMainDraft } from '../quoteMainDrafts'
-import { normalizeQuoteResult, quoteSaveMethod, quoteServiceUrl } from '../quoteApi'
+import { clearQuoteMainDraft, clearQuoteServiceDraft } from '../quoteMainDrafts'
+import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { buildPicPayload } from '../quoteContactUtils'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { useQuoteSave } from '../helpers/useQuoteSave'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import {
   QuoteClientSummary,
@@ -24,9 +25,6 @@ import {
   calculateGrandTotal,
 } from './calculations'
 import dialog from '../../../../components/dialog/dialogService'
-
-const isSuccess = (payload) =>
-  payload?.status === 'success' || payload?.success === true || payload?.ok === true
 
 const money = (value) =>
   Number(value || 0).toLocaleString('en-US', {
@@ -64,6 +62,17 @@ const ReviewQuotationCard = ({
   appliedPriceException = null,
 }) => {
   const navigate = useNavigate()
+  const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
+  const saveQuote = useQuoteSave({
+    serviceKey: 'training',
+    quoteId,
+    isEditMode,
+    recordTabKey: 'training-tab',
+    draftContext: {
+      clientId: clientDetails?.company_id,
+      language: formData?.proposalLanguage || proposalLanguage,
+    },
+  })
 
   const {
     pricingBasis,
@@ -127,7 +136,7 @@ const ReviewQuotationCard = ({
     const mealsProvidedFlag = normalizedMealsProvided === 'Yes' ? 1 : 0
     const payload = {
       ...(isEditMode && { id: quoteId }),
-      isRevision: new URLSearchParams(window.location.search).get('isRevision') === 'true',
+      isRevision,
       client_id: clientDetails.company_id,
       training_id: formData.trainingId,
       client_snapshot: {
@@ -163,7 +172,7 @@ const ReviewQuotationCard = ({
       travel_charge: Number(formData.travelCharge) || 0,
       travel_region: formData.travelRegion || 'none',
       price_exception_request_id:
-        new URLSearchParams(window.location.search).get('priceExceptionRequestId') || null,
+        priceExceptionRequestId || formData.priceExceptionRequestId || null,
       meals_provided: mealsProvidedFlag,
       meals_provided_text: normalizedMealsProvided,
       meal_price: mealsProvidedFlag === 1 ? Number(formData.mealPrice) || 0 : null,
@@ -179,63 +188,31 @@ const ReviewQuotationCard = ({
       sst_amount: sstAmount,
       hrd_amount: hrdAmount,
       grand_total: grandTotal,
-      attach_proposal: formData.attachProposal,
+      attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_id: formData.proposal_id,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
 
-    const endpoint = quoteServiceUrl('training', isEditMode ? quoteId : null)
-
-    try {
-      const response = await fetch(endpoint, {
-        method: quoteSaveMethod(isEditMode),
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-
-      const rawResult = await response.json()
-      const result = normalizeQuoteResult(rawResult)
-
-      if (isSuccess(result)) {
-        await handleQuoteSuccess(result)
-        localStorage.removeItem('draftTrainingQuote')
-        clearQuoteMainDraft('training')
-        sessionStorage.removeItem('quoteInquirySource')
-        const goToList = await dialog.confirm(
-          `Quotation ${isEditMode ? 'updated' : 'created'} successfully. Go to quote records?`,
-          {
-            title: isEditMode ? 'Quotation Updated' : 'Quotation Created',
-            confirmText: 'Go to list',
-            cancelText: isEditMode ? 'Stay here' : 'Create another',
-          },
-        )
-        if (goToList) {
-          navigate(getRecordListPath('training-tab'))
-        } else if (!isEditMode) {
-          window.location.href = '/crm/quotes'
-        }
-      } else {
-        dialog.alert(`Failed to save quote: ${result.message}`)
-      }
-    } catch (err) {
-      console.error('Error saving quote:', err)
-      dialog.alert('Server error. Please try again.')
-    }
+    await saveQuote(payload, {
+      networkErrorMessage: 'Server error. Please try again.',
+    })
   }
 
   const handleCancel = () => {
     // Clear both training and main quote drafts
-    localStorage.removeItem('draftTrainingQuote')
     clearQuoteMainDraft('training')
-    sessionStorage.removeItem('quoteInquirySource')
+    clearQuoteServiceDraft({
+      serviceKey: 'training',
+      clientId: clientDetails?.company_id,
+      language: formData?.proposalLanguage || proposalLanguage,
+    })
+    removeQuoteInquirySource()
 
     if (isEditMode) {
       // Navigate back to records in edit mode
       navigate(getRecordListPath('training-tab'))
     } else {
-      // Full reload to reset QuoteMain state
-      window.location.href = '/crm/quotes'
+      navigate('/crm/quotes', { replace: true, state: { quoteResetToken: Date.now() } })
     }
   }
 

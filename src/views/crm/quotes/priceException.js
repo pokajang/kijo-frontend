@@ -1,8 +1,8 @@
 import { quoteApiUrl } from './quoteApi'
+import { readCurrentQuoteRouteParams } from './helpers/quoteRouteParams'
 
 export const getPriceExceptionRequestId = () => {
-  if (typeof window === 'undefined') return ''
-  return new URLSearchParams(window.location.search).get('priceExceptionRequestId') || ''
+  return readCurrentQuoteRouteParams().priceExceptionRequestId
 }
 
 export const fetchPriceException = async (id) => {

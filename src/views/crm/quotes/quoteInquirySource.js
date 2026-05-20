@@ -92,7 +92,10 @@ export const getMatchingInquiryId = ({ currentInquirySource, selectedClient, sel
 
   const currentClientId = currentInquirySource.clientId
   const selectedClientId = selectedClient?.company_id ?? selectedClient?.clientId
-  if (currentClientId && selectedClientId && String(currentClientId) !== String(selectedClientId)) {
+  if (!currentClientId || !selectedClientId) {
+    return undefined
+  }
+  if (String(currentClientId) !== String(selectedClientId)) {
     return undefined
   }
 

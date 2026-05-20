@@ -18,6 +18,7 @@ import {
   CFormTextarea,
   CFormInput,
 } from '@coreui/react'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 
 const toInputDateValue = (value) => {
   if (!value) return ''
@@ -65,12 +66,23 @@ const TrainingDetailsCard = ({
   proposalLanguage = 'en',
 }) => {
   const navigate = useNavigate()
+  const { isRevision } = useQuoteRouteParams()
   const selectedPaymentMethodOption = presetPaymentMethods.includes(formData.paymentMethod)
     ? formData.paymentMethod
     : 'Other'
   const selectedDateValue = toInputDateValue(formData.selectedDate)
   const selectedEndDateValue = toInputDateValue(formData.selectedEndDate)
   const trainingDays = getInclusiveTrainingDays(selectedDateValue, selectedEndDateValue)
+  const selectedTrainingOption =
+    trainingOptions.find((opt) => String(opt.value) === String(formData.trainingId)) ||
+    (isEditMode && formData.trainingTitle
+      ? {
+          value: formData.trainingId,
+          proposal_id: formData.proposal_id || formData.trainingId,
+          label: formData.trainingTitle,
+          trainingTitle: formData.trainingTitle,
+        }
+      : null)
 
   return (
     <CCol xs={12}>
@@ -82,7 +94,7 @@ const TrainingDetailsCard = ({
           {isEditMode && (
             <CAlert color="primary">
               <strong>
-                {new URLSearchParams(window.location.search).get('isRevision') === 'true'
+                {isRevision
                   ? 'You are revising the existing quotation. The quotation number will be appended with Rev xx.'
                   : "You are editing the existing quotation. This won't change the quotation number."}
               </strong>
@@ -96,7 +108,7 @@ const TrainingDetailsCard = ({
               <Select
                 id="trainingTitle"
                 options={trainingOptions}
-                value={trainingOptions.find((opt) => opt.value === formData.trainingId) || null}
+                value={selectedTrainingOption}
                 onChange={(selected) =>
                   setFormData((prev) => ({
                     ...prev,

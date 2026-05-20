@@ -1,7 +1,7 @@
 // src/views/crm/quotes/special/formHandlers.js
 
 import { useState, useEffect } from 'react'
-import { quoteApiUrl } from '../quoteApi'
+import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
 
 export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposalLanguage = 'en') {
   const [templates, setTemplates] = useState([])
@@ -15,7 +15,7 @@ export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposa
       .then((r) => r.json())
       .then((j) => {
         const rows = Array.isArray(j) ? j : Array.isArray(j?.data) ? j.data : []
-        if (j?.status === 'success' || j?.success === true || Array.isArray(j)) {
+        if (isQuoteResultSuccess(j)) {
           setTemplates(rows)
         } else {
           console.error('Unexpected templates response', j)
@@ -97,7 +97,7 @@ export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposa
   // When user selects a service template
   const handleTemplateSelect = (e) => {
     const id = parseInt(e.target.value, 10) || null
-    const sel = templates.find((t) => t.id === id) || {}
+    const sel = templates.find((t) => Number(t.id) === id) || {}
     setFormData((p) => ({
       ...p,
       specialId: id,

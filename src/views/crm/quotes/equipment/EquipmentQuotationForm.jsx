@@ -12,6 +12,7 @@ export default function EquipmentQuotationForm({
   initialFormData = null,
   isEditMode = false,
   quoteId = null,
+  proposalLanguage = 'en',
 }) {
   const {
     selectOptions,
@@ -30,6 +31,8 @@ export default function EquipmentQuotationForm({
     setDiscount,
     sstPercent,
     setSstPercent,
+    attachProposal,
+    setAttachProposal,
     itemsTotal,
     subtotal,
     sstAmount,
@@ -40,6 +43,7 @@ export default function EquipmentQuotationForm({
     initialFormData,
     isEditMode,
     quoteId,
+    proposalLanguage,
   })
 
   return (
@@ -85,6 +89,8 @@ export default function EquipmentQuotationForm({
           subtotal={subtotal}
           sstAmount={sstAmount}
           grandTotal={grandTotal}
+          attachProposal={attachProposal}
+          onAttachProposalChange={setAttachProposal}
           onSave={handleSaveQuote}
           onCancel={handleCancel}
           isEditMode={isEditMode}

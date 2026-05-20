@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import dialog from '../dialog/dialogService'
+import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
 
 const fetchLeaveJson = async (url, options = {}) => {
   const res = await fetch(url, {
@@ -60,6 +61,8 @@ export const useLeaveRecordHandlers = () => {
         approvedStatus: row.approved_status,
         approvedRemarks: row.approved_remarks,
         approvedAt: row.approved_at,
+        cancelledBy: row.cancelled_by,
+        cancelledAt: row.cancelled_at,
       }))
       setLeaveRecords(mapped)
     } catch (err) {
@@ -83,6 +86,7 @@ export const useLeaveRecordHandlers = () => {
           },
         )
 
+        dispatchAppNotificationsChanged()
         dialog.alert('Leave application cancelled successfully.')
         fetchLeaveRecords()
       } catch (err) {

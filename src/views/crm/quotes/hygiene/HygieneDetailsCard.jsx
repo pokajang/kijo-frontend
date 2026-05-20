@@ -4,6 +4,7 @@ import ServiceTypeCard from './ServiceTypeCard'
 import ProjectDetailsCard from './ProjectDetailsCard'
 import SiteLocationCard from './SiteLocationCard'
 import RemarksAndTravelCard from './RemarksAndTravelCard'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 
 const HygieneDetailsCardMain = ({
   formData,
@@ -12,6 +13,8 @@ const HygieneDetailsCardMain = ({
   isEditMode = false,
   proposalLanguage = 'en',
 }) => {
+  const { isRevision } = useQuoteRouteParams()
+
   return (
     <CCol xs={12}>
       <CCard className="mb-4">
@@ -22,7 +25,7 @@ const HygieneDetailsCardMain = ({
           {isEditMode && (
             <CAlert color="primary">
               <strong>
-                {new URLSearchParams(window.location.search).get('isRevision') === 'true'
+                {isRevision
                   ? 'You are revising the existing quotation. The quotation number will be appended with Rev xx.'
                   : "You are editing the existing quotation. This won't change the quotation number."}
               </strong>

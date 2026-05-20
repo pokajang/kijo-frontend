@@ -17,7 +17,12 @@ export const pipelineCrmModuleTabs = [
 export const clientModuleTabs = [
   { key: 'records', label: 'Client Records', to: '/client/manage' },
   { key: 'roi', label: 'ROI per Client', to: '/client/roi' },
-  { key: 'vendor-registration', label: 'Vendor Registration', to: '/client/vendor-registration' },
+  {
+    key: 'vendor-registration',
+    label: 'Vendor Registration',
+    to: '/client/vendor-registration',
+    notificationTabKey: 'client.vendor-registration',
+  },
   { key: 'past-pics', label: 'Past PICs', to: '/client/past-pics' },
 ]
 
@@ -47,7 +52,12 @@ export const staffModuleTabs = [
   { key: 'manage', label: 'Manage Staff', to: '/staff/manage' },
   { key: 'tasks', label: 'View Tasks', to: '/staff/tasks' },
   { key: 'kpi', label: 'Manage KPI', to: '/staff/kpi' },
-  { key: 'leaves', label: 'Leave Records', to: '/staff/leaves' },
+  {
+    key: 'leaves',
+    label: 'Leave Records',
+    to: '/staff/leaves',
+    notificationTabKey: 'staff.leaves',
+  },
   { key: 'appraise', label: 'Appraise Staff', to: '/staff/appraise' },
   { key: 'activities', label: 'Activity Logs', to: '/staff/activities' },
 ]

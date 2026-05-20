@@ -17,6 +17,25 @@ import {
 
 const dataColumns = [
   {
+    key: 'status',
+    label: 'Status',
+    width: '120px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+  },
+  {
+    key: 'workflow',
+    label: 'Workflow',
+    width: '240px',
+    sortable: true,
+    sortType: 'string',
+    textMode: 'expandable',
+    cellMaxWidth: '240px',
+    previewCharThreshold: 34,
+  },
+  {
     key: 'leaveType',
     label: 'Leave Type',
     width: '140px',
@@ -52,34 +71,15 @@ const dataColumns = [
     cellMaxWidth: '190px',
     previewCharThreshold: 34,
   },
-  {
-    key: 'status',
-    label: 'Status',
-    width: '120px',
-    sortable: true,
-    sortType: 'string',
-    align: 'center',
-    shrinkToFit: true,
-  },
-  {
-    key: 'statusDetails',
-    label: 'Status Details',
-    width: '220px',
-    sortable: true,
-    sortType: 'string',
-    textMode: 'expandable',
-    cellMaxWidth: '220px',
-    previewCharThreshold: 34,
-  },
 ]
 
 const defaultVisibleColumns = {
+  status: true,
+  workflow: true,
   leaveType: true,
   appliedAt: true,
   duration: true,
   reason: true,
-  status: true,
-  statusDetails: false,
 }
 
 const requiredColumns = new Set(['leaveType', 'status'])
@@ -92,11 +92,65 @@ const formatTime = (value) => {
 
 const getStatusTone = (status, getStatusBadge) => {
   const tone = getStatusBadge(status)
-  if (['success', 'warning', 'danger', 'dark', 'info'].includes(tone)) return tone
+  if (['success', 'warning', 'danger', 'dark', 'info', 'secondary'].includes(tone)) return tone
   return 'info'
 }
 
 export const getLeaveRecordScopeDate = (record = {}) => record.appliedAt || record.startDate || null
+
+const buildWorkflowStep = ({ label, at, status, remarks }) =>
+  [`${label}: ${status || '-'}`, at ? `at ${at}` : '', remarks ? `Remarks: ${remarks}` : '']
+    .filter(Boolean)
+    .join(' ')
+
+export const getPersonalLeaveStatusSortPriority = (status) => {
+  switch (status) {
+    case 'Pending':
+      return 0
+    case 'Approved':
+      return 1
+    case 'Rejected':
+      return 2
+    case 'Cancelled':
+      return 3
+    default:
+      return 4
+  }
+}
+
+export const getPersonalLeaveWorkflowSteps = (record = {}) => {
+  const steps = [
+    record.reviewedStatus
+      ? buildWorkflowStep({
+          label: 'Review',
+          at: record.reviewedAt,
+          status: record.reviewedStatus,
+          remarks: record.reviewedRemarks,
+        })
+      : '',
+    record.approvedStatus
+      ? buildWorkflowStep({
+          label: 'Approval',
+          at: record.approvedAt,
+          status: record.approvedStatus,
+          remarks: record.approvedRemarks,
+        })
+      : '',
+    record.cancelledAt || record.status === 'Cancelled'
+      ? buildWorkflowStep({
+          label: 'Cancellation',
+          at: record.cancelledAt,
+          status: 'Cancelled',
+        })
+      : '',
+  ].filter(Boolean)
+
+  if (record.status === 'Pending' && !steps.length) {
+    return ['Pending review']
+  }
+
+  return steps
+}
 
 const LeaveRecordTable = ({
   leaveRecords = [],
@@ -165,22 +219,27 @@ const LeaveRecordTable = ({
         durationMeta: `${record.startDate} ${formatTime(record.startTime)} to ${record.endDate} ${formatTime(
           record.endTime,
         )}`,
-        statusDetails: [
-          record.reviewedStatus
-            ? `Reviewed: ${record.reviewedStatus}${record.reviewedAt ? ` at ${record.reviewedAt}` : ''}${
-                record.reviewedRemarks ? ` - ${record.reviewedRemarks}` : ''
-              }`
-            : '',
-          record.approvedStatus
-            ? `Approved: ${record.approvedStatus}${record.approvedAt ? ` at ${record.approvedAt}` : ''}${
-                record.approvedRemarks ? ` - ${record.approvedRemarks}` : ''
-              }`
-            : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
+        workflowSteps: getPersonalLeaveWorkflowSteps(record),
+        workflow: getPersonalLeaveWorkflowSteps(record).join('\n'),
       })),
     [filteredRecords],
+  )
+
+  const sortComparators = useMemo(
+    () => ({
+      status: (_leftValue, _rightValue, leftRecord, rightRecord) => {
+        const priorityCompare =
+          getPersonalLeaveStatusSortPriority(leftRecord.status) -
+          getPersonalLeaveStatusSortPriority(rightRecord.status)
+
+        if (priorityCompare !== 0) return priorityCompare
+
+        const rightApplied = Date.parse(rightRecord.appliedAt || '') || 0
+        const leftApplied = Date.parse(leftRecord.appliedAt || '') || 0
+        return rightApplied - leftApplied
+      },
+    }),
+    [],
   )
 
   const getActions = (record) => [
@@ -214,15 +273,22 @@ const LeaveRecordTable = ({
         </DataTableStatusBadge>
       )
     }
-    if (column.key === 'statusDetails') {
+    if (column.key === 'workflow') {
+      const steps = record.workflowSteps?.length ? record.workflowSteps : [record.workflow]
       return (
-        <DataTableTextCell
-          value={record.statusDetails}
-          maxWidth="220px"
-          title="Status Details"
-          mode="expandable"
-          previewCharThreshold={34}
-        />
+        <div className="d-flex flex-column gap-1" style={{ maxWidth: '240px' }}>
+          {steps.map((step, index) => (
+            <DataTableTextCell
+              key={`${record.id || 'workflow'}-${index}`}
+              value={step}
+              maxWidth="240px"
+              title="Workflow"
+              mode="expandable"
+              previewCharThreshold={52}
+              className="small text-muted"
+            />
+          ))}
+        </div>
       )
     }
     return record[column.key] || '-'
@@ -269,7 +335,7 @@ const LeaveRecordTable = ({
         dataColumns={dataColumns}
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
-        storageKey="leave.personal-records.visible-columns.v3"
+        storageKey="leave.personal-records.visible-columns.v4"
         idPrefix="leave-record"
         emptyMessage="No leave records found."
         exportFilename={`leave-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -289,9 +355,10 @@ const LeaveRecordTable = ({
           meta: 'duration',
           status: 'status',
         }}
-        initialSortField="appliedAt"
-        initialSortDir="desc"
-        initialSortDirByField={{ appliedAt: 'desc', duration: 'desc' }}
+        initialSortField="status"
+        initialSortDir="asc"
+        initialSortDirByField={{ appliedAt: 'desc', duration: 'desc', status: 'asc' }}
+        sortComparators={sortComparators}
         renderQuickFilters={() => (
           <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
         )}

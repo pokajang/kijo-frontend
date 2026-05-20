@@ -15,6 +15,7 @@ import Select from '../../../../components/forms/ThemedSelect'
 import { useNavigate } from 'react-router-dom'
 import LineItem from './LineItem'
 import { useSpecialDetailsForm } from './formHandlers'
+import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 
 export default function SpecialDetailsCard({
   formData,
@@ -23,8 +24,15 @@ export default function SpecialDetailsCard({
   proposalLanguage = 'en',
 }) {
   const navigate = useNavigate()
+  const { isRevision } = useQuoteRouteParams()
   const { templates, handleTemplateSelect, handleAddBlank, handleLineItemChange, handleRemove } =
     useSpecialDetailsForm(formData, setFormData, isEditMode, proposalLanguage)
+  const selectedTemplate = templates.find((t) => Number(t.id) === Number(formData.specialId))
+  const editServiceLabel = selectedTemplate
+    ? `${selectedTemplate.serviceTitle} (${selectedTemplate.serviceCode})`
+    : formData.serviceTitle
+      ? `${formData.serviceTitle} (${formData.serviceCode})`
+      : '--'
 
   const reactSelectOptions = templates.map((t) => ({
     value: t.id,
@@ -51,7 +59,7 @@ export default function SpecialDetailsCard({
           {isEditMode && (
             <CAlert color="primary">
               <strong>
-                {new URLSearchParams(window.location.search).get('isRevision') === 'true'
+                {isRevision
                   ? 'You are revising the existing quotation. The quotation number will be appended with Rev xx.'
                   : "You are editing the existing quotation. This won't change the quotation number."}
               </strong>
@@ -67,7 +75,11 @@ export default function SpecialDetailsCard({
                 <Select
                   id="specialServiceType"
                   options={reactSelectOptions}
-                  value={reactSelectOptions.find((opt) => opt.value === formData.specialId) || null}
+                  value={
+                    reactSelectOptions.find(
+                      (opt) => String(opt.value) === String(formData.specialId),
+                    ) || null
+                  }
                   onChange={handleSelectChange}
                   placeholder="Select special service..."
                   isClearable
@@ -89,14 +101,7 @@ export default function SpecialDetailsCard({
                   )}
                 />
               ) : (
-                <CFormInput
-                  readOnly
-                  value={
-                    templates.find((t) => t.id === formData.specialId)
-                      ? `${templates.find((t) => t.id === formData.specialId).serviceTitle} (${templates.find((t) => t.id === formData.specialId).serviceCode})`
-                      : '--'
-                  }
-                />
+                <CFormInput readOnly value={editServiceLabel} />
               )}
             </CCol>
           </CRow>

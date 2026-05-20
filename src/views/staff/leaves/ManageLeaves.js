@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import SectionAllLeaves from './SectionAllLeaves'
 import SectionViewAssignments from './SectionViewAssignments'
 import SectionAssignLeaves from './SectionAssignLeaves'
+import SectionLeaveWorkflowSettings from './SectionLeaveWorkflowSettings'
 import * as AH from './actionHandlers'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs'
@@ -50,7 +51,9 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
     }
 
     fetchStaffList()
-    fetchEntitlements()
+    if (routeSection !== 'workflow') {
+      fetchEntitlements()
+    }
   }, [routeSection])
 
   const editEntitlement = useMemo(
@@ -84,6 +87,13 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         onCancelEdit={() => navigate('/staff/leaves/entitlements')}
       />
     )
+  } else if (routeSection === 'workflow') {
+    content = (
+      <SectionLeaveWorkflowSettings
+        staffList={staffList}
+        onBack={() => navigate('/staff/leaves')}
+      />
+    )
   } else {
     content = (
       <SectionAllLeaves
@@ -91,6 +101,7 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         fetchAllLeaveRecords={fetchAllLeaveRecords}
         onManageEntitlements={() => navigate('/staff/leaves/entitlements')}
         onAssignLeave={() => navigate('/staff/leaves/assign')}
+        onManageWorkflow={() => navigate('/staff/leaves/workflow')}
         onViewRecord={(record) =>
           navigate(`/staff/leaves/records/${record.id}`, {
             state: { record, returnTo: '/staff/leaves' },

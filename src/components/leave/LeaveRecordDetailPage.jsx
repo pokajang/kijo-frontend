@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailFields, DataTableDetailShell, DataTableStatusBadge } from '../datatable'
 import dialog from '../dialog/dialogService'
 import { fetchJson, findRecordById, getArrayFromPayload } from '../../utils/detailPages'
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
+import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -51,6 +53,7 @@ const LeaveRecordDetailPage = () => {
   const [record, setRecord] = useState(() => mapPersonalLeave(location.state?.record))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
+  const { consumeEntity } = useAppNotifications()
 
   const loadRecord = useCallback(async () => {
     setLoading(true)
@@ -72,6 +75,14 @@ const LeaveRecordDetailPage = () => {
     loadRecord()
   }, [loadRecord])
 
+  useEffect(() => {
+    consumeEntity({
+      moduleKey: 'staff.leaves',
+      entityType: 'leave_application',
+      entityId: leaveId,
+    }).catch(() => {})
+  }, [consumeEntity, leaveId])
+
   const cancelLeave = useCallback(async () => {
     if (!(await dialog.confirm('Are you sure you want to cancel this leave application?'))) return
     try {
@@ -80,6 +91,7 @@ const LeaveRecordDetailPage = () => {
         body: JSON.stringify({ id: leaveId }),
       })
       if (data.status !== 'success') throw new Error(data.message || 'Unable to cancel leave')
+      dispatchAppNotificationsChanged()
       dialog.alert('Leave application cancelled successfully.')
       await loadRecord()
     } catch (err) {

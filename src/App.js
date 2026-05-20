@@ -12,6 +12,7 @@ import RequireAuth from './auth/RequireAuth'
 import VersionNotifier from './components/VersionNotifier'
 import AppDialogProvider from './components/dialog/AppDialogProvider'
 import AppApiProvider from './api/AppApiProvider'
+import AppNotificationProvider from './notifications/AppNotificationProvider'
 
 // Set global defaults for all charts
 Chart.defaults.font.family = 'var(--cui-font-sans-serif)'
@@ -52,7 +53,9 @@ const App = () => {
                   name="Home"
                   element={
                     <RequireAuth>
-                      <DefaultLayout />
+                      <AppNotificationProvider>
+                        <DefaultLayout />
+                      </AppNotificationProvider>
                     </RequireAuth>
                   }
                 />

@@ -9,20 +9,20 @@ describe('applySidebarBadges', () => {
         { name: 'Clients', to: '/client/manage' },
         { name: 'Negotiations', to: '/crm/price-exceptions' },
       ],
-      { vendorRegistrationExpiredCount: 3 },
+      { getRouteGroupCount: (route) => (route === '/client/manage' ? 3 : 0) },
     )
 
     expect(rows[0].badge).toEqual({
       color: 'danger',
       text: '3',
-      title: 'Expired vendor registrations',
+      title: 'Vendor registrations need attention',
     })
     expect(rows[1].badge).toBeUndefined()
   })
 
   it('does not add the Clients badge when only expiring-soon rows exist upstream', () => {
     const rows = applySidebarBadges([{ name: 'Clients', to: '/client/manage' }], {
-      vendorRegistrationExpiredCount: 0,
+      getRouteGroupCount: () => 0,
     })
 
     expect(rows[0].badge).toBeUndefined()

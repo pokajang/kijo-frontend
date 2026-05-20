@@ -1,8 +1,9 @@
 export const normalizeContact = (pic = {}) => ({
-  full_name: pic.full_name ?? pic.fullName ?? pic.pic_name ?? '',
-  email: pic.email ?? pic.pic_email ?? '',
-  mobile_number: pic.mobile_number ?? pic.mobileNumber ?? pic.pic_phone ?? '',
-  position: pic.position ?? pic.pic_position ?? '',
+  full_name: pic.full_name ?? pic.fullName ?? pic.pic_name ?? pic.picName ?? pic.name ?? '',
+  email: pic.email ?? pic.pic_email ?? pic.picEmail ?? '',
+  mobile_number:
+    pic.mobile_number ?? pic.mobileNumber ?? pic.pic_phone ?? pic.picPhone ?? pic.phone ?? '',
+  position: pic.position ?? pic.pic_position ?? pic.picPosition ?? '',
 })
 
 export const contactKey = (pic = {}, index = 0) => {

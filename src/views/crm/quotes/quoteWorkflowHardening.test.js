@@ -103,6 +103,13 @@ describe('quote inquiry source storage', () => {
         selectedService: 'training',
       }),
     ).toBeUndefined()
+    expect(
+      getMatchingInquiryId({
+        currentInquirySource,
+        selectedClient: {},
+        selectedService: 'training',
+      }),
+    ).toBeUndefined()
   })
 
   it('does not persist inquiry source payloads without a source', () => {

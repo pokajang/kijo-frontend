@@ -86,6 +86,7 @@ const DataTableRecordList = ({
   initialSortDir = 'asc',
   initialSortDirByField = {},
   getSortValue,
+  sortComparators = {},
   controlledSortField,
   controlledSortDir,
   onControlledSort,
@@ -174,6 +175,7 @@ const DataTableRecordList = ({
     initialSortDir,
     getSortValue: getSortValue || ((row, field) => row?.[field]),
     sortTypes,
+    sortComparators,
     initialSortDirByField,
   })
   const hasControlledSort =
