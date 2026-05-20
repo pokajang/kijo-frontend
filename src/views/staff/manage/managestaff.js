@@ -320,7 +320,6 @@ export default function ManageStaff() {
                 emptyMessage="No staff records found."
                 exportFilename="staff-records.csv"
                 getRowKey={(staff, index) => staff.staff_id || index}
-                initialSortField="fullName"
                 actionColumnWidth="56px"
                 getActions={getActions}
                 renderCell={renderCell}
