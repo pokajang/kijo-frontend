@@ -62,10 +62,20 @@ const useVersionCheck = () => {
 
     check()
     const intervalId = window.setInterval(check, pollMs)
+    const checkWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        check()
+      }
+    }
+
+    document.addEventListener('visibilitychange', checkWhenVisible)
+    window.addEventListener('focus', check)
 
     return () => {
       cancelled = true
       window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', checkWhenVisible)
+      window.removeEventListener('focus', check)
     }
   }, [pollMs, currentVersion])
 
