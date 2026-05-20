@@ -96,6 +96,8 @@ const getStatusTone = (status, getStatusBadge) => {
   return 'info'
 }
 
+export const getLeaveRecordScopeDate = (record = {}) => record.appliedAt || record.startDate || null
+
 const LeaveRecordTable = ({
   leaveRecords = [],
   loading = false,
@@ -150,7 +152,7 @@ const LeaveRecordTable = ({
         record.reason?.toLowerCase().includes(term) ||
         record.status?.toLowerCase().includes(term)
       const matchesType = !leaveTypeFilter || record.leaveType === leaveTypeFilter
-      const matchesPeriod = isDateInPeriodRange(record.startDate || record.appliedAt, periodRange)
+      const matchesPeriod = isDateInPeriodRange(getLeaveRecordScopeDate(record), periodRange)
       return matchesSearch && matchesType && matchesPeriod
     })
   }, [leaveRecords, searchTerm, leaveTypeFilter, periodRange])

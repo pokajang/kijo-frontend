@@ -167,7 +167,8 @@ export const useApplyLeaveHandlers = ({ onNotify, onSubmitted } = {}) => {
       } else {
         notify(
           'warning',
-          result.message ||
+          result.mail_message ||
+            result.message ||
             'Leave was submitted, but email notification to recipients could not be confirmed.',
           { scope: 'submission' },
         )

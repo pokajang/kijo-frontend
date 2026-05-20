@@ -152,6 +152,9 @@ const getStatusTone = (status) => {
   }
 }
 
+export const getLeaveApplicationScopeDate = (record = {}) =>
+  record.applied_at || record.start_date || null
+
 const SectionAllLeaves = ({
   allLeaveRecords = [],
   fetchAllLeaveRecords,
@@ -291,7 +294,7 @@ const SectionAllLeaves = ({
           .join(' ')
           .toLowerCase()
         const nameMatch = !term || searchableText.includes(term)
-        const periodMatch = isDateInPeriodRange(record.start_date || record.applied_at, periodRange)
+        const periodMatch = isDateInPeriodRange(getLeaveApplicationScopeDate(record), periodRange)
         const typeMatch = !filterType || record.type === filterType
         const statusMatch = !filterStatus || record.status === filterStatus
         return nameMatch && periodMatch && typeMatch && statusMatch
