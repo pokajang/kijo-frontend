@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import {
   CAlert,
   CButton,
@@ -20,6 +20,12 @@ import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { fetchAllPagedRecords, fetchJson } from '../../../utils/detailPages'
+import {
+  getClientPaymentTermsMeta,
+  getPaymentTermsCompactLabel,
+  normalizePaymentTermsDays,
+  SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS,
+} from '../../../shared/paymentTerms'
 import { getTodayDate, manualDebtorToForm, normalizeDebtorRow } from './debtorUtils'
 
 const debtorDraftStorageKey = 'debtorCreateDraft'
@@ -49,6 +55,10 @@ const blankForm = {
   service_end_date: '',
   purpose: '',
   invoice_date: getTodayDate(),
+  override_payment_terms: false,
+  payment_terms_days: '',
+  payment_terms_source: '',
+  due_date: '',
   grand_total: '',
   status: 'Open',
   payment_method: '',
@@ -87,6 +97,39 @@ const buildServicePeriod = (startDate, endDate, fallback = '') => {
   return start || end || String(fallback || '').trim()
 }
 
+const addDaysToDate = (dateValue, days) => {
+  if (!dateValue) return ''
+  const date = new Date(`${dateValue}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return ''
+  date.setDate(date.getDate() + normalizePaymentTermsDays(days))
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 10)
+}
+
+const resolveClientPaymentTerms = (client = {}) => {
+  const meta = getClientPaymentTermsMeta(client)
+  return {
+    days: meta.days,
+    source: meta.source,
+    label: getPaymentTermsCompactLabel(meta.source, meta.days),
+  }
+}
+
+const getManualTermsLabel = (form) => {
+  if (
+    form.payment_terms_days === null ||
+    form.payment_terms_days === undefined ||
+    form.payment_terms_days === ''
+  ) {
+    return '-'
+  }
+  const days = normalizePaymentTermsDays(form.payment_terms_days, SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS)
+  return getPaymentTermsCompactLabel(
+    form.override_payment_terms ? 'manual_override' : form.payment_terms_source || 'legacy',
+    days,
+  )
+}
+
 const buildGroupedClientOptions = (clients = []) => {
   const grouped = new Map()
 
@@ -103,6 +146,10 @@ const buildGroupedClientOptions = (clients = []) => {
         city: client.city ?? '',
         state: client.state ?? '',
         zip: client.zip ?? '',
+        payment_terms_days: client.payment_terms_days ?? client.paymentTermsDays ?? null,
+        effective_payment_terms_days:
+          client.effective_payment_terms_days ?? client.effectivePaymentTermsDays ?? null,
+        payment_terms_source: client.payment_terms_source ?? client.paymentTermsSource ?? '',
         pic_count: Number(client.pic_count || 0),
         all_pics: rowPics,
       })
@@ -287,15 +334,39 @@ const DebtorFormPage = () => {
   const [selectedClient, setSelectedClient] = useState(null)
   const [clientPics, setClientPics] = useState([])
   const [selectedPicKeys, setSelectedPicKeys] = useState([])
+  const [paymentTermsDirty, setPaymentTermsDirty] = useState(false)
   const returnHydratedRef = useRef(false)
   const editHydratedRef = useRef(false)
 
   const title = useMemo(() => (isEdit ? 'Edit Manual Debtor' : 'Add Manual Debtor'), [isEdit])
+  const selectedClientTerms = useMemo(
+    () => (selectedClient ? resolveClientPaymentTerms(selectedClient) : null),
+    [selectedClient],
+  )
+  const effectiveClientTermsLabel = useMemo(() => {
+    if (!isEdit || paymentTermsDirty || form.payment_terms_days === '') {
+      return selectedClientTerms?.label || 'Client terms'
+    }
+    return `Saved ${getManualTermsLabel(form)}`
+  }, [form, isEdit, paymentTermsDirty, selectedClientTerms])
 
   const updateField = useCallback((field, value) => {
     setForm((current) => ({
       ...current,
       [field]: value,
+      ...(field === 'invoice_date' && current.payment_terms_days !== ''
+        ? {
+            due_date: addDaysToDate(value, current.payment_terms_days),
+          }
+        : {}),
+      ...(field === 'payment_terms_days'
+        ? {
+            due_date:
+              value !== '' && current.invoice_date
+                ? addDaysToDate(current.invoice_date, value)
+                : '',
+          }
+        : {}),
       ...(field === 'status' && value !== 'Paid'
         ? { paid_date: '', paid_amount: '', paid_remarks: '' }
         : {}),
@@ -320,6 +391,32 @@ const DebtorFormPage = () => {
     }))
   }, [])
 
+  const handlePaymentTermsModeChange = useCallback(
+    (useManualOverride) => {
+      setPaymentTermsDirty(true)
+      setForm((current) => {
+        const baseDays =
+          selectedClientTerms?.days ??
+          normalizePaymentTermsDays(current.payment_terms_days, SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS)
+        const days = useManualOverride
+          ? normalizePaymentTermsDays(current.payment_terms_days || baseDays)
+          : baseDays
+        const source = useManualOverride
+          ? 'manual_override'
+          : selectedClientTerms?.source || 'system_default'
+
+        return {
+          ...current,
+          override_payment_terms: useManualOverride,
+          payment_terms_days: days,
+          payment_terms_source: source,
+          due_date: current.invoice_date ? addDaysToDate(current.invoice_date, days) : '',
+        }
+      })
+    },
+    [selectedClientTerms],
+  )
+
   const fetchCompanyPics = useCallback(async (companyId, fallbackPics = []) => {
     if (!companyId) return fallbackPics
 
@@ -338,7 +435,10 @@ const DebtorFormPage = () => {
   }, [])
 
   const hydrateSelectedClient = useCallback(
-    async (client, { fillSnapshots = true, defaultFirstPic = false } = {}) => {
+    async (
+      client,
+      { fillSnapshots = true, defaultFirstPic = false, markPaymentTermsDirty = true } = {},
+    ) => {
       if (!client) {
         setSelectedClient(null)
         setClientPics([])
@@ -347,7 +447,12 @@ const DebtorFormPage = () => {
           ...current,
           client_id: '',
           pic_id: '',
+          override_payment_terms: false,
+          payment_terms_days: '',
+          payment_terms_source: '',
+          due_date: '',
         }))
+        if (markPaymentTermsDirty) setPaymentTermsDirty(true)
         return
       }
 
@@ -360,8 +465,13 @@ const DebtorFormPage = () => {
         city: client.city ?? '',
         state: client.state ?? '',
         zip: client.zip ?? '',
+        payment_terms_days: client.payment_terms_days ?? client.paymentTermsDays ?? null,
+        effective_payment_terms_days:
+          client.effective_payment_terms_days ?? client.effectivePaymentTermsDays ?? null,
+        payment_terms_source: client.payment_terms_source ?? client.paymentTermsSource ?? '',
         all_pics: Array.isArray(client.all_pics) ? client.all_pics : extractPreviewPics(client),
       }
+      const clientTerms = resolveClientPaymentTerms(normalizedClient)
       const pics = await fetchCompanyPics(normalizedClient.company_id, normalizedClient.all_pics)
       setSelectedClient(normalizedClient)
       setClientPics(pics)
@@ -388,10 +498,17 @@ const DebtorFormPage = () => {
                 pic_name: primaryPic?.full_name || '',
                 pic_phone: primaryPic?.mobile_number || '',
                 pic_email: primaryPic?.email || '',
+                override_payment_terms: false,
+                payment_terms_days: clientTerms.days,
+                payment_terms_source: clientTerms.source,
+                due_date: current.invoice_date
+                  ? addDaysToDate(current.invoice_date, clientTerms.days)
+                  : '',
               }
             : {}),
         }
       })
+      if (fillSnapshots && markPaymentTermsDirty) setPaymentTermsDirty(true)
     },
     [fetchCompanyPics, form.pic_id],
   )
@@ -454,6 +571,7 @@ const DebtorFormPage = () => {
           ...manualDebtorToForm(normalizeDebtorRow(payload?.debtor || {})),
         }
         setForm(nextForm)
+        setPaymentTermsDirty(false)
       } catch (error) {
         if (!cancelled) {
           dialog.alert(error?.message || 'Unable to load manual debtor.')
@@ -483,7 +601,11 @@ const DebtorFormPage = () => {
     returnHydratedRef.current = true
 
     if (match) {
-      hydrateSelectedClient(match.data, { fillSnapshots: true, defaultFirstPic: true })
+      hydrateSelectedClient(match.data, {
+        fillSnapshots: true,
+        defaultFirstPic: true,
+        markPaymentTermsDirty: true,
+      })
     }
 
     sessionStorage.removeItem(cameFromDebtorStorageKey)
@@ -506,7 +628,7 @@ const DebtorFormPage = () => {
     if (!match) return
 
     editHydratedRef.current = true
-    hydrateSelectedClient(match.data, { fillSnapshots: false })
+    hydrateSelectedClient(match.data, { fillSnapshots: false, markPaymentTermsDirty: false })
   }, [clientOptions, form.client_id, form.client_name, hydrateSelectedClient, isEdit, loading])
 
   const handleContactToggle = (pic, index) => {
@@ -562,8 +684,13 @@ const DebtorFormPage = () => {
     )
     Object.entries(form).forEach(([key, value]) => {
       if (key === 'attachmentUrl' || key === 'attachmentOriginalName') return
+      if (key === 'override_payment_terms') {
+        data.append(key, value ? '1' : '0')
+        return
+      }
       data.append(key, key === 'service_period' ? servicePeriod : (value ?? ''))
     })
+    data.append('payment_terms_changed', !isEdit || paymentTermsDirty ? '1' : '0')
     if (attachment) data.append('attachment', attachment)
     return data
   }
@@ -629,7 +756,11 @@ const DebtorFormPage = () => {
                   clientPics={clientPics}
                   selectedPicKeys={selectedPicKeys}
                   onClientSelect={(client) =>
-                    hydrateSelectedClient(client, { fillSnapshots: true, defaultFirstPic: true })
+                    hydrateSelectedClient(client, {
+                      fillSnapshots: true,
+                      defaultFirstPic: true,
+                      markPaymentTermsDirty: true,
+                    })
                   }
                   onContactToggle={handleContactToggle}
                   onSelectAllContacts={handleSelectAllContacts}
@@ -645,7 +776,7 @@ const DebtorFormPage = () => {
                       invoice.
                     </CAlert>
                     <CRow className="g-3">
-                      <CCol xs={12} md={4}>
+                      <CCol xs={12} md={3}>
                         <CFormLabel>Invoice Ref</CFormLabel>
                         <CFormInput
                           value={form.invoice_ref_no}
@@ -653,7 +784,7 @@ const DebtorFormPage = () => {
                           required
                         />
                       </CCol>
-                      <CCol xs={12} md={4}>
+                      <CCol xs={12} md={3}>
                         <CFormLabel>Invoice Date</CFormLabel>
                         <CFormInput
                           type="date"
@@ -661,6 +792,46 @@ const DebtorFormPage = () => {
                           onChange={(event) => updateField('invoice_date', event.target.value)}
                           required
                         />
+                      </CCol>
+                      <CCol xs={12} md={3}>
+                        <CFormLabel>Payment Terms</CFormLabel>
+                        <div className="d-flex flex-wrap gap-3 mb-2">
+                          <CFormCheck
+                            type="radio"
+                            id="manualDebtorClientTerms"
+                            name="manualDebtorPaymentTermsMode"
+                            label={effectiveClientTermsLabel}
+                            checked={!form.override_payment_terms}
+                            onChange={() => handlePaymentTermsModeChange(false)}
+                          />
+                          <CFormCheck
+                            type="radio"
+                            id="manualDebtorCustomTerms"
+                            name="manualDebtorPaymentTermsMode"
+                            label="Custom"
+                            checked={Boolean(form.override_payment_terms)}
+                            onChange={() => handlePaymentTermsModeChange(true)}
+                          />
+                        </div>
+                        {form.override_payment_terms ? (
+                          <CFormInput
+                            type="number"
+                            min="0"
+                            max="365"
+                            value={form.payment_terms_days}
+                            onChange={(event) => {
+                              setPaymentTermsDirty(true)
+                              updateField('payment_terms_days', event.target.value)
+                            }}
+                            required
+                          />
+                        ) : (
+                          <div className="text-muted small">{getManualTermsLabel(form)}</div>
+                        )}
+                      </CCol>
+                      <CCol xs={12} md={3}>
+                        <CFormLabel>Due Date</CFormLabel>
+                        <CFormInput type="date" value={form.due_date || ''} readOnly disabled />
                       </CCol>
                       <CCol xs={12} md={4}>
                         <CFormLabel>Grand Total</CFormLabel>

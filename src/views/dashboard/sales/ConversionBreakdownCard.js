@@ -1,20 +1,6 @@
 ﻿import React from 'react'
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CRow,
-  CCol,
-  CTable,
-  CTableHead,
-  CTableBody,
-  CTableFoot,
-  CTableRow,
-  CTableHeaderCell,
-  CTableDataCell,
-  CPopover,
-} from '@coreui/react'
-import { DataTableLoadingState } from '../../../components/datatable'
+import { CCard, CCardHeader, CCardBody, CRow, CCol, CPopover } from '@coreui/react'
+import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`
@@ -89,6 +75,71 @@ const ConversionBreakdownCard = ({
         effectiveAverageDenominator
       : 0
   const periodRangeLabel = formatDateRangeLabel(startDate, endDate)
+  const columns = [
+    {
+      key: 'index',
+      label: '#',
+      width: '3.25rem',
+      shrinkToFit: true,
+      render: (_item, index) => index + 1,
+      cellClassName: 'text-muted',
+    },
+    {
+      key: 'label',
+      label: labelHeader,
+      render: (item) => {
+        const rate = Number(item.conversionRate || 0)
+        const barWidth = rate > 0 ? `${Math.min(rate, 100)}%` : '2px'
+
+        return (
+          <>
+            <div className="fw-semibold">{item.label}</div>
+            <div
+              className="mt-2 rounded-pill dashboard-breakdown-meter"
+              style={{ height: '4px', overflow: 'hidden' }}
+            >
+              <div
+                className="rounded-pill bg-success"
+                style={{ width: barWidth, height: '100%' }}
+              />
+            </div>
+          </>
+        )
+      },
+    },
+    {
+      key: 'rate',
+      label: 'Rate',
+      align: 'end',
+      render: (item) => formatPercent(Number(item.conversionRate || 0)),
+    },
+    {
+      key: 'converted',
+      label: 'Realized / Total',
+      align: 'end',
+      render: (item) => `${Number(item.convertedCount || 0)}/${Number(item.totalQuotes || 0)}`,
+    },
+  ]
+  const footerRows = [
+    {
+      key: 'total',
+      className: 'fw-semibold text-muted',
+      cells: [
+        {
+          key: 'total-label',
+          content: 'Total',
+          colSpan: 3,
+          className: 'text-muted',
+        },
+        {
+          key: 'total-value',
+          content: `${totalConverted}/${totalQuotes}`,
+          align: 'end',
+          className: 'text-muted',
+        },
+      ],
+    },
+  ]
 
   return (
     <CCard className="mb-4">
@@ -163,89 +214,15 @@ const ConversionBreakdownCard = ({
               </CRow>
             </div>
 
-            <div className="rounded-4 overflow-hidden bg-light">
-              {/* datatable-exempt: existing embedded/layout table */}
-              <CTable
-                responsive
-                align="middle"
-                className="mb-0 table-borderless border-0 data-table-compact embedded-data-table"
-              >
-                <CTableHead>
-                  <CTableRow className="table-light">
-                    <CTableHeaderCell style={{ borderBottom: '1px solid var(--app-surface-page)' }}>
-                      #
-                    </CTableHeaderCell>
-                    <CTableHeaderCell style={{ borderBottom: '1px solid var(--app-surface-page)' }}>
-                      {labelHeader}
-                    </CTableHeaderCell>
-                    <CTableHeaderCell
-                      className="text-end"
-                      style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                    >
-                      Rate
-                    </CTableHeaderCell>
-                    <CTableHeaderCell
-                      className="text-end"
-                      style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                    >
-                      Realized / Total
-                    </CTableHeaderCell>
-                  </CTableRow>
-                </CTableHead>
-
-                <CTableBody>
-                  {sortedRows.map((item, index) => {
-                    const rate = Number(item.conversionRate || 0)
-                    const barWidth = rate > 0 ? `${Math.min(rate, 100)}%` : '2px'
-
-                    return (
-                      <CTableRow
-                        key={`${item.label || 'item'}-${item.totalQuotes || 0}-${item.convertedCount || 0}`}
-                        className="table-light"
-                      >
-                        <CTableDataCell className="border-0 text-muted">{index + 1}</CTableDataCell>
-                        <CTableDataCell className="border-0">
-                          <div className="fw-semibold">{item.label}</div>
-                          <div
-                            className="mt-2 rounded-pill bg-white"
-                            style={{ height: '4px', overflow: 'hidden' }}
-                          >
-                            <div
-                              className="rounded-pill bg-success"
-                              style={{ width: barWidth, height: '100%' }}
-                            />
-                          </div>
-                        </CTableDataCell>
-                        <CTableDataCell className="text-end border-0">
-                          {formatPercent(rate)}
-                        </CTableDataCell>
-                        <CTableDataCell className="text-end border-0">
-                          {Number(item.convertedCount || 0)}/{Number(item.totalQuotes || 0)}
-                        </CTableDataCell>
-                      </CTableRow>
-                    )
-                  })}
-                </CTableBody>
-
-                <CTableFoot>
-                  <CTableRow className="table-light fw-semibold text-muted">
-                    <CTableDataCell
-                      colSpan={3}
-                      className="text-muted"
-                      style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                    >
-                      Total
-                    </CTableDataCell>
-                    <CTableDataCell
-                      className="text-end text-muted"
-                      style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                    >
-                      {totalConverted}/{totalQuotes}
-                    </CTableDataCell>
-                  </CTableRow>
-                </CTableFoot>
-              </CTable>
-            </div>
+            <DataTableEmbeddedList
+              rows={sortedRows}
+              columns={columns}
+              footerRows={footerRows}
+              getRowKey={(item) =>
+                `${item.label || 'item'}-${item.totalQuotes || 0}-${item.convertedCount || 0}`
+              }
+              desktopBreakpoint="md"
+            />
           </>
         )}
       </CCardBody>

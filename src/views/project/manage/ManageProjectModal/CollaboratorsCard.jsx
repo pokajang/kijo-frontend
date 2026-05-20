@@ -28,7 +28,7 @@ import {
 
 import CIcon from '@coreui/icons-react'
 import { cilOptions } from '@coreui/icons'
-import Select from 'react-select'
+import Select from '../../../../components/forms/ThemedSelect'
 import { DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
 import {

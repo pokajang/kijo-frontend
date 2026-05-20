@@ -22,7 +22,14 @@ const getColumnAlignClass = (align) => {
 }
 
 const getColumnStyle = (column = {}, style = {}) => ({
-  ...(column.width ? { minWidth: column.width } : {}),
+  ...(column.shrinkToFit
+    ? {
+        width: column.width || '1%',
+        ...(column.width ? { minWidth: column.width, maxWidth: column.width } : {}),
+      }
+    : column.width
+      ? { minWidth: column.width }
+      : {}),
   ...(column.align ? { textAlign: column.align === 'right' ? 'right' : column.align } : {}),
   ...style,
 })
@@ -30,6 +37,21 @@ const getColumnStyle = (column = {}, style = {}) => ({
 const renderValue = (value) => {
   if (value === null || value === undefined || value === '') return emptyValue
   return value
+}
+
+const renderCellContent = (row, rowIndex, cell) =>
+  typeof cell.render === 'function'
+    ? cell.render(row, rowIndex, cell)
+    : renderValue(cell.content ?? cell.value ?? row?.[cell.key])
+
+const formatMobileFooterFallbackLabel = (key, cellIndex) => {
+  if (!key) return `Cell ${cellIndex + 1}`
+
+  return String(key)
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim()
+    .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
 }
 
 const DataTableEmbeddedList = ({
@@ -43,12 +65,17 @@ const DataTableEmbeddedList = ({
   rowProps,
   emptyMessage = 'No records.',
   tableClassName = '',
+  shellClassName = '',
+  shellStyle,
+  tableProps = {},
   mobileClassName = '',
   dense = true,
   bordered = false,
   hover = true,
   striped = false,
   responsive = true,
+  desktopBreakpoint = 'lg',
+  hideMobileList = false,
   mobileMode = 'stacked',
 }) => {
   const renderBodyCell = (row, column, rowIndex) => {
@@ -63,10 +90,12 @@ const DataTableEmbeddedList = ({
       bordered={bordered}
       hover={hover}
       striped={striped}
+      {...tableProps}
       className={appendClassNames(
         dense && 'data-table-compact',
         'embedded-data-table',
         tableClassName,
+        tableProps.className,
       )}
     >
       <CTableHead>
@@ -151,10 +180,7 @@ const DataTableEmbeddedList = ({
     return cells.map((cell, cellIndex) => {
       const baseColumn = columns.find((column) => column.key === cell.key) || {}
       const noWrap = shouldNoWrapDataTableColumn({ ...baseColumn, ...cell })
-      const content =
-        typeof cell.render === 'function'
-          ? cell.render(row, rowIndex, cell)
-          : renderValue(cell.content ?? cell.value ?? row?.[cell.key])
+      const content = renderCellContent(row, rowIndex, cell)
 
       return (
         <CTableDataCell
@@ -173,6 +199,69 @@ const DataTableEmbeddedList = ({
     })
   }
 
+  const getFooterCells = (row) =>
+    Array.isArray(row.cells) ? row.cells : columns.map((column) => ({ ...column }))
+
+  const getMobileFooterLabel = (cell, cellIndex) => {
+    const baseColumn = columns.find((column) => column.key === cell.key) || {}
+    return (
+      cell.mobileLabel ||
+      cell.label ||
+      baseColumn.mobileLabel ||
+      baseColumn.label ||
+      formatMobileFooterFallbackLabel(cell.key, cellIndex)
+    )
+  }
+
+  const renderMobileFooterRow = (row, rowIndex) => {
+    const cells = getFooterCells(row)
+
+    if (cells.length === 2 && row.mobileLayout !== 'details' && row.mobileSummary !== false) {
+      return (
+        <div
+          key={row.key || `mobile-footer-${rowIndex}`}
+          className={appendClassNames(
+            'data-table-mobile-item data-table-mobile-footer-item data-table-mobile-footer-item--summary',
+            row.className,
+          )}
+        >
+          <span className="data-table-mobile-footer-label">
+            {renderCellContent(row, rowIndex, cells[0])}
+          </span>
+          <span className="data-table-mobile-footer-value">
+            {renderCellContent(row, rowIndex, cells[1])}
+          </span>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={row.key || `mobile-footer-${rowIndex}`}
+        className={appendClassNames(
+          'data-table-mobile-item data-table-mobile-footer-item',
+          row.className,
+        )}
+      >
+        <div className="records-mobile-item-main">
+          {cells.map((cell, cellIndex) => (
+            <div
+              key={cell.key || `mobile-footer-${rowIndex}-${cellIndex}`}
+              className="records-mobile-meta-row"
+            >
+              <span className="records-mobile-meta-label">
+                {getMobileFooterLabel(cell, cellIndex)}
+              </span>
+              <span className="records-mobile-meta-value">
+                {renderCellContent(row, rowIndex, cell)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   if (!rows.length && !summaryRows.length && !footerRows.length) {
     return <div className="border rounded p-3 text-muted">{emptyMessage}</div>
   }
@@ -180,40 +269,66 @@ const DataTableEmbeddedList = ({
   return (
     <>
       {responsive ? (
-        <div className="table-responsive d-none d-lg-block data-table-embedded-shell">
+        <div
+          className={appendClassNames(
+            'table-responsive',
+            `d-none d-${desktopBreakpoint}-block`,
+            'data-table-embedded-shell',
+            shellClassName,
+          )}
+          style={shellStyle}
+        >
           {renderDesktopTable()}
         </div>
       ) : (
-        <div className="d-none d-lg-block data-table-embedded-shell">{renderDesktopTable()}</div>
+        <div
+          className={appendClassNames(
+            `d-none d-${desktopBreakpoint}-block`,
+            'data-table-embedded-shell',
+            shellClassName,
+          )}
+          style={shellStyle}
+        >
+          {renderDesktopTable()}
+        </div>
       )}
-      <div className={`d-lg-none records-mobile-list ${mobileClassName}`.trim()}>
-        {rows.map((row, rowIndex) => {
-          if (typeof renderMobileItem === 'function') {
+      {!hideMobileList && (
+        <div
+          className={appendClassNames(
+            `d-${desktopBreakpoint}-none`,
+            'records-mobile-list',
+            mobileClassName,
+          )}
+        >
+          {rows.map((row, rowIndex) => {
+            if (typeof renderMobileItem === 'function') {
+              return (
+                <React.Fragment key={getRowKey(row, rowIndex)}>
+                  {renderMobileItem(row, rowIndex)}
+                </React.Fragment>
+              )
+            }
+
+            if (mobileMode !== 'stacked') return null
+
             return (
-              <React.Fragment key={getRowKey(row, rowIndex)}>
-                {renderMobileItem(row, rowIndex)}
-              </React.Fragment>
-            )
-          }
-
-          if (mobileMode !== 'stacked') return null
-
-          return (
-            <div key={getRowKey(row, rowIndex)} className="data-table-mobile-item">
-              <div className="records-mobile-item-main">
-                {columns.map((column) => (
-                  <div key={column.key} className="records-mobile-meta-row">
-                    <span className="records-mobile-meta-label">{column.label}</span>
-                    <span className="records-mobile-meta-value">
-                      {renderBodyCell(row, column, rowIndex)}
-                    </span>
-                  </div>
-                ))}
+              <div key={getRowKey(row, rowIndex)} className="data-table-mobile-item">
+                <div className="records-mobile-item-main">
+                  {columns.map((column) => (
+                    <div key={column.key} className="records-mobile-meta-row">
+                      <span className="records-mobile-meta-label">{column.label}</span>
+                      <span className="records-mobile-meta-value">
+                        {renderBodyCell(row, column, rowIndex)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+          {footerRows.map((row, rowIndex) => renderMobileFooterRow(row, rowIndex))}
+        </div>
+      )}
     </>
   )
 }

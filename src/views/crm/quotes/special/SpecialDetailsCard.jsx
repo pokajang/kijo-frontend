@@ -11,7 +11,7 @@ import {
   CFormTextarea,
   CFormInput,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../../components/forms/ThemedSelect'
 import { useNavigate } from 'react-router-dom'
 import LineItem from './LineItem'
 import { useSpecialDetailsForm } from './formHandlers'

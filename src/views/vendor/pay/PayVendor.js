@@ -18,7 +18,7 @@ import {
   CModalContent,
   CModalFooter,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 
 import PaymentHistoryTable from './PaymentHistoryTable.jsx'
 import dialog from '../../../components/dialog/dialogService'

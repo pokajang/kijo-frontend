@@ -13,7 +13,7 @@ import {
 } from '@coreui/react'
 
 import { CAlert } from '@coreui/react'
-import { Editor } from '@tinymce/tinymce-react'
+import Editor from '../../components/forms/ThemedTinyMCEEditor'
 
 // import dummy data
 import companyData from './companyData'

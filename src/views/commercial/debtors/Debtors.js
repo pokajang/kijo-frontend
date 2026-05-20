@@ -23,6 +23,7 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
 import { fetchJson } from '../../../utils/detailPages'
+import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
 import DebtorMarkPaidModal from './DebtorMarkPaidModal'
 import {
   emptyValue,
@@ -35,7 +36,7 @@ import {
   normalizeDebtorRow,
 } from './debtorUtils'
 
-const columnStorageKey = 'commercial.debtors.visible-columns.v1'
+const columnStorageKey = 'commercial.debtors.visible-columns.v2'
 
 const defaultVisibleColumns = {
   invoice: true,
@@ -45,6 +46,9 @@ const defaultVisibleColumns = {
   purpose: false,
   invoiceDate: true,
   age: true,
+  paymentTerms: true,
+  dueDate: true,
+  overdue: true,
   total: true,
   status: true,
   source: true,
@@ -73,6 +77,37 @@ const dataColumns = [
     sortType: 'number',
     align: 'center',
     shrinkToFit: true,
+    getExportValue: (row) => `${row.ageDays}d`,
+  },
+  {
+    key: 'paymentTerms',
+    label: 'Terms',
+    width: '110px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => getPaymentTermsDisplay(row),
+  },
+  {
+    key: 'dueDate',
+    label: 'Due',
+    width: '120px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => row.dueDate || emptyValue,
+  },
+  {
+    key: 'overdue',
+    label: 'Overdue',
+    width: '100px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => getOverdueLabel(row),
   },
   { key: 'pic', label: 'PIC', width: '160px', sortable: true, sortType: 'string' },
   { key: 'serviceType', label: 'Service', width: '140px', sortable: true, sortType: 'string' },
@@ -124,6 +159,35 @@ const getInvoiceCountLabel = (count) => `${formatCount(count)} invoice${count ==
 
 const sumGrandTotal = (items) => items.reduce((sum, row) => sum + Number(row.grandTotal || 0), 0)
 
+const getCollectionDays = (row) =>
+  row.overdueDays !== null && row.overdueDays !== undefined
+    ? Number(row.overdueDays || 0)
+    : Number(row.ageDays || 0)
+
+const getOverdueTone = (overdueDays) => {
+  const days = Number(overdueDays || 0)
+  if (days <= 0) return 'success'
+  return getAgeTone(days)
+}
+
+const getOverdueLabel = (debtor) => {
+  if (debtor.overdueDays === null || debtor.overdueDays === undefined) return emptyValue
+  const days = Number(debtor.overdueDays || 0)
+  if (days < 0) return `${Math.abs(days)}d left`
+  if (days === 0) return 'Due'
+  return `${days}d`
+}
+
+const hasPaymentTerms = (debtor) =>
+  debtor.paymentTermsDays !== null &&
+  debtor.paymentTermsDays !== undefined &&
+  debtor.paymentTermsDays !== ''
+
+const getPaymentTermsDisplay = (debtor) =>
+  hasPaymentTerms(debtor)
+    ? getPaymentTermsCompactLabel(debtor.paymentTermsSource, debtor.paymentTermsDays)
+    : emptyValue
+
 const Debtors = () => {
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
@@ -165,12 +229,12 @@ const Debtors = () => {
 
   const statsItems = useMemo(() => {
     const openRows = rows.filter((row) => isOpenStatus(row.status))
-    const overThirtyRows = openRows.filter((row) => Number(row.ageDays || 0) > 30)
+    const overThirtyRows = openRows.filter((row) => getCollectionDays(row) > 30)
     const thirtyOneToSixtyRows = openRows.filter((row) => {
-      const ageDays = Number(row.ageDays || 0)
-      return ageDays >= 31 && ageDays <= 60
+      const collectionDays = getCollectionDays(row)
+      return collectionDays >= 31 && collectionDays <= 60
     })
-    const sixtyOnePlusRows = openRows.filter((row) => Number(row.ageDays || 0) >= 61)
+    const sixtyOnePlusRows = openRows.filter((row) => getCollectionDays(row) >= 61)
 
     return [
       {
@@ -356,6 +420,18 @@ const Debtors = () => {
         </DataTableStatusBadge>
       )
     }
+    if (column.key === 'paymentTerms') {
+      return getPaymentTermsDisplay(debtor)
+    }
+    if (column.key === 'dueDate') return debtor.dueDate || emptyValue
+    if (column.key === 'overdue') {
+      if (debtor.overdueDays === null || debtor.overdueDays === undefined) return emptyValue
+      return (
+        <DataTableStatusBadge tone={getOverdueTone(debtor.overdueDays)}>
+          {getOverdueLabel(debtor)}
+        </DataTableStatusBadge>
+      )
+    }
     if (column.key === 'total') return formatMoney(debtor.grandTotal)
     if (column.key === 'source') {
       return (
@@ -478,13 +554,17 @@ const Debtors = () => {
                 getMobileTitle={(debtor) => debtor.invoiceRef}
                 getMobileSubtitle={(debtor) => debtor.client}
                 getMobileMeta={(debtor) =>
-                  `${debtor.invoiceDate || '-'} | ${formatMoney(debtor.grandTotal)}`
+                  `${debtor.invoiceDate || '-'} | ${getPaymentTermsDisplay(debtor)} | ${formatMoney(
+                    debtor.grandTotal,
+                  )}`
                 }
                 mobileRecord={{
                   title: (debtor) => debtor.invoiceRef,
                   subtitle: (debtor) => debtor.client,
                   meta: (debtor) =>
-                    `${debtor.invoiceDate || '-'} | ${formatMoney(debtor.grandTotal)}`,
+                    `${debtor.invoiceDate || '-'} | ${getPaymentTermsDisplay(debtor)} | ${formatMoney(
+                      debtor.grandTotal,
+                    )}`,
                   badges: (debtor) => [
                     {
                       key: 'status',
@@ -510,6 +590,8 @@ const Debtors = () => {
                 getSortValue={(debtor, field) => {
                   if (field === 'invoice') return debtor.invoiceRef
                   if (field === 'age') return debtor.ageDays
+                  if (field === 'paymentTerms') return Number(debtor.paymentTermsDays || -1)
+                  if (field === 'overdue') return Number(debtor.overdueDays ?? -999999)
                   if (field === 'total') return debtor.grandTotal
                   if (field === 'source') return debtor.sourceType
                   return debtor[field] || ''

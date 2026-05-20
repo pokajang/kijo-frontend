@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { CCol, CRow } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 
 import ClientListTableCard from './components/ClientListTableCard'
 import DeleteCompanyModal from './components/DeleteCompanyModal'
-import PastPicCard from './components/PastPicCard'
+import ClientModuleNavStrip from './components/ClientModuleNavStrip'
 import dialog from '../../../components/dialog/dialogService'
 
 const ClientsList = () => {
@@ -14,8 +13,6 @@ const ClientsList = () => {
   const [statusFilter, setStatusFilter] = useState('')
   const [branchFilter, setBranchFilter] = useState('')
   const [clientsLoading, setClientsLoading] = useState(true)
-  const [showUnassignedPICs, setShowUnassignedPICs] = useState(false)
-  const [unassignedPICs, setUnassignedPICs] = useState([])
   const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false)
   const [companyToDelete, setCompanyToDelete] = useState(null)
   const [deleteCompanyLoading, setDeleteCompanyLoading] = useState(false)
@@ -56,33 +53,9 @@ const ClientsList = () => {
     }
   }
 
-  const fetchPICs = async () => {
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}client-pics`, {
-        credentials: 'include',
-      })
-      const result = await res.json()
-      if (result.status === 'success') {
-        const data = Array.isArray(result.data) ? result.data : []
-        const unassigned = data.filter(
-          (pic) => pic.status?.toLowerCase().trim() === 'unassigned' && !pic.deleted_at,
-        )
-        setUnassignedPICs(unassigned)
-      }
-    } catch (err) {
-      console.error('Failed to fetch PIC list:', err)
-    }
-  }
-
   useEffect(() => {
     fetchClients()
   }, [])
-
-  useEffect(() => {
-    if (showUnassignedPICs) {
-      fetchPICs()
-    }
-  }, [showUnassignedPICs])
 
   const filteredClients = clientDatabase.filter((client) => {
     const term = searchTerm.toLowerCase()
@@ -127,7 +100,7 @@ const ClientsList = () => {
   const handleEditCompany = (client) => {
     const companyId = Number(client.company_id)
     if (!companyId) return
-    navigate(`/client/manage/${companyId}`, { state: { company: client, openEdit: true } })
+    navigate(`/client/manage/${companyId}/edit`, { state: { company: client } })
   }
 
   const handleDeleteCompany = (client) => {
@@ -152,9 +125,6 @@ const ClientsList = () => {
         setShowDeleteCompanyModal(false)
         setCompanyToDelete(null)
         await fetchClients()
-        if (showUnassignedPICs) {
-          await fetchPICs()
-        }
       } else {
         dialog.alert(`Failed: ${result.message}`)
       }
@@ -166,32 +136,10 @@ const ClientsList = () => {
     }
   }
 
-  const handleDeleteUnassignedPic = async (pic) => {
-    const confirmDelete = await dialog.confirm(`Delete ${pic.full_name}?`)
-    if (!confirmDelete) return
-
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE}client-pics/${pic.pic_id}/unassigned`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        },
-      )
-      const result = await res.json()
-      if (result.status === 'success') {
-        await fetchPICs()
-      } else {
-        dialog.alert(`Failed: ${result.message}`)
-      }
-    } catch (err) {
-      console.error('Delete error:', err)
-      dialog.alert('Server error. Please try again later.')
-    }
-  }
-
   return (
     <>
+      <ClientModuleNavStrip />
+
       <ClientListTableCard
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -208,17 +156,6 @@ const ClientsList = () => {
         onSeePics={(client) => openCompanyRoute(client, '#pics')}
         onCreateClient={() => navigate('/client/create')}
       />
-
-      <CRow>
-        <CCol xs={12}>
-          <PastPicCard
-            showUnassignedPICs={showUnassignedPICs}
-            onToggle={() => setShowUnassignedPICs((prev) => !prev)}
-            unassignedPICs={unassignedPICs}
-            onDeleteUnassignedPic={handleDeleteUnassignedPic}
-          />
-        </CCol>
-      </CRow>
 
       <DeleteCompanyModal
         visible={showDeleteCompanyModal}

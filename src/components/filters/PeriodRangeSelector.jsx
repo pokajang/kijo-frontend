@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   CDropdown,
   CDropdownItem,
@@ -168,11 +168,15 @@ const PeriodRangeSelector = ({
   buttonVariant = 'outline',
   size = 'sm',
 }) => {
+  const [visible, setVisible] = useState(false)
   const selectedValue = value || getPeriodRangePreset('ytd')
   const selectedLabel = useMemo(() => getPeriodRangeLabel(selectedValue), [selectedValue])
 
   const handlePresetSelect = (preset) => {
     onChange?.(createPeriodRangeValue(preset, selectedValue))
+    if (preset !== 'custom') {
+      setVisible(false)
+    }
   }
 
   const handleCustomDateChange = (field, nextDate) => {
@@ -183,7 +187,13 @@ const PeriodRangeSelector = ({
   }
 
   return (
-    <CDropdown autoClose="outside" className={`period-range-selector ${className}`.trim()}>
+    <CDropdown
+      autoClose="outside"
+      className={`period-range-selector ${className}`.trim()}
+      visible={visible}
+      onShow={() => setVisible(true)}
+      onHide={() => setVisible(false)}
+    >
       <CDropdownToggle
         size={size}
         color={buttonColor}

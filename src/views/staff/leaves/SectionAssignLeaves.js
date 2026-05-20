@@ -14,7 +14,7 @@ import {
   CCol,
   CAlert,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import * as AH from './actionHandlers'
 import dialog from '../../../components/dialog/dialogService'
 /**

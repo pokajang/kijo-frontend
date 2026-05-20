@@ -124,8 +124,18 @@ const AuthProvider = ({ children }) => {
       body: JSON.stringify(credentials),
     })
 
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     setCsrfToken(data?.csrf_token)
+
+    if (!res.ok) {
+      const fallbackMessage =
+        res.status >= 500
+          ? 'Login service is unavailable. Please try again later.'
+          : 'Invalid credentials.'
+
+      return { ok: false, message: data?.message || data?.error || fallbackMessage }
+    }
+
     if (data?.status === 'success' && data.user?.staff_id) {
       setUser(data.user)
       setStatus('authenticated')

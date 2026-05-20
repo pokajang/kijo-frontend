@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import Select from 'react-select'
+import Select from '../../../../components/forms/ThemedSelect'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CAlert, CButton } from '@coreui/react'
 

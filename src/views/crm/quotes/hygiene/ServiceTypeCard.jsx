@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import Select from 'react-select'
+import Select from '../../../../components/forms/ThemedSelect'
 import { useNavigate } from 'react-router-dom'
 import { CRow, CButton, CCol, CFormLabel, CFormInput } from '@coreui/react'
 import { quoteApiUrl } from '../quoteApi'

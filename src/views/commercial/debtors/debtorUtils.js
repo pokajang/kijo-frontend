@@ -38,37 +38,49 @@ export const isOpenStatus = (status) => {
   return !['paid', 'cancelled', 'canceled', 'void'].includes(normalized)
 }
 
-export const normalizeDebtorRow = (row = {}) => ({
-  ...row,
-  sourceType: row.sourceType || row.source_type || '',
-  sourceId: row.sourceId ?? row.source_id ?? row.id,
-  clientId: row.clientId ?? row.client_id ?? '',
-  picId: row.picId ?? row.pic_id ?? '',
-  invoiceRef: row.invoiceRef || row.invoice_ref_no || emptyValue,
-  client: row.client || row.client_name || emptyValue,
-  pic: row.pic || row.pic_name || emptyValue,
-  picPhone: row.picPhone || row.pic_phone || '',
-  picEmail: row.picEmail || row.pic_email || '',
-  serviceType: row.serviceType || row.service_type || emptyValue,
-  servicePeriod: row.servicePeriod || row.service_period || '',
-  serviceStartDate: row.serviceStartDate || row.service_start_date || '',
-  serviceEndDate: row.serviceEndDate || row.service_end_date || '',
-  purpose: row.purpose || row.project_name || emptyValue,
-  invoiceDate: row.invoiceDate || row.invoice_date || '',
-  ageDays: Number(row.ageDays ?? row.age_days ?? 0),
-  grandTotal: Number(row.grandTotal ?? row.grand_total ?? 0),
-  status: row.status || emptyValue,
-  paymentMethod: row.paymentMethod || row.payment_method || '',
-  paidDate: row.paidDate || row.paid_date || '',
-  paidAmount: row.paidAmount ?? row.paid_amount ?? null,
-  paidRemarks: row.paidRemarks || row.paid_remarks || '',
-  attachmentUrl: row.attachmentUrl || row.attachment_url || '',
-  attachmentOriginalName: row.attachmentOriginalName || row.attachment_original_name || '',
-  internalPicCode: row.internalPicCode || row.internal_pic_code || '',
-  canEdit: Boolean(row.canEdit ?? row.can_edit),
-  canDelete: Boolean(row.canDelete ?? row.can_delete),
-  canMarkPaid: Boolean(row.canMarkPaid ?? row.can_mark_paid),
-})
+export const normalizeDebtorRow = (row = {}) => {
+  const hasOverdueDays = row.overdueDays !== undefined || row.overdue_days !== undefined
+  const rawOverdueDays = row.overdueDays ?? row.overdue_days
+
+  return {
+    ...row,
+    sourceType: row.sourceType || row.source_type || '',
+    sourceId: row.sourceId ?? row.source_id ?? row.id,
+    clientId: row.clientId ?? row.client_id ?? '',
+    picId: row.picId ?? row.pic_id ?? '',
+    invoiceRef: row.invoiceRef || row.invoice_ref_no || emptyValue,
+    client: row.client || row.client_name || emptyValue,
+    pic: row.pic || row.pic_name || emptyValue,
+    picPhone: row.picPhone || row.pic_phone || '',
+    picEmail: row.picEmail || row.pic_email || '',
+    serviceType: row.serviceType || row.service_type || emptyValue,
+    servicePeriod: row.servicePeriod || row.service_period || '',
+    serviceStartDate: row.serviceStartDate || row.service_start_date || '',
+    serviceEndDate: row.serviceEndDate || row.service_end_date || '',
+    purpose: row.purpose || row.project_name || emptyValue,
+    invoiceDate: row.invoiceDate || row.invoice_date || '',
+    paymentTermsDays: row.paymentTermsDays ?? row.payment_terms_days ?? null,
+    paymentTermsSource: row.paymentTermsSource || row.payment_terms_source || '',
+    dueDate: row.dueDate || row.due_date || '',
+    ageDays: Number(row.ageDays ?? row.age_days ?? 0),
+    overdueDays:
+      hasOverdueDays && rawOverdueDays !== null && rawOverdueDays !== ''
+        ? Number(rawOverdueDays)
+        : null,
+    grandTotal: Number(row.grandTotal ?? row.grand_total ?? 0),
+    status: row.status || emptyValue,
+    paymentMethod: row.paymentMethod || row.payment_method || '',
+    paidDate: row.paidDate || row.paid_date || '',
+    paidAmount: row.paidAmount ?? row.paid_amount ?? null,
+    paidRemarks: row.paidRemarks || row.paid_remarks || '',
+    attachmentUrl: row.attachmentUrl || row.attachment_url || '',
+    attachmentOriginalName: row.attachmentOriginalName || row.attachment_original_name || '',
+    internalPicCode: row.internalPicCode || row.internal_pic_code || '',
+    canEdit: Boolean(row.canEdit ?? row.can_edit),
+    canDelete: Boolean(row.canDelete ?? row.can_delete),
+    canMarkPaid: Boolean(row.canMarkPaid ?? row.can_mark_paid),
+  }
+}
 
 export const manualDebtorToForm = (row = {}) => ({
   invoice_ref_no: row.invoiceRef || row.invoice_ref_no || '',
@@ -90,6 +102,11 @@ export const manualDebtorToForm = (row = {}) => ({
   paid_date: row.paidDate || row.paid_date || '',
   paid_amount: row.paidAmount ?? row.paid_amount ?? '',
   paid_remarks: row.paidRemarks || row.paid_remarks || '',
+  override_payment_terms:
+    (row.paymentTermsSource || row.payment_terms_source || '') === 'manual_override',
+  payment_terms_days: row.paymentTermsDays ?? row.payment_terms_days ?? '',
+  payment_terms_source: row.paymentTermsSource || row.payment_terms_source || '',
+  due_date: row.dueDate || row.due_date || '',
   attachmentUrl: row.attachmentUrl || '',
   attachmentOriginalName: row.attachmentOriginalName || '',
 })

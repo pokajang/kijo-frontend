@@ -1,17 +1,8 @@
 import React from 'react'
 import CIcon from '@coreui/icons-react'
 import { cilInfo } from '@coreui/icons'
-import {
-  CButton,
-  CPopover,
-  CTable,
-  CTableBody,
-  CTableDataCell,
-  CTableFoot,
-  CTableHead,
-  CTableHeaderCell,
-  CTableRow,
-} from '@coreui/react'
+import { CButton, CPopover } from '@coreui/react'
+import { DataTableSheet } from '../../../components/datatable'
 import MonitoringCellDetailsPopover from './MonitoringCellDetailsPopover'
 
 const notTrackedLabel = <span className="small text-muted">Not tracked</span>
@@ -95,7 +86,7 @@ const renderSegmentPlainCell = (value) =>
 const WeeklyQuantityMobileList = ({ rows, weeks, totals }) => (
   <div className="d-md-none d-grid gap-2">
     {rows.map((row, index) => (
-      <div key={`${row.label}-mobile`} className="rounded-4 bg-light p-3">
+      <div key={`${row.label}-mobile`} className="dashboard-table-mobile-card">
         <div className="d-flex justify-content-between gap-2 mb-2">
           <div className="fw-semibold">
             {index + 1}. {formatPipelineToolLabel(row.label)}
@@ -122,7 +113,7 @@ const WeeklyQuantityMobileList = ({ rows, weeks, totals }) => (
         </div>
       </div>
     ))}
-    <div className="rounded-4 bg-light p-3 fw-semibold">
+    <div className="dashboard-table-mobile-card fw-semibold">
       <div className="d-flex justify-content-between gap-2 mb-2">
         <div>Total</div>
         <div>{formatNumber(totals?.total)}</div>
@@ -152,7 +143,7 @@ const WeeklyQuantityMobileList = ({ rows, weeks, totals }) => (
 const SegmentBreakdownMobileList = ({ rows }) => (
   <div className="d-md-none d-grid gap-2">
     {rows.map((row, index) => (
-      <div key={`${row.label}-segment-mobile`} className="rounded-4 bg-light p-3">
+      <div key={`${row.label}-segment-mobile`} className="dashboard-table-mobile-card">
         <div className="fw-semibold mb-2">
           {index + 1}. {formatPipelineToolLabel(row.label)}
         </div>
@@ -203,183 +194,204 @@ const SegmentBreakdownMobileList = ({ rows }) => (
 )
 
 const WeeklyQuantityTable = ({ rows, weeks, totals }) => (
-  <div className="monitoring-table-frame d-none d-md-block">
-    {/* datatable-exempt: existing embedded/layout table */}
-    <CTable
-      responsive
-      align="middle"
-      className="mb-0 border-0 monitoring-sheet-table data-table-compact embedded-data-table"
-    >
-      <CTableHead>
-        <CTableRow className="table-light">
-          <CTableHeaderCell rowSpan={2} className="border-0 text-center" style={{ width: '56px' }}>
-            #
-          </CTableHeaderCell>
-          <CTableHeaderCell rowSpan={2} className="border-0">
-            Pipeline Tools
-          </CTableHeaderCell>
-          <CTableHeaderCell
-            colSpan={weeks.length + 1}
-            className="border-0 text-center monitoring-data-band monitoring-data-start-col"
-          >
-            Quantity
-          </CTableHeaderCell>
-        </CTableRow>
-        <CTableRow className="table-light">
-          {weeks.map((week) => (
-            <CTableHeaderCell
-              key={week.key}
-              className={`border-0 text-center text-nowrap monitoring-week-heading ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`}
-            >
-              <div>{week.label}</div>
-              <div className="small text-muted fw-normal">{week.rangeLabel}</div>
-            </CTableHeaderCell>
-          ))}
-          <CTableHeaderCell className="border-0 text-center text-nowrap monitoring-total-col monitoring-week-heading">
-            Total
-          </CTableHeaderCell>
-        </CTableRow>
-      </CTableHead>
-      <CTableBody>
-        {rows.map((row, index) => (
-          <CTableRow key={row.label} className="table-light">
-            <CTableDataCell className="border-0 text-center fw-semibold">
-              {index + 1}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 fw-semibold">
-              {formatPipelineToolLabel(row.label)}
-            </CTableDataCell>
-            {weeks.map((week) => (
-              <CTableDataCell
-                key={`${row.label}-${week.key}`}
-                className={`border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`}
-              >
-                {renderDetailMetric(
-                  row.weekly?.[week.key],
-                  row.details?.weekly?.[week.key],
-                  `${formatPipelineToolLabel(row.label)} - ${week.label}`,
-                  'quantity',
-                )}
-              </CTableDataCell>
-            ))}
-            <CTableDataCell className="border-0 text-center fw-semibold monitoring-total-col">
-              {formatNumber(row.total)}
-            </CTableDataCell>
-          </CTableRow>
-        ))}
-      </CTableBody>
-      <CTableFoot>
-        <CTableRow className="table-light fw-semibold text-muted">
-          <CTableDataCell className="border-0 text-center"> </CTableDataCell>
-          <CTableDataCell className="border-0">Total</CTableDataCell>
-          {weeks.map((week) => (
-            <CTableDataCell
-              key={`total-${week.key}`}
-              className={`border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`}
-            >
-              {renderDetailMetric(
-                totals?.weekly?.[week.key],
-                totals?.details?.weekly?.[week.key],
-                `Total - ${week.label}`,
-                'quantity',
-              )}
-            </CTableDataCell>
-          ))}
-          <CTableDataCell className="border-0 text-center monitoring-total-col">
-            {formatNumber(totals?.total)}
-          </CTableDataCell>
-        </CTableRow>
-      </CTableFoot>
-    </CTable>
-  </div>
+  <DataTableSheet
+    desktopBreakpoint="md"
+    shellClassName="monitoring-table-frame"
+    tableClassName="monitoring-sheet-table"
+    headerRows={[
+      {
+        key: 'group',
+        cells: [
+          {
+            key: 'index',
+            content: '#',
+            rowSpan: 2,
+            className: 'border-0 text-center',
+            style: { width: '56px' },
+          },
+          { key: 'label', content: 'Pipeline Tools', rowSpan: 2, className: 'border-0' },
+          {
+            key: 'quantity',
+            content: 'Quantity',
+            colSpan: weeks.length + 1,
+            className: 'border-0 text-center monitoring-data-band monitoring-data-start-col',
+          },
+        ],
+      },
+      {
+        key: 'weeks',
+        cells: [
+          ...weeks.map((week) => ({
+            key: week.key,
+            content: (
+              <>
+                <div>{week.label}</div>
+                <div className="small text-muted fw-normal">{week.rangeLabel}</div>
+              </>
+            ),
+            className: `border-0 text-center text-nowrap monitoring-week-heading ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
+          })),
+          {
+            key: 'total',
+            content: 'Total',
+            className:
+              'border-0 text-center text-nowrap monitoring-total-col monitoring-week-heading',
+          },
+        ],
+      },
+    ]}
+    rows={rows.map((row, index) => ({
+      key: row.label,
+      cells: [
+        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
+        {
+          key: 'label',
+          content: formatPipelineToolLabel(row.label),
+          className: 'border-0 fw-semibold',
+        },
+        ...weeks.map((week) => ({
+          key: `${row.label}-${week.key}`,
+          content: renderDetailMetric(
+            row.weekly?.[week.key],
+            row.details?.weekly?.[week.key],
+            `${formatPipelineToolLabel(row.label)} - ${week.label}`,
+            'quantity',
+          ),
+          className: `border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
+        })),
+        {
+          key: 'total',
+          content: formatNumber(row.total),
+          className: 'border-0 text-center fw-semibold monitoring-total-col',
+        },
+      ],
+    }))}
+    footerRows={[
+      {
+        key: 'total',
+        className: 'fw-semibold text-muted',
+        cells: [
+          { key: 'index', content: ' ', className: 'border-0 text-center' },
+          { key: 'label', content: 'Total', className: 'border-0' },
+          ...weeks.map((week) => ({
+            key: `total-${week.key}`,
+            content: renderDetailMetric(
+              totals?.weekly?.[week.key],
+              totals?.details?.weekly?.[week.key],
+              `Total - ${week.label}`,
+              'quantity',
+            ),
+            className: `border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
+          })),
+          {
+            key: 'total',
+            content: formatNumber(totals?.total),
+            className: 'border-0 text-center monitoring-total-col',
+          },
+        ],
+      },
+    ]}
+  />
 )
 
 const SegmentBreakdownTable = ({ rows }) => (
-  <div className="monitoring-table-frame d-none d-md-block">
-    {/* datatable-exempt: existing embedded/layout table */}
-    <CTable
-      responsive
-      align="middle"
-      className="mb-0 border-0 monitoring-sheet-table data-table-compact embedded-data-table"
-    >
-      <CTableHead>
-        <CTableRow className="table-light">
-          <CTableHeaderCell rowSpan={2} className="border-0 text-center" style={{ width: '56px' }}>
-            #
-          </CTableHeaderCell>
-          <CTableHeaderCell rowSpan={2} className="border-0">
-            Pipeline Tools
-          </CTableHeaderCell>
-          {segmentColumns.map((segment) => (
-            <CTableHeaderCell
-              key={segment.key}
-              colSpan={2}
-              className={`border-0 text-center text-nowrap monitoring-data-band ${segment === segmentColumns[0] ? 'monitoring-data-start-col' : ''}`}
-            >
-              {segment.label}
-            </CTableHeaderCell>
-          ))}
-        </CTableRow>
-        <CTableRow className="table-light">
-          {segmentColumns.map((segment) => (
-            <React.Fragment key={`${segment.key}-sub`}>
-              <CTableHeaderCell
-                className={`border-0 text-center text-nowrap monitoring-week-heading ${segment === segmentColumns[0] ? 'monitoring-data-start-col' : ''}`}
-              >
-                QTY
-              </CTableHeaderCell>
-              <CTableHeaderCell className="border-0 text-center text-nowrap">RM</CTableHeaderCell>
-            </React.Fragment>
-          ))}
-        </CTableRow>
-      </CTableHead>
-      <CTableBody>
-        {rows.map((row, index) => (
-          <CTableRow key={`${row.label}-segment`} className="table-light">
-            <CTableDataCell className="border-0 text-center fw-semibold">
-              {index + 1}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 fw-semibold">
-              {formatPipelineToolLabel(row.label)}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 text-center text-muted">
-              {renderSegmentCell(
-                row.individualQty,
-                row.details?.segments?.individual?.qty,
-                `${formatPipelineToolLabel(row.label)} - Individual QTY`,
-                'individual quantity',
-              )}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 text-center text-muted">
-              {renderSegmentPlainCell(row.individualRm)}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 text-center text-muted">
-              {renderSegmentCell(
-                row.specialProjectQty,
-                row.details?.segments?.specialProject?.qty,
-                `${formatPipelineToolLabel(row.label)} - Special Project QTY`,
-                'special project quantity',
-              )}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 text-center text-muted">
-              {renderSegmentPlainCell(row.specialProjectRm)}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 text-center text-muted">
-              {renderSegmentCell(
-                row.tenderQty,
-                row.details?.segments?.tender?.qty,
-                `${formatPipelineToolLabel(row.label)} - Tender QTY`,
-                'tender quantity',
-              )}
-            </CTableDataCell>
-            <CTableDataCell className="border-0 text-center text-muted">
-              {renderSegmentPlainCell(row.tenderRm)}
-            </CTableDataCell>
-          </CTableRow>
-        ))}
-      </CTableBody>
-    </CTable>
-  </div>
+  <DataTableSheet
+    desktopBreakpoint="md"
+    shellClassName="monitoring-table-frame"
+    tableClassName="monitoring-sheet-table"
+    headerRows={[
+      {
+        key: 'group',
+        cells: [
+          {
+            key: 'index',
+            content: '#',
+            rowSpan: 2,
+            className: 'border-0 text-center',
+            style: { width: '56px' },
+          },
+          { key: 'label', content: 'Pipeline Tools', rowSpan: 2, className: 'border-0' },
+          ...segmentColumns.map((segment) => ({
+            key: segment.key,
+            content: segment.label,
+            colSpan: 2,
+            className: `border-0 text-center text-nowrap monitoring-data-band ${segment === segmentColumns[0] ? 'monitoring-data-start-col' : ''}`,
+          })),
+        ],
+      },
+      {
+        key: 'metrics',
+        cells: segmentColumns.flatMap((segment) => [
+          {
+            key: `${segment.key}-qty`,
+            content: 'QTY',
+            className: `border-0 text-center text-nowrap monitoring-week-heading ${segment === segmentColumns[0] ? 'monitoring-data-start-col' : ''}`,
+          },
+          {
+            key: `${segment.key}-rm`,
+            content: 'RM',
+            className: 'border-0 text-center text-nowrap',
+          },
+        ]),
+      },
+    ]}
+    rows={rows.map((row, index) => ({
+      key: `${row.label}-segment`,
+      cells: [
+        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
+        {
+          key: 'label',
+          content: formatPipelineToolLabel(row.label),
+          className: 'border-0 fw-semibold',
+        },
+        {
+          key: 'individual-qty',
+          content: renderSegmentCell(
+            row.individualQty,
+            row.details?.segments?.individual?.qty,
+            `${formatPipelineToolLabel(row.label)} - Individual QTY`,
+            'individual quantity',
+          ),
+          className: 'border-0 text-center text-muted',
+        },
+        {
+          key: 'individual-rm',
+          content: renderSegmentPlainCell(row.individualRm),
+          className: 'border-0 text-center text-muted',
+        },
+        {
+          key: 'special-project-qty',
+          content: renderSegmentCell(
+            row.specialProjectQty,
+            row.details?.segments?.specialProject?.qty,
+            `${formatPipelineToolLabel(row.label)} - Special Project QTY`,
+            'special project quantity',
+          ),
+          className: 'border-0 text-center text-muted',
+        },
+        {
+          key: 'special-project-rm',
+          content: renderSegmentPlainCell(row.specialProjectRm),
+          className: 'border-0 text-center text-muted',
+        },
+        {
+          key: 'tender-qty',
+          content: renderSegmentCell(
+            row.tenderQty,
+            row.details?.segments?.tender?.qty,
+            `${formatPipelineToolLabel(row.label)} - Tender QTY`,
+            'tender quantity',
+          ),
+          className: 'border-0 text-center text-muted',
+        },
+        {
+          key: 'tender-rm',
+          content: renderSegmentPlainCell(row.tenderRm),
+          className: 'border-0 text-center text-muted',
+        },
+      ],
+    }))}
+  />
 )
 
 const MonitoringPipelineToolsContent = ({ data, segmentDataTitle }) => (

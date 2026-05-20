@@ -12,8 +12,10 @@ import {
   CFormCheck,
   CButton,
 } from '@coreui/react'
+import { SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS } from '../../../shared/paymentTerms'
 
 const CompanyDetails = ({
+  title = 'Company Details',
   clientDetails,
   handleInputChange,
   isDuplicateCompany,
@@ -21,12 +23,16 @@ const CompanyDetails = ({
   partialMatchCompany,
   branchList = [],
   setBranchList,
+  editableBranchList = false,
+  onBranchListFieldChange,
   showBranchForm = false,
   setShowBranchForm,
   currentBranch,
   handleBranchInputChange,
   addBranchToList,
   onBack,
+  footerActions,
+  children,
 }) => {
   const isInternational = clientDetails.country && clientDetails.country !== 'Malaysia'
 
@@ -63,6 +69,19 @@ const CompanyDetails = ({
     setBranchList(updated)
   }
 
+  const getBranchValue = (branch, camelKey, snakeKey = camelKey) =>
+    branch?.[camelKey] ?? branch?.[snakeKey] ?? ''
+
+  const handleExistingBranchCountryChange = (index, value) => {
+    if (typeof onBranchListFieldChange !== 'function') return
+    onBranchListFieldChange(index, 'country', value)
+    if (value === 'Malaysia') {
+      onBranchListFieldChange(index, 'intlCountry', '')
+    } else {
+      onBranchListFieldChange(index, 'state', '')
+    }
+  }
+
   const handleToggleBranchForm = (e) => {
     if (!setShowBranchForm) return
     setShowBranchForm(e.target.checked)
@@ -95,7 +114,7 @@ const CompanyDetails = ({
     <CCard className="mb-3">
       <CCardHeader>
         <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-          <strong>Company Details</strong>
+          <strong>{title}</strong>
           <CButton size="sm" color="secondary" variant="outline" onClick={onBack}>
             Back
           </CButton>
@@ -167,6 +186,49 @@ const CompanyDetails = ({
               <option value="Old">Old</option>
               <option value="New">New</option>
             </CFormSelect>
+          </CCol>
+
+          <CCol md={4}>
+            <CFormLabel>Payment Terms</CFormLabel>
+            <div className="d-flex align-items-center gap-4 flex-wrap">
+              <CFormCheck
+                type="radio"
+                id="paymentTermsDefault"
+                name="useDefaultPaymentTerms"
+                label={`Default (${SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS} days)`}
+                checked={Boolean(clientDetails.useDefaultPaymentTerms)}
+                onChange={() =>
+                  handleInputChange({
+                    target: { name: 'useDefaultPaymentTerms', type: 'checkbox', checked: true },
+                  })
+                }
+              />
+              <CFormCheck
+                type="radio"
+                id="paymentTermsCustom"
+                name="useDefaultPaymentTerms"
+                label="Custom"
+                checked={!clientDetails.useDefaultPaymentTerms}
+                onChange={() =>
+                  handleInputChange({
+                    target: { name: 'useDefaultPaymentTerms', type: 'checkbox', checked: false },
+                  })
+                }
+              />
+            </div>
+            {!clientDetails.useDefaultPaymentTerms && (
+              <CFormInput
+                className="mt-2"
+                type="number"
+                min="0"
+                max="365"
+                id="paymentTermsDays"
+                name="paymentTermsDays"
+                value={clientDetails.paymentTermsDays}
+                onChange={handleInputChange}
+                placeholder="e.g., 30"
+              />
+            )}
           </CCol>
 
           {/* Country selector */}
@@ -309,34 +371,168 @@ const CompanyDetails = ({
             <>
               {branchList.length > 0 && (
                 <CCol xs={12}>
-                  <div className="mb-1 d-flex flex-wrap gap-2">
+                  <div className="mb-1 d-flex flex-column gap-2">
                     {branchList.map((branch, index) => (
-                      <div
-                        key={index}
-                        className="border rounded p-2 d-flex flex-column gap-1"
-                        style={{ minWidth: '320px' }}
-                      >
-                        <div>
-                          <strong>{branch.branchName || `Branch ${index + 1}`}</strong>
-                        </div>
-                        <div className="text-muted small">
-                          {branch.address}
-                          {(branch.city || branch.state || branch.zip) &&
-                            `, ${branch.zip || ''} ${branch.city || ''} ${branch.state || ''}`}
-                        </div>
-                        <div className="text-muted small">
-                          {branch.country === 'Other'
-                            ? branch.intlCountry || 'Other'
-                            : branch.country || 'Malaysia'}
-                        </div>
-                        <CButton
-                          size="sm"
-                          color="danger"
-                          className="align-self-end"
-                          onClick={() => handleRemoveBranch(index)}
-                        >
-                          Remove
-                        </CButton>
+                      <div key={index} className="border rounded p-2 d-flex flex-column gap-2">
+                        {editableBranchList && typeof onBranchListFieldChange === 'function' ? (
+                          <>
+                            <div className="d-flex align-items-center justify-content-between gap-2">
+                              <strong>
+                                {getBranchValue(branch, 'branchName', 'branch_name') ||
+                                  `Branch ${index + 1}`}
+                              </strong>
+                              <CButton
+                                size="sm"
+                                color="danger"
+                                variant="outline"
+                                onClick={() => handleRemoveBranch(index)}
+                              >
+                                Remove
+                              </CButton>
+                            </div>
+                            <CRow className="g-3">
+                              <CCol md={3}>
+                                <CFormLabel>Branch Name</CFormLabel>
+                                <CFormInput
+                                  value={getBranchValue(branch, 'branchName', 'branch_name')}
+                                  onChange={(e) =>
+                                    onBranchListFieldChange(index, 'branchName', e.target.value)
+                                  }
+                                />
+                              </CCol>
+                              <CCol md={5}>
+                                <CFormLabel>Address</CFormLabel>
+                                <CFormInput
+                                  value={getBranchValue(branch, 'address')}
+                                  onChange={(e) =>
+                                    onBranchListFieldChange(index, 'address', e.target.value)
+                                  }
+                                />
+                              </CCol>
+                              <CCol md={2}>
+                                <CFormLabel>City</CFormLabel>
+                                <CFormInput
+                                  value={getBranchValue(branch, 'city')}
+                                  onChange={(e) =>
+                                    onBranchListFieldChange(index, 'city', e.target.value)
+                                  }
+                                />
+                              </CCol>
+                              <CCol md={2}>
+                                <CFormLabel>
+                                  {(branch.country || 'Malaysia') === 'Malaysia'
+                                    ? 'Zip'
+                                    : 'Postal Code'}
+                                </CFormLabel>
+                                <CFormInput
+                                  value={getBranchValue(branch, 'zip')}
+                                  onChange={(e) =>
+                                    onBranchListFieldChange(index, 'zip', e.target.value)
+                                  }
+                                />
+                              </CCol>
+                              <CCol md={3}>
+                                <CFormLabel>Country</CFormLabel>
+                                <CFormSelect
+                                  value={getBranchValue(branch, 'country') || 'Malaysia'}
+                                  onChange={(e) =>
+                                    handleExistingBranchCountryChange(index, e.target.value)
+                                  }
+                                >
+                                  <option value="Malaysia">Malaysia</option>
+                                  <option value="Other">Other (specify)</option>
+                                </CFormSelect>
+                              </CCol>
+                              {(getBranchValue(branch, 'country') || 'Malaysia') !== 'Malaysia' && (
+                                <CCol md={3}>
+                                  <CFormLabel>Country Name</CFormLabel>
+                                  <CFormInput
+                                    value={getBranchValue(branch, 'intlCountry', 'intl_country')}
+                                    onChange={(e) =>
+                                      onBranchListFieldChange(index, 'intlCountry', e.target.value)
+                                    }
+                                  />
+                                </CCol>
+                              )}
+                              <CCol md={3}>
+                                <CFormLabel>
+                                  {(getBranchValue(branch, 'country') || 'Malaysia') === 'Malaysia'
+                                    ? 'State'
+                                    : 'State / Province / Region'}
+                                </CFormLabel>
+                                {(getBranchValue(branch, 'country') || 'Malaysia') ===
+                                'Malaysia' ? (
+                                  <CFormSelect
+                                    value={getBranchValue(branch, 'state')}
+                                    onChange={(e) =>
+                                      onBranchListFieldChange(index, 'state', e.target.value)
+                                    }
+                                  >
+                                    <option value="">Choose state</option>
+                                    <option value="Johor">Johor</option>
+                                    <option value="Kedah">Kedah</option>
+                                    <option value="Kelantan">Kelantan</option>
+                                    <option value="Melaka">Melaka</option>
+                                    <option value="Negeri Sembilan">Negeri Sembilan</option>
+                                    <option value="Pahang">Pahang</option>
+                                    <option value="Perak">Perak</option>
+                                    <option value="Perlis">Perlis</option>
+                                    <option value="Pulau Pinang">Pulau Pinang</option>
+                                    <option value="Sabah">Sabah</option>
+                                    <option value="Sarawak">Sarawak</option>
+                                    <option value="Selangor">Selangor</option>
+                                    <option value="Terengganu">Terengganu</option>
+                                    <option value="Wilayah Persekutuan Kuala Lumpur">
+                                      Wilayah Persekutuan Kuala Lumpur
+                                    </option>
+                                    <option value="Wilayah Persekutuan Labuan">
+                                      Wilayah Persekutuan Labuan
+                                    </option>
+                                    <option value="Wilayah Persekutuan Putrajaya">
+                                      Wilayah Persekutuan Putrajaya
+                                    </option>
+                                  </CFormSelect>
+                                ) : (
+                                  <CFormInput
+                                    value={getBranchValue(branch, 'state')}
+                                    onChange={(e) =>
+                                      onBranchListFieldChange(index, 'state', e.target.value)
+                                    }
+                                  />
+                                )}
+                              </CCol>
+                            </CRow>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <strong>
+                                {getBranchValue(branch, 'branchName', 'branch_name') ||
+                                  `Branch ${index + 1}`}
+                              </strong>
+                            </div>
+                            <div className="text-muted small">
+                              {getBranchValue(branch, 'address')}
+                              {(getBranchValue(branch, 'city') ||
+                                getBranchValue(branch, 'state') ||
+                                getBranchValue(branch, 'zip')) &&
+                                `, ${getBranchValue(branch, 'zip')} ${getBranchValue(branch, 'city')} ${getBranchValue(branch, 'state')}`}
+                            </div>
+                            <div className="text-muted small">
+                              {getBranchValue(branch, 'country') === 'Other'
+                                ? getBranchValue(branch, 'intlCountry', 'intl_country') || 'Other'
+                                : getBranchValue(branch, 'country') || 'Malaysia'}
+                            </div>
+                            <CButton
+                              size="sm"
+                              color="danger"
+                              className="align-self-end"
+                              onClick={() => handleRemoveBranch(index)}
+                            >
+                              Remove
+                            </CButton>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -482,6 +678,8 @@ const CompanyDetails = ({
           )}
         </CRow>
       </CCardBody>
+      {children}
+      {footerActions}
     </CCard>
   )
 }

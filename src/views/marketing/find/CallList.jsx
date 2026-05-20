@@ -153,7 +153,7 @@ export default function CallList() {
               <span className="d-none d-md-inline">Factory Directory (Google On-Demand)</span>
             </strong>
             <div className="d-flex align-items-center gap-2 ms-auto">
-              <CBadge color="light" className="text-muted d-none d-md-inline-flex">
+              <CBadge className="records-status-badge factory-directory-source-badge d-none d-md-inline-flex">
                 Powered by Google
               </CBadge>
               <CButton

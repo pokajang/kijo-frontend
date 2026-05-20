@@ -12,7 +12,7 @@ import {
   CButton,
   CAlert,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import PasteImage from './PasteImage'
 import {
   handleChange,

@@ -3,6 +3,7 @@ import { DataTableRecordList, DataTableStatusBadge } from '../../../components/d
 import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { getAgeTone } from '../debtors/debtorUtils'
+import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.invoices.visible-columns.v4'
@@ -18,6 +19,8 @@ const defaultVisibleColumns = {
   servicePeriod: false,
   purpose: false,
   issued: true,
+  terms: true,
+  dueDate: false,
   age: true,
   total: true,
   status: true,
@@ -117,6 +120,26 @@ const dataColumns = [
     getExportValue: (inv) => inv.issuedDisplay,
   },
   {
+    key: 'terms',
+    label: 'Terms',
+    width: '100px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (inv) => inv.termsDisplay,
+  },
+  {
+    key: 'dueDate',
+    label: 'Due',
+    width: '120px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (inv) => inv.dueDateDisplay,
+  },
+  {
     key: 'total',
     label: 'Total',
     width: '130px',
@@ -189,6 +212,13 @@ const InvoiceTable = ({
           hrdClaimRefDisplay: isHrdTraining ? inv.hrdClaimRef || '??' : emptyValue,
           issued: inv.dateIssued || '',
           issuedDisplay: inv.dateIssued || emptyValue,
+          terms: Number(inv.paymentTermsDays ?? 30),
+          termsDisplay: getInvoicePaymentTermsSourceLabel(
+            inv.paymentTermsSource,
+            inv.paymentTermsDays,
+          ),
+          dueDate: inv.dueDate || '',
+          dueDateDisplay: inv.dueDate || emptyValue,
           age: Number.parseInt(inv.dueInDays, 10) || 0,
           ageDisplay: inv.dueInDays ?? emptyValue,
           total: parseMoney(inv.grandTotal),
@@ -315,6 +345,8 @@ const InvoiceTable = ({
   const renderCell = (inv, column) => {
     if (column.key === 'hrdClaimRef') return renderHrdClaimRefCell(inv)
     if (column.key === 'issued') return inv.issuedDisplay
+    if (column.key === 'terms') return inv.termsDisplay
+    if (column.key === 'dueDate') return inv.dueDateDisplay
     if (column.key === 'age') {
       return (
         <DataTableStatusBadge tone={getAgeTone(inv.age)}>{inv.ageDisplay}</DataTableStatusBadge>

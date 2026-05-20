@@ -37,6 +37,13 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
     const inv = invoice.raw || invoice
     const serviceType = inv.service_type || inv.serviceType
     const paymentMethod = normalizePaymentMethod(serviceType, inv.grant_approval_no)
+    const paymentTermsSource = inv.payment_terms_source || inv.paymentTermsSource || 'legacy'
+    const clientPaymentTermsSource =
+      inv.client_payment_terms_source ||
+      (inv.client_payment_terms_days === null || inv.client_payment_terms_days === undefined
+        ? 'system_default'
+        : 'client')
+    const clientPaymentTermsDays = inv.client_payment_terms_days ?? 30
 
     const mapped = buildPricingFromInvoice(inv)
     setPricing(mapped.pricing)
@@ -57,6 +64,16 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       serviceType,
       purpose: inv.invoice_purpose || '',
       dateIssued: inv.invoice_date || '',
+      paymentTermsDays: inv.payment_terms_days ?? 30,
+      paymentTermsSource,
+      paymentTermsBaseDays:
+        paymentTermsSource === 'invoice_override'
+          ? clientPaymentTermsDays
+          : (inv.payment_terms_days ?? 30),
+      paymentTermsBaseSource:
+        paymentTermsSource === 'invoice_override' ? clientPaymentTermsSource : paymentTermsSource,
+      overridePaymentTerms: paymentTermsSource === 'invoice_override',
+      paymentTermsTouched: false,
       status: inv.status || '',
       paymentMethod,
       grantApprovalNo: inv.grant_approval_no || '',
@@ -124,8 +141,28 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
 
   // generic field handler
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    if (name === 'overridePaymentTerms') {
+      setForm((prev) => ({
+        ...prev,
+        overridePaymentTerms: checked,
+        paymentTermsTouched: true,
+        paymentTermsSource: checked ? 'invoice_override' : prev.paymentTermsBaseSource,
+        paymentTermsDays: checked ? prev.paymentTermsDays : prev.paymentTermsBaseDays,
+      }))
+      return
+    }
+    if (name === 'paymentTermsDays') {
+      setForm((prev) => ({
+        ...prev,
+        paymentTermsDays: value,
+        paymentTermsTouched: true,
+        paymentTermsSource: 'invoice_override',
+        overridePaymentTerms: true,
+      }))
+      return
+    }
+    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
   // payment method toggle handler
@@ -204,6 +241,13 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       invoice_pic_position: form.picPosition,
 
       breakdown,
+    }
+
+    if (form.paymentTermsTouched) {
+      payload.override_payment_terms = Boolean(form.overridePaymentTerms)
+      if (form.overridePaymentTerms) {
+        payload.payment_terms_days = Number(form.paymentTermsDays ?? 30)
+      }
     }
 
     try {

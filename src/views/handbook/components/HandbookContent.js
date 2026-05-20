@@ -13,7 +13,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPencil } from '@coreui/icons'
-import { Editor } from '@tinymce/tinymce-react'
+import Editor from '../../../components/forms/ThemedTinyMCEEditor'
 import dialog from '../../../components/dialog/dialogService'
 import { saveHandbookDraftSection } from '../api/handbookApi'
 import { handbookEditorInit } from '../utils/handbookEditorConfig'

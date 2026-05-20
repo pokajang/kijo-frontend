@@ -1,9 +1,24 @@
 // shared/invoice/InvoiceDetails.jsx
 import React from 'react'
-import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CFormInput } from '@coreui/react'
+import {
+  CCardHeader,
+  CCardBody,
+  CRow,
+  CCol,
+  CFormLabel,
+  CFormInput,
+  CFormCheck,
+} from '@coreui/react'
+import { getInvoicePaymentTermsSourceLabel, normalizePaymentTermsDays } from '../paymentTerms'
 
 const InvoiceDetails = ({ form, handleChange, mode = 'create' }) => {
   const isCreate = mode === 'create'
+  const overridePaymentTerms = Boolean(form.overridePaymentTerms)
+  const source = overridePaymentTerms
+    ? 'invoice_override'
+    : form.paymentTermsSource || form.paymentTermsBaseSource || 'system_default'
+  const termsDays = normalizePaymentTermsDays(form.paymentTermsDays)
+
   return (
     <>
       <CCardHeader>
@@ -54,7 +69,7 @@ const InvoiceDetails = ({ form, handleChange, mode = 'create' }) => {
           </CCol>
         </CRow>
 
-        {/* Row 3: LOA/PO Number */}
+        {/* Row 3: LOA/PO Number and Payment Terms */}
         <CRow className="mb-2">
           <CCol md={6}>
             <CFormLabel>LOA / PO Ref.</CFormLabel>
@@ -64,6 +79,31 @@ const InvoiceDetails = ({ form, handleChange, mode = 'create' }) => {
               onChange={handleChange}
               disabled={isCreate}
             />
+          </CCol>
+          <CCol md={6}>
+            <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+              <CFormLabel className="mb-0">Payment Terms</CFormLabel>
+              <CFormCheck
+                id="overridePaymentTerms"
+                name="overridePaymentTerms"
+                label="Override for this invoice"
+                checked={overridePaymentTerms}
+                onChange={handleChange}
+              />
+            </div>
+            <CFormInput
+              className="mt-2"
+              type="number"
+              min="0"
+              max="365"
+              name="paymentTermsDays"
+              value={termsDays}
+              onChange={handleChange}
+              disabled={!overridePaymentTerms}
+            />
+            <small className="text-muted d-block mt-1">
+              {getInvoicePaymentTermsSourceLabel(source, termsDays)}
+            </small>
           </CCol>
         </CRow>
       </CCardBody>

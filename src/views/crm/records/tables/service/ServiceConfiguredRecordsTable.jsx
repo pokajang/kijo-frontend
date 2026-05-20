@@ -27,7 +27,10 @@ import {
   getStatusLabel,
   getStatusTone,
 } from '../../utils/allRecordsTableUtils'
-import { buildQuoteRecordStatsItems } from '../../utils/quoteRecordStats'
+import {
+  buildQuoteRecordStatsItems,
+  buildServiceQuoteRecordStatsItems,
+} from '../../utils/quoteRecordStats'
 import ServiceRecordsTableBase from './ServiceRecordsTableBase'
 import {
   ServiceRecordActionCell,
@@ -44,6 +47,67 @@ import {
   ServiceRecordSubjectCell,
   formatServiceRecordAmount,
 } from './ServiceRecordCells'
+
+const getRecordServiceTitle = (record) => record?.formData?.serviceTitle || ''
+
+const serviceStatsConfigs = {
+  training: {
+    topKey: 'top-training',
+    secondKey: 'second-top-training',
+    topLabel: 'Top Training',
+    secondLabel: '2nd Top Training',
+    emptyTopLabel: 'No training recorded',
+    emptySecondLabel: 'No second training',
+    getServiceLabel: (record) => record?.formData?.trainingTopic || '',
+  },
+  ih: {
+    topKey: 'top-ih-service',
+    secondKey: 'second-top-ih-service',
+    topLabel: 'Top IH Service',
+    secondLabel: '2nd Top IH Service',
+    emptyTopLabel: 'No IH service recorded',
+    emptySecondLabel: 'No second IH service',
+    getServiceLabel: getRecordServiceTitle,
+  },
+  manpower: {
+    topKey: 'top-manpower',
+    secondKey: 'second-top-manpower',
+    topLabel: 'Top Manpower',
+    secondLabel: '2nd Top Manpower',
+    emptyTopLabel: 'No manpower recorded',
+    emptySecondLabel: 'No second manpower',
+    getServiceLabel: getRecordServiceTitle,
+  },
+  special: {
+    topKey: 'top-special',
+    secondKey: 'second-top-special',
+    topLabel: 'Top Special',
+    secondLabel: '2nd Top Special',
+    emptyTopLabel: 'No special service recorded',
+    emptySecondLabel: 'No second special service',
+    getServiceLabel: getRecordServiceTitle,
+  },
+  equipment: {
+    topKey: 'top-equipment',
+    secondKey: 'second-top-equipment',
+    topLabel: 'Top Equipment',
+    secondLabel: '2nd Top Equipment',
+    emptyTopLabel: 'No equipment recorded',
+    emptySecondLabel: 'No second equipment',
+    countSingular: 'item',
+    countPlural: 'items',
+    getServiceEntries: (record) =>
+      Array.isArray(record?.lineItems)
+        ? record.lineItems.map((item) => ({
+            label:
+              item?.itemName ||
+              item?.description ||
+              (item?.itemId != null || item?.id != null ? `#${item?.itemId ?? item?.id}` : ''),
+            amount: item?.lineTotal,
+          }))
+        : [],
+  },
+}
 
 const ServiceConfiguredRecordsTable = ({
   serviceKey,
@@ -278,7 +342,13 @@ const ServiceConfiguredRecordsTable = ({
     return rows
   }, [filtered, sortDir, sortField])
 
-  const statsItems = useMemo(() => buildQuoteRecordStatsItems(sortedRecords), [sortedRecords])
+  const statsItems = useMemo(
+    () =>
+      serviceStatsConfigs[serviceKey]
+        ? buildServiceQuoteRecordStatsItems(sortedRecords, serviceStatsConfigs[serviceKey])
+        : buildQuoteRecordStatsItems(sortedRecords),
+    [serviceKey, sortedRecords],
+  )
 
   const totalRows = sortedRecords.length
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))

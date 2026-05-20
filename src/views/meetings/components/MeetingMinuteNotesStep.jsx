@@ -1,5 +1,5 @@
 import React from 'react'
-import { Editor } from '@tinymce/tinymce-react'
+import Editor from '../../../components/forms/ThemedTinyMCEEditor'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
 import { CButton, CCol, CFormInput, CFormLabel, CFormSelect, CRow } from '@coreui/react'

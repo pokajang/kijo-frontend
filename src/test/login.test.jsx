@@ -74,4 +74,26 @@ describe('Login', () => {
       })
     })
   })
+
+  it('shows a service availability message when login cannot reach the API', async () => {
+    loginMock.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('Email address'), {
+      target: { name: 'email', value: 'staff@example.com' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('Password'), {
+      target: { name: 'password', value: 'secret' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+    expect(
+      await screen.findByText('Cannot reach the login service. Please try again later.'),
+    ).toBeInTheDocument()
+  })
 })

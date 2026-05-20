@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom'
-import { CButton } from '@coreui/react'
+import { CBadge, CButton } from '@coreui/react'
 
 const normalizePath = (path) => {
   if (!path) return ''
@@ -16,15 +16,29 @@ const isPathActive = (targetPath, currentPath) => {
   return current === target || current.startsWith(`${target}/`)
 }
 
+const isPathNestedUnder = (targetPath, currentPath) => {
+  if (!targetPath) return false
+  const target = normalizePath(targetPath)
+  const current = normalizePath(currentPath)
+  if (target === '/') return current !== '/' && current.startsWith('/')
+  return current.startsWith(`${target}/`)
+}
+
 export const isModuleTabActive = (tab, pathname) =>
   isPathActive(tab?.to, pathname) ||
   (Array.isArray(tab?.activePaths) && tab.activePaths.some((path) => isPathActive(path, pathname)))
+
+export const isModuleTabNestedRoute = (tab, pathname) =>
+  isPathNestedUnder(tab?.to, pathname) ||
+  (Array.isArray(tab?.activePaths) &&
+    tab.activePaths.some((path) => isPathNestedUnder(path, pathname)))
 
 const ModuleNavStripShell = ({
   tabs,
   activeTab,
   onTabChange,
   ariaLabel,
+  hideOnNestedRoute = true,
   rightControls = null,
   className = '',
   pathname = '',
@@ -38,6 +52,15 @@ const ModuleNavStripShell = ({
     if (activeTab) return activeTab
     return tabs.find((tab) => isModuleTabActive(tab, pathname))?.key || tabs[0]?.key || ''
   }, [activeTab, pathname, tabs])
+
+  const shouldHideForNestedRoute = useMemo(
+    () =>
+      hideOnNestedRoute &&
+      !activeTab &&
+      !onTabChange &&
+      tabs.some((tab) => isModuleTabNestedRoute(tab, pathname)),
+    [activeTab, hideOnNestedRoute, onTabChange, pathname, tabs],
+  )
 
   useEffect(() => {
     const setTopOffset = () => {
@@ -76,6 +99,8 @@ const ModuleNavStripShell = ({
       window.removeEventListener('scroll', setScrollState)
     }
   }, [])
+
+  if (shouldHideForNestedRoute) return null
 
   const handleTabClick = (tab) => {
     if (onTabChange) {
@@ -119,7 +144,18 @@ const ModuleNavStripShell = ({
                 role="tab"
                 onClick={() => handleTabClick(tab)}
               >
-                {tab.label}
+                <span className="d-inline-flex align-items-center gap-2">
+                  <span>{tab.label}</span>
+                  {tab.badge ? (
+                    <CBadge
+                      color={tab.badge.color || 'primary'}
+                      className="rounded-pill"
+                      title={tab.badge.title || undefined}
+                    >
+                      {tab.badge.text}
+                    </CBadge>
+                  ) : null}
+                </span>
               </CButton>
             )
           })}
@@ -138,6 +174,7 @@ ModuleNavStripShell.propTypes = {
   activeTab: PropTypes.string,
   ariaLabel: PropTypes.string.isRequired,
   className: PropTypes.string,
+  hideOnNestedRoute: PropTypes.bool,
   navigate: PropTypes.func,
   onTabChange: PropTypes.func,
   pathname: PropTypes.string,
@@ -145,6 +182,11 @@ ModuleNavStripShell.propTypes = {
   tabs: PropTypes.arrayOf(
     PropTypes.shape({
       activePaths: PropTypes.arrayOf(PropTypes.string),
+      badge: PropTypes.shape({
+        color: PropTypes.string,
+        text: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+        title: PropTypes.string,
+      }),
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
       to: PropTypes.string,

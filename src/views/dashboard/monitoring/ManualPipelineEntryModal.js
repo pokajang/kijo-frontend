@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import CIcon from '@coreui/icons-react'
 import { cilChevronBottom, cilChevronTop, cilPencil, cilTrash } from '@coreui/icons'
 import {

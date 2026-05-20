@@ -1,20 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react'
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CRow,
-  CCol,
-  CTable,
-  CTableHead,
-  CTableBody,
-  CTableFoot,
-  CTableRow,
-  CTableHeaderCell,
-  CTableDataCell,
-} from '@coreui/react'
+import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { CChartBar } from '@coreui/react-chartjs'
-import { DataTableLoadingState } from '../../../components/datatable'
+import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { useChartTickColor } from '../../../utils/chartTheme'
@@ -105,6 +92,30 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
       totalValue: monthTotal,
     }
   })
+  const monthColumns = [
+    { key: 'month', label: 'Month', render: (row) => formatMonthLabel(row.month) },
+    {
+      key: 'totalValue',
+      label: 'Total (RM)',
+      align: 'end',
+      render: (row) => row.totalValue.toLocaleString(),
+    },
+  ]
+  const monthFooterRows = [
+    {
+      key: 'total',
+      className: 'fw-semibold text-muted',
+      cells: [
+        { key: 'label', content: 'Total', className: 'text-muted' },
+        {
+          key: 'value',
+          content: totalValue.toLocaleString(),
+          align: 'end',
+          className: 'text-muted',
+        },
+      ],
+    },
+  ]
 
   const chartDatasets = sortedStats.map((item, index) => ({
     label: item.serviceGroup,
@@ -205,58 +216,13 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
 
               {months.length > 1 && (
                 <CCol xs={12} lg={4}>
-                  <div className="rounded-4 overflow-hidden bg-light">
-                    {/* datatable-exempt: existing embedded/layout table */}
-                    <CTable
-                      responsive
-                      align="middle"
-                      className="mb-0 table-borderless border-0 data-table-compact embedded-data-table"
-                    >
-                      <CTableHead>
-                        <CTableRow className="table-light">
-                          <CTableHeaderCell
-                            style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                          >
-                            Month
-                          </CTableHeaderCell>
-                          <CTableHeaderCell
-                            className="text-end"
-                            style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                          >
-                            Total (RM)
-                          </CTableHeaderCell>
-                        </CTableRow>
-                      </CTableHead>
-                      <CTableBody>
-                        {monthRows.map((row) => (
-                          <CTableRow key={row.month} className="table-light">
-                            <CTableDataCell className="border-0">
-                              {formatMonthLabel(row.month)}
-                            </CTableDataCell>
-                            <CTableDataCell className="text-end border-0">
-                              {row.totalValue.toLocaleString()}
-                            </CTableDataCell>
-                          </CTableRow>
-                        ))}
-                      </CTableBody>
-                      <CTableFoot>
-                        <CTableRow className="table-light fw-semibold text-muted">
-                          <CTableDataCell
-                            className="text-muted"
-                            style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                          >
-                            Total
-                          </CTableDataCell>
-                          <CTableDataCell
-                            className="text-end text-muted"
-                            style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                          >
-                            {totalValue.toLocaleString()}
-                          </CTableDataCell>
-                        </CTableRow>
-                      </CTableFoot>
-                    </CTable>
-                  </div>
+                  <DataTableEmbeddedList
+                    rows={monthRows}
+                    columns={monthColumns}
+                    footerRows={monthFooterRows}
+                    getRowKey={(row) => row.month}
+                    desktopBreakpoint="md"
+                  />
                 </CCol>
               )}
             </CRow>

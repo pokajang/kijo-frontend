@@ -38,6 +38,7 @@ const renderTruncated = (value) => (
 )
 
 const PastPicCard = ({
+  showToggle = true,
   showUnassignedPICs,
   onToggle,
   unassignedPICs = [],
@@ -96,16 +97,18 @@ const PastPicCard = ({
         <strong>Past Person In Charge</strong>
       </CCardHeader>
       <CCardBody>
-        <CFormCheck
-          type="checkbox"
-          id="toggleUnassignedPICs"
-          label="View past PICs"
-          checked={showUnassignedPICs}
-          onChange={onToggle}
-        />
+        {showToggle && (
+          <CFormCheck
+            type="checkbox"
+            id="toggleUnassignedPICs"
+            label="View past PICs"
+            checked={showUnassignedPICs}
+            onChange={onToggle}
+          />
+        )}
 
         {showUnassignedPICs && (
-          <div className="mt-3">
+          <div className={showToggle ? 'mt-3' : ''}>
             <DataTableRecordControls
               searchValue={searchTerm}
               onSearchChange={setSearchTerm}

@@ -27,21 +27,23 @@ import {
 } from '../../../../components/filters'
 import { StatsStrip } from '../../../../components/stats'
 import { formatCount, getTopGroupByCount } from '../../../../utils/stats/formatStats'
+import { getClientPaymentTermsMeta } from '../../../../shared/paymentTerms'
 
 const emptyValue = '-'
-const columnStorageKey = 'client.manage.list.visible-columns.v4'
+const columnStorageKey = 'client.manage.list.visible-columns.v5'
 const actionColumnWidth = '56px'
 
 const defaultVisibleColumns = {
   company: true,
   status: true,
+  paymentTerms: true,
   ssmNumber: false,
   taxIdTin: false,
   address: false,
   zip: false,
   city: true,
   state: false,
-  branchCount: true,
+  branchCount: false,
   picName: true,
   picPosition: false,
   picEmail: false,
@@ -67,6 +69,15 @@ const dataColumns = [
     width: '120px',
     sortable: true,
     sortType: 'string',
+    align: 'center',
+    shrinkToFit: true,
+  },
+  {
+    key: 'paymentTerms',
+    label: 'Terms',
+    width: '100px',
+    sortable: true,
+    sortType: 'number',
     align: 'center',
     shrinkToFit: true,
   },
@@ -245,10 +256,14 @@ const ClientListTableCard = ({
         const picCount = Number(client.pic_count || previewPics.length || 0)
         const cityState = [client.city, client.state].filter(Boolean).join(', ') || emptyValue
 
+        const paymentTermsMeta = getClientPaymentTermsMeta(client)
+
         return {
           ...client,
           company: client.company_name || emptyValue,
           status,
+          paymentTerms: paymentTermsMeta.days,
+          paymentTermsDisplay: paymentTermsMeta.compactDisplay,
           ssmNumber: client.ssm_number || emptyValue,
           taxIdTin: client.tax_id_no_tin || emptyValue,
           address: client.address || emptyValue,
@@ -377,6 +392,7 @@ const ClientListTableCard = ({
         </DataTableStatusBadge>
       )
     }
+    if (column.key === 'paymentTerms') return client.paymentTermsDisplay
     if (['ssmNumber', 'taxIdTin', 'address', 'city', 'state', 'zip'].includes(column.key)) {
       return renderTruncated(client[column.key], column)
     }

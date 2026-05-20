@@ -19,6 +19,14 @@ const buildServicePeriod = (startDate, endDate) => {
   return startDate || endDate || ''
 }
 
+const addDaysToDate = (dateValue, days) => {
+  if (!dateValue) return ''
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return ''
+  date.setDate(date.getDate() + Number(days || 0))
+  return date.toISOString().slice(0, 10)
+}
+
 /**
  * Lookup endpoint by action
  */
@@ -47,6 +55,9 @@ export const fetchAllInvoices = async (setInvoices, setLoading) => {
           grand_total,
           status,
           payment_method,
+          payment_terms_days,
+          payment_terms_source,
+          due_date,
           hrd_claim_ref,
           client_name,
           client_ssm,
@@ -69,6 +80,8 @@ export const fetchAllInvoices = async (setInvoices, setLoading) => {
         } = row
 
         const diffDays = Math.floor((Date.now() - new Date(invoice_date)) / (1000 * 3600 * 24))
+        const termsDays = Number(payment_terms_days ?? 30)
+        const resolvedDueDate = due_date || addDaysToDate(invoice_date, termsDays)
         const isHrdTraining =
           String(service_type || '').toLowerCase() === 'training' &&
           String(payment_method || '')
@@ -132,6 +145,9 @@ export const fetchAllInvoices = async (setInvoices, setLoading) => {
           },
 
           dateIssued: invoice_date,
+          paymentTermsDays: termsDays,
+          paymentTermsSource: payment_terms_source || 'legacy',
+          dueDate: resolvedDueDate,
           dueInDays: `${diffDays} day${diffDays !== 1 ? 's' : ''}`,
           amount: parseFloat(amount).toFixed(2),
           grandTotal: parseFloat(grand_total).toFixed(2),

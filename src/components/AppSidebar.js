@@ -12,8 +12,10 @@ import {
 import CIcon from '@coreui/icons-react'
 
 import { AppSidebarNav } from './AppSidebarNav'
+import { applySidebarBadges } from './appSidebarBadges'
 import { useAuth } from '../auth/AuthProvider'
 import navigation from '../_nav' // your _nav.js with allowedRoles
+import { useClientVendorRegistrationAttentionCount } from '../hooks/useClientVendorRegistrationAttentionCount'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../utils/roles'
 import { quoteApiUrl } from '../views/crm/quotes/quoteApi'
 
@@ -55,6 +57,9 @@ const AppSidebar = () => {
 
   const [priceExceptionPendingCount, setPriceExceptionPendingCount] = useState(0)
   const [priceExceptionBadgeScope, setPriceExceptionBadgeScope] = useState('')
+  const { count: vendorRegistrationExpiredCount } = useClientVendorRegistrationAttentionCount({
+    refreshKey: location.pathname,
+  })
   const roles = useMemo(() => extractRolesFromSession({ user }), [user])
 
   const fetchPriceExceptionPendingCount = useCallback(() => {
@@ -90,21 +95,11 @@ const AppSidebar = () => {
   }, [fetchPriceExceptionPendingCount])
 
   // Now filter _and clean_ your nav items
-  const navigationWithBadges = navigation.map((item) =>
-    item.to === '/crm/price-exceptions' && priceExceptionPendingCount > 0
-      ? {
-          ...item,
-          badge: {
-            color: 'primary',
-            text: String(priceExceptionPendingCount),
-            title:
-              priceExceptionBadgeScope === 'ready_to_apply'
-                ? 'Negotiations ready to apply'
-                : 'Negotiations pending approval',
-          },
-        }
-      : item,
-  )
+  const navigationWithBadges = applySidebarBadges(navigation, {
+    priceExceptionPendingCount,
+    priceExceptionBadgeScope,
+    vendorRegistrationExpiredCount,
+  })
   const filteredNav = filterNav(navigationWithBadges, roles)
 
   return (

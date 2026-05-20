@@ -1,17 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import CIcon from '@coreui/icons-react'
 import { cilChevronBottom, cilChevronTop } from '@coreui/icons'
-import {
-  CButton,
-  CTable,
-  CTableBody,
-  CTableDataCell,
-  CTableFoot,
-  CTableHead,
-  CTableHeaderCell,
-  CTableRow,
-} from '@coreui/react'
-import { DataTableLoadingState } from '../../../components/datatable'
+import { CButton } from '@coreui/react'
+import { DataTableLoadingState, DataTableSheet } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { API_BASE } from '../../marketing/pipeline/pipelineEntryUtils'
 import MonitoringCellDetailsPopover from './MonitoringCellDetailsPopover'
@@ -72,7 +63,7 @@ const StaffMatrixMobileCard = ({ row, index }) => {
   const staffName = row.staffName || row.staffLabel
 
   return (
-    <div className="rounded-4 bg-light p-3">
+    <div className="dashboard-table-mobile-card">
       <div className="d-flex justify-content-between gap-2 mb-3">
         <div className="fw-semibold text-truncate">
           {index + 1}. {staffName}
@@ -169,6 +160,147 @@ const StaffMatrixMobileList = ({ rows }) => (
   </div>
 )
 
+const StaffPipelineMatrixTable = ({ rows, totals }) => (
+  <DataTableSheet
+    desktopBreakpoint="md"
+    shellClassName="monitoring-table-frame"
+    tableClassName="monitoring-sheet-table monitoring-staff-matrix-table"
+    headerRows={[
+      {
+        key: 'group',
+        cells: [
+          {
+            key: 'index',
+            content: '#',
+            rowSpan: 2,
+            className: 'border-0 text-center',
+            style: { width: '56px' },
+          },
+          {
+            key: 'staff',
+            content: 'Staff',
+            rowSpan: 2,
+            className: 'border-0 monitoring-staff-matrix-staff-col',
+          },
+          {
+            key: 'pipeline-tools',
+            content: 'Pipeline Tools',
+            colSpan: stageColumns.length,
+            className: 'border-0 text-center monitoring-data-band monitoring-data-start-col',
+          },
+          {
+            key: 'proposal-segment',
+            content: 'Proposal Segment',
+            colSpan: segmentColumns.length * 2,
+            className: 'border-0 text-center monitoring-data-band monitoring-data-start-col',
+          },
+        ],
+      },
+      {
+        key: 'metrics',
+        cells: [
+          ...stageColumns.map((stage, index) => ({
+            key: stage.key,
+            content: stage.label,
+            className: `border-0 text-center ${index === 0 ? 'monitoring-data-start-col' : ''}`,
+          })),
+          ...segmentColumns.flatMap((segment, index) => [
+            {
+              key: `${segment.key}-qty`,
+              content: `${segment.label} QTY`,
+              className: `border-0 text-center ${index === 0 ? 'monitoring-data-start-col' : ''}`,
+            },
+            {
+              key: `${segment.key}-rm`,
+              content: `${segment.label} RM`,
+              className: 'border-0 text-center',
+            },
+          ]),
+        ],
+      },
+    ]}
+    rows={rows.map((row, index) => ({
+      key: row.staffCode || row.staffLabel,
+      cells: [
+        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
+        {
+          key: 'staff',
+          content: <StaffNameCell row={row} />,
+          className: 'border-0 monitoring-staff-matrix-staff-col',
+        },
+        ...stageColumns.map((stage, stageIndex) => ({
+          key: stage.key,
+          content: renderDetailMetric(
+            row.stages?.[stage.key],
+            row.details?.stages?.[stage.key],
+            `${row.staffLabel} - ${stage.label}`,
+            'quantity',
+          ),
+          className: `border-0 text-center ${stageIndex === 0 ? 'monitoring-data-start-col' : ''}`,
+        })),
+        ...segmentColumns.flatMap((segment, segmentIndex) => [
+          {
+            key: `${segment.key}-qty`,
+            content: renderDetailMetric(
+              row.segments?.[segment.key]?.qty,
+              row.details?.segments?.[segment.key]?.qty,
+              `${row.staffLabel} - ${segment.label} QTY`,
+              `${segment.label} quantity`,
+            ),
+            className: `border-0 text-center ${segmentIndex === 0 ? 'monitoring-data-start-col' : ''}`,
+          },
+          {
+            key: `${segment.key}-rm`,
+            content: formatRm(row.segments?.[segment.key]?.rm),
+            className: 'border-0 text-center',
+          },
+        ]),
+      ],
+    }))}
+    footerRows={
+      totals
+        ? [
+            {
+              key: 'total',
+              className: 'fw-semibold',
+              cells: [
+                { key: 'index', content: ' ', className: 'border-0 text-center' },
+                { key: 'staff', content: 'Total', className: 'border-0' },
+                ...stageColumns.map((stage, stageIndex) => ({
+                  key: stage.key,
+                  content: renderDetailMetric(
+                    totals.stages?.[stage.key],
+                    totals.details?.stages?.[stage.key],
+                    `Total - ${stage.label}`,
+                    'quantity',
+                  ),
+                  className: `border-0 text-center ${stageIndex === 0 ? 'monitoring-data-start-col' : ''}`,
+                })),
+                ...segmentColumns.flatMap((segment, segmentIndex) => [
+                  {
+                    key: `${segment.key}-qty`,
+                    content: renderDetailMetric(
+                      totals.segments?.[segment.key]?.qty,
+                      totals.details?.segments?.[segment.key]?.qty,
+                      `Total - ${segment.label} QTY`,
+                      `${segment.label} quantity`,
+                    ),
+                    className: `border-0 text-center ${segmentIndex === 0 ? 'monitoring-data-start-col' : ''}`,
+                  },
+                  {
+                    key: `${segment.key}-rm`,
+                    content: formatRm(totals.segments?.[segment.key]?.rm),
+                    className: 'border-0 text-center',
+                  },
+                ]),
+              ],
+            },
+          ]
+        : []
+    }
+  />
+)
+
 const MonitoringStaffPipelineMatrix = ({ startDate, endDate, enabled, reloadKey = 0 }) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -260,146 +392,7 @@ const MonitoringStaffPipelineMatrix = ({ startDate, endDate, enabled, reloadKey 
       ) : (
         <>
           <StaffMatrixMobileList rows={rows} />
-          <div className="monitoring-table-frame d-none d-md-block">
-            {/* datatable-exempt: existing embedded/layout table */}
-            <CTable
-              responsive
-              align="middle"
-              className="mb-0 border-0 monitoring-sheet-table monitoring-staff-matrix-table data-table-compact embedded-data-table"
-            >
-              <CTableHead>
-                <CTableRow className="table-light">
-                  <CTableHeaderCell
-                    rowSpan={2}
-                    className="border-0 text-center"
-                    style={{ width: '56px' }}
-                  >
-                    #
-                  </CTableHeaderCell>
-                  <CTableHeaderCell
-                    rowSpan={2}
-                    className="border-0 monitoring-staff-matrix-staff-col"
-                  >
-                    Staff
-                  </CTableHeaderCell>
-                  <CTableHeaderCell
-                    colSpan={stageColumns.length}
-                    className="border-0 text-center monitoring-data-band monitoring-data-start-col"
-                  >
-                    Pipeline Tools
-                  </CTableHeaderCell>
-                  <CTableHeaderCell
-                    colSpan={segmentColumns.length * 2}
-                    className="border-0 text-center monitoring-data-band monitoring-data-start-col"
-                  >
-                    Proposal Segment
-                  </CTableHeaderCell>
-                </CTableRow>
-                <CTableRow className="table-light">
-                  {stageColumns.map((stage, index) => (
-                    <CTableHeaderCell
-                      key={stage.key}
-                      className={`border-0 text-center ${index === 0 ? 'monitoring-data-start-col' : ''}`}
-                    >
-                      {stage.label}
-                    </CTableHeaderCell>
-                  ))}
-                  {segmentColumns.map((segment, index) => (
-                    <React.Fragment key={segment.key}>
-                      <CTableHeaderCell
-                        className={`border-0 text-center ${index === 0 ? 'monitoring-data-start-col' : ''}`}
-                      >
-                        {segment.label} QTY
-                      </CTableHeaderCell>
-                      <CTableHeaderCell className="border-0 text-center">
-                        {segment.label} RM
-                      </CTableHeaderCell>
-                    </React.Fragment>
-                  ))}
-                </CTableRow>
-              </CTableHead>
-              <CTableBody>
-                {rows.map((row, index) => (
-                  <CTableRow key={row.staffCode || row.staffLabel} className="table-light">
-                    <CTableDataCell className="border-0 text-center fw-semibold">
-                      {index + 1}
-                    </CTableDataCell>
-                    <CTableDataCell className="border-0 monitoring-staff-matrix-staff-col">
-                      <StaffNameCell row={row} />
-                    </CTableDataCell>
-                    {stageColumns.map((stage, stageIndex) => (
-                      <CTableDataCell
-                        key={`${row.staffCode}-${stage.key}`}
-                        className={`border-0 text-center ${stageIndex === 0 ? 'monitoring-data-start-col' : ''}`}
-                      >
-                        {renderDetailMetric(
-                          row.stages?.[stage.key],
-                          row.details?.stages?.[stage.key],
-                          `${row.staffLabel} - ${stage.label}`,
-                          'quantity',
-                        )}
-                      </CTableDataCell>
-                    ))}
-                    {segmentColumns.map((segment, segmentIndex) => (
-                      <React.Fragment key={`${row.staffCode}-${segment.key}`}>
-                        <CTableDataCell
-                          className={`border-0 text-center ${segmentIndex === 0 ? 'monitoring-data-start-col' : ''}`}
-                        >
-                          {renderDetailMetric(
-                            row.segments?.[segment.key]?.qty,
-                            row.details?.segments?.[segment.key]?.qty,
-                            `${row.staffLabel} - ${segment.label} QTY`,
-                            `${segment.label} quantity`,
-                          )}
-                        </CTableDataCell>
-                        <CTableDataCell className="border-0 text-center">
-                          {formatRm(row.segments?.[segment.key]?.rm)}
-                        </CTableDataCell>
-                      </React.Fragment>
-                    ))}
-                  </CTableRow>
-                ))}
-              </CTableBody>
-              {totals && (
-                <CTableFoot>
-                  <CTableRow className="table-light fw-semibold">
-                    <CTableDataCell className="border-0 text-center"> </CTableDataCell>
-                    <CTableDataCell className="border-0">Total</CTableDataCell>
-                    {stageColumns.map((stage, stageIndex) => (
-                      <CTableDataCell
-                        key={`total-${stage.key}`}
-                        className={`border-0 text-center ${stageIndex === 0 ? 'monitoring-data-start-col' : ''}`}
-                      >
-                        {renderDetailMetric(
-                          totals.stages?.[stage.key],
-                          totals.details?.stages?.[stage.key],
-                          `Total - ${stage.label}`,
-                          'quantity',
-                        )}
-                      </CTableDataCell>
-                    ))}
-                    {segmentColumns.map((segment, segmentIndex) => (
-                      <React.Fragment key={`total-${segment.key}`}>
-                        <CTableDataCell
-                          className={`border-0 text-center ${segmentIndex === 0 ? 'monitoring-data-start-col' : ''}`}
-                        >
-                          {renderDetailMetric(
-                            totals.segments?.[segment.key]?.qty,
-                            totals.details?.segments?.[segment.key]?.qty,
-                            `Total - ${segment.label} QTY`,
-                            `${segment.label} quantity`,
-                          )}
-                        </CTableDataCell>
-                        <CTableDataCell className="border-0 text-center">
-                          {formatRm(totals.segments?.[segment.key]?.rm)}
-                        </CTableDataCell>
-                      </React.Fragment>
-                    ))}
-                  </CTableRow>
-                </CTableFoot>
-              )}
-            </CTable>
-          </div>
+          <StaffPipelineMatrixTable rows={rows} totals={totals} />
         </>
       )}
     </MonitoringSheetCard>

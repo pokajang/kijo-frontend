@@ -6,10 +6,12 @@ import PICAndSubmitSection from './PICAndSubmitSection'
 import useDuplicateChecker from '../../../hooks/useDuplicateChecker'
 import dialog from '../../../components/dialog/dialogService'
 import { linkInquiryClient } from '../../marketing/inquiries/inquiryUtils'
+import { SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS } from '../../../shared/paymentTerms'
 const CreateClient = () => {
   const navigate = useNavigate()
   const [cameFromQuote, setCameFromQuote] = useState(false)
   const [cameFromDebtor, setCameFromDebtor] = useState(false)
+  const [cameFromVendorRegistration, setCameFromVendorRegistration] = useState(false)
   const [cameFromInquiryId, setCameFromInquiryId] = useState('')
 
   useEffect(() => {
@@ -18,6 +20,9 @@ const CreateClient = () => {
     }
     if (sessionStorage.getItem('cameFromDebtor') === 'true') {
       setCameFromDebtor(true)
+    }
+    if (sessionStorage.getItem('cameFromVendorRegistration') === 'true') {
+      setCameFromVendorRegistration(true)
     }
     fetchClientCompanies()
     fetchPICs()
@@ -28,6 +33,8 @@ const CreateClient = () => {
     ssmNumber: '',
     taxIdNoTin: '',
     clientStatus: 'New',
+    useDefaultPaymentTerms: true,
+    paymentTermsDays: SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS,
     address: '',
     city: '',
     state: '',
@@ -120,8 +127,8 @@ const CreateClient = () => {
   })
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setClientDetails((prev) => ({ ...prev, [name]: value }))
+    const { name, type, checked, value } = e.target
+    setClientDetails((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
   const handlePICInputChange = (e) => {
@@ -248,6 +255,10 @@ const CreateClient = () => {
       ssmNumber: (clientDetails.ssmNumber || '').trim(),
       taxIdNoTin: (clientDetails.taxIdNoTin || '').trim(),
       clientStatus: (clientDetails.clientStatus || 'New').trim(),
+      useDefaultPaymentTerms: Boolean(clientDetails.useDefaultPaymentTerms),
+      paymentTermsDays: clientDetails.useDefaultPaymentTerms
+        ? null
+        : Number(clientDetails.paymentTermsDays || SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS),
       address: (clientDetails.address || '').trim(),
       city: (clientDetails.city || '').trim(),
       state: (composedState || '').trim(),
@@ -317,18 +328,22 @@ const CreateClient = () => {
             ? 'Client created successfully. Return to inquiry?'
             : cameFromDebtor
               ? 'Client created successfully. Return to debtor?'
-              : cameFromQuote
-                ? 'Client created successfully. Return to quotation?'
-                : 'Client created successfully. Go to client list?',
+              : cameFromVendorRegistration
+                ? 'Client created successfully. Return to vendor registration?'
+                : cameFromQuote
+                  ? 'Client created successfully. Return to quotation?'
+                  : 'Client created successfully. Go to client list?',
           {
             title: 'Client Created',
             confirmText: cameFromInquiryId
               ? 'Go to inquiry'
               : cameFromDebtor
                 ? 'Go to debtor'
-                : cameFromQuote
-                  ? 'Go to quotation'
-                  : 'Go to list',
+                : cameFromVendorRegistration
+                  ? 'Go to vendor registration'
+                  : cameFromQuote
+                    ? 'Go to quotation'
+                    : 'Go to list',
             cancelText: 'Create another',
           },
         )
@@ -341,6 +356,13 @@ const CreateClient = () => {
           } else if (cameFromDebtor) {
             sessionStorage.removeItem('cameFromDebtor')
             navigate('/commercial/debtors/create')
+          } else if (cameFromVendorRegistration) {
+            sessionStorage.removeItem('cameFromVendorRegistration')
+            const returnPath =
+              sessionStorage.getItem('vendorRegistrationReturnPath') ||
+              '/client/vendor-registration/create'
+            sessionStorage.removeItem('vendorRegistrationReturnPath')
+            navigate(returnPath)
           } else if (cameFromQuote) {
             sessionStorage.removeItem('cameFromQuote')
             navigate('/crm/quotes')
@@ -391,6 +413,14 @@ const CreateClient = () => {
       navigate('/commercial/debtors/create')
       return
     }
+    if (cameFromVendorRegistration) {
+      const returnPath =
+        sessionStorage.getItem('vendorRegistrationReturnPath') ||
+        '/client/vendor-registration/create'
+      sessionStorage.removeItem('vendorRegistrationReturnPath')
+      navigate(returnPath)
+      return
+    }
     navigate('/client/manage')
   }
 
@@ -410,22 +440,23 @@ const CreateClient = () => {
         handleBranchInputChange={handleBranchInputChange}
         addBranchToList={addBranchToList}
         onBack={handleBack}
-      />
-
-      <PICAndSubmitSection
-        picList={picList}
-        setPicList={setPicList}
-        currentPIC={currentPIC}
-        handlePICInputChange={handlePICInputChange}
-        addPicToList={addPicToList}
-        isDuplicatePIC={isDuplicatePIC}
-        duplicatePICName={duplicatePICName}
-        partialMatchPIC={partialMatchPIC}
-        isDuplicateEmail={isDuplicateEmail}
-        duplicateEmail={duplicateEmail}
-        handleSubmit={handleSubmit}
-        handleReset={handleReset}
-      />
+      >
+        <PICAndSubmitSection
+          embedded
+          picList={picList}
+          setPicList={setPicList}
+          currentPIC={currentPIC}
+          handlePICInputChange={handlePICInputChange}
+          addPicToList={addPicToList}
+          isDuplicatePIC={isDuplicatePIC}
+          duplicatePICName={duplicatePICName}
+          partialMatchPIC={partialMatchPIC}
+          isDuplicateEmail={isDuplicateEmail}
+          duplicateEmail={duplicateEmail}
+          handleSubmit={handleSubmit}
+          handleReset={handleReset}
+        />
+      </CompanyDetails>
     </>
   )
 }

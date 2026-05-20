@@ -28,11 +28,28 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
+import { normalizePaymentTermsDays } from '../../../../shared/paymentTerms'
 
 const getLocalISODate = () => {
   const now = new Date()
   const offsetMs = now.getTimezoneOffset() * 60 * 1000
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
+}
+
+const getProjectPaymentTerms = (project = {}) => {
+  const raw = project?.client_payment_terms_days
+  const hasClientTerms = raw !== null && raw !== undefined && raw !== ''
+  const days = normalizePaymentTermsDays(raw)
+  const source =
+    project?.client_payment_terms_source || (hasClientTerms ? 'client' : 'system_default')
+
+  return {
+    paymentTermsDays: days,
+    paymentTermsBaseDays: days,
+    paymentTermsSource: source,
+    paymentTermsBaseSource: source,
+    overridePaymentTerms: false,
+  }
 }
 
 const fetchersByType = {
@@ -79,6 +96,7 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
     picEmail: project.client_pics?.[0]?.email || '',
     picPhone: project.client_pics?.[0]?.mobile_number || '',
     picPosition: project.client_pics?.[0]?.position || '',
+    ...getProjectPaymentTerms(project),
   })
 
   const [pricing, setPricing] = useState({
@@ -180,6 +198,7 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
       picEmail: project?.client_pics?.[0]?.email || '',
       picPhone: project?.client_pics?.[0]?.mobile_number || '',
       picPosition: project?.client_pics?.[0]?.position || '',
+      ...getProjectPaymentTerms(project),
     })
     setProjectMeta({
       project_name: project?.project_name || '',
@@ -298,6 +317,7 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
       picEmail: quoteDetails.pic_email ?? project?.client_pics?.[0]?.email ?? '',
       picPhone: quoteDetails.pic_phone ?? project?.client_pics?.[0]?.mobile_number ?? '',
       picPosition: quoteDetails.pic_position ?? project?.client_pics?.[0]?.position ?? '',
+      ...getProjectPaymentTerms(project),
     }
 
     if (nextPaymentMethod === 'hrd grant') {
@@ -313,6 +333,11 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
         picEmail: '', // Fill if you have a generic HRD email
         picPhone: '', // Fill if you have a generic HRD phone
         picPosition: 'HRD Officer',
+        paymentTermsDays: baseClient.paymentTermsDays,
+        paymentTermsBaseDays: baseClient.paymentTermsBaseDays,
+        paymentTermsSource: baseClient.paymentTermsSource,
+        paymentTermsBaseSource: baseClient.paymentTermsBaseSource,
+        overridePaymentTerms: baseClient.overridePaymentTerms,
       })
     } else {
       setClientOverrides(baseClient)
@@ -357,6 +382,8 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
       paymentMethodOverride: effectivePaymentMethod,
       allowWithoutQuote: allowsManualInvoice,
       loaNo,
+      paymentTermsDays: clientOverrides.paymentTermsDays,
+      overridePaymentTerms: clientOverrides.overridePaymentTerms,
       navigate,
     })
     if (result?.success) {
@@ -377,6 +404,12 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
     paidDate: '',
     paidAmount: '',
     paidRemarks: '',
+    paymentTermsDays: clientOverrides.paymentTermsDays ?? 30,
+    paymentTermsBaseDays:
+      clientOverrides.paymentTermsBaseDays ?? clientOverrides.paymentTermsDays ?? 30,
+    paymentTermsSource: clientOverrides.paymentTermsSource,
+    paymentTermsBaseSource: clientOverrides.paymentTermsBaseSource,
+    overridePaymentTerms: clientOverrides.overridePaymentTerms,
   }
 
   return (
@@ -419,8 +452,24 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
             invoiceDetails={invoiceDetails}
             onInvoiceDetailsChange={(e) => {
               if (!e?.target) return
-              const { name, value } = e.target
+              const { name, value, checked } = e.target
               if (name === 'loaNo') setLoaNo(value)
+              if (name === 'overridePaymentTerms') {
+                setClientOverrides((prev) => ({
+                  ...prev,
+                  overridePaymentTerms: checked,
+                  paymentTermsSource: checked ? 'invoice_override' : prev.paymentTermsBaseSource,
+                  paymentTermsDays: checked ? prev.paymentTermsDays : prev.paymentTermsBaseDays,
+                }))
+              }
+              if (name === 'paymentTermsDays') {
+                setClientOverrides((prev) => ({
+                  ...prev,
+                  paymentTermsDays: value,
+                  paymentTermsSource: 'invoice_override',
+                  overridePaymentTerms: true,
+                }))
+              }
             }}
             pricing={pricing}
             setPricing={setPricing}

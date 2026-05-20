@@ -59,7 +59,11 @@ const Login = () => {
       setErrorMessage(`Login failed: ${response.message || 'Invalid credentials.'}`)
     } catch (err) {
       console.error('Login error:', err)
-      setErrorMessage('Server error. Please try again later.')
+      setErrorMessage(
+        err instanceof TypeError
+          ? 'Cannot reach the login service. Please try again later.'
+          : err?.message || 'Server error. Please try again later.',
+      )
     } finally {
       setIsSubmitting(false)
     }

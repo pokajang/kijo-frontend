@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilTrash } from '@coreui/icons'
 import LoadingImage from '../../../components/LoadingImage'

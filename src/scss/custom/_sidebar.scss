@@ -12,6 +12,11 @@
   height: 1rem !important;
 }
 
+.custom-sidebar-link .nav-icon,
+.custom-sidebar-link .nav-icon svg {
+  color: currentColor !important;
+}
+
 /* Compact vertical density overrides for CoreUI sidebar */
 .sidebar .nav-title {
   padding-top: 0.6rem;

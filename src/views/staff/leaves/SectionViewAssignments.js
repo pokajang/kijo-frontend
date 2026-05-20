@@ -8,7 +8,7 @@ import {
   CFormLabel,
   CFormSelect,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import { DataTableRecordControls, DataTableRecordList } from '../../../components/datatable'
 import * as AH from './actionHandlers'
 import dialog from '../../../components/dialog/dialogService'

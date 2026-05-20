@@ -14,6 +14,13 @@ export const pipelineCrmModuleTabs = [
   { key: 'pipeline-entries', label: 'Pipeline Entries', to: '/pipeline/entries' },
 ]
 
+export const clientModuleTabs = [
+  { key: 'records', label: 'Client Records', to: '/client/manage' },
+  { key: 'roi', label: 'ROI per Client', to: '/client/roi' },
+  { key: 'vendor-registration', label: 'Vendor Registration', to: '/client/vendor-registration' },
+  { key: 'past-pics', label: 'Past PICs', to: '/client/past-pics' },
+]
+
 export const administrationModuleTabs = [
   { key: 'meetings', label: 'Meetings', to: '/administration/meetings' },
   { key: 'procedures', label: 'Procedures', to: '/administration/procedures' },

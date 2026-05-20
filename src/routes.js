@@ -36,6 +36,21 @@ const ClientsList = React.lazy(() => import('./views/client/manage/ClientsList')
 const ClientCompanyDetailPage = React.lazy(
   () => import('./views/client/manage/ClientCompanyDetailPage'),
 )
+const ClientEditPage = React.lazy(() => import('./views/client/manage/ClientEditPage'))
+const PastPicsPage = React.lazy(() => import('./views/client/manage/PastPicsPage'))
+const ClientRoiPage = React.lazy(() => import('./views/client/manage/roi/ClientRoiPage'))
+const ClientRoiDetailPage = React.lazy(
+  () => import('./views/client/manage/roi/ClientRoiDetailPage'),
+)
+const ClientVendorRegistrationPage = React.lazy(
+  () => import('./views/client/manage/vendor-registration/ClientVendorRegistrationPage'),
+)
+const ClientVendorRegistrationDetailPage = React.lazy(
+  () => import('./views/client/manage/vendor-registration/ClientVendorRegistrationDetailPage'),
+)
+const ClientVendorRegistrationFormPage = React.lazy(
+  () => import('./views/client/manage/vendor-registration/ClientVendorRegistrationFormPage'),
+)
 
 // Staff pages
 const Activities = React.lazy(() => import('./views/staff/activities/Activities'))
@@ -432,6 +447,38 @@ const routes = [
 
   // Client paths
   { path: '/client/create', name: 'Create Client', element: CreateClient },
+  {
+    path: '/client/roi/:companyId',
+    name: 'Client Commercial History',
+    element: ClientRoiDetailPage,
+  },
+  { path: '/client/roi', name: 'ROI per Client', element: ClientRoiPage },
+  {
+    path: '/client/vendor-registration/create',
+    name: 'Add Vendor Registration',
+    element: ClientVendorRegistrationFormPage,
+  },
+  {
+    path: '/client/vendor-registration/:registrationId/edit',
+    name: 'Edit Vendor Registration',
+    element: ClientVendorRegistrationFormPage,
+  },
+  {
+    path: '/client/vendor-registration/:registrationId',
+    name: 'Vendor Registration Details',
+    element: ClientVendorRegistrationDetailPage,
+  },
+  {
+    path: '/client/vendor-registration',
+    name: 'Vendor Registration',
+    element: ClientVendorRegistrationPage,
+  },
+  { path: '/client/past-pics', name: 'Past PICs', element: PastPicsPage },
+  {
+    path: '/client/manage/:companyId/edit',
+    name: 'Edit Client',
+    element: ClientEditPage,
+  },
   {
     path: '/client/manage/:companyId',
     name: 'Client Company Details',

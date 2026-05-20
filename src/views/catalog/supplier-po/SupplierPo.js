@@ -18,7 +18,8 @@ import {
   CTableDataCell,
   CButton,
 } from '@coreui/react'
-import Select, { components } from 'react-select'
+import { components } from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import { useSupplierPoServices } from './services'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { catalogModuleTabs } from '../../../components/navigation/moduleNavConfigs'

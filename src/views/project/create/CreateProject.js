@@ -13,7 +13,7 @@ import {
   CAlert,
 } from '@coreui/react'
 
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import dialog from '../../../components/dialog/dialogService'
 const CreateProject = () => {
   const navigate = useNavigate()

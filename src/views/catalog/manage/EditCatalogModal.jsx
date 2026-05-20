@@ -13,7 +13,7 @@ import {
   CFormTextarea,
   CButton,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import dialog from '../../../components/dialog/dialogService'
 const CATEGORIES = [
   { category_id: 'Personal Protective Equipment', category_name: 'Personal Protective Equipment' },

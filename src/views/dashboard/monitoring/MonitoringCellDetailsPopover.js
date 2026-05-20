@@ -35,8 +35,14 @@ const getContributorSubject = (item) =>
     .filter(Boolean)
     .join(' - ')
 
-const getContributorSourceTag = (item) =>
-  String(item?.sourceType || '').trim() === 'manual' ? 'Manual Entry' : ''
+const getContributorSourceTag = (item) => {
+  const sourceType = String(item?.sourceType || '').trim()
+
+  if (sourceType === 'manual') return 'Manual Entry'
+  if (sourceType === 'negotiation') return 'CRM Negotiation'
+
+  return ''
+}
 
 const pipelineStageLabels = {
   LEADS: 'Leads',

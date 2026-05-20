@@ -6,6 +6,8 @@ import { formatMoney } from '../../../utils/stats/formatStats'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { recordsDesktopBreakpoint } from '../../crm/records/config/recordsTableUiShared'
 import { getAgeTone } from '../../commercial/debtors/debtorUtils'
+import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
+import MonthlyFinancialTrendWidget from './MonthlyFinancialTrendWidget'
 
 // Helper: format date as "01 Jan 2025"
 const formatDisplayDate = (date) => {
@@ -64,6 +66,20 @@ const formatInvoiceAmount = (value) => Number(value || 0).toLocaleString()
 const formatInvoiceRef = (invoice) => String(invoice?.invoice_ref_no || '').trim() || '-'
 const getInvoiceDebtor = (invoice) => invoice.client_name || invoice.invoice_client_name || '-'
 const getInvoiceProject = (invoice) => invoice.project_name || '-'
+const getInvoicePaymentTermsDays = (invoice) =>
+  invoice?.paymentTermsDays ?? invoice?.payment_terms_days ?? null
+const getInvoicePaymentTermsSource = (invoice) =>
+  invoice?.paymentTermsSource || invoice?.payment_terms_source || ''
+const getInvoicePaymentTermsDisplay = (invoice) => {
+  const days = getInvoicePaymentTermsDays(invoice)
+  if (days === null || days === undefined || days === '') return '-'
+  return getPaymentTermsCompactLabel(getInvoicePaymentTermsSource(invoice), days)
+}
+const renderInvoicePaymentTerms = (invoice) => {
+  const label = getInvoicePaymentTermsDisplay(invoice)
+  if (label === '-') return label
+  return <DataTableStatusBadge tone="secondary">{label}</DataTableStatusBadge>
+}
 
 const getInvoiceAgeDays = (invoice) => {
   const invoiceDate = new Date(invoice?.invoice_date)
@@ -106,6 +122,16 @@ const debtorTableColumns = [
     width: '4rem',
     shrinkToFit: true,
     getExportValue: (invoice) => computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate),
+  },
+  {
+    key: 'paymentTerms',
+    label: 'Terms',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    width: '5.5rem',
+    shrinkToFit: true,
+    getExportValue: getInvoicePaymentTermsDisplay,
   },
   {
     key: 'invoiceDate',
@@ -320,114 +346,122 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
   }, [endDate])
 
   return (
-    <CCard className="mb-4">
-      <CCardHeader>
-        <CRow className="align-items-center">
-          <CCol className="text-nowrap">
-            <strong>Amount Invoiced &amp; Received</strong>
-          </CCol>
-        </CRow>
-      </CCardHeader>
-      <CCardBody>
-        {totalsError ? (
-          <div className="text-center text-danger py-3">{totalsError}</div>
-        ) : (
-          <StatsStrip items={financialStatsItems} loading={totalsLoading} className="mb-4" />
-        )}
+    <>
+      <MonthlyFinancialTrendWidget startDate={startDate} endDate={endDate} />
 
-        <CRow>
-          <CCol xs={12}>
-            {debtorsError ? (
-              <div className="text-center text-danger py-3">{debtorsError}</div>
-            ) : (
-              <DataTableRecordList
-                rows={debtorRows}
-                dataColumns={debtorTableColumns}
-                defaultVisibleColumns={debtorDefaultVisibleColumns}
-                requiredColumns={debtorRequiredColumns}
-                idPrefix="financial-debtors"
-                loading={debtorsLoading}
-                loadingMessage="Loading debtors..."
-                emptyMessage="No debtors"
-                getRowKey={(invoice, index) => invoice.id || invoice.invoice_ref_no || index}
-                renderCell={(invoice, column) => {
-                  if (column.key === 'invoice') return formatInvoiceRef(invoice)
-                  if (column.key === 'debtor') return getInvoiceDebtor(invoice)
-                  if (column.key === 'invoiceDate') return formatDisplayDate(invoice.invoice_date)
-                  if (column.key === 'project') return getInvoiceProject(invoice)
-                  if (column.key === 'age') {
-                    const ageDays = getInvoiceAgeDays(invoice)
-                    return (
-                      <DataTableStatusBadge tone={getAgeTone(ageDays)}>
+      <CCard className="mb-4">
+        <CCardHeader>
+          <CRow className="align-items-center">
+            <CCol className="text-nowrap">
+              <strong>Open Receivables</strong>
+            </CCol>
+          </CRow>
+        </CCardHeader>
+        <CCardBody>
+          {totalsError ? (
+            <div className="text-center text-danger py-3">{totalsError}</div>
+          ) : (
+            <StatsStrip items={financialStatsItems} loading={totalsLoading} className="mb-4" />
+          )}
+
+          {debtorsError ? (
+            <div className="text-center text-danger py-3">{debtorsError}</div>
+          ) : (
+            <DataTableRecordList
+              rows={debtorRows}
+              dataColumns={debtorTableColumns}
+              defaultVisibleColumns={debtorDefaultVisibleColumns}
+              requiredColumns={debtorRequiredColumns}
+              idPrefix="financial-debtors"
+              loading={debtorsLoading}
+              loadingMessage="Loading debtors..."
+              emptyMessage="No debtors"
+              getRowKey={(invoice, index) => invoice.id || invoice.invoice_ref_no || index}
+              renderCell={(invoice, column) => {
+                if (column.key === 'invoice') return formatInvoiceRef(invoice)
+                if (column.key === 'debtor') return getInvoiceDebtor(invoice)
+                if (column.key === 'invoiceDate') return formatDisplayDate(invoice.invoice_date)
+                if (column.key === 'project') return getInvoiceProject(invoice)
+                if (column.key === 'age') {
+                  const ageDays = getInvoiceAgeDays(invoice)
+                  return (
+                    <DataTableStatusBadge tone={getAgeTone(ageDays)}>
+                      {computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate)}
+                    </DataTableStatusBadge>
+                  )
+                }
+                if (column.key === 'paymentTerms') return renderInvoicePaymentTerms(invoice)
+                if (column.key === 'amount') {
+                  return `RM ${formatInvoiceAmount(invoice.grand_total)}`
+                }
+                return '-'
+              }}
+              getSortValue={(invoice, field) => {
+                if (field === 'invoice') return formatInvoiceRef(invoice)
+                if (field === 'debtor') return getInvoiceDebtor(invoice)
+                if (field === 'invoiceDate') return invoice.invoice_date || ''
+                if (field === 'project') return getInvoiceProject(invoice)
+                if (field === 'age') return getInvoiceAgeDays(invoice)
+                if (field === 'paymentTerms')
+                  return Number(getInvoicePaymentTermsDays(invoice) ?? -1)
+                if (field === 'amount') return Number(invoice.grand_total || 0)
+                return invoice?.[field] || ''
+              }}
+              initialSortField="invoiceDate"
+              initialSortDir="asc"
+              controlledPageSize={debtorPageSize}
+              controlledSetPageSize={() => {}}
+              controlledCurrentPage={1}
+              controlledSetCurrentPage={() => {}}
+              pageSizeOptions={[debtorPageSize]}
+              desktopBreakpoint={desktopBreakpoint}
+              showDesktopSummary={false}
+              desktopUtilityPlacement="hidden"
+              mobileUtilityPlacement="hidden"
+              showMobileUtilityRow={false}
+              showMobileTopFooter={false}
+              showFooter={false}
+              showExport={false}
+              showColumnMenu={false}
+              showScrollTip={false}
+              recordsLength={debtorRows.length}
+              mobileRecord={{
+                title: formatInvoiceRef,
+                subtitle: getInvoiceDebtor,
+                meta: getInvoiceProject,
+                kv: (invoice) => [
+                  {
+                    key: 'invoice-date',
+                    label: 'Invoice Date',
+                    value: formatDisplayDate(invoice.invoice_date),
+                  },
+                  {
+                    key: 'age',
+                    label: 'Age',
+                    value: (
+                      <DataTableStatusBadge tone={getAgeTone(getInvoiceAgeDays(invoice))}>
                         {computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate)}
                       </DataTableStatusBadge>
-                    )
-                  }
-                  if (column.key === 'amount') {
-                    return `RM ${formatInvoiceAmount(invoice.grand_total)}`
-                  }
-                  return '-'
-                }}
-                getSortValue={(invoice, field) => {
-                  if (field === 'invoice') return formatInvoiceRef(invoice)
-                  if (field === 'debtor') return getInvoiceDebtor(invoice)
-                  if (field === 'invoiceDate') return invoice.invoice_date || ''
-                  if (field === 'project') return getInvoiceProject(invoice)
-                  if (field === 'age') return getInvoiceAgeDays(invoice)
-                  if (field === 'amount') return Number(invoice.grand_total || 0)
-                  return invoice?.[field] || ''
-                }}
-                initialSortField="invoiceDate"
-                initialSortDir="asc"
-                controlledPageSize={debtorPageSize}
-                controlledSetPageSize={() => {}}
-                controlledCurrentPage={1}
-                controlledSetCurrentPage={() => {}}
-                pageSizeOptions={[debtorPageSize]}
-                desktopBreakpoint={desktopBreakpoint}
-                showDesktopSummary={false}
-                desktopUtilityPlacement="hidden"
-                mobileUtilityPlacement="hidden"
-                showMobileUtilityRow={false}
-                showMobileTopFooter={false}
-                showFooter={false}
-                showExport={false}
-                showColumnMenu={false}
-                showScrollTip={false}
-                recordsLength={debtorRows.length}
-                mobileRecord={{
-                  title: formatInvoiceRef,
-                  subtitle: getInvoiceDebtor,
-                  meta: getInvoiceProject,
-                  kv: (invoice) => [
-                    {
-                      key: 'invoice-date',
-                      label: 'Invoice Date',
-                      value: formatDisplayDate(invoice.invoice_date),
-                    },
-                    {
-                      key: 'age',
-                      label: 'Age',
-                      value: (
-                        <DataTableStatusBadge tone={getAgeTone(getInvoiceAgeDays(invoice))}>
-                          {computeAge(invoice.invoice_date, invoice.__debtorsAsOfDate)}
-                        </DataTableStatusBadge>
-                      ),
-                    },
-                    {
-                      key: 'amount',
-                      label: 'Amount',
-                      value: `RM ${formatInvoiceAmount(invoice.grand_total)}`,
-                    },
-                  ],
-                }}
-                tableViewportDeps={[debtorRows.length, debtorsAsOfDate]}
-              />
-            )}
-          </CCol>
-        </CRow>
-      </CCardBody>
-    </CCard>
+                    ),
+                  },
+                  {
+                    key: 'payment-terms',
+                    label: 'Terms',
+                    value: renderInvoicePaymentTerms(invoice),
+                  },
+                  {
+                    key: 'amount',
+                    label: 'Amount',
+                    value: `RM ${formatInvoiceAmount(invoice.grand_total)}`,
+                  },
+                ],
+              }}
+              tableViewportDeps={[debtorRows.length, debtorsAsOfDate]}
+            />
+          )}
+        </CCardBody>
+      </CCard>
+    </>
   )
 }
 

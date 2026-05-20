@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import {
   CCard,
   CCardBody,
@@ -14,17 +14,36 @@ import {
 import { contactKey, getSelectedContacts } from './quoteContactUtils'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
 
-const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Client', onBack }) => {
+const SelectClientCard = ({
+  selectedClient,
+  onClientChange,
+  title = 'Select Client',
+  onBack,
+  onCreateClient,
+  shell = 'card',
+}) => {
   const navigate = useNavigate()
   const selectedClientRef = useRef(selectedClient)
+  const onClientChangeRef = useRef(onClientChange)
   const [clientOptions, setClientOptions] = useState([])
   const [hasTyped, setHasTyped] = useState(false)
   const [selectedPicKeys, setSelectedPicKeys] = useState([])
+  const [loadingClients, setLoadingClients] = useState(true)
+  const [autoSelectingCreatedClient, setAutoSelectingCreatedClient] = useState(() =>
+    Boolean(
+      sessionStorage.getItem('lastCreatedClientId') ||
+        sessionStorage.getItem('lastCreatedClientName'),
+    ),
+  )
   const [loadingBranches, setLoadingBranches] = useState(false)
 
   useEffect(() => {
     selectedClientRef.current = selectedClient
   }, [selectedClient])
+
+  useEffect(() => {
+    onClientChangeRef.current = onClientChange
+  }, [onClientChange])
 
   const normalizePic = useCallback(
     (pic = {}) => ({
@@ -203,13 +222,26 @@ const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Clie
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+
     const fetchClients = async () => {
+      const hasPendingCreatedClient = Boolean(
+        sessionStorage.getItem('lastCreatedClientId') ||
+          sessionStorage.getItem('lastCreatedClientName'),
+      )
+      if (!cancelled) {
+        setLoadingClients(true)
+        setAutoSelectingCreatedClient(hasPendingCreatedClient)
+      }
+
       try {
         const clients = await fetchAllPagedRecords({
           url: `${import.meta.env.VITE_API_BASE}client-companies`,
           dataKeys: ['data'],
           perPage: 200,
         })
+        if (cancelled) return
+
         if (Array.isArray(clients)) {
           const grouped = new Map()
 
@@ -266,11 +298,15 @@ const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Clie
             )
             if (match) {
               const withPic = withDefaultPic(match.data)
-              setSelectedPicKeys(
-                getSelectedContacts(withPic).map((pic, index) => contactKey(pic, index)),
-              )
+              if (!cancelled) {
+                setSelectedPicKeys(
+                  getSelectedContacts(withPic).map((pic, index) => contactKey(pic, index)),
+                )
+              }
               const enriched = await withBranches(withPic, currentSelectedClient?.selected_branch)
-              onClientChange(enriched)
+              if (!cancelled) {
+                onClientChangeRef.current(enriched)
+              }
             }
             sessionStorage.removeItem('lastCreatedClientId')
             sessionStorage.removeItem('lastCreatedClientName')
@@ -309,22 +345,33 @@ const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Clie
                 currentSelectedClient?.selected_branch,
               )
 
-              setSelectedPicKeys(
-                getSelectedContacts(hydratedWithBranches).map((pic, index) =>
-                  contactKey(pic, index),
-                ),
-              )
-              onClientChange(hydratedWithBranches)
+              if (!cancelled) {
+                setSelectedPicKeys(
+                  getSelectedContacts(hydratedWithBranches).map((pic, index) =>
+                    contactKey(pic, index),
+                  ),
+                )
+                onClientChangeRef.current(hydratedWithBranches)
+              }
             }
           }
         }
       } catch (err) {
         console.error('Error fetching clients:', err)
+      } finally {
+        if (!cancelled) {
+          setLoadingClients(false)
+          setAutoSelectingCreatedClient(false)
+        }
       }
     }
 
     fetchClients()
-  }, [extractPics, onClientChange, withBranches, withDefaultPic])
+
+    return () => {
+      cancelled = true
+    }
+  }, [extractPics, withBranches, withDefaultPic])
 
   const handleClientSelect = async (selectedOption) => {
     if (selectedOption) {
@@ -417,6 +464,200 @@ const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Clie
   const hasAddressRadios = addressOptions.length > 1
   const hasContactOptions = (selectedClient?.all_pics?.length || 0) > 1
   const hideCompanySummary = hasAddressRadios && hasContactOptions
+  const selectedClientOption = selectedClient
+    ? clientOptions.find((opt) => String(opt.value) === String(selectedClient.company_id)) || {
+        value: selectedClient.company_id,
+        label: `${selectedClient.company_name || selectedClient.hq_company_name || 'Selected client'} - Loading details...`,
+        data: selectedClient,
+      }
+    : null
+  const clientLoadingMessage = autoSelectingCreatedClient
+    ? 'Loading newly created client...'
+    : 'Loading clients...'
+
+  const content = (
+    <>
+      <CRow className="g-3">
+        <CCol md={12}>
+          <CFormLabel>Client / Company</CFormLabel>
+          <Select
+            options={clientOptions}
+            value={selectedClientOption}
+            onChange={(opt) => {
+              setHasTyped(true)
+              handleClientSelect(opt)
+            }}
+            onInputChange={() => setHasTyped(true)}
+            placeholder="Search client"
+            isClearable
+            isLoading={loadingClients || loadingBranches}
+            loadingMessage={() => clientLoadingMessage}
+            noOptionsMessage={() =>
+              loadingClients ? (
+                clientLoadingMessage
+              ) : hasTyped ? (
+                <span>
+                  No client found.{' '}
+                  <CButton
+                    color="primary"
+                    variant="outline"
+                    size="sm"
+                    data-api-busy-allow="true"
+                    onClick={() => {
+                      if (onCreateClient) {
+                        onCreateClient()
+                        return
+                      }
+                      sessionStorage.setItem('cameFromQuote', 'true')
+                      navigate('/client/create')
+                    }}
+                  >
+                    Create one?
+                  </CButton>
+                </span>
+              ) : (
+                'Type to search...'
+              )
+            }
+          />
+          {loadingClients ? (
+            <div className="small text-muted mt-1" aria-live="polite">
+              {clientLoadingMessage}
+            </div>
+          ) : loadingBranches ? (
+            <div className="small text-muted mt-1" aria-live="polite">
+              Loading client details...
+            </div>
+          ) : null}
+        </CCol>
+      </CRow>
+
+      {/* Client Info Display */}
+      {selectedClient && (
+        <>
+          <CRow className="mt-4">
+            <CCol md={7}>
+              {!hideCompanySummary && (
+                <>
+                  <CFormLabel>Company Name</CFormLabel>
+                  <div>
+                    <strong>{selectedClient.company_name}</strong>{' '}
+                    <small className="text-muted">
+                      (Reg. No.: {selectedClient.ssm_number || '-'})
+                    </small>
+                    <br />
+                    {selectedClient.address}, {selectedClient.city}, {selectedClient.state}{' '}
+                    {selectedClient.zip}
+                  </div>
+                </>
+              )}
+
+              {hasAddressRadios && (
+                <div className={hideCompanySummary ? '' : 'mt-3'}>
+                  <CFormLabel>Quote Address</CFormLabel>
+                  <div className="d-flex flex-column gap-2">
+                    {addressOptions.map((option) => {
+                      const selectedKey = selectedClient.selected_branch
+                        ? getBranchOptionKey(selectedClient.selected_branch)
+                        : 'hq'
+                      const isSelected = selectedKey === option.key
+
+                      return (
+                        <label
+                          key={option.key}
+                          className={`border rounded p-2 d-flex align-items-start gap-2 ${isSelected ? 'border-primary bg-light' : ''}`}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <CFormCheck
+                            type="radio"
+                            name="quoteAddress"
+                            checked={isSelected}
+                            onChange={() => handleAddressSelect(option)}
+                          />
+                          <div>
+                            <strong>{option.title}</strong>
+                            <div className="text-muted">{option.address || '-'}</div>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {loadingBranches && (
+                    <small className="text-muted">Refreshing branch addresses...</small>
+                  )}
+                </div>
+              )}
+            </CCol>
+
+            <CCol md={5}>
+              <CFormLabel>Contact Information</CFormLabel>
+              {selectedClient.all_pics?.length > 1 ? (
+                <div className="d-flex flex-column gap-2">
+                  <div className="d-flex gap-2 mb-1">
+                    <CButton
+                      color="primary"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAllContacts}
+                    >
+                      Select all
+                    </CButton>
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectPrimaryContact}
+                    >
+                      Primary only
+                    </CButton>
+                  </div>
+                  {selectedClient.all_pics.map((pic, index) => {
+                    const isSelected = selectedPicKeys.includes(contactKey(pic, index))
+                    return (
+                      <label
+                        key={`${pic.email || 'no-email'}-${pic.full_name || 'no-name'}-${index}`}
+                        className={`border rounded p-2 d-flex align-items-start gap-2 ${isSelected ? 'border-primary bg-light' : ''}`}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <CFormCheck
+                          type="checkbox"
+                          name="contactPic"
+                          checked={isSelected}
+                          onChange={() => handleContactToggle(pic, index)}
+                        />
+                        <div>
+                          <strong>
+                            {pic.full_name || '-'} {pic.position ? `(${pic.position})` : ''}
+                          </strong>
+                          <br />
+                          {pic.email || '-'}{' '}
+                          <small className="text-muted">({pic.mobile_number || '-'})</small>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              ) : selectedClient.all_pics?.length === 1 ? (
+                <div>
+                  <strong>{selectedClient.all_pics[0].full_name}</strong>{' '}
+                  <small className="text-muted">({selectedClient.all_pics[0].position})</small>
+                  <br />
+                  {selectedClient.all_pics[0].email}{' '}
+                  <small className="text-muted">({selectedClient.all_pics[0].mobile_number})</small>
+                </div>
+              ) : (
+                <div className="text-muted">No contacts found.</div>
+              )}
+            </CCol>
+          </CRow>
+        </>
+      )}
+    </>
+  )
+
+  if (shell === 'none') {
+    return <CCol xs={12}>{content}</CCol>
+  }
 
   return (
     <CCol xs={12}>
@@ -429,173 +670,7 @@ const SelectClientCard = ({ selectedClient, onClientChange, title = 'Select Clie
             </CButton>
           )}
         </CCardHeader>
-        <CCardBody>
-          <CRow className="g-3">
-            <CCol md={12}>
-              <CFormLabel>Client / Company</CFormLabel>
-              <Select
-                options={clientOptions}
-                value={
-                  selectedClient
-                    ? clientOptions.find(
-                        (opt) => String(opt.value) === String(selectedClient.company_id),
-                      )
-                    : null
-                }
-                onChange={(opt) => {
-                  setHasTyped(true)
-                  handleClientSelect(opt)
-                }}
-                onInputChange={() => setHasTyped(true)}
-                placeholder="Search client"
-                isClearable
-                noOptionsMessage={() =>
-                  hasTyped ? (
-                    <span>
-                      No client found.{' '}
-                      <CButton
-                        color="primary"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          sessionStorage.setItem('cameFromQuote', 'true')
-                          navigate('/client/create')
-                        }}
-                      >
-                        Create one?
-                      </CButton>
-                    </span>
-                  ) : (
-                    'Type to search...'
-                  )
-                }
-              />
-            </CCol>
-          </CRow>
-
-          {/* Client Info Display */}
-          {selectedClient && (
-            <>
-              <CRow className="mt-4">
-                <CCol md={7}>
-                  {!hideCompanySummary && (
-                    <>
-                      <CFormLabel>Company Name</CFormLabel>
-                      <div>
-                        <strong>{selectedClient.company_name}</strong>{' '}
-                        <small className="text-muted">
-                          (Reg. No.: {selectedClient.ssm_number || '-'})
-                        </small>
-                        <br />
-                        {selectedClient.address}, {selectedClient.city}, {selectedClient.state}{' '}
-                        {selectedClient.zip}
-                      </div>
-                    </>
-                  )}
-
-                  {hasAddressRadios && (
-                    <div className={hideCompanySummary ? '' : 'mt-3'}>
-                      <CFormLabel>Quote Address</CFormLabel>
-                      <div className="d-flex flex-column gap-2">
-                        {addressOptions.map((option) => {
-                          const selectedKey = selectedClient.selected_branch
-                            ? getBranchOptionKey(selectedClient.selected_branch)
-                            : 'hq'
-                          const isSelected = selectedKey === option.key
-
-                          return (
-                            <label
-                              key={option.key}
-                              className={`border rounded p-2 d-flex align-items-start gap-2 ${isSelected ? 'border-primary bg-light' : ''}`}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <CFormCheck
-                                type="radio"
-                                name="quoteAddress"
-                                checked={isSelected}
-                                onChange={() => handleAddressSelect(option)}
-                              />
-                              <div>
-                                <strong>{option.title}</strong>
-                                <div className="text-muted">{option.address || '-'}</div>
-                              </div>
-                            </label>
-                          )
-                        })}
-                      </div>
-                      {loadingBranches && (
-                        <small className="text-muted">Refreshing branch addresses...</small>
-                      )}
-                    </div>
-                  )}
-                </CCol>
-
-                <CCol md={5}>
-                  <CFormLabel>Contact Information</CFormLabel>
-                  {selectedClient.all_pics?.length > 1 ? (
-                    <div className="d-flex flex-column gap-2">
-                      <div className="d-flex gap-2 mb-1">
-                        <CButton
-                          color="primary"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectAllContacts}
-                        >
-                          Select all
-                        </CButton>
-                        <CButton
-                          color="secondary"
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectPrimaryContact}
-                        >
-                          Primary only
-                        </CButton>
-                      </div>
-                      {selectedClient.all_pics.map((pic, index) => {
-                        const isSelected = selectedPicKeys.includes(contactKey(pic, index))
-                        return (
-                          <label
-                            key={`${pic.email || 'no-email'}-${pic.full_name || 'no-name'}-${index}`}
-                            className={`border rounded p-2 d-flex align-items-start gap-2 ${isSelected ? 'border-primary bg-light' : ''}`}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <CFormCheck
-                              type="checkbox"
-                              name="contactPic"
-                              checked={isSelected}
-                              onChange={() => handleContactToggle(pic, index)}
-                            />
-                            <div>
-                              <strong>
-                                {pic.full_name || '-'} {pic.position ? `(${pic.position})` : ''}
-                              </strong>
-                              <br />
-                              {pic.email || '-'}{' '}
-                              <small className="text-muted">({pic.mobile_number || '-'})</small>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  ) : selectedClient.all_pics?.length === 1 ? (
-                    <div>
-                      <strong>{selectedClient.all_pics[0].full_name}</strong>{' '}
-                      <small className="text-muted">({selectedClient.all_pics[0].position})</small>
-                      <br />
-                      {selectedClient.all_pics[0].email}{' '}
-                      <small className="text-muted">
-                        ({selectedClient.all_pics[0].mobile_number})
-                      </small>
-                    </div>
-                  ) : (
-                    <div className="text-muted">No contacts found.</div>
-                  )}
-                </CCol>
-              </CRow>
-            </>
-          )}
-        </CCardBody>
+        <CCardBody>{content}</CCardBody>
       </CCard>
     </CCol>
   )

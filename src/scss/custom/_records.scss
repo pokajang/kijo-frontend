@@ -314,6 +314,11 @@
   color: color-mix(in srgb, var(--cui-dark) 82%, var(--app-text-base) 18%);
 }
 
+.factory-directory-source-badge {
+  align-items: center;
+  min-height: 1.45rem;
+}
+
 .records-scroll-tip-kbd {
   background-color: var(--app-surface-muted);
   color: var(--app-text-secondary);

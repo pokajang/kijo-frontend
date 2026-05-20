@@ -6,6 +6,7 @@ import ViewInvoiceModal from './InvoiceModal/ViewInvoiceModal'
 import EditInvoiceModal from './InvoiceModal/edit/EditInvoiceModal'
 import MarkPaidModal from './InvoiceModal/MarkPaidModal'
 import UpdateHrdClaimRefModal from './InvoiceModal/UpdateHrdClaimRefModal'
+import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
 import {
   fetchAllInvoices,
   handleAction,
@@ -137,6 +138,14 @@ const InvoiceDetailPage = () => {
           <DetailField label="Service Period" value={invoice?.servicePeriod} />
           <DetailField label="Purpose" value={invoice?.purpose} />
           <DetailField label="Issued" value={invoice?.dateIssued} />
+          <DetailField
+            label="Payment Terms"
+            value={getInvoicePaymentTermsSourceLabel(
+              invoice?.paymentTermsSource,
+              invoice?.paymentTermsDays,
+            )}
+          />
+          <DetailField label="Due Date" value={invoice?.dueDate} />
           <DetailField label="Age" value={invoice?.dueInDays} />
           <DetailField label="Grand Total" value={invoice?.grandTotal} />
           <DetailField label="Payment Method" value={invoice?.paymentMethod} />

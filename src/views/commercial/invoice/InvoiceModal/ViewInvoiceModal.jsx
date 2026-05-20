@@ -20,6 +20,7 @@ import {
   CTableBody,
   CTableDataCell,
 } from '@coreui/react'
+import { getInvoicePaymentTermsSourceLabel } from '../../../../shared/paymentTerms'
 
 const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
   if (!visible || !invoice) return null
@@ -70,7 +71,7 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
     paid_remarks,
   } = raw
 
-  const { dateIssued, dueInDays, amount } = invoice
+  const { dateIssued, dueInDays, amount, paymentTermsDays, dueDate } = invoice
   const servicePeriod =
     service_start_date && service_end_date
       ? `${service_start_date} to ${service_end_date}`
@@ -274,6 +275,21 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
               <CCol md={6}>
                 <CFormLabel>Age</CFormLabel>
                 <div>{dueInDays}</div>
+              </CCol>
+            </CRow>
+            <CRow className="mb-2">
+              <CCol md={6}>
+                <CFormLabel>Payment Terms</CFormLabel>
+                <div>
+                  {getInvoicePaymentTermsSourceLabel(
+                    invoice.paymentTermsSource || raw.payment_terms_source,
+                    paymentTermsDays ?? raw.payment_terms_days,
+                  )}
+                </div>
+              </CCol>
+              <CCol md={6}>
+                <CFormLabel>Due Date</CFormLabel>
+                <div>{dueDate || raw.due_date || '-'}</div>
               </CCol>
             </CRow>
             <CRow className="mb-2">

@@ -12,7 +12,7 @@ import {
   CFormSelect,
   CRow,
 } from '@coreui/react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 
 import SelectClientCard from './SelectClientCard'
 import {

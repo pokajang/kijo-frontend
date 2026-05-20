@@ -1,7 +1,7 @@
 // src/templates/components/EditorInput.jsx
 import React from 'react'
 import { CRow, CCol } from '@coreui/react'
-import { Editor } from '@tinymce/tinymce-react'
+import Editor from '../../../components/forms/ThemedTinyMCEEditor'
 
 /**
  * A reusable TinyMCE editor input component with heading support.

@@ -1,20 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react'
-import {
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CRow,
-  CCol,
-  CTable,
-  CTableHead,
-  CTableBody,
-  CTableFoot,
-  CTableRow,
-  CTableHeaderCell,
-  CTableDataCell,
-} from '@coreui/react'
+import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
-import { DataTableLoadingState } from '../../../components/datatable'
+import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { useChartTickColor } from '../../../utils/chartTheme'
 
@@ -71,6 +58,35 @@ const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
   const labels = monthlyQuoteCount.map((mq) => formatMonthLabel(mq.month))
   const dataPoints = monthlyQuoteCount.map((mq) => Number(mq.count) || 0)
   const periodTotal = dataPoints.reduce((sum, value) => sum + value, 0)
+  const detailRows = monthlyQuoteCount.map((row, index) => ({
+    ...row,
+    label: labels[index],
+    countValue: dataPoints[index],
+  }))
+  const detailColumns = [
+    { key: 'month', label: 'Month', render: (row) => row.label },
+    {
+      key: 'count',
+      label: 'Count',
+      align: 'end',
+      render: (row) => row.countValue?.toLocaleString(),
+    },
+  ]
+  const footerRows = [
+    {
+      key: 'total',
+      className: 'fw-semibold text-muted',
+      cells: [
+        { key: 'label', content: 'Total', className: 'text-muted' },
+        {
+          key: 'count',
+          content: periodTotal.toLocaleString(),
+          align: 'end',
+          className: 'text-muted',
+        },
+      ],
+    },
+  ]
 
   return (
     <CCard className="mb-4">
@@ -148,56 +164,13 @@ const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
 
             <CCol xs={12} lg={4}>
               {labels.length > 0 && dataPoints.length > 0 ? (
-                <div className="rounded-4 overflow-hidden bg-light">
-                  {/* datatable-exempt: existing embedded/layout table */}
-                  <CTable
-                    responsive
-                    align="middle"
-                    className="mb-0 table-borderless border-0 data-table-compact embedded-data-table"
-                  >
-                    <CTableHead>
-                      <CTableRow className="table-light">
-                        <CTableHeaderCell
-                          style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                        >
-                          Month
-                        </CTableHeaderCell>
-                        <CTableHeaderCell
-                          className="text-end"
-                          style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                        >
-                          Count
-                        </CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {labels.map((label, idx) => (
-                        <CTableRow key={label} className="table-light">
-                          <CTableDataCell className="border-0">{label}</CTableDataCell>
-                          <CTableDataCell className="text-end border-0">
-                            {dataPoints[idx]?.toLocaleString()}
-                          </CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                    <CTableFoot>
-                      <CTableRow className="table-light fw-semibold text-muted">
-                        <CTableDataCell
-                          className="text-muted"
-                          style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                        >
-                          Total
-                        </CTableDataCell>
-                        <CTableDataCell
-                          className="text-end text-muted"
-                          style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                        >
-                          {periodTotal.toLocaleString()}
-                        </CTableDataCell>
-                      </CTableRow>
-                    </CTableFoot>
-                  </CTable>
-                </div>
+                <DataTableEmbeddedList
+                  rows={detailRows}
+                  columns={detailColumns}
+                  footerRows={footerRows}
+                  getRowKey={(row) => row.month}
+                  desktopBreakpoint="md"
+                />
               ) : (
                 <div className="text-muted small">No data available</div>
               )}

@@ -11,16 +11,9 @@ import {
   CDropdown,
   CDropdownToggle,
   CDropdownMenu,
-  CTable,
-  CTableHead,
-  CTableBody,
-  CTableFoot,
-  CTableRow,
-  CTableHeaderCell,
-  CTableDataCell,
 } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
-import { DataTableLoadingState } from '../../../components/datatable'
+import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { useChartTickColor } from '../../../utils/chartTheme'
@@ -100,6 +93,75 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
   const periodRangeLabel = formatDateRangeLabel(startDate, endDate)
 
   const shouldScrollTable = monthlySales.length > 12
+  const detailColumns = [
+    {
+      key: 'month',
+      label: 'Month',
+      render: (row) => (
+        <>
+          {formatMonthLabel(row.month)}
+          {Number(row.terminatedAmount || 0) > 0 && (
+            <div className="small text-muted">
+              Excl. terminated RM {Number(row.terminatedAmount || 0).toLocaleString()}
+            </div>
+          )}
+        </>
+      ),
+    },
+    ...(showValueSeries
+      ? [
+          {
+            key: 'amount',
+            label: 'Value (RM)',
+            align: 'end',
+            render: (row) => (Number(row.amount) || 0).toLocaleString(),
+          },
+        ]
+      : []),
+    ...(showCountSeries
+      ? [
+          {
+            key: 'count',
+            label: 'Realized Jobs',
+            align: 'end',
+            render: (row) => (Number(row.count) || 0).toLocaleString(),
+          },
+        ]
+      : []),
+  ]
+  const detailFooterRows = [
+    {
+      key: 'total',
+      className: 'fw-semibold text-muted',
+      cells: [
+        {
+          key: 'total-label',
+          content: 'Total',
+          className: 'text-muted',
+        },
+        ...(showValueSeries
+          ? [
+              {
+                key: 'total-value',
+                content: periodTotal.toLocaleString(),
+                align: 'end',
+                className: 'text-muted',
+              },
+            ]
+          : []),
+        ...(showCountSeries
+          ? [
+              {
+                key: 'total-count',
+                content: periodQuoteTotal.toLocaleString(),
+                align: 'end',
+                className: 'text-muted',
+              },
+            ]
+          : []),
+      ],
+    },
+  ]
   const handleSeriesToggle = (series, checked) => {
     if (!checked) {
       const activeCount = Number(showValueSeries) + Number(showCountSeries)
@@ -289,96 +351,14 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
 
             {showDetailTable && (
               <CCol xs={12} lg={4}>
-                <div className="rounded-4 overflow-hidden bg-light">
-                  <div
-                    className={shouldScrollTable ? 'overflow-auto' : ''}
-                    style={shouldScrollTable ? { maxHeight: '40rem' } : undefined}
-                  >
-                    {/* datatable-exempt: existing embedded/layout table */}
-                    <CTable
-                      responsive
-                      align="middle"
-                      className="mb-0 table-borderless border-0 data-table-compact embedded-data-table"
-                    >
-                      <CTableHead>
-                        <CTableRow className="table-light">
-                          <CTableHeaderCell
-                            style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                          >
-                            Month
-                          </CTableHeaderCell>
-                          {showValueSeries && (
-                            <CTableHeaderCell
-                              className="text-end"
-                              style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                            >
-                              Value (RM)
-                            </CTableHeaderCell>
-                          )}
-                          {showCountSeries && (
-                            <CTableHeaderCell
-                              className="text-end"
-                              style={{ borderBottom: '1px solid var(--app-surface-page)' }}
-                            >
-                              Realized Jobs
-                            </CTableHeaderCell>
-                          )}
-                        </CTableRow>
-                      </CTableHead>
-                      <CTableBody>
-                        {monthlySales.map((row) => (
-                          <CTableRow key={row.month} className="table-light">
-                            <CTableDataCell className="border-0">
-                              {formatMonthLabel(row.month)}
-                              {Number(row.terminatedAmount || 0) > 0 && (
-                                <div className="small text-muted">
-                                  Excl. terminated RM{' '}
-                                  {Number(row.terminatedAmount || 0).toLocaleString()}
-                                </div>
-                              )}
-                            </CTableDataCell>
-                            {showValueSeries && (
-                              <CTableDataCell className="text-end border-0">
-                                {(Number(row.amount) || 0).toLocaleString()}
-                              </CTableDataCell>
-                            )}
-                            {showCountSeries && (
-                              <CTableDataCell className="text-end border-0">
-                                {(Number(row.count) || 0).toLocaleString()}
-                              </CTableDataCell>
-                            )}
-                          </CTableRow>
-                        ))}
-                      </CTableBody>
-                      <CTableFoot>
-                        <CTableRow className="table-light fw-semibold text-muted">
-                          <CTableDataCell
-                            className="text-muted"
-                            style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                          >
-                            Total
-                          </CTableDataCell>
-                          {showValueSeries && (
-                            <CTableDataCell
-                              className="text-end text-muted"
-                              style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                            >
-                              {periodTotal.toLocaleString()}
-                            </CTableDataCell>
-                          )}
-                          {showCountSeries && (
-                            <CTableDataCell
-                              className="text-end text-muted"
-                              style={{ borderTop: '1px solid var(--app-surface-page)' }}
-                            >
-                              {periodQuoteTotal.toLocaleString()}
-                            </CTableDataCell>
-                          )}
-                        </CTableRow>
-                      </CTableFoot>
-                    </CTable>
-                  </div>
-                </div>
+                <DataTableEmbeddedList
+                  rows={monthlySales}
+                  columns={detailColumns}
+                  footerRows={detailFooterRows}
+                  getRowKey={(row) => row.month}
+                  desktopBreakpoint="md"
+                  shellStyle={shouldScrollTable ? { maxHeight: '40rem' } : undefined}
+                />
               </CCol>
             )}
           </CRow>

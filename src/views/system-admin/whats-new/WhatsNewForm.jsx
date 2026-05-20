@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Editor } from '@tinymce/tinymce-react'
+import Editor from '../../../components/forms/ThemedTinyMCEEditor'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   CAlert,

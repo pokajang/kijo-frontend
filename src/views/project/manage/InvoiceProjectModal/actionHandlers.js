@@ -229,6 +229,8 @@ export const createInvoiceForType = async (
     allowWithoutQuote,
     navigate,
     loaNo,
+    paymentTermsDays,
+    overridePaymentTerms,
   },
 ) => {
   if (!project) {
@@ -268,6 +270,10 @@ export const createInvoiceForType = async (
     invoice_purpose:
       pricing.service_title || projectMeta?.project_name || project.project_name || '',
     invoice_date: getLocalISODate(),
+    override_payment_terms: Boolean(overridePaymentTerms ?? clientOverrides.overridePaymentTerms),
+    payment_terms_days: Boolean(overridePaymentTerms ?? clientOverrides.overridePaymentTerms)
+      ? Number(paymentTermsDays ?? clientOverrides.paymentTermsDays ?? 30)
+      : null,
     payment_method: paymentMethod,
     grant_approval_no:
       serviceType === 'Training' && isHrdPayment ? grantApprovalNo?.trim() || null : null,

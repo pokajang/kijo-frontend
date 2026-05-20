@@ -1,6 +1,6 @@
 // src/components/StaffSelector.js
 import React, { useState, useEffect } from 'react'
-import Select from 'react-select'
+import Select from '../../../components/forms/ThemedSelect'
 import { CAlert } from '@coreui/react'
 
 /**

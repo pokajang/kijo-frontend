@@ -45,7 +45,13 @@ const _nav = [
     component: CNavItem,
     name: 'Clients',
     to: '/client/manage',
-    activePaths: ['/client/manage', '/client/create'],
+    activePaths: [
+      '/client/manage',
+      '/client/create',
+      '/client/roi',
+      '/client/vendor-registration',
+      '/client/past-pics',
+    ],
     icon: <CIcon icon={cilAddressBook} customClassName="nav-icon" />,
   },
   {

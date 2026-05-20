@@ -1,4 +1,5 @@
 import React from 'react'
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import {
@@ -9,6 +10,7 @@ import {
   DataTableMatrix,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableSheet,
   DataTableStatusBadge,
   DataTableTextCell,
 } from '../index'
@@ -702,7 +704,7 @@ describe('datatable shared components', () => {
   })
 
   it('renders embedded tables with shared width, nowrap, summary, and footer support', () => {
-    render(
+    const { container } = render(
       <DataTableEmbeddedList
         rows={[{ id: 1, code: 'SVC-1', amount: 25 }]}
         columns={[
@@ -724,9 +726,17 @@ describe('datatable shared components', () => {
             ],
           },
         ]}
+        desktopBreakpoint="md"
+        shellClassName="dashboard-table-shell"
+        hideMobileList
       />,
     )
 
+    expect(container.querySelector('.data-table-embedded-shell')).toHaveClass('d-md-block')
+    expect(container.querySelector('.data-table-embedded-shell')).toHaveClass(
+      'dashboard-table-shell',
+    )
+    expect(container.querySelector('.records-mobile-list')).not.toBeInTheDocument()
     const header = screen.getByRole('columnheader', { name: 'Service Code' })
     expect(header).toHaveClass('text-nowrap')
     expect(header.style.minWidth).toBe('120px')
@@ -734,6 +744,43 @@ describe('datatable shared components', () => {
     expect(desktopCodeCell.closest('td')).toHaveClass('text-nowrap')
     expect(screen.getByText('Summary')).toBeInTheDocument()
     expect(screen.getByText('Total')).toBeInTheDocument()
+  })
+
+  it('passes custom table props to embedded tables', () => {
+    const { container } = render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, code: 'SVC-1' }]}
+        columns={[{ key: 'code', label: 'Service Code' }]}
+        tableProps={{ 'data-testid': 'embedded-table', className: 'custom-table-prop' }}
+      />,
+    )
+
+    expect(screen.getByTestId('embedded-table')).toHaveClass('custom-table-prop')
+    expect(container.querySelector('.records-mobile-list')).toBeInTheDocument()
+  })
+
+  it('keeps shrink-to-fit embedded columns content-sized', () => {
+    render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, rowNumber: 1, name: 'Alpha' }]}
+        columns={[
+          { key: 'rowNumber', label: '#', width: '3.25rem', shrinkToFit: true },
+          { key: 'name', label: 'Name' },
+        ]}
+      />,
+    )
+
+    const header = screen.getByRole('columnheader', { name: '#' })
+    const cell = screen
+      .getAllByText('1')
+      .find((node) => node.closest('td'))
+      .closest('td')
+
+    expect(header.style.width).toBe('3.25rem')
+    expect(header.style.minWidth).toBe('3.25rem')
+    expect(header.style.maxWidth).toBe('3.25rem')
+    expect(cell.style.width).toBe('3.25rem')
+    expect(cell).not.toHaveClass('text-center')
   })
 
   it('renders embedded table rows on mobile without a custom mobile renderer', () => {
@@ -747,6 +794,157 @@ describe('datatable shared components', () => {
     const mobileList = container.querySelector('.records-mobile-list')
     expect(within(mobileList).getByText('Service Code')).toBeInTheDocument()
     expect(within(mobileList).getByText('SVC-1')).toBeInTheDocument()
+  })
+
+  it('renders two-cell embedded footer rows as compact mobile summaries', () => {
+    const { container } = render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, code: 'SVC-1', amount: 25 }]}
+        columns={[
+          { key: 'code', label: 'Service Code' },
+          { key: 'amount', label: 'Amount', align: 'right' },
+        ]}
+        footerRows={[
+          {
+            key: 'total',
+            cells: [
+              { key: 'code', content: 'Total' },
+              { key: 'amount', content: '25', align: 'right' },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    const mobileFooter = container.querySelector('.data-table-mobile-footer-item--summary')
+    expect(mobileFooter).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('Total')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('25')).toBeInTheDocument()
+  })
+
+  it('renders multi-cell embedded footer rows with mobile labels', () => {
+    const { container } = render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, service: 'Training', quoted: 5, won: 2 }]}
+        columns={[
+          { key: 'service', label: 'Service' },
+          { key: 'quoted', label: 'Quoted' },
+          { key: 'won', label: 'Won' },
+        ]}
+        footerRows={[
+          {
+            key: 'totals',
+            cells: [
+              { key: 'service', content: 'Totals' },
+              { key: 'quoted', content: '8', mobileLabel: 'Quote Total' },
+              { key: 'won', content: '3' },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    const mobileFooter = container.querySelector(
+      '.data-table-mobile-footer-item:not(.data-table-mobile-footer-item--summary)',
+    )
+    expect(mobileFooter).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('Quote Total')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('Won')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('8')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('3')).toBeInTheDocument()
+  })
+
+  it('humanizes unmatched embedded footer cell keys on mobile', () => {
+    const { container } = render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, service: 'Training', amount: 25 }]}
+        columns={[
+          { key: 'service', label: 'Service' },
+          { key: 'amount', label: 'Amount' },
+        ]}
+        footerRows={[
+          {
+            key: 'totals',
+            cells: [
+              { key: 'total-label', content: 'Total', colSpan: 2 },
+              { key: 'quoted_value', content: '8' },
+              { key: 'realizedJobs', content: '3' },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    const mobileFooter = container.querySelector(
+      '.data-table-mobile-footer-item:not(.data-table-mobile-footer-item--summary)',
+    )
+    expect(within(mobileFooter).getByText('Total Label')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('Quoted Value')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('Realized Jobs')).toBeInTheDocument()
+    expect(within(mobileFooter).queryByText('total-label')).not.toBeInTheDocument()
+  })
+
+  it('can render two-cell embedded footer rows as detailed mobile rows', () => {
+    const { container } = render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, quoted: 5, won: 2 }]}
+        columns={[
+          { key: 'quoted', label: 'Quoted' },
+          { key: 'won', label: 'Won' },
+        ]}
+        footerRows={[
+          {
+            key: 'totals',
+            mobileLayout: 'details',
+            cells: [
+              { key: 'quoted', content: '8' },
+              { key: 'won', content: '3' },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    expect(
+      container.querySelector('.data-table-mobile-footer-item--summary'),
+    ).not.toBeInTheDocument()
+    const mobileFooter = container.querySelector('.data-table-mobile-footer-item')
+    expect(within(mobileFooter).getByText('Quoted')).toBeInTheDocument()
+    expect(within(mobileFooter).getByText('Won')).toBeInTheDocument()
+  })
+
+  it('keeps monitoring table mobile cards off Bootstrap light surfaces', () => {
+    const monitoringFiles = [
+      '../../../views/dashboard/monitoring/MonitoringPipelineStatus.js',
+      '../../../views/dashboard/monitoring/MonitoringPipelineToolsContent.js',
+      '../../../views/dashboard/monitoring/MonitoringStaffPipelineMatrix.js',
+    ]
+
+    monitoringFiles.forEach((filePath) => {
+      const source = readFileSync(new URL(filePath, import.meta.url), 'utf8')
+      expect(source).toContain('dashboard-table-mobile-card')
+      expect(source).not.toMatch(/rounded-4 bg-light p-3|bg-light p-3/)
+    })
+  })
+
+  it('keeps shared sheet table shells rounded for Monitoring dashboard tables', () => {
+    const source = readFileSync('src/scss/custom/_data-table.scss', 'utf8')
+
+    expect(source).toMatch(
+      /\.data-table-sheet-shell\s*\{[^}]*border-radius: var\(--app-radius-lg\)/,
+    )
+    expect(source).toMatch(
+      /\.monitoring-table-frame\s*\{[^}]*border-radius: var\(--app-radius-lg\)/,
+    )
+    expect(source).not.toMatch(/\.monitoring-table-frame\s*\{[^}]*border-radius: 0/)
+  })
+
+  it('prevents double-thick bottom borders on Monitoring sheet tables', () => {
+    const source = readFileSync('src/scss/custom/_data-table.scss', 'utf8')
+
+    expect(source).toMatch(
+      /\.monitoring-table-frame \.monitoring-sheet-table tbody tr:last-child > \*,\s*\.monitoring-table-frame \.monitoring-sheet-table tfoot tr:last-child > \*\s*\{[^}]*border-bottom: 0 !important/,
+    )
   })
 
   it('renders matrix tables with dynamic numeric columns and footer totals', () => {
@@ -777,5 +975,57 @@ describe('datatable shared components', () => {
     expect(metricHeader.style.minWidth).toBe('160px')
     expect(screen.getByText('Revenue')).toBeInTheDocument()
     expect(screen.getByText('Totals')).toBeInTheDocument()
+  })
+
+  it('renders sheet tables with grouped headers, spans, footer rows, and jsx cells', () => {
+    render(
+      <DataTableSheet
+        headerRows={[
+          {
+            key: 'group',
+            cells: [
+              { key: 'metric', content: 'Metric', rowSpan: 2 },
+              { key: 'week', content: 'Week 1', colSpan: 2, className: 'group-heading' },
+            ],
+          },
+          {
+            key: 'subhead',
+            cells: [
+              { key: 'qty', content: 'QTY' },
+              { key: 'value', content: 'RM' },
+            ],
+          },
+        ]}
+        rows={[
+          {
+            key: 'training',
+            cells: [
+              { key: 'metric', content: <strong>Training</strong> },
+              { key: 'qty', content: 2, align: 'center' },
+              { key: 'value', content: '1,000', align: 'end' },
+            ],
+          },
+        ]}
+        footerRows={[
+          {
+            key: 'total',
+            cells: [
+              { key: 'metric', content: 'Total' },
+              { key: 'qty', content: 2, align: 'center' },
+              { key: 'value', content: '1,000', align: 'end' },
+            ],
+          },
+        ]}
+        shellClassName="custom-sheet-shell"
+      />,
+    )
+
+    expect(screen.getByRole('columnheader', { name: 'Metric' })).toHaveAttribute('rowspan', '2')
+    expect(screen.getByRole('columnheader', { name: 'Week 1' })).toHaveAttribute('colspan', '2')
+    expect(screen.getByRole('columnheader', { name: 'Week 1' })).toHaveClass('group-heading')
+    expect(screen.getByText('Training')).toBeInTheDocument()
+    expect(screen.getAllByText('1,000')[0].closest('td')).toHaveClass('text-end')
+    expect(document.querySelector('.data-table-sheet-shell')).toHaveClass('custom-sheet-shell')
+    expect(screen.getByText('Total')).toBeInTheDocument()
   })
 })
