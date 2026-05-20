@@ -20,6 +20,7 @@ import {
 import {
   getTrainingRateOption,
   getTrainingTravelRegion,
+  shouldApplyTrainingRateFloors,
   trainingRateOptions,
   trainingTravelRegionOptions,
 } from './trainingRates'
@@ -30,24 +31,135 @@ const money = (value) =>
     maximumFractionDigits: 2,
   })
 
+const labels = {
+  en: {
+    title: 'Pricing Details',
+    pricingCategory: 'Pricing Category',
+    travelRegion: 'Travel Region',
+    travelMinimum: 'Mob. & accom. minimum',
+    floorExemption: 'Configured minimums are not applied for online or hourly training.',
+    requestOverride: 'Request Override',
+    negotiationTitle: 'Approved negotiation applied.',
+    negotiationBody:
+      'Training base rates remain locked at the configured unit, travel/accommodation, and meal rates.',
+    negotiationDiscount:
+      'is applied as the approved discount and will replace any existing discount when saved.',
+    pricingBasis: 'Pricing Basis',
+    perSession: 'Per Session / Class',
+    perPax: 'Per Pax',
+    quantity: 'Quantity',
+    duration: 'Duration',
+    noOfPax: 'No. of Pax',
+    unitPrice: 'Unit Price',
+    travelCharge: 'Mob. & Accom. Costs',
+    participantsMeals: 'Participants Meals',
+    mealPlaceholder: 'Enter meal cost',
+    discountType: 'Discount Type',
+    discountValue: 'Discount Value',
+    sstRate: 'SST Rate',
+    hrdCharge: 'HRD Charge',
+    chooseDiscount: 'Choose discount',
+    noDiscount: 'No Discount',
+    oneOff: 'One-Off',
+    introductory: 'Introductory',
+    special: 'Special',
+    negotiated: 'Negotiated',
+    insertAmount: 'Insert amount',
+    sessionUnit: 'session(s)',
+    paxUnit: 'pax',
+    sumUnit: 'sum',
+    mealUnit: 'per pax per day',
+    dayUnit: 'day(s)',
+    hourUnit: 'hour(s)',
+    yes: 'Yes',
+    no: 'No',
+    per: 'per',
+    perPaxSuffix: 'per pax',
+  },
+  bm: {
+    title: 'Butiran Harga',
+    pricingCategory: 'Kategori Harga',
+    travelRegion: 'Wilayah Perjalanan',
+    travelMinimum: 'Minimum mob. & penginapan',
+    floorExemption:
+      'Minimum yang ditetapkan tidak digunakan untuk latihan dalam talian atau mengikut jam.',
+    requestOverride: 'Mohon Pengecualian',
+    negotiationTitle: 'Rundingan diluluskan.',
+    negotiationBody:
+      'Kadar asas latihan kekal mengikut unit, perjalanan/penginapan dan makanan yang ditetapkan.',
+    negotiationDiscount:
+      'digunakan sebagai diskaun yang diluluskan dan akan menggantikan diskaun sedia ada apabila disimpan.',
+    pricingBasis: 'Asas Harga',
+    perSession: 'Setiap Sesi / Kelas',
+    perPax: 'Setiap Peserta',
+    quantity: 'Kuantiti',
+    duration: 'Tempoh',
+    noOfPax: 'Bil. Peserta',
+    unitPrice: 'Harga Unit',
+    travelCharge: 'Kos Mob. & Penginapan',
+    participantsMeals: 'Makanan Peserta',
+    mealPlaceholder: 'Masukkan kos makanan',
+    discountType: 'Jenis Diskaun',
+    discountValue: 'Nilai Diskaun',
+    sstRate: 'Kadar SST',
+    hrdCharge: 'Caj HRD',
+    chooseDiscount: 'Pilih diskaun',
+    noDiscount: 'Tiada Diskaun',
+    oneOff: 'Sekali Sahaja',
+    introductory: 'Pengenalan',
+    special: 'Khas',
+    negotiated: 'Rundingan',
+    insertAmount: 'Masukkan amaun',
+    sessionUnit: 'sesi',
+    paxUnit: 'peserta',
+    sumUnit: 'jumlah',
+    mealUnit: 'setiap peserta setiap hari',
+    dayUnit: 'hari',
+    hourUnit: 'jam',
+    yes: 'Ya',
+    no: 'Tidak',
+    per: 'setiap',
+    perPaxSuffix: 'setiap peserta',
+  },
+}
+
+const discountLabels = (text) => ({
+  'No Discount': text.noDiscount,
+  'One-Off': text.oneOff,
+  Introductory: text.introductory,
+  Special: text.special,
+  Negotiated: text.negotiated,
+})
+
 const PricingDetailsCard = ({
   formData,
   setFormData,
   onRequestOverride,
   appliedPriceException = null,
+  proposalLanguage = 'en',
 }) => {
+  const text = proposalLanguage === 'ms-MY' ? labels.bm : labels.en
+  const discountLabelMap = discountLabels(text)
   const selectedRate = getTrainingRateOption(formData.trainingRateType)
   const selectedTravelRegion = getTrainingTravelRegion(formData.travelRegion)
   const isPerPaxMode = formData.pricingBasis === 'per_pax'
-  const unitLabel = formData.durationUnit.replace('(s)', '').trim()
-  const unitPriceSuffix = formData.pricingBasis === 'per_pax' ? 'per pax' : `per ${unitLabel}`
+  const appliesRateFloors = shouldApplyTrainingRateFloors(formData)
+  const durationUnit = formData.durationUnit || 'day(s)'
+  const unitLabel = durationUnit === 'hour(s)' ? text.hourUnit : text.dayUnit
+  const unitPriceSuffix =
+    formData.pricingBasis === 'per_pax' ? text.perPaxSuffix : `${text.per} ${unitLabel}`
   const hasAppliedNegotiation = Boolean(appliedPriceException)
-  const travelRateLabel =
-    selectedTravelRegion.amount > 0
-      ? `Mob. & accom. minimum: RM ${money(selectedTravelRegion.amount)} (${selectedTravelRegion.label})`
-      : 'Mob. & accom. minimum: RM 0.00'
+  const travelRateLabel = (() => {
+    if (!appliesRateFloors) return text.floorExemption
+    if (selectedTravelRegion.amount > 0) {
+      return `${text.travelMinimum}: RM ${money(selectedTravelRegion.amount)} (${selectedTravelRegion.label})`
+    }
+    return `${text.travelMinimum}: RM 0.00`
+  })()
   const enforceRateFloors = () => {
     setFormData((prev) => {
+      if (!shouldApplyTrainingRateFloors(prev)) return prev
+
       const rate = getTrainingRateOption(prev.trainingRateType)
       const region = getTrainingTravelRegion(prev.travelRegion)
       return {
@@ -74,29 +186,41 @@ const PricingDetailsCard = ({
     <CCol xs={12}>
       <CCard className="mb-4">
         <CCardHeader>
-          <strong>Pricing Details</strong>
+          <strong>{text.title}</strong>
         </CCardHeader>
         <CCardBody>
           <CForm className="row g-3">
             <CCol md={6}>
-              <CFormLabel htmlFor="trainingRateType">Pricing Category</CFormLabel>
+              <CFormLabel htmlFor="trainingRateType">{text.pricingCategory}</CFormLabel>
               <CFormSelect
                 id="trainingRateType"
                 value={formData.trainingRateType || selectedRate.value}
                 onChange={(e) => {
                   const rate = getTrainingRateOption(e.target.value)
-                  setFormData((prev) => ({
-                    ...prev,
-                    trainingRateType: rate.value,
-                    pricingBasis: rate.pricingBasis || 'per_session',
-                    trainingQty: 1,
-                    trainingDuration: 1,
-                    durationUnit: 'day(s)',
-                    noOfPax: rate.pricingBasis === 'per_pax' ? 1 : prev.noOfPax || 25,
-                    unitPrice: rate.unitCost,
-                    mealsProvided: rate.mealUnitCost > 0 ? 'Yes' : prev.mealsProvided,
-                    mealPrice: rate.mealUnitCost > 0 ? rate.mealUnitCost : prev.mealPrice,
-                  }))
+                  setFormData((prev) => {
+                    const nextPricingBasis = rate.pricingBasis || 'per_session'
+                    const appliesRateFloors = shouldApplyTrainingRateFloors({
+                      ...prev,
+                      pricingBasis: nextPricingBasis,
+                    })
+
+                    return {
+                      ...prev,
+                      trainingRateType: rate.value,
+                      pricingBasis: nextPricingBasis,
+                      trainingQty: 1,
+                      trainingDuration: prev.trainingDuration || 1,
+                      durationUnit: prev.durationUnit || 'day(s)',
+                      noOfPax: nextPricingBasis === 'per_pax' ? 1 : prev.noOfPax || 25,
+                      unitPrice: appliesRateFloors ? rate.unitCost : prev.unitPrice,
+                      mealsProvided:
+                        appliesRateFloors && rate.mealUnitCost > 0 ? 'Yes' : prev.mealsProvided,
+                      mealPrice:
+                        appliesRateFloors && rate.mealUnitCost > 0
+                          ? rate.mealUnitCost
+                          : prev.mealPrice,
+                    }
+                  })
                 }}
               >
                 {trainingRateOptions.map((option) => (
@@ -108,7 +232,7 @@ const PricingDetailsCard = ({
             </CCol>
 
             <CCol md={6}>
-              <CFormLabel htmlFor="travelRegion">Travel Region</CFormLabel>
+              <CFormLabel htmlFor="travelRegion">{text.travelRegion}</CFormLabel>
               <CFormSelect
                 id="travelRegion"
                 value={formData.travelRegion || selectedTravelRegion.value}
@@ -117,7 +241,9 @@ const PricingDetailsCard = ({
                   setFormData((prev) => ({
                     ...prev,
                     travelRegion: region.value,
-                    travelCharge: region.amount,
+                    travelCharge: shouldApplyTrainingRateFloors(prev)
+                      ? region.amount
+                      : prev.travelCharge,
                   }))
                 }}
               >
@@ -141,7 +267,7 @@ const PricingDetailsCard = ({
                 </span>
                 {selectedRate.requiresManagementApproval && (
                   <CButton color="warning" size="sm" onClick={onRequestOverride}>
-                    Request Override
+                    {text.requestOverride}
                   </CButton>
                 )}
               </CAlert>
@@ -150,22 +276,20 @@ const PricingDetailsCard = ({
             {hasAppliedNegotiation && (
               <CCol xs={12}>
                 <CAlert color="success" className="mb-0">
-                  <strong>Approved negotiation applied.</strong> Training base rates remain locked
-                  at the configured unit, travel/accommodation, and meal rates. RM{' '}
-                  {money(formData.discountValue)} is applied as the approved discount and will
-                  replace any existing discount when saved.
+                  <strong>{text.negotiationTitle}</strong> {text.negotiationBody} RM{' '}
+                  {money(formData.discountValue)} {text.negotiationDiscount}
                 </CAlert>
               </CCol>
             )}
 
             <CCol md={12}>
-              <CFormLabel className="d-block">Pricing Basis</CFormLabel>
+              <CFormLabel className="d-block">{text.pricingBasis}</CFormLabel>
               <div className="d-flex gap-4">
                 <CFormCheck
                   id="pricingBasisPerSession"
                   type="radio"
                   name="pricingBasis"
-                  label="Per Session / Class"
+                  label={text.perSession}
                   checked={(formData.pricingBasis || 'per_session') === 'per_session'}
                   disabled
                   onChange={() =>
@@ -184,7 +308,7 @@ const PricingDetailsCard = ({
                   id="pricingBasisPerPax"
                   type="radio"
                   name="pricingBasis"
-                  label="Per Pax"
+                  label={text.perPax}
                   checked={formData.pricingBasis === 'per_pax'}
                   disabled
                   onChange={() =>
@@ -204,7 +328,7 @@ const PricingDetailsCard = ({
             {/* Quantity */}
             {!isPerPaxMode && (
               <CCol md={3}>
-                <CFormLabel htmlFor="trainingQty">Quantity</CFormLabel>
+                <CFormLabel htmlFor="trainingQty">{text.quantity}</CFormLabel>
                 <CInputGroup>
                   <CFormInput
                     type="number"
@@ -218,7 +342,7 @@ const PricingDetailsCard = ({
                       }))
                     }
                   />
-                  <CInputGroupText>session(s)</CInputGroupText>
+                  <CInputGroupText>{text.sessionUnit}</CInputGroupText>
                 </CInputGroup>
               </CCol>
             )}
@@ -226,7 +350,7 @@ const PricingDetailsCard = ({
             {/* Duration */}
             {!isPerPaxMode && (
               <CCol md={3}>
-                <CFormLabel htmlFor="trainingDuration">Duration</CFormLabel>
+                <CFormLabel htmlFor="trainingDuration">{text.duration}</CFormLabel>
                 <CInputGroup>
                   <CFormInput
                     type="number"
@@ -249,8 +373,8 @@ const PricingDetailsCard = ({
                       }))
                     }
                   >
-                    <option value="day(s)">day(s)</option>
-                    <option value="hour(s)">hour(s)</option>
+                    <option value="day(s)">{text.dayUnit}</option>
+                    <option value="hour(s)">{text.hourUnit}</option>
                   </CFormSelect>
                 </CInputGroup>
               </CCol>
@@ -258,7 +382,7 @@ const PricingDetailsCard = ({
 
             {/* No. of Pax */}
             <CCol md={3}>
-              <CFormLabel htmlFor="noOfPax">No. of Pax</CFormLabel>
+              <CFormLabel htmlFor="noOfPax">{text.noOfPax}</CFormLabel>
               <CInputGroup>
                 <CFormInput
                   type="number"
@@ -272,13 +396,13 @@ const PricingDetailsCard = ({
                     }))
                   }
                 />
-                <CInputGroupText>pax</CInputGroupText>
+                <CInputGroupText>{text.paxUnit}</CInputGroupText>
               </CInputGroup>
             </CCol>
 
             {/* Unit Price */}
             <CCol md={3}>
-              <CFormLabel htmlFor="unitPrice">Unit Price</CFormLabel>
+              <CFormLabel htmlFor="unitPrice">{text.unitPrice}</CFormLabel>
               <CInputGroup>
                 <CFormInput
                   type="number"
@@ -298,7 +422,7 @@ const PricingDetailsCard = ({
 
             {/* Mobilization Cost */}
             <CCol md={3}>
-              <CFormLabel htmlFor="travelCharge">Mob. & Accom. Costs</CFormLabel>
+              <CFormLabel htmlFor="travelCharge">{text.travelCharge}</CFormLabel>
               <CInputGroup>
                 <CFormInput
                   type="number"
@@ -312,13 +436,13 @@ const PricingDetailsCard = ({
                   }
                   onBlur={enforceRateFloors}
                 />
-                <CInputGroupText>sum</CInputGroupText>
+                <CInputGroupText>{text.sumUnit}</CInputGroupText>
               </CInputGroup>
             </CCol>
 
             {/* Meals */}
             <CCol md={3}>
-              <CFormLabel htmlFor="participantsMeals">Participants Meals</CFormLabel>
+              <CFormLabel htmlFor="participantsMeals">{text.participantsMeals}</CFormLabel>
               <CFormSelect
                 id="participantsMeals"
                 value={formData.mealsProvided}
@@ -331,8 +455,8 @@ const PricingDetailsCard = ({
                   }))
                 }}
               >
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
+                <option value="No">{text.no}</option>
+                <option value="Yes">{text.yes}</option>
               </CFormSelect>
 
               {/* Meal Price if Yes */}
@@ -341,7 +465,7 @@ const PricingDetailsCard = ({
                   <CFormInput
                     type="number"
                     id="mealPrice"
-                    placeholder="Enter meal cost"
+                    placeholder={text.mealPlaceholder}
                     value={formData.mealPrice}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -351,14 +475,14 @@ const PricingDetailsCard = ({
                     }
                     onBlur={enforceRateFloors}
                   />
-                  <CInputGroupText>per pax per day</CInputGroupText>
+                  <CInputGroupText>{text.mealUnit}</CInputGroupText>
                 </CInputGroup>
               )}
             </CCol>
 
             {/* Discount Type */}
             <CCol md={3}>
-              <CFormLabel htmlFor="discountType">Discount Type</CFormLabel>
+              <CFormLabel htmlFor="discountType">{text.discountType}</CFormLabel>
               <CFormSelect
                 id="discountType"
                 value={formData.discountType}
@@ -380,20 +504,20 @@ const PricingDetailsCard = ({
                   }))
                 }}
               >
-                <option value="">Choose discount</option>
-                <option value="No Discount">No Discount</option>
-                <option value="One-Off">One-Off</option>
-                <option value="Introductory">Introductory</option>
-                <option value="Special">Special</option>
+                <option value="">{text.chooseDiscount}</option>
+                <option value="No Discount">{discountLabelMap['No Discount']}</option>
+                <option value="One-Off">{discountLabelMap['One-Off']}</option>
+                <option value="Introductory">{discountLabelMap.Introductory}</option>
+                <option value="Special">{discountLabelMap.Special}</option>
                 {formData.discountType === 'Negotiated' && (
-                  <option value="Negotiated">Negotiated</option>
+                  <option value="Negotiated">{discountLabelMap.Negotiated}</option>
                 )}
               </CFormSelect>
             </CCol>
 
             {/* Discount Value */}
             <CCol md={3}>
-              <CFormLabel htmlFor="discountValue">Discount Value</CFormLabel>
+              <CFormLabel htmlFor="discountValue">{text.discountValue}</CFormLabel>
               <CInputGroup>
                 <CFormInput
                   type="number"
@@ -407,7 +531,7 @@ const PricingDetailsCard = ({
                   }
                   disabled={!formData.discountType}
                   readOnly={hasAppliedNegotiation}
-                  placeholder={formData.discountType === 'Special' ? 'Insert amount' : ''}
+                  placeholder={formData.discountType === 'Special' ? text.insertAmount : ''}
                 />
                 <CInputGroupText>MYR</CInputGroupText>
               </CInputGroup>
@@ -415,7 +539,7 @@ const PricingDetailsCard = ({
 
             {/* SST Rate */}
             <CCol md={2}>
-              <CFormLabel htmlFor="sstRate">SST Rate</CFormLabel>
+              <CFormLabel htmlFor="sstRate">{text.sstRate}</CFormLabel>
               <CInputGroup>
                 <CFormInput
                   type="number"
@@ -436,7 +560,7 @@ const PricingDetailsCard = ({
 
             {/* HRD Charge */}
             <CCol md={2}>
-              <CFormLabel htmlFor="hrdCharge">HRD Charge</CFormLabel>
+              <CFormLabel htmlFor="hrdCharge">{text.hrdCharge}</CFormLabel>
               <CInputGroup>
                 <CFormInput
                   type="number"

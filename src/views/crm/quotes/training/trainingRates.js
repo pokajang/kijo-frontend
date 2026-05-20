@@ -28,3 +28,14 @@ export const getTrainingRateOption = (value) =>
 export const getTrainingTravelRegion = (value) =>
   trainingTravelRegionOptions.find((option) => option.value === value) ||
   trainingTravelRegionOptions[0]
+
+export const shouldApplyTrainingRateFloors = ({
+  trainingTypeOption,
+  durationUnit,
+  pricingBasis,
+} = {}) => {
+  if (trainingTypeOption === 'Online') return false
+  if ((durationUnit || 'day(s)') !== 'day(s)') return false
+  if (pricingBasis === 'per_pax') return true
+  return true
+}

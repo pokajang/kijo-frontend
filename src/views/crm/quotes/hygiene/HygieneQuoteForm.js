@@ -72,7 +72,7 @@ export default function HygieneQuotationForm({
       unitPrice: 500,
       discount: 300,
       priceExceptionRequestId: '',
-      sstPercent: 8,
+      sstPercent: 0,
       sstAmount: '0.00',
       subTotal: '0.00',
       grandTotal: '0.00',

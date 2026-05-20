@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clientModuleTabs } from './moduleNavConfigs'
+import { clientModuleTabs, systemAdminModuleTabs } from './moduleNavConfigs'
 
 describe('clientModuleTabs', () => {
   it('includes the ROI per Client tab', () => {
@@ -21,6 +21,19 @@ describe('clientModuleTabs', () => {
           key: 'vendor-registration',
           label: 'Vendor Registration',
           to: '/client/vendor-registration',
+        }),
+      ]),
+    )
+  })
+})
+
+describe('systemAdminModuleTabs', () => {
+  it('includes the Email Test tab', () => {
+    expect(systemAdminModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'email-test',
+          label: 'Email Test',
         }),
       ]),
     )

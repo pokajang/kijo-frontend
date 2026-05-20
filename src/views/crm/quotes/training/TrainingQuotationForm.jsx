@@ -13,15 +13,10 @@ import {
   readQuoteServiceDraft,
   writeQuoteServiceDraft,
 } from '../quoteMainDrafts'
+import { formatTrainingDurationLabel } from './trainingDuration'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchPriceException } from '../priceException'
-
-const durationMap = {
-  halfday_am: 'half day (AM)',
-  halfday_pm: 'half day (PM)',
-  '1day': '1 day',
-}
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
@@ -219,7 +214,7 @@ const TrainingQuotationForm = ({
           const options = rows.map((item) => ({
             value: item.id,
             proposal_id: item.id,
-            label: `${item.training_title} – ${durationMap[item.duration] || item.duration}${item.proposal_language === 'ms-MY' ? ' [BM]' : ''}`,
+            label: `${item.training_title} - ${formatTrainingDurationLabel(item.duration)}${item.proposal_language === 'ms-MY' ? ' [BM]' : ''}`,
             duration: item.duration,
             trainingTitle: item.training_title,
           }))
@@ -312,6 +307,7 @@ const TrainingQuotationForm = ({
             setFormData={setFormData}
             onRequestOverride={handleRequestOverride}
             appliedPriceException={appliedPriceException}
+            proposalLanguage={proposalLanguage}
           />
         </CCol>
       )}

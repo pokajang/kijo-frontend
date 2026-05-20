@@ -1,12 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { CAlert, CBadge, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 import { DataTableLoadingState } from '../../components/datatable'
+import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
+import { systemAdminModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import { API_BASE } from './schema-sync/constants'
 import SchemaScriptsTable from './schema-sync/SchemaScriptsTable'
 import { normalizeScripts } from './schema-sync/schemaSyncUtils'
 import SummaryTile from './schema-sync/SummaryTile'
+import SectionMailDiagnostics from './SectionMailDiagnostics'
 
 const SystemAdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('migration-status')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [data, setData] = useState(null)
@@ -58,96 +62,109 @@ const SystemAdminDashboard = () => {
   const normalizedScripts = useMemo(() => normalizeScripts(sortedFiles), [sortedFiles])
 
   return (
-    <CRow>
-      <CCol xl={12}>
-        <CCard className="mb-4 records-page-card">
-          <CCardHeader className="d-flex align-items-center gap-2 flex-wrap records-page-card-header">
-            <strong>Laravel Migration Status</strong>
-            <CBadge color="secondary" className="rounded-pill">
-              Read-only
-            </CBadge>
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm ms-auto"
-              onClick={loadStatus}
-              disabled={isBusy}
-            >
-              Refresh
-            </button>
-          </CCardHeader>
-          <CCardBody className="records-page-card-body">
-            {loading ? (
-              <DataTableLoadingState message="Loading Laravel migration status..." />
-            ) : (
-              <>
-                {error && (
-                  <CAlert color={data ? 'warning' : 'danger'}>
-                    {error}
-                    {data ? ' Showing the last successful migration status.' : ''}
-                  </CAlert>
-                )}
+    <>
+      <ModuleNavStrip
+        tabs={systemAdminModuleTabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        ariaLabel="System admin sections"
+      />
 
-                {!data ? (
-                  <div className="text-center py-4 text-muted">
-                    Migration status is unavailable. Refresh to try again.
-                  </div>
+      {activeTab === 'email-test' ? (
+        <SectionMailDiagnostics />
+      ) : (
+        <CRow>
+          <CCol xl={12}>
+            <CCard className="mb-4 records-page-card">
+              <CCardHeader className="d-flex align-items-center gap-2 flex-wrap records-page-card-header">
+                <strong>Laravel Migration Status</strong>
+                <CBadge color="secondary" className="rounded-pill">
+                  Read-only
+                </CBadge>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm ms-auto"
+                  onClick={loadStatus}
+                  disabled={isBusy}
+                >
+                  Refresh
+                </button>
+              </CCardHeader>
+              <CCardBody className="records-page-card-body">
+                {loading ? (
+                  <DataTableLoadingState message="Loading Laravel migration status..." />
                 ) : (
                   <>
-                    <div className="d-flex flex-wrap align-items-center gap-4 mb-3">
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="text-uppercase text-muted small">Access</span>
-                        <CBadge color="secondary" className="rounded-pill px-3">
-                          System Admin, status only
-                        </CBadge>
+                    {error && (
+                      <CAlert color={data ? 'warning' : 'danger'}>
+                        {error}
+                        {data ? ' Showing the last successful migration status.' : ''}
+                      </CAlert>
+                    )}
+
+                    {!data ? (
+                      <div className="text-center py-4 text-muted">
+                        Migration status is unavailable. Refresh to try again.
                       </div>
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="text-uppercase text-muted small">Source</span>
-                        <span className="fw-semibold">
-                          {data.environment?.migration_source === 'laravel'
-                            ? 'Laravel migrations'
-                            : '-'}
-                        </span>
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="d-flex flex-wrap align-items-center gap-4 mb-3">
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="text-uppercase text-muted small">Access</span>
+                            <CBadge color="secondary" className="rounded-pill px-3">
+                              System Admin, status only
+                            </CBadge>
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="text-uppercase text-muted small">Source</span>
+                            <span className="fw-semibold">
+                              {data.environment?.migration_source === 'laravel'
+                                ? 'Laravel migrations'
+                                : '-'}
+                            </span>
+                          </div>
+                        </div>
 
-                    <CAlert color="info">
-                      Laravel migrations should run through deployment or server terminal using{' '}
-                      <code>php artisan migrate</code>. This page is read-only and shows whether the
-                      database matches the migration files in this codebase.
-                    </CAlert>
+                        <CAlert color="info">
+                          Laravel migrations should run through deployment or server terminal using{' '}
+                          <code>php artisan migrate</code>. This page is read-only and shows whether
+                          the database matches the migration files in this codebase.
+                        </CAlert>
 
-                    <CRow className="g-2 align-items-stretch mb-4">
-                      <CCol xs={6} md={4} lg={3}>
-                        <SummaryTile
-                          label="Pending Migrations"
-                          value={pendingCount}
-                          color="danger"
-                        />
-                      </CCol>
-                      <CCol xs={6} md={4} lg={3}>
-                        <SummaryTile label="Applied" value={syncedCount} color="success" />
-                      </CCol>
-                      <CCol xs={6} md={4} lg={3}>
-                        <SummaryTile
-                          label="Missing Files"
-                          value={missingFileCount}
-                          color="warning"
-                        />
-                      </CCol>
-                      <CCol xs={6} md={4} lg={3}>
-                        <SummaryTile label="Total Known" value={totalCount} color="secondary" />
-                      </CCol>
-                    </CRow>
+                        <CRow className="g-2 align-items-stretch mb-4">
+                          <CCol xs={6} md={4} lg={3}>
+                            <SummaryTile
+                              label="Pending Migrations"
+                              value={pendingCount}
+                              color="danger"
+                            />
+                          </CCol>
+                          <CCol xs={6} md={4} lg={3}>
+                            <SummaryTile label="Applied" value={syncedCount} color="success" />
+                          </CCol>
+                          <CCol xs={6} md={4} lg={3}>
+                            <SummaryTile
+                              label="Missing Files"
+                              value={missingFileCount}
+                              color="warning"
+                            />
+                          </CCol>
+                          <CCol xs={6} md={4} lg={3}>
+                            <SummaryTile label="Total Known" value={totalCount} color="secondary" />
+                          </CCol>
+                        </CRow>
 
-                    <SchemaScriptsTable rows={normalizedScripts} dataFiles={data.files} />
+                        <SchemaScriptsTable rows={normalizedScripts} dataFiles={data.files} />
+                      </>
+                    )}
                   </>
                 )}
-              </>
-            )}
-          </CCardBody>
-        </CCard>
-      </CCol>
-    </CRow>
+              </CCardBody>
+            </CCard>
+          </CCol>
+        </CRow>
+      )}
+    </>
   )
 }
 

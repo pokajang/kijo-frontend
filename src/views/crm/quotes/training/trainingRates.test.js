@@ -3,6 +3,7 @@ import trainingRateConfig from '../config/trainingRates.json'
 import {
   getTrainingRateOption,
   getTrainingTravelRegion,
+  shouldApplyTrainingRateFloors,
   trainingRateOptions,
   trainingTravelRegionOptions,
   TRAINING_RATE_TYPES,
@@ -35,5 +36,47 @@ describe('trainingRates', () => {
     expect(getTrainingTravelRegion('central_border')).toMatchObject({
       amount: 800,
     })
+  })
+
+  it('does not apply configured rate floors to online or hourly training', () => {
+    expect(
+      shouldApplyTrainingRateFloors({
+        trainingTypeOption: 'Online',
+        durationUnit: 'day(s)',
+        pricingBasis: 'per_session',
+      }),
+    ).toBe(false)
+
+    expect(
+      shouldApplyTrainingRateFloors({
+        trainingTypeOption: 'Physical',
+        durationUnit: 'hour(s)',
+        pricingBasis: 'per_session',
+      }),
+    ).toBe(false)
+
+    expect(
+      shouldApplyTrainingRateFloors({
+        trainingTypeOption: 'Physical',
+        durationUnit: 'hour(s)',
+        pricingBasis: 'per_pax',
+      }),
+    ).toBe(false)
+
+    expect(
+      shouldApplyTrainingRateFloors({
+        trainingTypeOption: 'Physical',
+        durationUnit: 'day(s)',
+        pricingBasis: 'per_session',
+      }),
+    ).toBe(true)
+
+    expect(
+      shouldApplyTrainingRateFloors({
+        trainingTypeOption: 'Physical',
+        durationUnit: 'day(s)',
+        pricingBasis: 'per_pax',
+      }),
+    ).toBe(true)
   })
 })

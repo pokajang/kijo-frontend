@@ -55,10 +55,13 @@ const ManageKpi = () => {
     'Dec',
   ]
   const lastParamsKeyRef = useRef('')
+  const loadingParamsKeyRef = useRef('')
+  const bootstrappingStaffIdRef = useRef(null)
   const overviewRunIdRef = useRef(0)
 
   // ==== RESET WHEN STAFF CHANGES ====
   useEffect(() => {
+    bootstrappingStaffIdRef.current = staffId || null
     setYear(null)
     setYearOptions([])
     setLoadingYears(false)
@@ -70,6 +73,7 @@ const ManageKpi = () => {
     setAllTrackerData([])
     setErrorAnnual('')
     lastParamsKeyRef.current = ''
+    loadingParamsKeyRef.current = ''
     overviewRunIdRef.current += 1
   }, [staffId])
 
@@ -77,6 +81,7 @@ const ManageKpi = () => {
   useEffect(() => {
     if (!staffId) return
     let cancelled = false
+    bootstrappingStaffIdRef.current = staffId
     ;(async () => {
       try {
         setLoadingYears(true)
@@ -96,11 +101,18 @@ const ManageKpi = () => {
         setYear(defaultYear)
 
         // seed KPI list for that year (avoids extra round trip before year-effect below)
+        lastParamsKeyRef.current = `${staffId}-${defaultYear}`
         setKpiOptions(items.filter((i) => Number(i.year) === Number(defaultYear)))
       } catch (err) {
         if (!cancelled) setErrorAnnual(err.message)
       } finally {
-        if (!cancelled) setLoadingYears(false)
+        if (!cancelled) {
+          if (bootstrappingStaffIdRef.current === staffId) {
+            bootstrappingStaffIdRef.current = null
+          }
+          setLoadingYears(false)
+          setSwitchingYear(false)
+        }
       }
     })()
     return () => {
@@ -112,15 +124,20 @@ const ManageKpi = () => {
   // 2) When year changes, load KPI parameters for that (staff, year)
   useEffect(() => {
     if (!staffId || !year) return
+    if (bootstrappingStaffIdRef.current === staffId) return
     const key = `${staffId}-${year}`
     // if list already matches requested year, skip fetch
     if (
       lastParamsKeyRef.current === key &&
+      kpiOptions.length > 0 &&
       kpiOptions.every((k) => Number(k.year) === Number(year))
-    )
+    ) {
+      loadingParamsKeyRef.current = ''
+      setSwitchingYear(false)
       return
-    lastParamsKeyRef.current = key
+    }
 
+    loadingParamsKeyRef.current = key
     setSwitchingYear(true)
     setAnnualOverview([])
     setAllTrackerData([])
@@ -130,11 +147,17 @@ const ManageKpi = () => {
       try {
         const items = await getAllKpiParameters(staffId, year)
         if (cancelled) return
+        lastParamsKeyRef.current = key
         setKpiOptions(items)
       } catch (err) {
         if (!cancelled) setErrorAnnual(err.message)
       } finally {
-        if (!cancelled) setSwitchingYear(false)
+        if (!cancelled) {
+          if (loadingParamsKeyRef.current === key) {
+            loadingParamsKeyRef.current = ''
+          }
+          setSwitchingYear(false)
+        }
       }
     })()
     return () => {
@@ -145,9 +168,17 @@ const ManageKpi = () => {
 
   // 3) Build annual overview & collect trackers for (staff, year)
   useEffect(() => {
-    if (!staffId || !year || !kpiOptions.length) {
+    const paramsKey = staffId && year ? `${staffId}-${year}` : ''
+    const isLoadingParams = loadingParamsKeyRef.current === paramsKey
+    const isBootstrappingStaff = bootstrappingStaffIdRef.current === staffId
+
+    if (!staffId || !year || isLoadingParams || isBootstrappingStaff || !kpiOptions.length) {
       setAnnualOverview([])
       setAllTrackerData([])
+      setLoadingAnnual(false)
+      if (!isLoadingParams && !isBootstrappingStaff) {
+        setSwitchingYear(false)
+      }
       return
     }
 

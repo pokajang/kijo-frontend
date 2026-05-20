@@ -10,11 +10,13 @@ export const registerAppServiceWorker = () => {
   }
 
   if (!registrationPromise) {
-    registrationPromise = navigator.serviceWorker.register(SERVICE_WORKER_URL).catch((error) => {
-      console.error('Service worker registration failed', error)
-      registrationPromise = null
-      throw error
-    })
+    registrationPromise = navigator.serviceWorker
+      .register(SERVICE_WORKER_URL, { updateViaCache: 'none' })
+      .catch((error) => {
+        console.error('Service worker registration failed', error)
+        registrationPromise = null
+        throw error
+      })
   }
 
   return registrationPromise

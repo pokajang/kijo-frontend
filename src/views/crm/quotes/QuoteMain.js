@@ -56,6 +56,31 @@ const getInitialInquiryData = (inquirySource, draftMain, explicitServiceKey) => 
   return { source: inquirySource.source || '', remarks: inquirySource.remarks || '' }
 }
 
+const quoteMainLabels = {
+  en: {
+    createQuotation: 'Create Quotation',
+    selectServiceQuotation: 'Select Service Quotation',
+    serviceType: 'Service Type',
+    selectService: 'Select Service',
+    proposalLanguage: 'Proposal Language',
+    inquirySource: 'Inquiry Source',
+    selectSource: 'Select Source...',
+    sourceRemarks: 'Source Remarks (optional)',
+    sourceRemarksPlaceholder: 'e.g., from SSS Telegram group, from ex-staff',
+  },
+  bm: {
+    createQuotation: 'Cipta Sebut Harga',
+    selectServiceQuotation: 'Pilih Sebut Harga Perkhidmatan',
+    serviceType: 'Jenis Perkhidmatan',
+    selectService: 'Pilih Perkhidmatan',
+    proposalLanguage: 'Bahasa Cadangan',
+    inquirySource: 'Sumber Pertanyaan',
+    selectSource: 'Pilih Sumber...',
+    sourceRemarks: 'Catatan Sumber (pilihan)',
+    sourceRemarksPlaceholder: 'cth. daripada kumpulan Telegram SSS, daripada bekas staf',
+  },
+}
+
 const QuoteMain = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -96,6 +121,7 @@ const QuoteMain = () => {
     getInitialInquiryData(inquirySource, draftMain, explicitServiceKey),
   )
   const [proposalLanguage, setProposalLanguage] = useState(draftMain?.proposalLanguage || 'en')
+  const text = proposalLanguage === 'ms-MY' ? quoteMainLabels.bm : quoteMainLabels.en
   const inquirySourcePendingRef = useRef(Boolean(inquirySource))
 
   useEffect(() => {
@@ -401,7 +427,7 @@ const QuoteMain = () => {
         <SelectClientCard
           selectedClient={selectedClient}
           onClientChange={handleClientChange}
-          title="Create Quotation"
+          title={text.createQuotation}
           onBack={() => navigate(returnTo)}
         />
       )}
@@ -411,18 +437,18 @@ const QuoteMain = () => {
           <CCol xs={12}>
             <CCard className="mb-4">
               <CCardHeader>
-                <strong>Select Service Quotation</strong>
+                <strong>{text.selectServiceQuotation}</strong>
               </CCardHeader>
               <CCardBody>
                 <CForm className="row g-3">
                   <CCol xs={12} md={selectedService === 'equipment' ? 4 : 3}>
-                    <CFormLabel htmlFor="serviceType">Service Type</CFormLabel>
+                    <CFormLabel htmlFor="serviceType">{text.serviceType}</CFormLabel>
                     <CFormSelect
                       id="serviceType"
                       value={selectedService}
                       onChange={handleServiceChange}
                     >
-                      <option value="">Select Service</option>
+                      <option value="">{text.selectService}</option>
                       {getServiceList().map(({ key, label }) => (
                         <option key={key} value={key}>
                           {label}
@@ -433,7 +459,7 @@ const QuoteMain = () => {
 
                   {selectedService !== 'equipment' && (
                     <CCol xs={12} md={3}>
-                      <CFormLabel htmlFor="proposalLanguage">Proposal Language</CFormLabel>
+                      <CFormLabel htmlFor="proposalLanguage">{text.proposalLanguage}</CFormLabel>
                       <CFormSelect
                         id="proposalLanguage"
                         value={proposalLanguage}
@@ -447,7 +473,7 @@ const QuoteMain = () => {
                   )}
 
                   <CCol xs={12} md={selectedService === 'equipment' ? 4 : 3}>
-                    <CFormLabel htmlFor="inquirySource">Inquiry Source</CFormLabel>
+                    <CFormLabel htmlFor="inquirySource">{text.inquirySource}</CFormLabel>
                     <Select
                       id="inquirySource"
                       name="source"
@@ -458,19 +484,19 @@ const QuoteMain = () => {
                           target: { name: 'source', value: selected ? selected.value : '' },
                         })
                       }
-                      placeholder="Select Source..."
+                      placeholder={text.selectSource}
                       isClearable
                     />
                   </CCol>
 
                   <CCol xs={12} md={selectedService === 'equipment' ? 4 : 3}>
-                    <CFormLabel htmlFor="inquiryRemarks">Source Remarks (optional)</CFormLabel>
+                    <CFormLabel htmlFor="inquiryRemarks">{text.sourceRemarks}</CFormLabel>
                     <CFormInput
                       id="inquiryRemarks"
                       name="remarks"
                       value={inquiryData.remarks}
                       onChange={handleInquiryChange}
-                      placeholder="e.g., from SSS Telegram group, from ex-staff"
+                      placeholder={text.sourceRemarksPlaceholder}
                     />
                   </CCol>
                 </CForm>

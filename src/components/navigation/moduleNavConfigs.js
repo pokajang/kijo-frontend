@@ -37,6 +37,11 @@ export const supportModuleTabs = [
   { key: 'feedback', label: 'System Feedback', to: '/support/feedback' },
 ]
 
+export const systemAdminModuleTabs = [
+  { key: 'migration-status', label: 'Migration Status' },
+  { key: 'email-test', label: 'Email Test' },
+]
+
 export const vendorModuleTabs = [
   { key: 'manage', label: 'Manage Vendors', to: '/vendor/manage' },
   { key: 'pay', label: 'Pay Vendors', to: '/vendor/pay' },
@@ -49,15 +54,15 @@ export const catalogModuleTabs = [
 ]
 
 export const staffModuleTabs = [
-  { key: 'manage', label: 'Manage Staff', to: '/staff/manage' },
-  { key: 'tasks', label: 'View Tasks', to: '/staff/tasks' },
-  { key: 'kpi', label: 'Manage KPI', to: '/staff/kpi' },
   {
     key: 'leaves',
     label: 'Leave Records',
     to: '/staff/leaves',
     notificationTabKey: 'staff.leaves',
   },
+  { key: 'tasks', label: 'View Tasks', to: '/staff/tasks' },
+  { key: 'kpi', label: 'Manage KPI', to: '/staff/kpi' },
+  { key: 'manage', label: 'Manage Staff', to: '/staff/manage' },
   { key: 'appraise', label: 'Appraise Staff', to: '/staff/appraise' },
   { key: 'activities', label: 'Activity Logs', to: '/staff/activities' },
 ]

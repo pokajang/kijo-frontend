@@ -7,7 +7,7 @@ export const routeNotificationBadges = {
     color: 'danger',
     title: 'Vendor registrations need attention',
   },
-  '/staff/manage': {
+  '/staff/leaves': {
     color: 'warning',
     title: 'Leave requests need attention',
   },

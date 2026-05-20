@@ -119,7 +119,7 @@ const _nav = [
   {
     component: CNavItem,
     name: 'Staff Management',
-    to: '/staff/manage',
+    to: '/staff/leaves',
     icon: <CIcon icon={cilGroup} customClassName="nav-icon" />,
     allowedRoles: ['System Admin', 'HR', 'Manager'],
     activePaths: ['/staff'],

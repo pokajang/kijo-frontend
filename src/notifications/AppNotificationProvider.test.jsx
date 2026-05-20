@@ -10,7 +10,7 @@ const Consumer = () => {
 
   return (
     <div>
-      <span data-testid="route">{getRouteGroupCount('/staff/manage')}</span>
+      <span data-testid="route">{getRouteGroupCount('/staff/leaves')}</span>
       <span data-testid="tab">{getTabCount('staff.leaves')}</span>
       <span data-testid="module">{getModuleCount('staff.leaves')}</span>
     </div>
@@ -32,7 +32,7 @@ describe('AppNotificationProvider', () => {
         data: {
           total: 2,
           by_module: { 'staff.leaves': 2 },
-          by_route_group: { '/staff/manage': 2 },
+          by_route_group: { '/staff/leaves': 2 },
           by_tab: { 'staff.leaves': 2 },
         },
       }),
@@ -73,7 +73,7 @@ describe('AppNotificationProvider', () => {
           data: {
             total: 1,
             by_module: { 'staff.leaves': 1 },
-            by_route_group: { '/staff/manage': 1 },
+            by_route_group: { '/staff/leaves': 1 },
             by_tab: { 'staff.leaves': 1 },
           },
         }),

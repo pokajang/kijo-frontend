@@ -19,6 +19,7 @@ import {
   CFormInput,
 } from '@coreui/react'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { getPricingDurationDefaults } from './trainingDuration'
 
 const toInputDateValue = (value) => {
   if (!value) return ''
@@ -43,18 +44,85 @@ const getInclusiveTrainingDays = (startValue, endValue) => {
 const applyDateRange = (prev, nextStartValue, nextEndValue) => {
   const normalizedEndValue = nextStartValue ? nextEndValue || nextStartValue : ''
   const trainingDays = getInclusiveTrainingDays(nextStartValue, normalizedEndValue)
+  const shouldSyncDurationToDateRange = prev.durationUnit !== 'hour(s)'
+
   return {
     ...prev,
     selectedDate: nextStartValue ? new Date(`${nextStartValue}T00:00:00`) : null,
     selectedEndDate: normalizedEndValue ? new Date(`${normalizedEndValue}T00:00:00`) : null,
     toBeConfirmed: false,
-    ...(trainingDays > 0
+    ...(shouldSyncDurationToDateRange && trainingDays > 0
       ? {
           trainingDuration: trainingDays,
           durationUnit: 'day(s)',
         }
       : {}),
   }
+}
+
+const labels = {
+  en: {
+    title: 'Training Details',
+    revision:
+      'You are revising the existing quotation. The quotation number will be appended with Rev xx.',
+    edit: "You are editing the existing quotation. This won't change the quotation number.",
+    trainingTopic: 'Training Topic',
+    topicPlaceholder: 'Search and select training topic...',
+    noTopics: 'No training topics available.',
+    noBmTopics:
+      'No reviewed BM training proposals available. Review and save the BM proposal first.',
+    createOne: 'Create One?',
+    trainingType: 'Training Type',
+    physical: 'Physical',
+    online: 'Online',
+    paymentMethod: 'Payment Method',
+    other: 'Other',
+    paymentPlaceholder: 'Enter payment method',
+    proposedDateRange: 'Proposed Date Range',
+    tbc: 'To be confirmed',
+    chooseDate: 'Choose date',
+    to: 'to',
+    trainingDays: 'Training days',
+    day: 'day',
+    days: 'days',
+    trainingVenue: 'Training Venue',
+    venuePlaceholder: 'Enter training venue full address',
+    targetParticipants: 'Target Participants',
+    targetPlaceholder: 'e.g. Supervisors, General Workers',
+    quotationRemarks: 'Quotation Remarks',
+    remarksPlaceholder: 'e.g. Mention things to highlight in the quotation.',
+  },
+  bm: {
+    title: 'Butiran Latihan',
+    revision:
+      'Anda sedang menyemak sebut harga sedia ada. Nombor sebut harga akan ditambah dengan Rev xx.',
+    edit: 'Anda sedang mengedit sebut harga sedia ada. Nombor sebut harga tidak akan berubah.',
+    trainingTopic: 'Topik Latihan',
+    topicPlaceholder: 'Cari dan pilih topik latihan...',
+    noTopics: 'Tiada topik latihan tersedia.',
+    noBmTopics:
+      'Tiada cadangan latihan BM yang telah disemak. Sila semak dan simpan cadangan BM dahulu.',
+    createOne: 'Cipta Satu?',
+    trainingType: 'Jenis Latihan',
+    physical: 'Fizikal',
+    online: 'Dalam Talian',
+    paymentMethod: 'Kaedah Bayaran',
+    other: 'Lain-lain',
+    paymentPlaceholder: 'Masukkan kaedah bayaran',
+    proposedDateRange: 'Julat Tarikh Dicadangkan',
+    tbc: 'Akan disahkan',
+    chooseDate: 'Pilih tarikh',
+    to: 'hingga',
+    trainingDays: 'Hari latihan',
+    day: 'hari',
+    days: 'hari',
+    trainingVenue: 'Tempat Latihan',
+    venuePlaceholder: 'Masukkan alamat penuh tempat latihan',
+    targetParticipants: 'Peserta Sasaran',
+    targetPlaceholder: 'cth. Penyelia, Pekerja Am',
+    quotationRemarks: 'Catatan Sebut Harga',
+    remarksPlaceholder: 'cth. Nyatakan perkara yang perlu ditonjolkan dalam sebut harga.',
+  },
 }
 
 const TrainingDetailsCard = ({
@@ -67,6 +135,7 @@ const TrainingDetailsCard = ({
 }) => {
   const navigate = useNavigate()
   const { isRevision } = useQuoteRouteParams()
+  const text = proposalLanguage === 'ms-MY' ? labels.bm : labels.en
   const selectedPaymentMethodOption = presetPaymentMethods.includes(formData.paymentMethod)
     ? formData.paymentMethod
     : 'Other'
@@ -88,23 +157,19 @@ const TrainingDetailsCard = ({
     <CCol xs={12}>
       <CCard className="mb-4">
         <CCardHeader>
-          <strong>Training Details</strong>
+          <strong>{text.title}</strong>
         </CCardHeader>
         <CCardBody>
           {isEditMode && (
             <CAlert color="primary">
-              <strong>
-                {isRevision
-                  ? 'You are revising the existing quotation. The quotation number will be appended with Rev xx.'
-                  : "You are editing the existing quotation. This won't change the quotation number."}
-              </strong>
+              <strong>{isRevision ? text.revision : text.edit}</strong>
             </CAlert>
           )}
 
           <CForm className="row g-3">
             {/* Training Topic Selection */}
             <CCol md={12}>
-              <CFormLabel htmlFor="trainingTitle">Training Topic</CFormLabel>
+              <CFormLabel htmlFor="trainingTitle">{text.trainingTopic}</CFormLabel>
               <Select
                 id="trainingTitle"
                 options={trainingOptions}
@@ -116,23 +181,22 @@ const TrainingDetailsCard = ({
                     trainingTitle: selected?.trainingTitle || '',
                     proposal_id: selected?.proposal_id || '',
                     template: selected?.template || null,
+                    ...getPricingDurationDefaults(selected?.duration),
                   }))
                 }
-                placeholder="Search and select training topic..."
+                placeholder={text.topicPlaceholder}
                 isClearable
                 isDisabled={isEditMode}
                 noOptionsMessage={() => (
                   <span>
-                    {proposalLanguage === 'ms-MY'
-                      ? 'No reviewed BM training proposals available. Review and save the BM proposal first.'
-                      : 'No training topics available.'}{' '}
+                    {proposalLanguage === 'ms-MY' ? text.noBmTopics : text.noTopics}{' '}
                     <CButton
                       color="primary"
                       variant="outline"
                       size="sm"
                       onClick={() => navigate('/templates/create')}
                     >
-                      Create One?
+                      {text.createOne}
                     </CButton>
                   </span>
                 )}
@@ -141,7 +205,7 @@ const TrainingDetailsCard = ({
 
             {/* Training Type */}
             <CCol md={3}>
-              <CFormLabel>Training Type</CFormLabel>
+              <CFormLabel>{text.trainingType}</CFormLabel>
               <CRow className="g-2">
                 {['Physical', 'Online'].map((type) => (
                   <CCol xs="auto" key={type}>
@@ -151,16 +215,23 @@ const TrainingDetailsCard = ({
                       name="trainingTypeOption"
                       id={type}
                       value={type}
-                      label={type}
+                      label={type === 'Online' ? text.online : text.physical}
                       checked={formData.trainingTypeOption === type}
                       onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          trainingTypeOption: e.target.value,
-                          unitPrice: e.target.value === 'Online' ? 3500 : 4500,
-                          travelCharge: e.target.value === 'Online' ? 0 : prev.travelCharge,
-                          mealsProvided: e.target.value === 'Online' ? 'No' : prev.mealsProvided,
-                        }))
+                        setFormData((prev) => {
+                          const nextTrainingType = e.target.value
+                          const isOnline = nextTrainingType === 'Online'
+                          const isHourly = prev.durationUnit === 'hour(s)'
+
+                          return {
+                            ...prev,
+                            trainingTypeOption: nextTrainingType,
+                            unitPrice: isOnline ? 3500 : isHourly ? prev.unitPrice : 4500,
+                            travelCharge: isOnline ? 0 : prev.travelCharge,
+                            travelRegion: isOnline ? 'none' : prev.travelRegion,
+                            mealsProvided: isOnline ? 'No' : prev.mealsProvided,
+                          }
+                        })
                       }
                     />
                   </CCol>
@@ -170,7 +241,7 @@ const TrainingDetailsCard = ({
 
             {/* Payment Method */}
             <CCol md={3}>
-              <CFormLabel>Payment Method</CFormLabel>
+              <CFormLabel>{text.paymentMethod}</CFormLabel>
               <CFormSelect
                 value={selectedPaymentMethodOption}
                 onChange={(e) =>
@@ -194,14 +265,14 @@ const TrainingDetailsCard = ({
               >
                 {[...presetPaymentMethods, 'Other'].map((method) => (
                   <option key={method} value={method}>
-                    {method}
+                    {method === 'Other' ? text.other : method}
                   </option>
                 ))}
               </CFormSelect>
               {selectedPaymentMethodOption === 'Other' && (
                 <CFormInput
                   className="mt-2"
-                  placeholder="Enter payment method"
+                  placeholder={text.paymentPlaceholder}
                   value={formData.customPaymentMethod || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -217,14 +288,14 @@ const TrainingDetailsCard = ({
 
             {/* Date Selection */}
             <CCol md={6}>
-              <CFormLabel>Proposed Date Range</CFormLabel>
+              <CFormLabel>{text.proposedDateRange}</CFormLabel>
               <CRow className="g-3 align-items-center">
                 <CCol xs="auto">
                   <CFormCheck
                     type="radio"
                     name="dateConfirmationMode"
                     id="tbcOption"
-                    label="To be confirmed"
+                    label={text.tbc}
                     checked={formData.toBeConfirmed}
                     onChange={() =>
                       setFormData((prev) => ({
@@ -241,7 +312,7 @@ const TrainingDetailsCard = ({
                     type="radio"
                     name="dateConfirmationMode"
                     id="chooseDateOption"
-                    label="Choose date"
+                    label={text.chooseDate}
                     checked={!formData.toBeConfirmed}
                     onChange={() =>
                       setFormData((prev) => ({
@@ -274,7 +345,7 @@ const TrainingDetailsCard = ({
                         />
                       </CCol>
                       <CCol md="auto" className="text-center">
-                        <small>to</small>
+                        <small>{text.to}</small>
                       </CCol>
                       <CCol md={5}>
                         <CFormInput
@@ -293,7 +364,8 @@ const TrainingDetailsCard = ({
                       {trainingDays > 0 && (
                         <CCol xs={12}>
                           <small className="text-body-secondary">
-                            Training days: {trainingDays} day{trainingDays === 1 ? '' : 's'}
+                            {text.trainingDays}: {trainingDays}{' '}
+                            {trainingDays === 1 ? text.day : text.days}
                           </small>
                         </CCol>
                       )}
@@ -305,11 +377,11 @@ const TrainingDetailsCard = ({
 
             {/* Training Venue */}
             <CCol md={4}>
-              <CFormLabel htmlFor="trainingVenue">Training Venue</CFormLabel>
+              <CFormLabel htmlFor="trainingVenue">{text.trainingVenue}</CFormLabel>
               <CFormTextarea
                 id="trainingVenue"
                 rows={2}
-                placeholder="Enter training venue full address"
+                placeholder={text.venuePlaceholder}
                 value={formData.trainingVenue}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -322,11 +394,11 @@ const TrainingDetailsCard = ({
 
             {/* Target Groups */}
             <CCol md={4}>
-              <CFormLabel htmlFor="targetGroups">Target Participants</CFormLabel>
+              <CFormLabel htmlFor="targetGroups">{text.targetParticipants}</CFormLabel>
               <CFormTextarea
                 id="targetGroups"
                 rows={2}
-                placeholder="e.g. Supervisors, General Workers"
+                placeholder={text.targetPlaceholder}
                 value={formData.targetGroups || ''}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -339,7 +411,7 @@ const TrainingDetailsCard = ({
 
             {/* Remarks */}
             <CCol md={4}>
-              <CFormLabel htmlFor="trainingInqRemarks">Quotation Remarks</CFormLabel>
+              <CFormLabel htmlFor="trainingInqRemarks">{text.quotationRemarks}</CFormLabel>
               <CFormTextarea
                 id="trainingInqRemarks"
                 rows={2}
@@ -350,7 +422,7 @@ const TrainingDetailsCard = ({
                     trainingInqRemarks: e.target.value,
                   }))
                 }
-                placeholder="e.g. Mention things to highlight in the quotation."
+                placeholder={text.remarksPlaceholder}
               />
             </CCol>
           </CForm>
