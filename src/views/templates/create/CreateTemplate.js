@@ -53,14 +53,24 @@ const CreateTemplate = () => {
         <CCard className="mb-4">
           <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
             <strong>{isEdit ? 'Editing' : 'Create'} Proposal Template</strong>
-            <CButton
-              size="sm"
-              color="secondary"
-              variant="outline"
-              onClick={() => navigate(returnTo)}
-            >
-              Back
-            </CButton>
+            <div className="d-flex flex-wrap gap-2">
+              <CButton
+                size="sm"
+                color="info"
+                variant="outline"
+                onClick={() => navigate('/knowledge/how-to-create-a-proposal')}
+              >
+                Help
+              </CButton>
+              <CButton
+                size="sm"
+                color="secondary"
+                variant="outline"
+                onClick={() => navigate(returnTo)}
+              >
+                Back
+              </CButton>
+            </div>
           </CCardHeader>
           <CCardBody>
             {/* show buttons only when NOT editing */}

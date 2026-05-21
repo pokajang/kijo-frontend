@@ -222,6 +222,32 @@ const ConversionBreakdownCard = ({
                 `${item.label || 'item'}-${item.totalQuotes || 0}-${item.convertedCount || 0}`
               }
               desktopBreakpoint="md"
+              mobileClassName="dashboard-metric-mobile-list"
+              renderMobileItem={(item, index) => {
+                const rate = Number(item.conversionRate || 0)
+                const convertedCount = Number(item.convertedCount || 0)
+                const totalQuoteCount = Number(item.totalQuotes || 0)
+                const barWidth = rate > 0 ? `${Math.min(rate, 100)}%` : '2px'
+
+                return (
+                  <div className="data-table-mobile-item dashboard-metric-mobile-row dashboard-metric-mobile-row--with-bar">
+                    <div className="dashboard-metric-mobile-main">
+                      <div className="dashboard-metric-mobile-kicker">#{index + 1}</div>
+                      <div className="dashboard-metric-mobile-title">{item.label}</div>
+                      <div className="dashboard-metric-mobile-subtitle">{labelHeader}</div>
+                    </div>
+                    <div className="dashboard-metric-mobile-values">
+                      <div className="dashboard-metric-mobile-primary">{formatPercent(rate)}</div>
+                      <div className="dashboard-metric-mobile-secondary">
+                        {convertedCount}/{totalQuoteCount} realized
+                      </div>
+                    </div>
+                    <div className="dashboard-metric-mobile-bar">
+                      <div className="bg-success" style={{ width: barWidth }} />
+                    </div>
+                  </div>
+                )
+              }}
             />
           </>
         )}

@@ -371,7 +371,6 @@
   text-decoration: none;
 }
 
-
 .procedure-clickable-row {
   cursor: pointer;
 }
@@ -463,6 +462,70 @@
   background: var(--cui-card-bg, var(--app-surface-page));
   color: var(--cui-body-color);
   padding: 1rem;
+}
+
+.dashboard-metric-mobile-list {
+  border-radius: var(--app-radius-lg);
+  overflow: hidden;
+}
+
+.dashboard-metric-mobile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, auto);
+  align-items: start;
+  gap: 0.35rem 0.75rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.dashboard-metric-mobile-row--with-bar {
+  padding-bottom: 0.75rem;
+}
+
+.dashboard-metric-mobile-main,
+.dashboard-metric-mobile-values {
+  min-width: 0;
+}
+
+.dashboard-metric-mobile-values {
+  color: var(--cui-body-color, var(--app-text-base));
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-metric-mobile-kicker,
+.dashboard-metric-mobile-subtitle,
+.dashboard-metric-mobile-secondary {
+  color: var(--app-text-muted);
+  font-size: var(--app-font-size-sm);
+  line-height: 1.2;
+}
+
+.dashboard-metric-mobile-title {
+  color: var(--cui-body-color, var(--app-text-base));
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-metric-mobile-primary {
+  color: var(--cui-body-color, var(--app-text-base));
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dashboard-metric-mobile-bar {
+  grid-column: 1 / -1;
+  height: 4px;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  border-radius: var(--app-radius-pill);
+  background-color: var(--app-surface-muted);
+}
+
+.dashboard-metric-mobile-bar > div {
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
 }
 
 .data-table-action-toggle {

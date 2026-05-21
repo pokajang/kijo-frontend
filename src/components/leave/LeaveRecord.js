@@ -5,6 +5,7 @@ import { StatsStrip } from '../stats'
 import { getMyEntitlements } from './actionHandlers'
 import { useLeaveRecordHandlers } from './actionHandlersRecords'
 import LeaveRecordTable from './LeaveRecordTable'
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 
 const currentYear = new Date().getFullYear()
 
@@ -86,10 +87,27 @@ const LeaveRecord = () => {
     handleCancel,
     getStatusBadge,
   } = useLeaveRecordHandlers()
+  const { consumeRouteGroup } = useAppNotifications()
 
   useEffect(() => {
-    fetchLeaveRecords()
-  }, [fetchLeaveRecords])
+    let cancelled = false
+
+    const loadRecordsAndConsumeNotifications = async () => {
+      const recordsLoaded = await fetchLeaveRecords()
+      if (cancelled || !recordsLoaded) return
+
+      consumeRouteGroup({
+        routePrefix: '/my/leaves',
+        moduleKeys: ['my.leaves', 'staff.leaves'],
+      }).catch(() => {})
+    }
+
+    loadRecordsAndConsumeNotifications()
+
+    return () => {
+      cancelled = true
+    }
+  }, [consumeRouteGroup, fetchLeaveRecords])
 
   useEffect(() => {
     let cancelled = false

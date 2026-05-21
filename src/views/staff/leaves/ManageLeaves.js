@@ -1,7 +1,7 @@
 // src/views/ManageLeaves.js
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import SectionAllLeaves from './SectionAllLeaves'
 import SectionViewAssignments from './SectionViewAssignments'
 import SectionAssignLeaves from './SectionAssignLeaves'
@@ -9,10 +9,20 @@ import SectionLeaveWorkflowSettings from './SectionLeaveWorkflowSettings'
 import * as AH from './actionHandlers'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { useAuth } from '../../../auth/AuthProvider'
+import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
+
+const LEAVE_ADMIN_ALLOWED_ROLES = ['System Admin', 'HR']
 
 const ManageLeaves = ({ routeSection = 'records' }) => {
   const navigate = useNavigate()
   const { entitlementId } = useParams()
+  const { user } = useAuth()
+  const roles = useMemo(() => extractRolesFromSession({ user }), [user])
+  const canManageLeaveAdmin = useMemo(
+    () => hasAnyAllowedRole(roles, LEAVE_ADMIN_ALLOWED_ROLES),
+    [roles],
+  )
   const [allLeaveRecords, setAllLeaveRecords] = useState([])
   const [staffList, setStaffList] = useState([])
   const [entitlements, setEntitlements] = useState([])
@@ -50,11 +60,13 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
       return
     }
 
+    if (!canManageLeaveAdmin) return
+
     fetchStaffList()
     if (routeSection !== 'workflow') {
       fetchEntitlements()
     }
-  }, [routeSection])
+  }, [canManageLeaveAdmin, routeSection])
 
   const editEntitlement = useMemo(
     () =>
@@ -67,7 +79,9 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
 
   let content
 
-  if (routeSection === 'entitlements') {
+  if (routeSection !== 'records' && !canManageLeaveAdmin) {
+    content = <Navigate to="/staff/leaves" replace />
+  } else if (routeSection === 'entitlements') {
     content = (
       <SectionViewAssignments
         staffList={staffList}
@@ -99,9 +113,13 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
       <SectionAllLeaves
         allLeaveRecords={allLeaveRecords}
         fetchAllLeaveRecords={fetchAllLeaveRecords}
-        onManageEntitlements={() => navigate('/staff/leaves/entitlements')}
-        onAssignLeave={() => navigate('/staff/leaves/assign')}
-        onManageWorkflow={() => navigate('/staff/leaves/workflow')}
+        onManageEntitlements={
+          canManageLeaveAdmin ? () => navigate('/staff/leaves/entitlements') : undefined
+        }
+        onAssignLeave={canManageLeaveAdmin ? () => navigate('/staff/leaves/assign') : undefined}
+        onManageWorkflow={
+          canManageLeaveAdmin ? () => navigate('/staff/leaves/workflow') : undefined
+        }
         onViewRecord={(record) =>
           navigate(`/staff/leaves/records/${record.id}`, {
             state: { record, returnTo: '/staff/leaves' },

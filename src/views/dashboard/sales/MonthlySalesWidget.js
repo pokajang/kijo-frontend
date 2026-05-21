@@ -137,6 +137,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
         {
           key: 'total-label',
           content: 'Total',
+          mobileLabel: 'Summary',
           className: 'text-muted',
         },
         ...(showValueSeries
@@ -144,6 +145,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
               {
                 key: 'total-value',
                 content: periodTotal.toLocaleString(),
+                mobileLabel: 'Value (RM)',
                 align: 'end',
                 className: 'text-muted',
               },
@@ -154,6 +156,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
               {
                 key: 'total-count',
                 content: periodQuoteTotal.toLocaleString(),
+                mobileLabel: 'Realized Jobs',
                 align: 'end',
                 className: 'text-muted',
               },
@@ -358,6 +361,39 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                   getRowKey={(row) => row.month}
                   desktopBreakpoint="md"
                   shellStyle={shouldScrollTable ? { maxHeight: '40rem' } : undefined}
+                  mobileClassName="dashboard-metric-mobile-list"
+                  renderMobileItem={(row) => {
+                    const amount = Number(row.amount) || 0
+                    const count = Number(row.count) || 0
+                    const terminatedAmount = Number(row.terminatedAmount || 0)
+
+                    return (
+                      <div className="data-table-mobile-item dashboard-metric-mobile-row">
+                        <div className="dashboard-metric-mobile-main">
+                          <div className="dashboard-metric-mobile-title">
+                            {formatMonthLabel(row.month)}
+                          </div>
+                          {terminatedAmount > 0 && (
+                            <div className="dashboard-metric-mobile-subtitle">
+                              Excl. terminated RM {terminatedAmount.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="dashboard-metric-mobile-values">
+                          {showValueSeries && (
+                            <div className="dashboard-metric-mobile-primary">
+                              RM {amount.toLocaleString()}
+                            </div>
+                          )}
+                          {showCountSeries && (
+                            <div className="dashboard-metric-mobile-secondary">
+                              Realized Jobs {count.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  }}
                 />
               </CCol>
             )}

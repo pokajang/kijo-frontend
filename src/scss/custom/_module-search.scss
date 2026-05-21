@@ -36,7 +36,7 @@
   padding-top: 0;
   padding-bottom: 0;
   border: 1px solid var(--app-border-card);
-  border-radius: 0.2rem;
+  border-radius: 6px;
   border-color: var(--app-border-card);
   background: var(--app-surface-page);
   color: var(--cui-body-color);
@@ -52,6 +52,8 @@
 
 .app-module-search__input::placeholder {
   color: var(--cui-secondary-color);
+  font-size: calc(var(--app-font-size-sm) + 0.04rem);
+  font-style: italic;
 }
 
 .app-module-search__results {

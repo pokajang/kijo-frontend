@@ -12,6 +12,7 @@ import {
 import { hasAnyAllowedRole } from '../../utils/roles'
 
 const STAFF_ALLOWED_ROLES = ['Manager', 'System Admin', 'HR']
+const HR_SYSTEM_ADMIN_ALLOWED_ROLES = ['System Admin', 'HR']
 const SYSTEM_ADMIN_ALLOWED_ROLES = ['System Admin']
 const MAX_RESULTS = 8
 const RECENT_STORAGE_KEY = 'kijo:module-search:recent:v1'
@@ -98,9 +99,41 @@ const itemEnhancements = {
     aliases: ['leave', 'leaves', 'leave record', 'leave records'],
     intentPhrases: ['mc', 'annual leave', 'time off', 'vacation', 'holiday', 'medical leave'],
   },
+  '/staff/tasks': {
+    aliases: ['staff tasks', 'employee tasks'],
+    intentPhrases: ['view staff tasks', 'staff task achievement', 'employee task achievement'],
+  },
+  '/staff/kpi': {
+    aliases: ['staff kpi', 'manage kpi'],
+    intentPhrases: ['employee kpi', 'staff performance parameter', 'kpi management'],
+  },
+  '/staff/manage': {
+    aliases: ['staff', 'employees', 'manage employee'],
+    intentPhrases: ['staff list', 'employee profile', 'staff record', 'manage staff'],
+  },
+  '/staff/appraise': {
+    aliases: ['appraisal', 'appraise', 'staff appraisal'],
+    intentPhrases: ['employee appraisal', 'performance review', 'appraisal record'],
+  },
+  '/staff/activities': {
+    aliases: ['activity', 'activity logs', 'staff activity'],
+    intentPhrases: ['employee activity', 'activity report', 'staff logs'],
+  },
   '/my/leaves': {
     aliases: ['my leave', 'my leaves', 'leave'],
     intentPhrases: ['apply leave', 'mc', 'annual leave', 'time off', 'vacation', 'holiday'],
+  },
+  '/my/kpi': {
+    aliases: ['my kpi', 'personal kpi'],
+    intentPhrases: ['my performance', 'kpi progress', 'kpi overview'],
+  },
+  '/my/kpi/update': {
+    aliases: ['update kpi', 'kpi tracker'],
+    intentPhrases: ['achievement', 'monthly remarks', 'progress update', 'add kpi progress'],
+  },
+  '/my/kpi/parameters': {
+    aliases: ['kpi parameter', 'kpi parameters'],
+    intentPhrases: ['add kpi', 'create kpi', 'target', 'weightage', 'annual target'],
   },
   '/commercial/invoice': {
     aliases: ['invoice', 'invoices', 'billing'],
@@ -110,13 +143,46 @@ const itemEnhancements = {
     aliases: ['debtor', 'debtors', 'receivable'],
     intentPhrases: ['accounts receivable', 'commercial payment', 'customer payment'],
   },
+  '/commercial/delivery-order': {
+    aliases: ['delivery order', 'do'],
+    intentPhrases: ['delivery note', 'delivery record', 'commercial delivery'],
+  },
+  '/commercial/jd14': {
+    aliases: ['jd14', 'jd 14', 'hrd claim'],
+    intentPhrases: ['approval number', 'employer', 'course claim', 'training claim'],
+  },
+  '/commercial/vendor-loa': {
+    aliases: ['vendor loa', 'loa'],
+    intentPhrases: ['award value', 'payment terms', 'scope of award', 'vendor letter of award'],
+  },
+  '/commercial/supplier-po': {
+    aliases: ['supplier po', 'po', 'purchase order'],
+    intentPhrases: ['supplier purchase order', 'po number', 'grand total'],
+  },
   '/vendor/payment-records': {
     aliases: ['vendor payment', 'supplier payment', 'payables'],
     intentPhrases: ['payment records', 'pay supplier', 'pay vendor'],
   },
   '/vendor/pay': {
     aliases: ['pay vendor', 'pay supplier'],
-    intentPhrases: ['vendor payment', 'supplier payment', 'make payment'],
+    intentPhrases: [
+      'vendor payment',
+      'supplier payment',
+      'make payment',
+      'payment request',
+      'payment context',
+      'payment type',
+      'bank account',
+      'upload invoice',
+    ],
+  },
+  '/vendor/manage': {
+    aliases: ['vendor list', 'supplier list'],
+    intentPhrases: ['manage vendor', 'manage supplier', 'frozen vendor', 'vendor record'],
+  },
+  '/catalog/supplier-po': {
+    aliases: ['catalog supplier po', 'award supplier po'],
+    intentPhrases: ['award supplier purchase order', 'supplier price', 'catalog purchase order'],
   },
   '/task-manager': {
     aliases: ['task', 'tasks', 'todo', 'to do'],
@@ -124,19 +190,85 @@ const itemEnhancements = {
   },
   '/administration/meetings': {
     aliases: ['meeting', 'meetings', 'mom'],
-    intentPhrases: ['minutes', 'minutes of meeting', 'meeting minutes'],
+    intentPhrases: ['minutes', 'minutes of meeting', 'meeting minutes', 'action items'],
   },
   '/administration/procedures': {
     aliases: ['procedure', 'procedures', 'sop'],
     intentPhrases: ['work instruction', 'process document', 'admin procedure'],
   },
+  '/administration/sport-time': {
+    aliases: ['sport time', 'sports'],
+    intentPhrases: ['sport attendance', 'sport session', 'activity time'],
+  },
+  '/pipeline/find': {
+    aliases: ['find clients', 'find customer', 'prospect'],
+    intentPhrases: ['call list', 'lead search', 'customer prospect'],
+  },
+  '/pipeline/call-records': {
+    aliases: ['call records', 'calls'],
+    intentPhrases: ['sales call', 'call history', 'contact records'],
+  },
+  '/pipeline/inquiries': {
+    aliases: ['inquiry', 'inquiries', 'leads'],
+    intentPhrases: ['sales inquiry', 'new lead', 'lead record'],
+  },
+  '/pipeline/entries': {
+    aliases: ['pipeline entries', 'pipeline records'],
+    intentPhrases: ['manual pipeline', 'pipeline value', 'estimated rm', 'service category'],
+  },
   '/client/manage': {
     aliases: ['client', 'clients', 'customer', 'customers', 'company'],
-    intentPhrases: ['client record', 'customer record', 'company record', 'pic'],
+    intentPhrases: [
+      'client record',
+      'customer record',
+      'company record',
+      'pic',
+      'contact person',
+      'company address',
+    ],
+  },
+  '/client/roi': {
+    aliases: ['roi', 'client roi', 'commercial history'],
+    intentPhrases: ['return on investment', 'client sales history', 'customer commercial history'],
+  },
+  '/client/vendor-registration': {
+    aliases: ['vendor registration', 'client vendor registration'],
+    intentPhrases: ['register client as vendor', 'vendor form', 'registration status'],
+  },
+  '/client/past-pics': {
+    aliases: ['past pic', 'past pics', 'old pic'],
+    intentPhrases: ['previous contact person', 'past contact', 'former pic'],
   },
   '/catalog/manage': {
     aliases: ['catalog', 'inventory', 'item'],
-    intentPhrases: ['catalog item', 'equipment item', 'item list'],
+    intentPhrases: ['catalog item', 'equipment item', 'item list', 'supplier item'],
+  },
+  '/support/requests': {
+    aliases: ['request tool', 'tool request', 'asset request'],
+    intentPhrases: [
+      'equipment request',
+      'request laptop',
+      'request projector',
+      'use start date',
+      'use end date',
+      'purpose of use',
+    ],
+  },
+  '/support/feedback': {
+    aliases: ['feedback', 'support ticket', 'bug report'],
+    intentPhrases: ['submit feedback', 'report issue', 'improvement request', 'system feedback'],
+  },
+  '/handbook': {
+    aliases: ['handbook', 'policy', 'policies'],
+    intentPhrases: ['employee handbook', 'company policy', 'leave entitlement policy'],
+  },
+  '/internal-tools': {
+    aliases: ['internal tools', 'tools'],
+    intentPhrases: ['free osh', 'free iso', 'assessment tool', 'gap analysis'],
+  },
+  '/system-admin/dashboard': {
+    aliases: ['system admin', 'migration status', 'email test'],
+    intentPhrases: ['admin dashboard', 'laravel migration', 'mail diagnostics', 'schema sync'],
   },
 }
 
@@ -180,6 +312,49 @@ const standaloneItems = [
     aliases: ['about', 'version'],
   },
   {
+    label: 'My KPI Update',
+    group: 'My Workspace',
+    to: '/my/kpi/update',
+    keywords: ['update kpi', 'achievement', 'monthly remarks', 'kpi tracker'],
+    aliases: ['kpi progress', 'update progress'],
+    intentPhrases: ['add kpi achievement', 'monthly kpi update', 'progress update'],
+  },
+  {
+    label: 'My KPI Parameters',
+    group: 'My Workspace',
+    to: '/my/kpi/parameters',
+    keywords: ['kpi parameters', 'target', 'weightage', 'unit', 'annual target'],
+    aliases: ['kpi parameter', 'add kpi'],
+    intentPhrases: ['create kpi', 'add kpi parameter', 'set kpi target'],
+  },
+  {
+    label: 'Handbook Signatures',
+    group: 'Handbook',
+    to: '/handbook/signatures',
+    allowedRoles: STAFF_ALLOWED_ROLES,
+    keywords: ['handbook signatures', 'acknowledgement records'],
+    aliases: ['handbook acknowledgement', 'signatures'],
+    intentPhrases: ['employee acknowledgement', 'handbook signed records'],
+  },
+  {
+    label: 'Handbook Change Log',
+    group: 'Handbook',
+    to: '/handbook/change-log',
+    allowedRoles: STAFF_ALLOWED_ROLES,
+    keywords: ['handbook change log', 'handbook changes'],
+    aliases: ['policy changes', 'change log'],
+    intentPhrases: ['handbook update history', 'policy update log'],
+  },
+  {
+    label: 'Handbook Version History',
+    group: 'Handbook',
+    to: '/handbook/versions',
+    allowedRoles: STAFF_ALLOWED_ROLES,
+    keywords: ['handbook version history', 'handbook versions'],
+    aliases: ['policy versions', 'version history'],
+    intentPhrases: ['published handbook versions', 'employee handbook history'],
+  },
+  {
     label: 'System Updates',
     group: 'System Admin',
     to: '/system-admin/whats-new',
@@ -187,6 +362,24 @@ const standaloneItems = [
     keywords: ['whats new admin', 'release admin', 'publish update'],
     aliases: ['admin updates', 'system update'],
     intentPhrases: ['publish update', 'create system update'],
+  },
+  {
+    label: 'Migration Status',
+    group: 'System Admin',
+    to: '/system-admin/dashboard',
+    allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    keywords: ['migration status', 'schema sync', 'laravel migrations'],
+    aliases: ['migrations', 'database status'],
+    intentPhrases: ['pending migrations', 'applied migrations', 'missing files'],
+  },
+  {
+    label: 'Email Test',
+    group: 'System Admin',
+    to: '/system-admin/dashboard',
+    allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    keywords: ['email test', 'mail diagnostics', 'smtp'],
+    aliases: ['mail test', 'email diagnostics'],
+    intentPhrases: ['send test email', 'mail configuration', 'test smtp'],
   },
 ]
 
@@ -197,6 +390,20 @@ const actionItems = [
     to: '/my/leaves/apply',
     aliases: ['leave application', 'apply mc'],
     intentPhrases: ['apply leave', 'take leave', 'submit leave', 'request leave', 'annual leave'],
+  },
+  {
+    label: 'Update KPI Progress',
+    group: 'My Workspace',
+    to: '/my/kpi/update',
+    aliases: ['update kpi', 'kpi tracker'],
+    intentPhrases: ['add achievement', 'monthly remarks', 'progress update', 'kpi achievement'],
+  },
+  {
+    label: 'Add KPI Parameter',
+    group: 'My Workspace',
+    to: '/my/kpi/parameters',
+    aliases: ['create kpi', 'new kpi'],
+    intentPhrases: ['add kpi', 'kpi parameter', 'target', 'weightage', 'annual target'],
   },
   {
     label: 'Create Client',
@@ -217,14 +424,28 @@ const actionItems = [
     group: 'Vendors',
     to: '/vendor/create',
     aliases: ['new vendor', 'new supplier', 'create supplier'],
-    intentPhrases: ['add vendor', 'add supplier', 'register vendor'],
+    intentPhrases: [
+      'add vendor',
+      'add supplier',
+      'register vendor',
+      'bank details',
+      'account holder',
+      'vendor contact',
+    ],
   },
   {
     label: 'Create Catalog Item',
     group: 'Catalog',
     to: '/catalog/create',
     aliases: ['new catalog item', 'new item'],
-    intentPhrases: ['add catalog item', 'add equipment item', 'create inventory item'],
+    intentPhrases: [
+      'add catalog item',
+      'add equipment item',
+      'create inventory item',
+      'supplier price',
+      'item code',
+      'unit price',
+    ],
   },
   {
     label: 'Create Procedure',
@@ -234,11 +455,49 @@ const actionItems = [
     intentPhrases: ['add procedure', 'add sop', 'create work instruction'],
   },
   {
+    label: 'Add Meeting Minute',
+    group: 'Administration',
+    to: '/administration/meetings/add',
+    aliases: ['new meeting', 'new mom', 'create meeting minute'],
+    intentPhrases: [
+      'meeting minutes',
+      'minutes of meeting',
+      'meeting title',
+      'meeting type',
+      'attendees',
+      'agenda',
+      'action items',
+      'guest attendees',
+    ],
+  },
+  {
     label: 'Create Inquiry',
     group: 'Pipeline CRM',
     to: '/pipeline/inquiries/create',
     aliases: ['new inquiry', 'new lead'],
-    intentPhrases: ['add inquiry', 'create lead', 'new sales inquiry'],
+    intentPhrases: [
+      'add inquiry',
+      'create lead',
+      'new sales inquiry',
+      'lead source',
+      'client inquiry',
+      'service category',
+    ],
+  },
+  {
+    label: 'Bulk Add Pipeline Entries',
+    group: 'Pipeline CRM',
+    to: '/pipeline/entries/bulk-add',
+    aliases: ['bulk pipeline', 'bulk leads', 'bulk add leads'],
+    intentPhrases: [
+      'manual pipeline',
+      'bulk pipeline entries',
+      'prospect',
+      'estimated rm',
+      'classification',
+      'service category',
+      'screenshot proof',
+    ],
   },
   {
     label: 'Create Vendor Registration',
@@ -253,6 +512,135 @@ const actionItems = [
     to: '/templates/create',
     aliases: ['new template'],
     intentPhrases: ['add template', 'create document template'],
+  },
+  {
+    label: 'Create Training Template',
+    group: 'Proposals',
+    to: '/templates/create?type=training',
+    aliases: ['training proposal template', 'training template'],
+    intentPhrases: [
+      'training requirements',
+      'training materials',
+      'lecture medium',
+      'agenda',
+      'tentative program',
+      'objectives',
+      'modules',
+    ],
+  },
+  {
+    label: 'Create IH Template',
+    group: 'Proposals',
+    to: '/templates/create?type=ih',
+    aliases: ['industrial hygiene template', 'ih template', 'oh template'],
+    intentPhrases: [
+      'industrial hygiene proposal',
+      'scope of work',
+      'project schedule',
+      'references',
+      'chra template',
+    ],
+  },
+  {
+    label: 'Create Manpower Template',
+    group: 'Proposals',
+    to: '/templates/create?type=manpower',
+    aliases: ['manpower template', 'manpower proposal template'],
+    intentPhrases: [
+      'service title',
+      'service code',
+      'service deliverables',
+      'supplied manpower deliverables',
+    ],
+  },
+  {
+    label: 'Create Special Template',
+    group: 'Proposals',
+    to: '/templates/create?type=special',
+    aliases: ['special template', 'special proposal template'],
+    intentPhrases: [
+      'upload full proposal',
+      'write proposal',
+      'special service title',
+      'service code',
+      'attachments',
+    ],
+  },
+  {
+    label: 'Create Staff',
+    group: 'Staff Management',
+    to: '/staff/create',
+    allowedRoles: STAFF_ALLOWED_ROLES,
+    aliases: ['new staff', 'new employee', 'hire staff'],
+    intentPhrases: [
+      'add staff',
+      'add employee',
+      'employee profile',
+      'personal details',
+      'contact details',
+      'emergency contact',
+      'bank details',
+      'hiring details',
+    ],
+  },
+  {
+    label: 'Leave Entitlements',
+    group: 'Staff Management',
+    to: '/staff/leaves/entitlements',
+    allowedRoles: HR_SYSTEM_ADMIN_ALLOWED_ROLES,
+    aliases: ['leave entitlement', 'leave balance'],
+    intentPhrases: ['annual leave balance', 'staff leave allocation', 'leave type entitlement'],
+  },
+  {
+    label: 'Assign Leave Entitlement',
+    group: 'Staff Management',
+    to: '/staff/leaves/assign',
+    allowedRoles: HR_SYSTEM_ADMIN_ALLOWED_ROLES,
+    aliases: ['assign leave', 'add leave entitlement'],
+    intentPhrases: ['staff leave allocation', 'annual leave balance', 'leave entitlement'],
+  },
+  {
+    label: 'Leave Workflow',
+    group: 'Staff Management',
+    to: '/staff/leaves/workflow',
+    allowedRoles: HR_SYSTEM_ADMIN_ALLOWED_ROLES,
+    aliases: ['leave approval', 'leave workflow'],
+    intentPhrases: [
+      'approve leave',
+      'recommend leave',
+      'reject leave',
+      'revoke leave',
+      'leave request action',
+    ],
+  },
+  {
+    label: 'Appraisal Feedback',
+    group: 'Staff Management',
+    to: '/staff/appraise/feedback',
+    allowedRoles: STAFF_ALLOWED_ROLES,
+    aliases: ['appraisal feedback', 'staff feedback'],
+    intentPhrases: ['employee feedback', 'performance feedback', 'appraisal notes'],
+  },
+  {
+    label: 'Final Appraisal',
+    group: 'Staff Management',
+    to: '/staff/appraise/final-appraisal',
+    allowedRoles: STAFF_ALLOWED_ROLES,
+    aliases: ['final appraisal', 'final performance review'],
+    intentPhrases: ['final appraisal record', 'year end appraisal', 'employee final review'],
+  },
+  {
+    label: 'Create Manual Debtor',
+    group: 'Commercial',
+    to: '/commercial/debtors/create',
+    aliases: ['manual debtor', 'debtor entry'],
+    intentPhrases: [
+      'accounts receivable',
+      'receivable',
+      'customer payment',
+      'invoice not in system',
+      'manual receivable',
+    ],
   },
   {
     label: 'Create System Update',
@@ -275,6 +663,80 @@ const actionItems = [
     to: '/crm/quotes',
     aliases: ['new quote', 'new quotation'],
     intentPhrases: ['create quotation', 'create quote', 'proposal price', 'pricing'],
+  },
+  {
+    label: 'Create Training Quote',
+    group: 'CRM Management',
+    to: '/crm/quotes?service=training',
+    aliases: ['training quote', 'training quotation'],
+    intentPhrases: [
+      'training pricing',
+      'training topic',
+      'training title',
+      'training type',
+      'venue',
+      'pax',
+      'hrd',
+      'per pax',
+      'per session',
+    ],
+  },
+  {
+    label: 'Create Industrial Hygiene Quote',
+    group: 'CRM Management',
+    to: '/crm/quotes?service=ih',
+    aliases: ['ih quote', 'oh quote', 'hygiene quotation'],
+    intentPhrases: [
+      'industrial hygiene quote',
+      'site address',
+      'sample count',
+      'work unit',
+      'chra',
+      'noise monitoring',
+      'chemical exposure',
+    ],
+  },
+  {
+    label: 'Create Manpower Quote',
+    group: 'CRM Management',
+    to: '/crm/quotes?service=manpower',
+    aliases: ['manpower quote', 'worker supply quote'],
+    intentPhrases: [
+      'manpower supply',
+      'worker supply',
+      'nature of work',
+      'site location',
+      'duration months',
+      'billing unit',
+    ],
+  },
+  {
+    label: 'Create Equipment Quote',
+    group: 'CRM Management',
+    to: '/crm/quotes?service=equipment',
+    aliases: ['equipment quote', 'equipment supply quote'],
+    intentPhrases: [
+      'equipment supply',
+      'catalog item quote',
+      'delivery charge',
+      'misc charge',
+      'item selection',
+      'supplier price',
+    ],
+  },
+  {
+    label: 'Create Special Quote',
+    group: 'CRM Management',
+    to: '/crm/quotes?service=special',
+    aliases: ['special quote', 'custom quote'],
+    intentPhrases: [
+      'special service',
+      'line item',
+      'quotation remarks',
+      'service title',
+      'service code',
+      'custom quotation',
+    ],
   },
 ]
 
@@ -307,7 +769,8 @@ const createItem = ({
   type = 'module',
   action,
 }) => {
-  const enhancement = itemEnhancements[to] || itemEnhancements[`${group}:${label}`] || {}
+  const enhancement =
+    type === 'module' ? itemEnhancements[to] || itemEnhancements[`${group}:${label}`] || {} : {}
   const itemKeywords = [...keywords]
   const itemAliases = [...aliases, ...(enhancement.aliases || [])]
   const itemIntentPhrases = [...intentPhrases, ...(enhancement.intentPhrases || [])]
@@ -520,9 +983,11 @@ const scoreSearchItems = (items, query) => {
     .map((item) => {
       const rawScore = scoreSearchItem(item, normalizedQuery, queryTokens)
       const score =
-        item.type === 'action' && rawScore > 0 && rawScore < 900
+        item.type === 'action' && rawScore > 0 && rawScore < 700
           ? Math.max(1, rawScore - 420)
-          : rawScore
+          : item.type === 'action' && rawScore === 900 && queryTokens.length === 1
+            ? rawScore - 120
+            : rawScore
 
       return { item, score }
     })

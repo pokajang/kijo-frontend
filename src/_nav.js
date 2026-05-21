@@ -154,6 +154,22 @@ const _nav = [
   },
   {
     component: CNavItem,
+    name: (
+      <>
+        Learn
+        <strong style={{ marginLeft: '0.25rem' }}>kijo</strong>
+      </>
+    ),
+    to: '/knowledge',
+    icon: <CIcon icon={cilBook} customClassName="nav-icon" />,
+    badge: {
+      color: 'info',
+      text: 'New',
+      title: 'New resource',
+    },
+  },
+  {
+    component: CNavItem,
     name: 'Internal Tools',
     to: '/internal-tools',
     icon: <CIcon icon={cilApplications} customClassName="nav-icon" />,

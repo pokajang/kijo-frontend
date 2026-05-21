@@ -394,14 +394,24 @@ const QuoteMain = () => {
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <strong>Edit Quotation</strong>
-              <CButton
-                size="sm"
-                color="secondary"
-                variant="outline"
-                onClick={() => navigate(returnTo)}
-              >
-                Back
-              </CButton>
+              <div className="d-flex flex-wrap gap-2">
+                <CButton
+                  size="sm"
+                  color="info"
+                  variant="outline"
+                  onClick={() => navigate('/knowledge/how-to-create-a-quotation')}
+                >
+                  Help
+                </CButton>
+                <CButton
+                  size="sm"
+                  color="secondary"
+                  variant="outline"
+                  onClick={() => navigate(returnTo)}
+                >
+                  Back
+                </CButton>
+              </div>
             </CCardHeader>
           </CCard>
         </CCol>
@@ -436,8 +446,16 @@ const QuoteMain = () => {
         <>
           <CCol xs={12}>
             <CCard className="mb-4">
-              <CCardHeader>
+              <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <strong>{text.selectServiceQuotation}</strong>
+                <CButton
+                  size="sm"
+                  color="info"
+                  variant="outline"
+                  onClick={() => navigate('/knowledge/how-to-create-a-quotation')}
+                >
+                  Help
+                </CButton>
               </CCardHeader>
               <CCardBody>
                 <CForm className="row g-3">

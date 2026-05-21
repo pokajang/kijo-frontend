@@ -65,9 +65,11 @@ export const useLeaveRecordHandlers = () => {
         cancelledAt: row.cancelled_at,
       }))
       setLeaveRecords(mapped)
+      return true
     } catch (err) {
       console.error('Fetch error:', err)
       setRecordsError(err?.message || 'Could not load leave records.')
+      return false
     } finally {
       setLoadingRecords(false)
     }

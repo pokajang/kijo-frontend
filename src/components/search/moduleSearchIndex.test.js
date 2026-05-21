@@ -116,6 +116,16 @@ describe('module search index', () => {
     expect(result.suggestion?.correctedQuery).toBe('invoice')
   })
 
+  it('finds manual debtor creation from debtor form intent', () => {
+    const results = searchModuleItems('invoice not in system', ['Staff'])
+
+    expect(results[0]).toMatchObject({
+      label: 'Create Manual Debtor',
+      group: 'Commercial',
+      to: '/commercial/debtors/create',
+    })
+  })
+
   it('finds meetings for mom intent', () => {
     const results = searchModuleItems('mom', ['Staff'])
 
@@ -137,6 +147,90 @@ describe('module search index', () => {
     expect(result.suggestion?.correctedQuery).toBe('procedure')
   })
 
+  it('finds meeting minute creation from meeting form fields', () => {
+    const results = searchModuleItems('guest attendees', ['Staff'])
+
+    expect(results[0]).toMatchObject({
+      label: 'Add Meeting Minute',
+      group: 'Administration',
+      to: '/administration/meetings/add',
+    })
+  })
+
+  it('finds bulk pipeline entries from bulk-add intent', () => {
+    const results = searchModuleItems('estimated rm', ['Staff'])
+
+    expect(results[0]).toMatchObject({
+      label: 'Bulk Add Pipeline Entries',
+      group: 'Pipeline CRM',
+      to: '/pipeline/entries/bulk-add',
+    })
+  })
+
+  it('finds service-specific quote actions from form fields', () => {
+    expect(searchModuleItems('training topic', ['Staff'])[0]).toMatchObject({
+      label: 'Create Training Quote',
+      to: '/crm/quotes?service=training',
+    })
+    expect(searchModuleItems('sample count', ['Staff'])[0]).toMatchObject({
+      label: 'Create Industrial Hygiene Quote',
+      to: '/crm/quotes?service=ih',
+    })
+    expect(searchModuleItems('duration months', ['Staff'])[0]).toMatchObject({
+      label: 'Create Manpower Quote',
+      to: '/crm/quotes?service=manpower',
+    })
+    expect(searchModuleItems('delivery charge', ['Staff'])[0]).toMatchObject({
+      label: 'Create Equipment Quote',
+      to: '/crm/quotes?service=equipment',
+    })
+  })
+
+  it('finds typed proposal template creation from template fields', () => {
+    expect(searchModuleItems('tentative program', ['Staff'])[0]).toMatchObject({
+      label: 'Create Training Template',
+      to: '/templates/create?type=training',
+    })
+    expect(searchModuleItems('chra template', ['Staff'])[0]).toMatchObject({
+      label: 'Create IH Template',
+      to: '/templates/create?type=ih',
+    })
+    expect(searchModuleItems('supplied manpower deliverables', ['Staff'])[0]).toMatchObject({
+      label: 'Create Manpower Template',
+      to: '/templates/create?type=manpower',
+    })
+  })
+
+  it('finds staff creation from employee form fields for allowed roles', () => {
+    const results = searchModuleItems('emergency contact', ['HR'])
+
+    expect(results[0]).toMatchObject({
+      label: 'Create Staff',
+      group: 'Staff Management',
+      to: '/staff/create',
+    })
+  })
+
+  it('finds KPI sub-actions from KPI form fields', () => {
+    expect(searchModuleItems('monthly remarks', ['Staff'])[0]).toMatchObject({
+      to: '/my/kpi/update',
+    })
+    expect(searchModuleItems('weightage', ['Staff'])[0]).toMatchObject({
+      to: '/my/kpi/parameters',
+    })
+  })
+
+  it('finds handbook and system admin submodules for allowed roles', () => {
+    expect(searchModuleItems('handbook signatures', ['HR'])[0]).toMatchObject({
+      label: 'Handbook Signatures',
+      to: '/handbook/signatures',
+    })
+    expect(searchModuleItems('mail diagnostics', ['System Admin'])[0]).toMatchObject({
+      label: 'Email Test',
+      to: '/system-admin/dashboard',
+    })
+  })
+
   it('does not typo-correct short acronyms into unrelated modules', () => {
     const result = getModuleSearchResults('po', ['Staff'])
 
@@ -156,6 +250,14 @@ describe('module search index', () => {
     const labels = searchModuleItems('create system update', ['Staff']).map((item) => item.label)
 
     expect(labels).not.toContain('Create System Update')
+  })
+
+  it('hides leave entitlement workflow actions from managers without backend permission', () => {
+    const managerLabels = searchModuleItems('leave workflow', ['Manager']).map((item) => item.label)
+    const hrLabels = searchModuleItems('leave workflow', ['HR']).map((item) => item.label)
+
+    expect(managerLabels).not.toContain('Leave Workflow')
+    expect(hrLabels).toContain('Leave Workflow')
   })
 
   it('records and returns recent accessible selections', () => {

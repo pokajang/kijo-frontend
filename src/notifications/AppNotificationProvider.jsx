@@ -16,6 +16,7 @@ const AppNotificationContext = createContext({
   getTabCount: () => 0,
   getModuleCount: () => 0,
   consumeEntity: async () => 0,
+  consumeRouteGroup: async () => 0,
 })
 
 const normalizeSummary = (payload) => {
@@ -85,6 +86,33 @@ const AppNotificationProvider = ({ children }) => {
     [refresh],
   )
 
+  const consumeRouteGroup = useCallback(
+    async ({ routePrefix, moduleKeys = [] }) => {
+      if (!routePrefix || !moduleKeys.length) return 0
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE}notifications/consume-route-group`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            route_prefix: routePrefix,
+            module_keys: moduleKeys,
+          }),
+        },
+      )
+      const result = await readJsonResponse(response)
+      if (!response.ok || result.status !== 'success') {
+        throw new Error(result.message || 'Failed to consume notifications.')
+      }
+
+      await refresh()
+      return Number(result.data?.consumed_count || 0)
+    },
+    [refresh],
+  )
+
   useEffect(() => {
     refresh()
   }, [refresh])
@@ -117,8 +145,9 @@ const AppNotificationProvider = ({ children }) => {
       getTabCount: (tabKey) => Number(summary.by_tab?.[tabKey] || 0),
       getModuleCount: (moduleKey) => Number(summary.by_module?.[moduleKey] || 0),
       consumeEntity,
+      consumeRouteGroup,
     }),
-    [consumeEntity, refresh, summary],
+    [consumeEntity, consumeRouteGroup, refresh, summary],
   )
 
   return <AppNotificationContext.Provider value={value}>{children}</AppNotificationContext.Provider>

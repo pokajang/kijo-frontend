@@ -127,6 +127,9 @@ const HandbookVersionHistory = React.lazy(
 const HandbookVersionDetail = React.lazy(
   () => import('./views/handbook/components/HandbookVersionDetail'),
 )
+const KnowledgeHub = React.lazy(() => import('./views/knowledge/KnowledgeHub'))
+const KnowledgeArticleDetail = React.lazy(() => import('./views/knowledge/KnowledgeArticleDetail'))
+const KnowledgeArticleForm = React.lazy(() => import('./views/knowledge/KnowledgeArticleForm'))
 const InternalTools = React.lazy(() => import('./views/internal-tools/InternalTools'))
 const TaskManager = React.lazy(() => import('./views/task-manager/TaskManager'))
 const RequestDetailPage = React.lazy(() => import('./views/request-tool/RequestDetailPage'))
@@ -172,6 +175,7 @@ const Login = React.lazy(() => import('./views/pages/login/Login'))
 
 // DEFINE ALLOWED ROUTES
 const staffAllowedRoles = ['Manager', 'System Admin', 'HR']
+const leaveAdminAllowedRoles = ['System Admin', 'HR']
 const systemAdminAllowedRoles = ['System Admin']
 
 const LegacyRouteRedirect = ({ to, paramName }) => {
@@ -578,7 +582,7 @@ const routes = [
   {
     path: '/staff/leaves/entitlements',
     element: (
-      <ProtectedRoute allowedRoles={staffAllowedRoles}>
+      <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
         <ManageLeaves routeSection="entitlements" />
       </ProtectedRoute>
     ),
@@ -586,7 +590,7 @@ const routes = [
   {
     path: '/staff/leaves/assign',
     element: (
-      <ProtectedRoute allowedRoles={staffAllowedRoles}>
+      <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
         <ManageLeaves routeSection="assign" />
       </ProtectedRoute>
     ),
@@ -594,7 +598,7 @@ const routes = [
   {
     path: '/staff/leaves/workflow',
     element: (
-      <ProtectedRoute allowedRoles={staffAllowedRoles}>
+      <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
         <ManageLeaves routeSection="workflow" />
       </ProtectedRoute>
     ),
@@ -602,7 +606,7 @@ const routes = [
   {
     path: '/staff/leaves/entitlements/:entitlementId/edit',
     element: (
-      <ProtectedRoute allowedRoles={staffAllowedRoles}>
+      <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
         <ManageLeaves routeSection="assign" />
       </ProtectedRoute>
     ),
@@ -795,6 +799,23 @@ const routes = [
       </ProtectedRoute>
     ),
   },
+  { path: '/knowledge', name: 'Knowledge Hub', element: KnowledgeHub },
+  {
+    path: '/knowledge/my',
+    name: 'Knowledge Hub Redirect',
+    element: <Navigate to="/knowledge" replace />,
+  },
+  {
+    path: '/knowledge/create',
+    name: 'Create Knowledge Article',
+    element: <KnowledgeArticleForm mode="create" />,
+  },
+  {
+    path: '/knowledge/:articleId/edit',
+    name: 'Edit Knowledge Article',
+    element: <KnowledgeArticleForm mode="edit" />,
+  },
+  { path: '/knowledge/:slug', name: 'Knowledge Article', element: KnowledgeArticleDetail },
   { path: 'internal-tools', name: 'Internal Tools', element: InternalTools },
   // Support paths
   {
