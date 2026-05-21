@@ -1,0 +1,1 @@
+import{j as o}from"./vendor-react-pHMxTNR8.js";import{M as r}from"./ModuleNavStrip-CeO47yVq.js";import{a0 as a}from"./DefaultLayout-WPejxs-B.js";const l=t=>o.jsx(r,{ariaLabel:"Client sections",...t,tabs:a});export{l as C};

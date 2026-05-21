@@ -34,8 +34,8 @@ describe('templateValidation', () => {
     const errors = validateTrainingTemplate({
       templateDetails: {
         trainingTitle: 'A'.repeat(256),
-        trainingCode: 'B'.repeat(101),
-        hrdNo: 'C'.repeat(101),
+        trainingCode: 'B'.repeat(51),
+        hrdNo: 'C'.repeat(21),
         lectureMedium: 'D'.repeat(256),
         duration: '1day',
         introduction: '<p>Intro</p>',
@@ -48,8 +48,8 @@ describe('templateValidation', () => {
     expect(messages(errors)).toEqual(
       expect.arrayContaining([
         'Training title must be 255 characters or fewer.',
-        'Training code must be 100 characters or fewer.',
-        'HRD program number must be 100 characters or fewer.',
+        'Training code must be 50 characters or fewer.',
+        'HRD program number must be 20 characters or fewer.',
         'Lecture medium must be 255 characters or fewer.',
         'Agenda Day 1, row 1 topic must be 500 characters or fewer.',
       ]),

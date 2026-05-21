@@ -58,8 +58,8 @@ export const validateTrainingTemplate = ({ templateDetails = {}, agendaRows = []
   addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
 
   addMaxLength(errors, templateDetails.trainingTitle, 255, 'trainingTitle', 'Training title')
-  addMaxLength(errors, templateDetails.trainingCode, 100, 'trainingCode', 'Training code')
-  addMaxLength(errors, templateDetails.hrdNo, 100, 'hrdNo', 'HRD program number')
+  addMaxLength(errors, templateDetails.trainingCode, 50, 'trainingCode', 'Training code')
+  addMaxLength(errors, templateDetails.hrdNo, 20, 'hrdNo', 'HRD program number')
   addMaxLength(errors, templateDetails.lectureMedium, 255, 'lectureMedium', 'Lecture medium')
   addMaxLength(errors, templateDetails.duration, 100, 'duration', 'Training duration')
   addMaxLength(errors, remarks, 1000, 'remarks', 'Remarks')
