@@ -242,12 +242,20 @@ const FeedbackTable = ({
         label: 'Pending',
         value: formatCount(pendingCount),
         tone: pendingCount ? 'warning' : 'secondary',
+        onClick: () => {
+          setStatusFilter('pending')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'fixed',
         label: 'Fixed',
         value: formatCount(fixedRows.length),
         tone: 'success',
+        onClick: () => {
+          setStatusFilter('fixed')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'top-reporter',
@@ -255,9 +263,18 @@ const FeedbackTable = ({
         value: topReporter.value,
         sublabel: `${formatCount(topReporter.count)} reports`,
         tone: 'secondary',
+        onClick:
+          topReporter.value &&
+          topReporter.value !== '-' &&
+          reporterOptions.includes(topReporter.value)
+            ? () => {
+                setReportedByFilter(topReporter.value)
+                setShowAdvancedFilters(true)
+              }
+            : undefined,
       },
     ]
-  }, [rows])
+  }, [reporterOptions, rows])
 
   const resetFilters = () => {
     setSearchTerm('')

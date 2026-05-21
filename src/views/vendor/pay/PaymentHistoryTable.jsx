@@ -227,6 +227,10 @@ const PaymentHistoryTable = ({
         value: formatCount(pendingRows.length),
         sublabel: formatMoney(sumBy(pendingRows, (payment) => payment.amount)),
         tone: 'warning',
+        onClick: () => {
+          setStatusFilter('Pending')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'top-requester',

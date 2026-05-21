@@ -11,6 +11,10 @@ export const routeNotificationBadges = {
     color: 'warning',
     title: 'Leave requests need attention',
   },
+  '/my/leaves': {
+    color: 'success',
+    title: 'Leave updates available',
+  },
 }
 
 export const tabNotificationBadges = {
@@ -21,6 +25,10 @@ export const tabNotificationBadges = {
   'staff.leaves': {
     color: 'warning',
     title: 'Leave requests need attention',
+  },
+  'my.leaves': {
+    color: 'success',
+    title: 'Leave updates available',
   },
   'crm.negotiations': {
     color: 'primary',

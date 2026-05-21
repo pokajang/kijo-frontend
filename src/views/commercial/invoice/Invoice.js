@@ -138,6 +138,11 @@ const Invoice = () => {
     if (key === 'status') setStatusFilter('all')
   }
 
+  const applyStatFilter = (_key, value) => {
+    setPersonInChargeFilter(value)
+    setShowAdvancedFilters(true)
+  }
+
   useEffect(() => {
     fetchAllInvoices(setInvoices, setLoading)
   }, [])
@@ -311,6 +316,7 @@ const Invoice = () => {
               onOpen={(invoice) => navigate(`/commercial/invoice/${invoice.rawId || invoice.id}`)}
               desktopUtilityPortalId="invoice-table-tools"
               mobileUtilityPortalId="invoice-mobile-table-tools"
+              onStatFilter={applyStatFilter}
               renderQuickFilters={() => (
                 <PeriodRangeSelector
                   value={periodRange}

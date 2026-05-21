@@ -261,7 +261,22 @@ const TemplateProposalTable = ({ type, data = [], onDelete, onCreateBmCopy, load
     })
   }, [createdByFilter, rows, searchTerm, yearFilter])
 
-  const statsItems = useMemo(() => buildStatsItems(type, filteredRows), [filteredRows, type])
+  const statsItems = useMemo(
+    () =>
+      buildStatsItems(type, filteredRows).map((item) => {
+        if (item.key === 'top-creator' && item.value && item.value !== '-') {
+          return {
+            ...item,
+            onClick: () => {
+              setCreatedByFilter(item.value)
+              setShowAdvancedFilters(true)
+            },
+          }
+        }
+        return item
+      }),
+    [filteredRows, type],
+  )
 
   const resetFilters = () => {
     setSearchTerm('')

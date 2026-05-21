@@ -1,7 +1,7 @@
 // src/components/tasks/TaskManager.js
 import React, { useState, useEffect, useCallback } from 'react'
 import { CRow, CCol, CModal, CModalBody, CModalHeader, CModalTitle } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import CreateTask from './CreateTask'
 import TaskTable from './TaskTable'
@@ -57,6 +57,7 @@ const TaskManager = () => {
   const [taskList, setTaskList] = useState([])
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [savingTasks, setSavingTasks] = useState(false)
+  const location = useLocation()
   const navigate = useNavigate()
 
   const resetCreateTaskForm = ({ clearStorage = true } = {}) => {
@@ -64,9 +65,25 @@ const TaskManager = () => {
     setTaskDrafts([createTaskDraft()])
   }
 
+  const clearCreateActionParam = useCallback(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('action') !== 'create') return
+
+    params.delete('action')
+    const search = params.toString()
+    navigate(
+      {
+        pathname: location.pathname,
+        search: search ? `?${search}` : '',
+      },
+      { replace: true },
+    )
+  }, [location.pathname, location.search, navigate])
+
   const closeCreateTaskModal = () => {
     if (savingTasks) return
     setShowCreateTaskModal(false)
+    clearCreateActionParam()
   }
 
   const onDraftChange = (id, field, value) => {
@@ -107,6 +124,13 @@ const TaskManager = () => {
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('action') === 'create') {
+      setShowCreateTaskModal(true)
+    }
+  }, [location.search])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -154,6 +178,7 @@ const TaskManager = () => {
         await loadTasks()
         resetCreateTaskForm()
         setShowCreateTaskModal(false)
+        clearCreateActionParam()
       } else {
         dialog.alert(json.message || 'Failed to create task')
       }

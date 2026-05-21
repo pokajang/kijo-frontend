@@ -150,6 +150,14 @@ const Activities = () => {
         value: topUser.value,
         sublabel: `${formatCount(topUser.count)} logs`,
         tone: 'success',
+        onClick:
+          topUser.value &&
+          userOptions.some((option) => option.value === String(topUser.value).toLowerCase())
+            ? () => {
+                setUserFilter(String(topUser.value).toLowerCase())
+                setShowAdvancedFilters(true)
+              }
+            : undefined,
       },
       {
         key: 'top-action',
@@ -159,7 +167,7 @@ const Activities = () => {
         tone: 'warning',
       },
     ]
-  }, [filteredActivities])
+  }, [filteredActivities, userOptions])
 
   return (
     <>

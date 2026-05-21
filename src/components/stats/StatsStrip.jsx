@@ -85,6 +85,7 @@ const StatsStrip = ({
             size={resolveItemSize(item)}
             valueSize={item.valueSize}
             onClick={item.onClick}
+            actionTooltip={item.actionTooltip}
           />
         ))}
       </div>

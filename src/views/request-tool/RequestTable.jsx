@@ -306,6 +306,13 @@ export default function RequestTable({
         value: topLoanDaysStaff?.[0] || emptyValue,
         sublabel: `${formatCount(topLoanDaysStaff?.[1] || 0)} days loaned`,
         tone: 'secondary',
+        onClick:
+          topLoanDaysStaff?.[0] && topLoanDaysStaff[0] !== emptyValue
+            ? () => {
+                setStaffFilter(topLoanDaysStaff[0])
+                setShowAdvancedFilters(true)
+              }
+            : undefined,
       },
     ]
   }, [normalizedRecords])

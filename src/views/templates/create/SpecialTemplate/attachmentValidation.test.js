@@ -12,11 +12,20 @@ describe('attachmentValidation', () => {
   it('accepts supported files and rejects unsupported files', () => {
     const { accepted, rejected } = validateNewAttachments([
       file('proposal.pdf'),
+      file('photo.jpg', 'image/jpeg'),
+      file('diagram.png', 'image/png'),
       file('script.exe', 'application/x-msdownload'),
+      file(
+        'slides.pptx',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      ),
     ])
 
-    expect(accepted).toHaveLength(1)
-    expect(rejected).toEqual([{ fileName: 'script.exe', reason: 'Unsupported file type.' }])
+    expect(accepted).toHaveLength(3)
+    expect(rejected).toEqual([
+      { fileName: 'script.exe', reason: 'Unsupported file type.' },
+      { fileName: 'slides.pptx', reason: 'Unsupported file type.' },
+    ])
   })
 
   it('rejects files when extension and MIME type do not match', () => {
@@ -35,7 +44,7 @@ describe('attachmentValidation', () => {
     )
 
     expect(rejected.map((item) => item.reason)).toEqual([
-      'File exceeds the 15 MB size limit.',
+      'File exceeds the 10 MB size limit.',
       'Duplicate file name.',
     ])
   })

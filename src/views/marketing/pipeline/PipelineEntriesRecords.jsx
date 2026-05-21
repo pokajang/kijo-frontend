@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
@@ -132,7 +132,35 @@ const PipelineEntriesRecords = () => {
 
   const normalizedEntries = useMemo(() => entries.map(normalizePipelineRecord), [entries])
 
-  const statsItems = useMemo(() => buildPipelineRecordStats(normalizedEntries), [normalizedEntries])
+  const applyStatFilter = useCallback((key, value) => {
+    setFilters((current) => {
+      if (key === 'total-leads') return { ...current, entry_type: 'lead' }
+      if (key === 'total-qualified') return { ...current, entry_type: 'qualified' }
+      if (key === 'total-meetings') return { ...current, entry_type: 'meeting_pitching' }
+      if (key === 'top-leads') return { ...current, entry_type: 'lead', staff_code: value }
+      return current
+    })
+    setShowAdvancedFilters(true)
+  }, [])
+
+  const statsItems = useMemo(
+    () =>
+      buildPipelineRecordStats(normalizedEntries).map((item) => {
+        if (['total-leads', 'total-qualified', 'total-meetings'].includes(item.key)) {
+          return { ...item, onClick: () => applyStatFilter(item.key) }
+        }
+        if (
+          item.key === 'top-leads' &&
+          item.value &&
+          item.value !== '-' &&
+          staffOptions.some((staff) => staff.value === item.value)
+        ) {
+          return { ...item, onClick: () => applyStatFilter(item.key, item.value) }
+        }
+        return item
+      }),
+    [applyStatFilter, normalizedEntries, staffOptions],
+  )
 
   const updateFilter = (key, value) => {
     setFilters((current) => ({ ...current, [key]: value }))

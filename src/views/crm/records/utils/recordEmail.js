@@ -1,5 +1,7 @@
 import { recordTabOptions } from '../config/recordTabs'
 import { endpointsByService } from '../services/recordsActions'
+import { apiJson } from '../../../../api/apiClient'
+import { apiUrl } from '../../../../api/apiUrl'
 
 const serviceLabelByTab = Object.fromEntries(recordTabOptions.map((tab) => [tab.key, tab.label]))
 const serviceApiPathByTab = {
@@ -190,8 +192,8 @@ export const sendRecordEmailDraft = async (record, { subject, body } = {}) => {
     throw new Error('Unable to resolve the quotation email target.')
   }
 
-  const response = await fetch(
-    `${import.meta.env.VITE_API_BASE}quote-records/${service}/${encodeURIComponent(quoteId)}/email`,
+  const payload = await apiJson(
+    apiUrl(`quote-records/${encodeURIComponent(service)}/${encodeURIComponent(quoteId)}/email`),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -203,15 +205,8 @@ export const sendRecordEmailDraft = async (record, { subject, body } = {}) => {
     },
   )
 
-  let payload = null
-  try {
-    payload = await response.json()
-  } catch {
-    throw new Error(`System email request failed with HTTP ${response.status}.`)
-  }
-
-  if (!response.ok || payload?.status !== 'success') {
-    throw new Error(payload?.message || `System email request failed with HTTP ${response.status}.`)
+  if (payload?.status !== 'success') {
+    throw new Error(payload?.message || 'System email request failed.')
   }
 
   return payload

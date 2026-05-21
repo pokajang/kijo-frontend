@@ -76,11 +76,19 @@ const LeaveRecordDetailPage = () => {
   }, [loadRecord])
 
   useEffect(() => {
-    consumeEntity({
-      moduleKey: 'staff.leaves',
-      entityType: 'leave_application',
-      entityId: leaveId,
-    }).catch(() => {})
+    Promise.allSettled([
+      consumeEntity({
+        moduleKey: 'my.leaves',
+        entityType: 'leave_application',
+        entityId: leaveId,
+      }),
+      consumeEntity({
+        moduleKey: 'staff.leaves',
+        entityType: 'leave_application',
+        entityId: leaveId,
+        routePrefix: '/my/leaves',
+      }),
+    ]).catch(() => {})
   }, [consumeEntity, leaveId])
 
   const cancelLeave = useCallback(async () => {

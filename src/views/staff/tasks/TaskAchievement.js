@@ -1,38 +1,62 @@
 // src/components/tasks/TaskAchievement.js
 
 import React, { useState, useMemo } from 'react'
-import { CRow, CCol, CCard, CCardHeader, CCardBody, CButtonGroup, CButton } from '@coreui/react'
+import { CCardHeader, CCardBody, CButtonGroup, CButton } from '@coreui/react'
+import { StatsStrip } from '../../../components/stats'
+import { formatCount } from '../../../utils/stats/formatStats'
 import { getStatusText } from './actionHandlers'
 
+export const getTaskAchievementCounts = (tasks = [], todayStr, mode = 'year') => {
+  const currentYear = Number(String(todayStr).slice(0, 4))
+  let onTime = 0
+  let late = 0
+
+  tasks.forEach((task) => {
+    const status = getStatusText(task, todayStr)
+    if (!status.startsWith('Completed')) return
+
+    if (mode === 'year') {
+      const compDate = task.completedAt || todayStr
+      const compYear = new Date(compDate).getFullYear()
+      if (compYear !== currentYear) return
+    }
+
+    if (status.startsWith('Completed (On time)')) {
+      onTime++
+    } else if (status.startsWith('Completed (Late')) {
+      late++
+    }
+  })
+
+  return { onTimeCount: onTime, lateCount: late }
+}
+
 const TaskAchievement = ({ tasks, todayStr }) => {
-  const [mode, setMode] = useState('year') // 'year' or 'all'
+  const [mode, setMode] = useState('year')
   const currentYear = Number(String(todayStr).slice(0, 4))
 
-  const { onTimeCount, lateCount } = useMemo(() => {
-    let onTime = 0
-    let late = 0
+  const { onTimeCount, lateCount } = useMemo(
+    () => getTaskAchievementCounts(tasks, todayStr, mode),
+    [tasks, todayStr, mode],
+  )
 
-    tasks.forEach((task) => {
-      const status = getStatusText(task, todayStr)
-      if (!status.startsWith('Completed')) return
-
-      // if in 'year' mode, only count tasks completed this year
-      if (mode === 'year') {
-        const compDate = task.completedAt || todayStr
-        const compYear = new Date(compDate).getFullYear()
-        if (compYear !== currentYear) return
-      }
-
-      if (status.startsWith('Completed (On time)')) {
-        onTime++
-      } else {
-        // anything else starting with 'Completed (' is late
-        late++
-      }
-    })
-
-    return { onTimeCount: onTime, lateCount: late }
-  }, [tasks, todayStr, mode, currentYear])
+  const achievementItems = useMemo(
+    () => [
+      {
+        key: 'on-time',
+        label: 'On Time',
+        value: formatCount(onTimeCount),
+        tone: onTimeCount ? 'success' : 'secondary',
+      },
+      {
+        key: 'late',
+        label: 'Late',
+        value: formatCount(lateCount),
+        tone: lateCount ? 'warning' : 'secondary',
+      },
+    ],
+    [onTimeCount, lateCount],
+  )
 
   return (
     <>
@@ -56,33 +80,11 @@ const TaskAchievement = ({ tasks, todayStr }) => {
         </CButtonGroup>
       </CCardHeader>
       <CCardBody>
-        <CRow className="justify-content-center align-items-center">
-          {/* Title for on-time completions */}
-          <CCol xs="auto" className="text-center">
-            <div style={{ fontSize: '1rem', fontWeight: '500' }}>On Time</div>
-          </CCol>
-
-          {/* Rabbit icon + count */}
-          <CCol xs="auto" className="text-center">
-            <div style={{ fontSize: '2.5rem', color: 'brown' }}>🐇</div>
-            <div style={{ fontSize: '1.5rem', marginTop: '0.25rem' }}>
-              <strong>{onTimeCount}</strong>
-            </div>
-          </CCol>
-
-          {/* Snail icon + count */}
-          <CCol xs="auto" className="text-center">
-            <div style={{ fontSize: '2.5rem', color: 'goldenrod' }}>🐌</div>
-            <div style={{ fontSize: '1.5rem', marginTop: '0.25rem' }}>
-              <strong>{lateCount}</strong>
-            </div>
-          </CCol>
-
-          {/* Title for late completions */}
-          <CCol xs="auto" className="text-center">
-            <div style={{ fontSize: '1rem', fontWeight: '500' }}>Late</div>
-          </CCol>
-        </CRow>
+        <StatsStrip
+          items={achievementItems}
+          className="mb-0"
+          scopeLabel={mode === 'year' ? `YTD ${currentYear}` : 'All Time'}
+        />
       </CCardBody>
     </>
   )

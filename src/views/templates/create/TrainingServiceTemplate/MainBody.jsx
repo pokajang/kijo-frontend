@@ -2,13 +2,20 @@ import React from 'react'
 import EditorInput from '../../components/EditorInput'
 import MethodologySection from './MethodologySection'
 
-const MainBody = ({ templateDetails, setTemplateDetails, handleEditorChange }) => (
+const MainBody = ({
+  templateDetails,
+  setTemplateDetails,
+  handleEditorChange,
+  validationErrors = {},
+}) => (
   <>
     <EditorInput
       label="Introduction"
       value={templateDetails.introduction}
       onChange={handleEditorChange}
       field="introduction"
+      invalid={Boolean(validationErrors.introduction)}
+      feedbackInvalid={validationErrors.introduction}
     />
 
     <EditorInput
@@ -16,6 +23,8 @@ const MainBody = ({ templateDetails, setTemplateDetails, handleEditorChange }) =
       value={templateDetails.objectives}
       onChange={handleEditorChange}
       field="objectives"
+      invalid={Boolean(validationErrors.objectives)}
+      feedbackInvalid={validationErrors.objectives}
     />
 
     <EditorInput
@@ -25,7 +34,11 @@ const MainBody = ({ templateDetails, setTemplateDetails, handleEditorChange }) =
       field="modules"
     />
 
-    <MethodologySection templateDetails={templateDetails} setTemplateDetails={setTemplateDetails} />
+    <MethodologySection
+      templateDetails={templateDetails}
+      setTemplateDetails={setTemplateDetails}
+      validationErrors={validationErrors}
+    />
   </>
 )
 

@@ -456,6 +456,10 @@ const DeliveryOrder = () => {
           ),
         ),
         tone: 'success',
+        onClick: () => {
+          setStatusFilter('Issued')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'upcoming',
@@ -467,6 +471,10 @@ const DeliveryOrder = () => {
           ),
         ),
         tone: 'warning',
+        onClick: () => {
+          setStatusFilter('Upcoming')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'top-pic',
@@ -474,6 +482,13 @@ const DeliveryOrder = () => {
         value: topPic.value,
         sublabel: `${formatCount(topPic.count)} delivery orders`,
         tone: 'secondary',
+        onClick:
+          topPic.value && topPic.value !== emptyValue
+            ? () => {
+                setPersonInChargeFilter(topPic.value)
+                setShowAdvancedFilters(true)
+              }
+            : undefined,
       },
     ]
   }, [normalizedDos])

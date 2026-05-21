@@ -344,10 +344,21 @@ const ServiceConfiguredRecordsTable = ({
 
   const statsItems = useMemo(
     () =>
-      serviceStatsConfigs[serviceKey]
+      (serviceStatsConfigs[serviceKey]
         ? buildServiceQuoteRecordStatsItems(sortedRecords, serviceStatsConfigs[serviceKey])
-        : buildQuoteRecordStatsItems(sortedRecords),
-    [serviceKey, sortedRecords],
+        : buildQuoteRecordStatsItems(sortedRecords)
+      ).map((item) => {
+        if (item.key !== 'awarded') return item
+        return {
+          ...item,
+          onClick: () => {
+            setStatusFilter('Awarded')
+            setShowAdvancedFilters(true)
+            setCurrentPage(1)
+          },
+        }
+      }),
+    [serviceKey, setCurrentPage, setShowAdvancedFilters, setStatusFilter, sortedRecords],
   )
 
   const totalRows = sortedRecords.length

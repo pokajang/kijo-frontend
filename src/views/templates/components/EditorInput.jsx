@@ -11,6 +11,8 @@ const EditorInput = ({
   field,
   value,
   onChange,
+  invalid = false,
+  feedbackInvalid = '',
   /* default plugins for headings, lists, links, tables, code view */
   plugins = 'advlist lists link table code',
   /* default toolbar layout including formatselect */
@@ -23,24 +25,33 @@ const EditorInput = ({
   <CRow className="mb-3">
     <CCol md={12}>
       {label && <label className="form-label">{label}</label>}
-      <Editor
-        tinymceScriptSrc="/tinymce/tinymce.min.js"
-        value={value}
-        init={{
-          license_key: 'gpl',
-          height,
-          menubar: 'format', // keep format menu for headings
-          branding: false, // hide TinyMCE branding
-          promotion: false,
-          toolbar_mode: 'wrap', // wrap toolbar lines
-          block_formats:
-            'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Preformatted=pre',
-          plugins,
-          toolbar,
-          ...init,
-        }}
-        onEditorChange={(content) => onChange(content, field)}
-      />
+      <div
+        className={invalid ? 'border border-danger rounded p-1' : ''}
+        data-template-field={field || undefined}
+        tabIndex={invalid ? -1 : undefined}
+      >
+        <Editor
+          tinymceScriptSrc="/tinymce/tinymce.min.js"
+          value={value}
+          init={{
+            license_key: 'gpl',
+            height,
+            menubar: 'format', // keep format menu for headings
+            branding: false, // hide TinyMCE branding
+            promotion: false,
+            toolbar_mode: 'wrap', // wrap toolbar lines
+            block_formats:
+              'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3; Heading 4=h4; Heading 5=h5; Heading 6=h6; Preformatted=pre',
+            plugins,
+            toolbar,
+            ...init,
+          }}
+          onEditorChange={(content) => onChange(content, field)}
+        />
+      </div>
+      {invalid && feedbackInvalid && (
+        <div className="invalid-feedback d-block">{feedbackInvalid}</div>
+      )}
     </CCol>
   </CRow>
 )

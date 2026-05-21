@@ -245,8 +245,38 @@ const AllRecordsTable = ({
     () =>
       buildQuoteRecordStatsItems(sortedRecords, {
         finalMetric: activeTab === 'my-tab' ? 'top-source' : 'top-creator',
+      }).map((item) => {
+        if (item.key === 'awarded') {
+          return {
+            ...item,
+            onClick: () => {
+              setStatusFilter('Awarded')
+              setShowAdvancedFilters(true)
+              setCurrentPage(1)
+            },
+          }
+        }
+        if (item.key === 'top-creator' && creatorOptions.includes(item.value)) {
+          return {
+            ...item,
+            onClick: () => {
+              setCreatedByFilter(item.value)
+              setShowAdvancedFilters(true)
+              setCurrentPage(1)
+            },
+          }
+        }
+        return item
       }),
-    [activeTab, sortedRecords],
+    [
+      activeTab,
+      creatorOptions,
+      setCreatedByFilter,
+      setCurrentPage,
+      setShowAdvancedFilters,
+      setStatusFilter,
+      sortedRecords,
+    ],
   )
 
   useEffect(() => {

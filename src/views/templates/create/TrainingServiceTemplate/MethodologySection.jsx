@@ -1,7 +1,7 @@
 import React from 'react'
 import { CRow, CCol, CFormLabel, CFormCheck, CFormTextarea } from '@coreui/react'
 
-const MethodologySection = ({ templateDetails, setTemplateDetails }) => {
+const MethodologySection = ({ templateDetails, setTemplateDetails, validationErrors = {} }) => {
   // Toggle checkbox values
   const toggleCheck = (field) => {
     setTemplateDetails((prev) => ({
@@ -38,6 +38,9 @@ const MethodologySection = ({ templateDetails, setTemplateDetails }) => {
             name="method_theory_desc"
             value={templateDetails.method_theory_desc}
             onChange={handleChange}
+            invalid={Boolean(validationErrors.method_theory_desc)}
+            feedbackInvalid={validationErrors.method_theory_desc}
+            data-template-field="method_theory_desc"
           />
         )}
       </CCol>
@@ -55,6 +58,9 @@ const MethodologySection = ({ templateDetails, setTemplateDetails }) => {
             name="method_practical_desc"
             value={templateDetails.method_practical_desc}
             onChange={handleChange}
+            invalid={Boolean(validationErrors.method_practical_desc)}
+            feedbackInvalid={validationErrors.method_practical_desc}
+            data-template-field="method_practical_desc"
           />
         )}
       </CCol>

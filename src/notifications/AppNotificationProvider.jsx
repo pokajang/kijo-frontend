@@ -60,7 +60,7 @@ const AppNotificationProvider = ({ children }) => {
   }, [])
 
   const consumeEntity = useCallback(
-    async ({ moduleKey, entityType, entityId }) => {
+    async ({ moduleKey, entityType, entityId, routePrefix }) => {
       if (!moduleKey || !entityType || !entityId) return 0
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE}notifications/consume-entity`, {
@@ -71,6 +71,7 @@ const AppNotificationProvider = ({ children }) => {
           module_key: moduleKey,
           entity_type: entityType,
           entity_id: entityId,
+          ...(routePrefix ? { route_prefix: routePrefix } : {}),
         }),
       })
       const result = await readJsonResponse(response)

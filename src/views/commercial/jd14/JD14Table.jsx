@@ -143,6 +143,7 @@ const JD14Table = ({
   renderQuickFilters,
   desktopUtilityPortalId,
   mobileUtilityPortalId,
+  onStatFilter,
 }) => {
   const navigate = useNavigate()
   const [editJd14Visible, setEditJd14Visible] = useState(false)
@@ -221,21 +222,24 @@ const JD14Table = ({
           countByPredicate(normalizedForms, (form) => form.status === 'Completed'),
         ),
         tone: 'success',
+        onClick: onStatFilter ? () => onStatFilter('status', 'Completed') : undefined,
       },
       {
         key: 'ongoing',
         label: 'Ongoing',
         value: formatCount(countByPredicate(normalizedForms, (form) => form.status === 'Ongoing')),
         tone: 'info',
+        onClick: onStatFilter ? () => onStatFilter('status', 'Ongoing') : undefined,
       },
       {
         key: 'upcoming',
         label: 'Upcoming',
         value: formatCount(countByPredicate(normalizedForms, (form) => form.status === 'Upcoming')),
         tone: 'warning',
+        onClick: onStatFilter ? () => onStatFilter('status', 'Upcoming') : undefined,
       },
     ]
-  }, [normalizedForms])
+  }, [normalizedForms, onStatFilter])
 
   const getActions = (form) => [
     {

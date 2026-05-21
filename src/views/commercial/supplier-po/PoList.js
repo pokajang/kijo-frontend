@@ -383,6 +383,10 @@ export default function SupplierPoRecords() {
         value: formatCount(pendingRows.length),
         sublabel: formatMoney(sumBy(pendingRows, (po) => po.total)),
         tone: 'warning',
+        onClick: () => {
+          setStatusFilter('Pending')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'top-creator',
@@ -390,6 +394,13 @@ export default function SupplierPoRecords() {
         value: topCreator.value,
         sublabel: `${formatMoney(topCreator.total)} across ${formatCount(topCreator.count)} POs`,
         tone: 'secondary',
+        onClick:
+          topCreator.value && topCreator.value !== emptyValue
+            ? () => {
+                setPersonInChargeFilter(topCreator.value)
+                setShowAdvancedFilters(true)
+              }
+            : undefined,
       },
     ]
   }, [normalizedPos])

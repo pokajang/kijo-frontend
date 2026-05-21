@@ -44,6 +44,7 @@ const StatCard = ({
   size = 'md',
   valueSize = 'auto',
   onClick,
+  actionTooltip = 'Click to filter',
 }) => {
   const isActionable = typeof onClick === 'function'
   const valueText = typeof value === 'string' || typeof value === 'number' ? String(value) : ''
@@ -63,7 +64,7 @@ const StatCard = ({
     onClick(event)
   }
 
-  return (
+  const widget = (
     <CWidgetStatsF
       className={`stats-strip-widget stats-strip-widget--${tone} stats-strip-widget--${size} stats-strip-widget--value-${autoValueSize}${isActionable ? ' stats-strip-widget--action' : ''}`}
       color={tone}
@@ -91,6 +92,14 @@ const StatCard = ({
         )
       }
     />
+  )
+
+  if (!isActionable) return widget
+
+  return (
+    <CTooltip content={actionTooltip} placement="top">
+      {widget}
+    </CTooltip>
   )
 }
 

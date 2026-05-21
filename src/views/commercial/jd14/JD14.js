@@ -127,6 +127,11 @@ const JD14 = () => {
     if (key === 'status') setStatusFilter('all')
   }
 
+  const applyStatFilter = (_key, value) => {
+    setStatusFilter(value)
+    setShowAdvancedFilters(true)
+  }
+
   useEffect(() => {
     const fetchForms = async () => {
       setLoading(true)
@@ -275,6 +280,7 @@ const JD14 = () => {
               }
               desktopUtilityPortalId="jd14-table-tools"
               mobileUtilityPortalId="jd14-mobile-table-tools"
+              onStatFilter={applyStatFilter}
               renderQuickFilters={() => (
                 <PeriodRangeSelector
                   value={periodRange}

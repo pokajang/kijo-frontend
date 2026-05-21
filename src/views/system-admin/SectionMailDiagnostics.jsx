@@ -11,9 +11,7 @@ import {
 } from '@coreui/react'
 import { DataTableRecordList, DataTableStatusBadge } from '../../components/datatable'
 import { apiJson } from '../../api/apiClient'
-import { API_BASE } from './schema-sync/constants'
-
-const fallbackApiBase = API_BASE || '/'
+import { apiUrl } from '../../api/apiUrl'
 
 const testActions = [
   {
@@ -150,7 +148,7 @@ const SectionMailDiagnostics = () => {
       setLogRows((current) => [pendingRow, ...current])
 
       try {
-        const payload = await apiJson(`${fallbackApiBase}${action.endpoint}`, {
+        const payload = await apiJson(apiUrl(action.endpoint), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom'
 import { CBadge, CButton } from '@coreui/react'
@@ -47,8 +47,10 @@ const ModuleNavStripShell = ({
   navigate = null,
 }) => {
   const stickyGap = 8
+  const tabsRef = useRef(null)
   const [stickyTop, setStickyTop] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
+  const [tabScrollHint, setTabScrollHint] = useState(false)
   const { getTabCount } = useAppNotifications()
 
   const inferredActiveTab = useMemo(() => {
@@ -103,6 +105,52 @@ const ModuleNavStripShell = ({
     }
   }, [])
 
+  useEffect(() => {
+    const tabsNode = tabsRef.current
+    if (!tabsNode) return undefined
+
+    let animationFrameId = 0
+
+    const updateScrollHint = () => {
+      const maxScrollLeft = Math.max(0, tabsNode.scrollWidth - tabsNode.clientWidth)
+      const hasHiddenEnd = tabsNode.scrollLeft < maxScrollLeft - 1
+
+      setTabScrollHint((current) => (current === hasHiddenEnd ? current : hasHiddenEnd))
+    }
+
+    const scheduleScrollHintUpdate = () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId)
+      }
+
+      if (typeof window.requestAnimationFrame === 'function') {
+        animationFrameId = window.requestAnimationFrame(updateScrollHint)
+        return
+      }
+
+      updateScrollHint()
+    }
+
+    updateScrollHint()
+    tabsNode.addEventListener('scroll', scheduleScrollHintUpdate, { passive: true })
+    window.addEventListener('resize', scheduleScrollHintUpdate)
+
+    let resizeObserver = null
+    if (typeof window.ResizeObserver === 'function') {
+      resizeObserver = new window.ResizeObserver(scheduleScrollHintUpdate)
+      resizeObserver.observe(tabsNode)
+    }
+
+    return () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId)
+      }
+      tabsNode.removeEventListener('scroll', scheduleScrollHintUpdate)
+      window.removeEventListener('resize', scheduleScrollHintUpdate)
+      resizeObserver?.disconnect()
+    }
+  }, [tabs])
+
   if (shouldHideForNestedRoute) return null
 
   const handleTabClick = (tab) => {
@@ -125,57 +173,64 @@ const ModuleNavStripShell = ({
     >
       <div className="module-nav-strip__inner records-service-strip__inner">
         <div
-          className="module-nav-strip__tabs records-service-strip__tabs"
-          role="tablist"
-          aria-label={ariaLabel}
+          className={`module-nav-strip__tabs-viewport records-service-strip__tabs-viewport ${
+            tabScrollHint ? 'has-scroll-hint-end' : ''
+          }`.trim()}
         >
-          {tabs.map((tab) => {
-            const isActive = inferredActiveTab === tab.key
-            const notificationCount = tab.notificationTabKey
-              ? getTabCount(tab.notificationTabKey)
-              : 0
-            const notificationBadgeConfig = tab.notificationTabKey
-              ? getTabNotificationBadge(tab.notificationTabKey)
-              : null
-            const badge =
-              tab.badge ||
-              (notificationCount > 0 && notificationBadgeConfig
-                ? {
-                    ...notificationBadgeConfig,
-                    text: String(notificationCount),
-                  }
-                : null)
+          <div
+            ref={tabsRef}
+            className="module-nav-strip__tabs records-service-strip__tabs"
+            role="tablist"
+            aria-label={ariaLabel}
+          >
+            {tabs.map((tab) => {
+              const isActive = inferredActiveTab === tab.key
+              const notificationCount = tab.notificationTabKey
+                ? getTabCount(tab.notificationTabKey)
+                : 0
+              const notificationBadgeConfig = tab.notificationTabKey
+                ? getTabNotificationBadge(tab.notificationTabKey)
+                : null
+              const badge =
+                tab.badge ||
+                (notificationCount > 0 && notificationBadgeConfig
+                  ? {
+                      ...notificationBadgeConfig,
+                      text: String(notificationCount),
+                    }
+                  : null)
 
-            return (
-              <CButton
-                key={tab.key}
-                type="button"
-                color="light"
-                variant="ghost"
-                data-api-busy-allow="true"
-                className={`module-nav-strip__tab records-service-strip__tab border-0 ${
-                  isActive ? 'is-active fw-semibold' : 'text-muted fw-normal'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-                aria-selected={isActive}
-                role="tab"
-                onClick={() => handleTabClick(tab)}
-              >
-                <span className="d-inline-flex align-items-center gap-2">
-                  <span>{tab.label}</span>
-                  {badge ? (
-                    <CBadge
-                      color={badge.color || 'primary'}
-                      className="rounded-pill"
-                      title={badge.title || undefined}
-                    >
-                      {badge.text}
-                    </CBadge>
-                  ) : null}
-                </span>
-              </CButton>
-            )
-          })}
+              return (
+                <CButton
+                  key={tab.key}
+                  type="button"
+                  color="light"
+                  variant="ghost"
+                  data-api-busy-allow="true"
+                  className={`module-nav-strip__tab records-service-strip__tab border-0 ${
+                    isActive ? 'is-active fw-semibold' : 'text-muted fw-normal'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                  aria-selected={isActive}
+                  role="tab"
+                  onClick={() => handleTabClick(tab)}
+                >
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <span>{tab.label}</span>
+                    {badge ? (
+                      <CBadge
+                        color={badge.color || 'primary'}
+                        className="rounded-pill"
+                        title={badge.title || undefined}
+                      >
+                        {badge.text}
+                      </CBadge>
+                    ) : null}
+                  </span>
+                </CButton>
+              )
+            })}
+          </div>
         </div>
         {rightControls && (
           <div className="module-nav-strip__controls records-service-strip__controls">

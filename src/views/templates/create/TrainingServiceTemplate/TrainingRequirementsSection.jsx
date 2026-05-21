@@ -1,7 +1,11 @@
 import React from 'react'
 import { CRow, CCol, CFormLabel, CFormTextarea } from '@coreui/react'
 
-const TrainingRequirementsSection = ({ templateDetails, setTemplateDetails }) => {
+const TrainingRequirementsSection = ({
+  templateDetails,
+  setTemplateDetails,
+  validationErrors = {},
+}) => {
   const handleChange = (e) => {
     const { name, value } = e.target
     setTemplateDetails((prev) => ({
@@ -19,6 +23,9 @@ const TrainingRequirementsSection = ({ templateDetails, setTemplateDetails }) =>
           name="trainingRequirements"
           value={templateDetails.trainingRequirements}
           onChange={handleChange}
+          invalid={Boolean(validationErrors.trainingRequirements)}
+          feedbackInvalid={validationErrors.trainingRequirements}
+          data-template-field="trainingRequirements"
         />
       </CCol>
       <CCol md={6} className="mb-3">
@@ -29,6 +36,9 @@ const TrainingRequirementsSection = ({ templateDetails, setTemplateDetails }) =>
           value={templateDetails.additionalTrainingRequirements}
           onChange={handleChange}
           placeholder="e.g. Work at height platform, scaffolding, etc."
+          invalid={Boolean(validationErrors.additionalTrainingRequirements)}
+          feedbackInvalid={validationErrors.additionalTrainingRequirements}
+          data-template-field="additionalTrainingRequirements"
         />
       </CCol>
       <CCol md={6} className="mb-3">
@@ -38,6 +48,9 @@ const TrainingRequirementsSection = ({ templateDetails, setTemplateDetails }) =>
           name="trainingMaterials"
           value={templateDetails.trainingMaterials}
           onChange={handleChange}
+          invalid={Boolean(validationErrors.trainingMaterials)}
+          feedbackInvalid={validationErrors.trainingMaterials}
+          data-template-field="trainingMaterials"
         />
       </CCol>
       <CCol md={6} className="mb-3">
@@ -48,6 +61,9 @@ const TrainingRequirementsSection = ({ templateDetails, setTemplateDetails }) =>
           value={templateDetails.lectureMedium}
           onChange={handleChange}
           placeholder="e.g. English & Bahasa Malaysia"
+          invalid={Boolean(validationErrors.lectureMedium)}
+          feedbackInvalid={validationErrors.lectureMedium}
+          data-template-field="lectureMedium"
         />
       </CCol>
     </CRow>

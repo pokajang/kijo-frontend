@@ -293,18 +293,30 @@ const ClientVendorRegistrationPage = () => {
         label: 'Active',
         value: formatCount(normalizedRows.filter((row) => row.status === 'active').length),
         tone: 'success',
+        onClick: () => {
+          setStatusFilter('active')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'expiring',
         label: 'Expiring Soon',
         value: formatCount(normalizedRows.filter((row) => row.status === 'expiring_soon').length),
         tone: 'warning',
+        onClick: () => {
+          setStatusFilter('expiring_soon')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'expired',
         label: 'Expired',
         value: formatCount(normalizedRows.filter((row) => row.status === 'expired').length),
         tone: 'danger',
+        onClick: () => {
+          setStatusFilter('expired')
+          setShowAdvancedFilters(true)
+        },
       },
     ],
     [normalizedRows],

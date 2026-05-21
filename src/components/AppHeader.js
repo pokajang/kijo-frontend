@@ -32,6 +32,7 @@ import {
   cilSun,
 } from '@coreui/icons'
 import { AppHeaderDropdown } from './header/index'
+import AppModuleSearch from './search/AppModuleSearch'
 import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
@@ -202,6 +203,8 @@ const AppHeader = () => {
           </CTooltip>
           <span className="app-bottom-nav-label">Menu</span>
         </CHeaderToggler>
+
+        <AppModuleSearch />
 
         <CHeaderNav className="d-flex align-items-center ms-auto app-bottom-nav-actions">
           <CNavItem className="me-2 app-bottom-nav-entry d-md-none">

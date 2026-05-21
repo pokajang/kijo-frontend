@@ -10,6 +10,14 @@ export const formatValidationErrors = (errors = []) =>
     .filter(Boolean)
     .join('\n')
 
+export const getValidationErrorMap = (errors = []) =>
+  errors.reduce((map, error) => {
+    if (error?.field && error?.message && !map[error.field]) {
+      map[error.field] = error.message
+    }
+    return map
+  }, {})
+
 const addRequiredText = (errors, value, field, label) => {
   if (!hasText(value)) {
     errors.push({ field, message: `${label} is required.` })
@@ -19,6 +27,16 @@ const addRequiredText = (errors, value, field, label) => {
 const addRequiredRichText = (errors, value, field, label) => {
   if (!hasRichText(value)) {
     errors.push({ field, message: `${label} is required.` })
+  }
+}
+
+const addMaxLength = (errors, value, maxLength, field, label) => {
+  const text = String(value || '')
+  if (text.length > maxLength) {
+    errors.push({
+      field,
+      message: `${label} must be ${maxLength} characters or fewer.`,
+    })
   }
 }
 
@@ -35,7 +53,16 @@ export const validateTrainingTemplate = ({ templateDetails = {}, agendaRows = []
   addRequiredText(errors, templateDetails.trainingTitle, 'trainingTitle', 'Training title')
   addRequiredText(errors, templateDetails.trainingCode, 'trainingCode', 'Training code')
   addRequiredText(errors, templateDetails.duration, 'duration', 'Training duration')
-  addRequiredText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, templateDetails.introduction, 'introduction', 'Introduction')
+  addRequiredRichText(errors, templateDetails.objectives, 'objectives', 'Objectives')
+  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
+
+  addMaxLength(errors, templateDetails.trainingTitle, 255, 'trainingTitle', 'Training title')
+  addMaxLength(errors, templateDetails.trainingCode, 100, 'trainingCode', 'Training code')
+  addMaxLength(errors, templateDetails.hrdNo, 100, 'hrdNo', 'HRD program number')
+  addMaxLength(errors, templateDetails.lectureMedium, 255, 'lectureMedium', 'Lecture medium')
+  addMaxLength(errors, templateDetails.duration, 100, 'duration', 'Training duration')
+  addMaxLength(errors, remarks, 1000, 'remarks', 'Remarks')
 
   agendaRows.forEach((row, index) => {
     const start = String(row?.start || '').trim()
@@ -63,6 +90,7 @@ export const validateTrainingTemplate = ({ templateDetails = {}, agendaRows = []
         message: `${label} start time must be before end time.`,
       })
     }
+    addMaxLength(errors, row?.topic, 500, `agenda.${index}`, `${label} topic`)
   })
 
   if (completeAgendaRows === 0) {
@@ -80,7 +108,8 @@ export const validateIhTemplate = ({ templateDetails = {}, remarks }) => {
 
   addRequiredText(errors, templateDetails.serviceTitle, 'serviceTitle', 'Service title')
   addRequiredText(errors, templateDetails.serviceCode, 'serviceCode', 'Service code')
-  addRequiredText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, templateDetails.introduction, 'introduction', 'Introduction')
+  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
 
   const contentFields = [
     templateDetails.introduction,
@@ -105,7 +134,14 @@ export const validateManpowerTemplate = ({ templateDetails = {}, remarks }) => {
 
   addRequiredText(errors, templateDetails.serviceTitle, 'serviceTitle', 'Service title')
   addRequiredText(errors, templateDetails.serviceCode, 'serviceCode', 'Service code')
-  addRequiredText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, templateDetails.introduction, 'introduction', 'Introduction')
+  addRequiredRichText(
+    errors,
+    templateDetails.serviceDeliverables,
+    'serviceDeliverables',
+    'Service deliverables',
+  )
+  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
 
   if (
     ![
@@ -136,7 +172,7 @@ export const validateSpecialTemplate = ({
 
   addRequiredText(errors, template.serviceTitle, 'serviceTitle', 'Service title')
   addRequiredText(errors, template.serviceCode, 'serviceCode', 'Service code')
-  addRequiredText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
 
   if (!['upload', 'write'].includes(proposalMode)) {
     errors.push({ field: 'proposalMode', message: 'Proposal mode is invalid.' })

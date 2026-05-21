@@ -14,7 +14,14 @@ import {
 } from '@coreui/react'
 import EditorInput from '../../components/EditorInput'
 
-const ProposalRemarks = ({ remarks, setRemarks, isEdit = false, history = [] }) => {
+const ProposalRemarks = ({
+  remarks,
+  setRemarks,
+  isEdit = false,
+  history = [],
+  validationErrors = {},
+  clearValidationError,
+}) => {
   return (
     <CRow className="mb-3">
       <CCol md={12}>
@@ -68,7 +75,16 @@ const ProposalRemarks = ({ remarks, setRemarks, isEdit = false, history = [] }) 
         )}
 
         <CFormLabel>Proposal Remarks (Internal Use)</CFormLabel>
-        <EditorInput value={remarks} onChange={(content) => setRemarks(content)} />
+        <EditorInput
+          field="remarks"
+          value={remarks}
+          onChange={(content) => {
+            clearValidationError?.('remarks')
+            setRemarks(content)
+          }}
+          invalid={Boolean(validationErrors.remarks)}
+          feedbackInvalid={validationErrors.remarks}
+        />
       </CCol>
     </CRow>
   )

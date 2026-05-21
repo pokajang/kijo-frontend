@@ -186,6 +186,7 @@ const InvoiceTable = ({
   renderQuickFilters,
   desktopUtilityPortalId,
   mobileUtilityPortalId,
+  onStatFilter,
 }) => {
   const normalizedInvoices = useMemo(
     () =>
@@ -269,9 +270,13 @@ const InvoiceTable = ({
         value: topPic.value,
         sublabel: `${formatMoney(topPic.total)} across ${formatCount(topPic.count)} invoices`,
         tone: 'secondary',
+        onClick:
+          onStatFilter && topPic.value && topPic.value !== emptyValue
+            ? () => onStatFilter('pic', topPic.value)
+            : undefined,
       },
     ]
-  }, [normalizedInvoices])
+  }, [normalizedInvoices, onStatFilter])
 
   const getActions = (inv) =>
     [

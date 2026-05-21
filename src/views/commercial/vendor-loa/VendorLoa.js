@@ -85,6 +85,11 @@ const VendorLoa = () => {
     if (key === 'status') setStatusFilter('all')
   }
 
+  const applyStatFilter = (_key, value) => {
+    setPicFilter(value)
+    setShowAdvancedFilters(true)
+  }
+
   const picOptions = useMemo(() => {
     const picSet = new Set()
     records.forEach((record) => {
@@ -235,6 +240,7 @@ const VendorLoa = () => {
               }
               desktopUtilityPortalId="vendor-loa-table-tools"
               mobileUtilityPortalId="vendor-loa-mobile-table-tools"
+              onStatFilter={applyStatFilter}
               renderQuickFilters={() => (
                 <PeriodRangeSelector
                   value={periodRange}

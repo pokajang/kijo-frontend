@@ -1,0 +1,195 @@
+.app-module-search-shell {
+  flex: 1 1 auto;
+  min-width: 12rem;
+  max-width: 34rem;
+  align-self: stretch;
+  margin: 0 1rem;
+  align-items: center;
+}
+
+.app-module-search {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.app-module-search__field {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin-block: 0;
+  padding-block: 0;
+}
+
+.app-module-search__input {
+  min-width: 0;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  margin-block: 0;
+  padding: 0 0.75rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  border: 1px solid var(--app-border-card);
+  border-radius: 0.2rem;
+  border-color: var(--app-border-card);
+  background: var(--app-surface-page);
+  color: var(--cui-body-color);
+  font-size: var(--app-font-size-sm);
+  line-height: normal;
+  outline: 0;
+}
+
+.app-module-search__input:focus {
+  border-color: rgba(var(--cui-primary-rgb), 0.45);
+  box-shadow: 0 0 0 0.16rem rgba(var(--cui-primary-rgb), 0.12);
+}
+
+.app-module-search__input::placeholder {
+  color: var(--cui-secondary-color);
+}
+
+.app-module-search__results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  z-index: 1070;
+  max-height: min(22rem, calc(100dvh - 8rem));
+  margin: 0;
+  padding: 0.3rem;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--app-border-card);
+  border-radius: var(--app-radius-md);
+  background: var(--cui-body-bg);
+  box-shadow: var(--app-shadow-lg);
+}
+
+.app-module-search__results.is-open {
+  display: block;
+}
+
+.app-module-search__result,
+.app-module-search__empty,
+.app-module-search__section-label,
+.app-module-search__suggestion-button {
+  min-height: 2rem;
+  border-radius: var(--app-radius-sm);
+  padding: 0.38rem 0.55rem;
+}
+
+.app-module-search__result {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  cursor: pointer;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.app-module-search__result.is-active,
+.app-module-search__result:hover {
+  background: rgba(var(--cui-primary-rgb), 0.09);
+}
+
+.app-module-search__result-label {
+  color: var(--cui-body-color);
+  font-weight: 600;
+}
+
+.app-module-search__result-separator,
+.app-module-search__result-group,
+.app-module-search__empty,
+.app-module-search__section-label {
+  color: var(--cui-secondary-color);
+  font-size: var(--app-font-size-xs);
+}
+
+.app-module-search__result-group {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-module-search__section-label {
+  display: flex;
+  align-items: center;
+  min-height: 1.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.app-module-search__suggestion {
+  display: flex;
+}
+
+.app-module-search__suggestion-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--cui-primary);
+  font: inherit;
+  font-size: var(--app-font-size-sm);
+  text-align: left;
+}
+
+.app-module-search__suggestion-button:hover,
+.app-module-search__suggestion-button:focus-visible {
+  background: rgba(var(--cui-primary-rgb), 0.09);
+  outline: 0;
+}
+
+.app-module-search-fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(4.55rem + env(safe-area-inset-bottom));
+  z-index: 1045;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: var(--app-shadow-lg);
+}
+
+.app-module-search-fab svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.app-module-search-modal .modal-body {
+  padding-top: 0.25rem;
+}
+
+.app-module-search-modal .app-module-search__results {
+  position: static;
+  max-height: min(55vh, 24rem);
+  margin-top: 0.5rem;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .app-module-search-fab {
+    display: none;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-module-search-shell {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-module-search__input {
+    transition: none;
+  }
+}

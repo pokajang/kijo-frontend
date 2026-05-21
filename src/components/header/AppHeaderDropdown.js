@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react'
 import {
+  CBadge,
   CButton,
   CDropdown,
   CDropdownDivider,
@@ -28,6 +29,8 @@ import {
 import CIcon from '@coreui/icons-react'
 
 import { useAuth } from '../../auth/AuthProvider'
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
+import { getRouteNotificationBadge } from '../../notifications/notificationRegistry'
 
 import StaffProfile from '../profile/StaffProfile'
 import UserSetting from '../user-setting/UserSetting'
@@ -121,6 +124,8 @@ const defaultModalKey = Object.keys(modalMapping)[0] || null
 const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange }) => {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const { getRouteGroupCount } = useAppNotifications()
+  const personalLeaveNotificationCount = Number(getRouteGroupCount('/my/leaves') || 0)
 
   const [modalVisible, setModalVisible] = useState(false)
   const [signOutModalVisible, setSignOutModalVisible] = useState(false)
@@ -195,9 +200,24 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
           caret={false}
           aria-pressed={isAccountActive}
         >
-          <CTooltip content="Open Account Menu" placement="bottom">
-            <span className="app-bottom-nav-icon app-bottom-nav-icon--account" aria-hidden="true">
+          <CTooltip
+            content={
+              personalLeaveNotificationCount > 0
+                ? `${personalLeaveNotificationCount} leave update${
+                    personalLeaveNotificationCount === 1 ? '' : 's'
+                  } available`
+                : 'Open Account Menu'
+            }
+            placement="bottom"
+          >
+            <span
+              className={`app-bottom-nav-icon app-bottom-nav-icon--account${
+                personalLeaveNotificationCount > 0 ? ' app-bottom-nav-icon--with-badge' : ''
+              }`}
+              aria-hidden="true"
+            >
               <CIcon icon={cilUser} className="app-bottom-nav-account-icon" />
+              {personalLeaveNotificationCount > 0 && <span className="app-bottom-nav-unread-dot" />}
             </span>
           </CTooltip>
           <span className="app-bottom-nav-label">Account</span>
@@ -224,18 +244,33 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
               <div key={section.title} className="app-header-dropdown-section">
                 <CDropdownHeader className={section.headerClass}>{section.title}</CDropdownHeader>
                 <div className="app-header-dropdown-grid">
-                  {section.items.map((item) => (
-                    <CDropdownItem
-                      key={item.key}
-                      className="app-header-dropdown-item"
-                      onClick={() => handleMenuItemClick(item)}
-                    >
-                      {item.icon && (
-                        <CIcon icon={item.icon} className="app-header-dropdown-item-icon" />
-                      )}
-                      {item.label}
-                    </CDropdownItem>
-                  ))}
+                  {section.items.map((item) => {
+                    const count = item.to ? Number(getRouteGroupCount(item.to) || 0) : 0
+                    const badgeConfig = item.to ? getRouteNotificationBadge(item.to) : null
+                    const badge = count > 0 && badgeConfig ? { ...badgeConfig, text: count } : null
+
+                    return (
+                      <CDropdownItem
+                        key={item.key}
+                        className="app-header-dropdown-item"
+                        onClick={() => handleMenuItemClick(item)}
+                      >
+                        {item.icon && (
+                          <CIcon icon={item.icon} className="app-header-dropdown-item-icon" />
+                        )}
+                        <span>{item.label}</span>
+                        {badge ? (
+                          <CBadge
+                            color={badge.color}
+                            className="rounded-pill ms-auto"
+                            title={badge.title}
+                          >
+                            {badge.text}
+                          </CBadge>
+                        ) : null}
+                      </CDropdownItem>
+                    )
+                  })}
                 </div>
               </div>
             ))}

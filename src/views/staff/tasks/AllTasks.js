@@ -220,6 +220,43 @@ const getStatusRank = (statusText) => {
   return 99
 }
 
+export const buildAllTaskStatsItems = (normalizedTasks = []) => {
+  const ongoingRows = normalizedTasks.filter((task) => task.statusText === 'Ongoing')
+  const overdueRows = normalizedTasks.filter((task) => task.statusText === 'Overdue')
+  const onTimeRows = normalizedTasks.filter((task) => task.statusText === 'Completed (On time)')
+  const topOverdueStaff = getTopGroupByCount(overdueRows, getStaffCode)
+  const topOnTimeStaff = getTopGroupByCount(onTimeRows, getStaffCode)
+
+  return [
+    {
+      key: 'ongoing',
+      label: 'Ongoing',
+      value: formatCount(ongoingRows.length),
+      tone: 'info',
+    },
+    {
+      key: 'overdue',
+      label: 'Overdue',
+      value: formatCount(overdueRows.length),
+      tone: overdueRows.length ? 'danger' : 'secondary',
+    },
+    {
+      key: 'top-overdue',
+      label: 'Most Overdue',
+      value: topOverdueStaff.value,
+      sublabel: `${formatCount(topOverdueStaff.count)} overdue`,
+      tone: topOverdueStaff.count ? 'danger' : 'secondary',
+    },
+    {
+      key: 'top-on-time',
+      label: 'Top On Time',
+      value: topOnTimeStaff.value,
+      sublabel: `${formatCount(topOnTimeStaff.count)} on time`,
+      tone: topOnTimeStaff.count ? 'success' : 'secondary',
+    },
+  ]
+}
+
 const AllTasks = () => {
   const navigate = useNavigate()
   const [tasks, setTasks] = useState([])
@@ -331,39 +368,7 @@ const AllTasks = () => {
     [filteredTasks, todayStr],
   )
 
-  const statsItems = useMemo(() => {
-    const ongoingRows = normalizedTasks.filter((task) => task.statusText === 'Ongoing')
-    const overdueRows = normalizedTasks.filter((task) => task.statusText === 'Overdue')
-    const topStaff = getTopGroupByCount(normalizedTasks, getStaffCode)
-
-    return [
-      {
-        key: 'tasks',
-        label: 'Tasks',
-        value: formatCount(normalizedTasks.length),
-        tone: 'primary',
-      },
-      {
-        key: 'ongoing',
-        label: 'Ongoing',
-        value: formatCount(ongoingRows.length),
-        tone: 'info',
-      },
-      {
-        key: 'overdue',
-        label: 'Overdue',
-        value: formatCount(overdueRows.length),
-        tone: overdueRows.length ? 'danger' : 'secondary',
-      },
-      {
-        key: 'top-staff',
-        label: 'Top Staff',
-        value: topStaff.value,
-        sublabel: `${formatCount(topStaff.count)} tasks`,
-        tone: 'success',
-      },
-    ]
-  }, [normalizedTasks])
+  const statsItems = useMemo(() => buildAllTaskStatsItems(normalizedTasks), [normalizedTasks])
 
   const hasCustomPeriod = periodRange && !isDefaultPeriodRange(periodRange)
   const activeFilterCount = 0

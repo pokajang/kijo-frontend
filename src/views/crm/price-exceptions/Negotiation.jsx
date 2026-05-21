@@ -289,6 +289,11 @@ const Negotiation = () => {
     )
   }, [normalizedRows, requester, search])
 
+  const applyStatFilter = useCallback((nextStatus) => {
+    setStatus(nextStatus)
+    setShowAdvancedFilters(true)
+  }, [])
+
   const statsItems = useMemo(() => {
     const used = normalizedRows.filter((row) => row.status === 'used').length
     const pending = normalizedRows.filter((row) => row.status === 'pending').length
@@ -299,13 +304,21 @@ const Negotiation = () => {
       .reduce((sum, row) => sum + Number(row.approved_discount_amount || 0), 0)
 
     return [
-      { key: 'used', label: 'Applied', value: used, sublabel: 'Applied to quote', tone: 'info' },
+      {
+        key: 'used',
+        label: 'Applied',
+        value: used,
+        sublabel: 'Applied to quote',
+        tone: 'info',
+        onClick: () => applyStatFilter('used'),
+      },
       {
         key: 'pending',
         label: 'Pending',
         value: pending,
         sublabel: 'Open requests',
         tone: 'warning',
+        onClick: () => applyStatFilter('pending'),
       },
       {
         key: 'approved',
@@ -313,6 +326,7 @@ const Negotiation = () => {
         value: approved,
         sublabel: `RM ${money(approvedDiscountTotal)} approved`,
         tone: 'success',
+        onClick: () => applyStatFilter('approved'),
       },
       {
         key: 'rejected',
@@ -320,9 +334,10 @@ const Negotiation = () => {
         value: rejected,
         sublabel: 'Declined requests',
         tone: 'danger',
+        onClick: () => applyStatFilter('rejected'),
       },
     ]
-  }, [normalizedRows])
+  }, [applyStatFilter, normalizedRows])
 
   const activeChips = [
     search.trim() ? { key: 'search', label: `Search: ${search.trim()}` } : null,

@@ -229,24 +229,40 @@ export default function TemplateTable({ data = [], onDelete, onCreateBmCopy, loa
           countByPredicate(filtered, (row) => isDuration(row, 'half day (4 hours)')),
         ),
         tone: 'primary',
+        onClick: () => {
+          setDurationFilter('half-day')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'one-day',
         label: '1-Day Program',
         value: formatCount(countByPredicate(filtered, (row) => isDuration(row, '1 day'))),
         tone: 'success',
+        onClick: () => {
+          setDurationFilter('1-day')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'two-days',
         label: '2-Day Program',
         value: formatCount(countByPredicate(filtered, (row) => isDuration(row, '2 days'))),
         tone: 'info',
+        onClick: () => {
+          setDurationFilter('2-days')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'missing-hrd',
         label: 'Without HRD Program No',
         value: formatCount(countByPredicate(filtered, isMissingHrdNo)),
         tone: 'warning',
+        onClick: () => {
+          setHrdFilter('without-hrd')
+          setShowAdvancedFilters(true)
+        },
       },
     ]
   }, [filtered])

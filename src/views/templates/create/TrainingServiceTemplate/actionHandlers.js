@@ -12,7 +12,11 @@ import {
   readTemplateDraft,
   writeTemplateDraft,
 } from '../../shared/templateDrafts'
-import { formatValidationErrors, validateTrainingTemplate } from '../../shared/templateValidation'
+import {
+  formatValidationErrors,
+  getValidationErrorMap,
+  validateTrainingTemplate,
+} from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
 // ------ LocalStorage draft key
 const DRAFT_KEY = 'trainingProposalDraft'
@@ -145,6 +149,22 @@ export function handleEditorChange(content, field, setTemplateDetails) {
   setTemplateDetails((prev) => ({ ...prev, [field]: content }))
 }
 
+const scrollToValidationField = (field) => {
+  if (!field || typeof document === 'undefined') return
+
+  window.setTimeout(() => {
+    const escapedField = String(field).replace(/"/g, '\\"')
+    const target = document.querySelector(`[data-template-field="${escapedField}"]`)
+    if (!target) return
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const focusable = target.matches('input, textarea, select, button')
+      ? target
+      : target.querySelector('input, textarea, select, button, [tabindex]')
+    focusable?.focus?.({ preventScroll: true })
+  }, 0)
+}
+
 // ------ Handler: Save or Update
 export async function handleSave({
   templateDetails,
@@ -156,6 +176,7 @@ export async function handleSave({
   saving,
   setSaving,
   setSaveError,
+  setValidationErrors,
   saveInFlightRef,
   finalizingBmTranslation = false,
   isBmProposal = false,
@@ -165,11 +186,15 @@ export async function handleSave({
   const validationErrors = validateTrainingTemplate({ templateDetails, agendaRows, remarks })
   if (validationErrors.length > 0) {
     const message = formatValidationErrors(validationErrors)
+    const errorMap = getValidationErrorMap(validationErrors)
+    setValidationErrors?.(errorMap)
     setSaveError(message)
     dialog.alert(message)
+    scrollToValidationField(validationErrors[0]?.field)
     return
   }
 
+  setValidationErrors?.({})
   setSaveError('')
   if (saveInFlightRef) saveInFlightRef.current = true
   setSaving(true)

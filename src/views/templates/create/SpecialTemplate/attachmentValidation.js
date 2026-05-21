@@ -1,24 +1,11 @@
-export const MAX_ATTACHMENT_SIZE_BYTES = 15 * 1024 * 1024
+export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024
 
-export const ACCEPTED_ATTACHMENT_TYPES = new Set([
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'image/jpeg',
-  'image/png',
-])
+export const ACCEPTED_ATTACHMENT_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
 
-export const ACCEPTED_ATTACHMENT_INPUT =
-  '.pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/jpeg,image/png'
+export const ACCEPTED_ATTACHMENT_INPUT = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png'
 
 const ACCEPTED_EXTENSION_TYPES = {
   pdf: new Set(['application/pdf']),
-  doc: new Set(['application/msword']),
-  docx: new Set(['application/vnd.openxmlformats-officedocument.wordprocessingml.document']),
-  ppt: new Set(['application/vnd.ms-powerpoint']),
-  pptx: new Set(['application/vnd.openxmlformats-officedocument.presentationml.presentation']),
   jpg: new Set(['image/jpeg']),
   jpeg: new Set(['image/jpeg']),
   png: new Set(['image/png']),
@@ -59,7 +46,7 @@ export const validateNewAttachments = (files = [], existing = []) => {
     }
 
     if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
-      rejected.push({ fileName: file.name, reason: 'File exceeds the 15 MB size limit.' })
+      rejected.push({ fileName: file.name, reason: 'File exceeds the 10 MB size limit.' })
       return
     }
 

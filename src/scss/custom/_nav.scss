@@ -64,13 +64,13 @@
 
   .app-main-header > .container-fluid {
     align-items: center;
-    min-height: calc(1.25rem + 14px);
+    min-height: 44px;
     padding-top: 6px;
     padding-bottom: 6px;
   }
 
   .sidebar-header {
-    min-height: calc(1.25rem + 14px);
+    min-height: 44px;
     padding-top: 6px;
     padding-bottom: 6px;
     padding-left: 0.8rem;
@@ -154,14 +154,13 @@
     transform: scale(1.02);
   }
 
-.app-bottom-nav--ticket-active.app-main-header
-  .app-bottom-nav-link.active:not(.app-bottom-nav-dropdown-toggle),
-.app-bottom-nav--account-active.app-main-header
+  .app-bottom-nav--ticket-active.app-main-header
+    .app-bottom-nav-link.active:not(.app-bottom-nav-dropdown-toggle),
+  .app-bottom-nav--account-active.app-main-header
     .app-bottom-nav-link.active:not(.app-bottom-nav-dropdown-toggle) {
     color: var(--cui-secondary-color);
     transform: none;
   }
-
 }
 
 /* Mobile: move global top header menu to bottom bar */

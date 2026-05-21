@@ -460,6 +460,10 @@ const SectionAllLeaves = ({
         label: 'Pending',
         value: formatCount(pendingRows.length),
         tone: 'warning',
+        onClick: () => {
+          setFilterStatus('Pending')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'approved-days',
@@ -467,6 +471,10 @@ const SectionAllLeaves = ({
         value: formatCount(sumBy(approvedRows, (record) => record.duration)),
         sublabel: `${formatCount(approvedRows.length)} approved requests`,
         tone: 'success',
+        onClick: () => {
+          setFilterStatus('Approved')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'top-staff',

@@ -68,11 +68,19 @@ const adjustAgendaForDayCount = (prevRows, nextDayCount) => {
   return clone
 }
 
-const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
+const AgendaTable = ({
+  agendaRows,
+  setAgendaRows,
+  duration,
+  setDuration,
+  validationErrors = {},
+  clearAgendaValidationErrors,
+}) => {
   const handleDurationSelect = (nextToken) => {
     if (nextToken === duration) return
 
     const nextDays = getDayCountFromDuration(nextToken)
+    clearAgendaValidationErrors?.()
     setDuration(nextToken)
 
     setAgendaRows((prev) => {
@@ -90,6 +98,7 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
   }
 
   const handleAgendaChange = (index, field, value) => {
+    clearAgendaValidationErrors?.()
     setAgendaRows((prev) => {
       const updated = [...prev]
       updated[index] = { ...updated[index], [field]: value }
@@ -99,6 +108,7 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
 
   // Add row to the selected day.
   const handleAddRowToDay = (day) => {
+    clearAgendaValidationErrors?.()
     setAgendaRows((prev) => {
       const dayNum = Number(day) || 1
       const rowsForDay = prev.filter((r) => Number(r.day) === dayNum)
@@ -115,6 +125,7 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
   }
 
   const handleRemoveRow = (index) => {
+    clearAgendaValidationErrors?.()
     setAgendaRows((prev) => prev.filter((_, idx) => idx !== index))
   }
 
@@ -133,7 +144,11 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
     <CRow className="mb-3">
       <CCol>
         <CFormLabel>Select Training Duration</CFormLabel>
-        <CButtonGroup className="mb-3 d-block">
+        <CButtonGroup
+          className="mb-1 d-block"
+          data-template-field="duration"
+          tabIndex={validationErrors.duration ? -1 : undefined}
+        >
           {DURATION_OPTIONS.map(({ label, value }) => (
             <CButton
               key={value}
@@ -146,8 +161,16 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
             </CButton>
           ))}
         </CButtonGroup>
+        {validationErrors.duration && (
+          <div className="invalid-feedback d-block mb-3">{validationErrors.duration}</div>
+        )}
 
         <CFormLabel>Tentative Program</CFormLabel>
+        {validationErrors.agenda && (
+          <div className="invalid-feedback d-block mb-2" data-template-field="agenda" tabIndex={-1}>
+            {validationErrors.agenda}
+          </div>
+        )}
         {/* datatable-exempt: existing embedded/layout table */}
         <CTable hover responsive className="data-table-compact embedded-data-table">
           <CTableHead>
@@ -167,6 +190,7 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
 
                 {groupedByDay[day].map((row) => {
                   const idx = row._idx
+                  const rowError = validationErrors[`agenda.${idx}`]
                   return (
                     <CTableRow key={`${day}-${idx}`}>
                       <CTableDataCell>
@@ -174,6 +198,8 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
                           type="time"
                           value={row.start}
                           onChange={(e) => handleAgendaChange(idx, 'start', e.target.value)}
+                          invalid={Boolean(rowError)}
+                          data-template-field={`agenda.${idx}`}
                         />
                       </CTableDataCell>
                       <CTableDataCell>
@@ -181,6 +207,7 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
                           type="time"
                           value={row.end}
                           onChange={(e) => handleAgendaChange(idx, 'end', e.target.value)}
+                          invalid={Boolean(rowError)}
                         />
                       </CTableDataCell>
                       <CTableDataCell>
@@ -195,7 +222,9 @@ const AgendaTable = ({ agendaRows, setAgendaRows, duration, setDuration }) => {
                           onChange={(e) =>
                             handleAgendaChange(idx, 'topic', e.target.value.replace(/\n/g, '<br/>'))
                           }
+                          invalid={Boolean(rowError)}
                         />
+                        {rowError && <div className="invalid-feedback d-block">{rowError}</div>}
                       </CTableDataCell>
                       <CTableDataCell className="text-center">
                         <CButton

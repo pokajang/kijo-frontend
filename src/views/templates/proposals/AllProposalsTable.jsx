@@ -208,6 +208,10 @@ const AllProposalsTable = ({
         label: 'Training',
         value: formatCount(countByPredicate(filteredRows, (row) => row.type === 'training')),
         tone: 'success',
+        onClick: () => {
+          setServiceFilter('training')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'ih',
@@ -223,6 +227,13 @@ const AllProposalsTable = ({
         value: topCreator.value,
         sublabel: `${formatCount(topCreator.count)} proposals`,
         tone: 'secondary',
+        onClick:
+          topCreator.value && topCreator.value !== emptyValue
+            ? () => {
+                setCreatedByFilter(topCreator.value)
+                setShowAdvancedFilters(true)
+              }
+            : undefined,
       },
     ]
   }, [filteredRows])

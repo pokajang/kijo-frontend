@@ -136,6 +136,7 @@ const VendorLoaTable = ({
   renderQuickFilters,
   desktopUtilityPortalId,
   mobileUtilityPortalId,
+  onStatFilter,
 }) => {
   const navigate = useNavigate()
   const [selectedRecord, setSelectedRecord] = useState(null)
@@ -381,9 +382,13 @@ const VendorLoaTable = ({
         value: topAwardBy.value,
         sublabel: `${formatMoney(topAwardBy.total)} across ${formatCount(topAwardBy.count)} LOAs`,
         tone: 'secondary',
+        onClick:
+          onStatFilter && topAwardBy.value && topAwardBy.value !== emptyValue
+            ? () => onStatFilter('pic', topAwardBy.value)
+            : undefined,
       },
     ]
-  }, [normalizedRecords])
+  }, [normalizedRecords, onStatFilter])
 
   const canMarkPaid = (rec) => {
     const statusRaw = String(rec.payment_status_raw || '').toLowerCase()

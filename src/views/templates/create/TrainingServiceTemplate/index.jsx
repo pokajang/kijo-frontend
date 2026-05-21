@@ -60,6 +60,7 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
   const [agendaRows, setAgendaRows] = useState([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [validationErrors, setValidationErrors] = useState({})
   const [loading, setLoading] = useState(Boolean(isEdit && editId))
   const [loadError, setLoadError] = useState('')
   const saveInFlightRef = useRef(false)
@@ -80,9 +81,35 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
   )
 
   // ------ event handlers
-  const onInputChange = (e) => handleInputChange(e, setTemplateDetails)
+  const clearValidationError = (...fields) => {
+    setValidationErrors((prev) => {
+      const next = { ...prev }
+      fields.forEach((field) => {
+        delete next[field]
+      })
+      return next
+    })
+  }
 
-  const onEditorChange = (content, field) => handleEditorChange(content, field, setTemplateDetails)
+  const clearValidationErrorsByPrefix = (...prefixes) => {
+    setValidationErrors((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(
+          ([field]) => !prefixes.some((prefix) => field === prefix || field.startsWith(prefix)),
+        ),
+      ),
+    )
+  }
+
+  const onInputChange = (e) => {
+    clearValidationError(e.target.name)
+    handleInputChange(e, setTemplateDetails)
+  }
+
+  const onEditorChange = (content, field) => {
+    clearValidationError(field)
+    handleEditorChange(content, field, setTemplateDetails)
+  }
 
   const finalizingBmTranslation =
     templateMeta?.proposalLanguage === 'ms-MY' &&
@@ -101,13 +128,17 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
       saving,
       setSaving,
       setSaveError,
+      setValidationErrors,
       saveInFlightRef,
       finalizingBmTranslation,
       isBmProposal,
     })
 
-  const onReset = () =>
+  const onReset = () => {
+    setValidationErrors({})
+    setSaveError('')
     handleReset(initialTemplateDetails, setTemplateDetails, setAgendaRows, setRemarks)
+  }
 
   return (
     <>
@@ -129,6 +160,9 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
                 value={templateDetails.trainingTitle}
                 onChange={onInputChange}
                 placeholder="e.g., Safety and Health Awareness"
+                invalid={Boolean(validationErrors.trainingTitle)}
+                feedbackInvalid={validationErrors.trainingTitle}
+                data-template-field="trainingTitle"
               />
             </CCol>
             <CCol md={2}>
@@ -139,11 +173,15 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
                 value={templateDetails.trainingCode}
                 onChange={(e) => {
                   const val = e.target.value.toUpperCase()
+                  clearValidationError('trainingCode')
                   setTemplateDetails((prev) => ({ ...prev, trainingCode: val }))
                 }}
                 placeholder="e.g., SHOC"
                 autoCapitalize="characters"
                 style={{ textTransform: 'uppercase' }} // visual cue while typing
+                invalid={Boolean(validationErrors.trainingCode)}
+                feedbackInvalid={validationErrors.trainingCode}
+                data-template-field="trainingCode"
               />
             </CCol>
 
@@ -155,6 +193,9 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
                 value={templateDetails.hrdNo}
                 onChange={onInputChange}
                 placeholder="e.g., 1000000... (Not the grant number)"
+                invalid={Boolean(validationErrors.hrdNo)}
+                feedbackInvalid={validationErrors.hrdNo}
+                data-template-field="hrdNo"
               />
             </CCol>
           </CRow>
@@ -163,18 +204,25 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
             templateDetails={templateDetails}
             setTemplateDetails={setTemplateDetails}
             handleEditorChange={onEditorChange}
+            validationErrors={validationErrors}
           />
 
           <TrainingRequirementsSection
             templateDetails={templateDetails}
             setTemplateDetails={setTemplateDetails}
+            validationErrors={validationErrors}
           />
 
           <AgendaTable
             agendaRows={agendaRows}
             setAgendaRows={setAgendaRows}
             duration={templateDetails.duration}
-            setDuration={(val) => setTemplateDetails((prev) => ({ ...prev, duration: val }))}
+            setDuration={(val) => {
+              clearValidationError('duration')
+              setTemplateDetails((prev) => ({ ...prev, duration: val }))
+            }}
+            validationErrors={validationErrors}
+            clearAgendaValidationErrors={() => clearValidationErrorsByPrefix('agenda')}
           />
 
           <hr />
@@ -184,6 +232,8 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
             setRemarks={setRemarks}
             isEdit={isEdit}
             history={history}
+            validationErrors={validationErrors}
+            clearValidationError={clearValidationError}
           />
 
           <CRow className="mt-4">

@@ -243,6 +243,10 @@ const Debtors = () => {
         value: formatMoney(sumGrandTotal(openRows)),
         tone: 'warning',
         size: 'md',
+        onClick: () => {
+          setStatusFilter('open')
+          setShowAdvancedFilters(true)
+        },
       },
       {
         key: 'over-30',
