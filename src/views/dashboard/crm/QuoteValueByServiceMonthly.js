@@ -222,6 +222,34 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
                     footerRows={monthFooterRows}
                     getRowKey={(row) => row.month}
                     desktopBreakpoint="md"
+                    mobileClassName="dashboard-metric-mobile-list"
+                    renderMobileItem={(row) => (
+                      <div className="data-table-mobile-item dashboard-metric-mobile-row">
+                        <div className="dashboard-metric-mobile-main">
+                          <div className="dashboard-metric-mobile-title">
+                            {formatMonthLabel(row.month)}
+                          </div>
+                        </div>
+                        <div className="dashboard-metric-mobile-values">
+                          <div className="dashboard-metric-mobile-primary">
+                            RM {row.totalValue.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    renderMobileFooterItem={() => (
+                      <div className="data-table-mobile-item data-table-mobile-footer-item dashboard-metric-mobile-row dashboard-metric-mobile-total-row">
+                        <div className="dashboard-metric-mobile-main">
+                          <div className="dashboard-metric-mobile-title">Total</div>
+                          <div className="dashboard-metric-mobile-subtitle">Selected period</div>
+                        </div>
+                        <div className="dashboard-metric-mobile-values">
+                          <div className="dashboard-metric-mobile-primary">
+                            RM {totalValue.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   />
                 </CCol>
               )}

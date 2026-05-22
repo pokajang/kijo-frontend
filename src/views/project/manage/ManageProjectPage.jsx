@@ -11,9 +11,6 @@ import CloseProjectModal from './CloseProjectModal'
 import ClientDetailsCard from './ManageProjectModal/ClientDetailsCard'
 import CommercialTrailsCard from './ManageProjectModal/CommercialTrailsCard'
 import CRMDetailsCard from './ManageProjectModal/CRMDetailsCard'
-import DeliveryOrderModal from './DeliveryOrderModal'
-import InvoiceProjectModal from './InvoiceProjectModal'
-import Jd14Modal from './Jd14Modal'
 import ProjectDetailsCard from './ManageProjectModal/ProjectDetailsCard'
 import ProgressTrackerCard from './ManageProjectModal/ProgressTrackerCard'
 import VendorDetailsCard from './ManageProjectModal/VendorDetailsCard'
@@ -67,22 +64,15 @@ const ManageProjectPage = () => {
   const [financeError, setFinanceError] = useState('')
 
   const [progressRefreshKey, setProgressRefreshKey] = useState(0)
-  const [commercialRefreshKey, setCommercialRefreshKey] = useState(0)
+  const [commercialRefreshKey] = useState(0)
   const [deletingProjectId, setDeletingProjectId] = useState(null)
   const [selectedCloseType, setSelectedCloseType] = useState('Completed')
   const [modals, setModals] = useState({
     close: false,
-    invoice: false,
-    do: false,
-    jd14: false,
   })
 
   const triggerProgressRefresh = () => {
     setProgressRefreshKey((prev) => prev + 1)
-  }
-
-  const triggerCommercialRefresh = () => {
-    setCommercialRefreshKey((prev) => prev + 1)
   }
 
   const refreshProject = useCallback(async () => {
@@ -125,6 +115,14 @@ const ManageProjectPage = () => {
     setModals((current) => ({ ...current, [name]: false }))
   }, [])
 
+  const openCommercialCreatePage = useCallback(
+    (documentType) => {
+      if (!project?.id) return
+      navigate(`/commercial/${documentType}/create/${project.id}`, { state: { project } })
+    },
+    [navigate, project],
+  )
+
   const handleDelete = useCallback(async () => {
     if (!project || deletingProjectId != null) return
 
@@ -148,18 +146,18 @@ const ManageProjectPage = () => {
         ? {
             key: 'jd14',
             label: 'Generate JD14',
-            onClick: () => openActionModal('jd14'),
+            onClick: () => openCommercialCreatePage('jd14'),
           }
         : null,
       {
         key: 'invoice',
         label: 'Generate Invoice',
-        onClick: () => openActionModal('invoice'),
+        onClick: () => openCommercialCreatePage('invoice'),
       },
       {
         key: 'delivery-order',
         label: 'Generate DO',
-        onClick: () => openActionModal('do'),
+        onClick: () => openCommercialCreatePage('delivery-order'),
       },
       {
         key: 'complete',
@@ -185,7 +183,7 @@ const ManageProjectPage = () => {
         onClick: handleDelete,
       },
     ].filter(Boolean)
-  }, [deletingProjectId, handleDelete, openActionModal, project])
+  }, [deletingProjectId, handleDelete, openActionModal, openCommercialCreatePage, project])
 
   useEffect(() => {
     let active = true
@@ -364,36 +362,6 @@ const ManageProjectPage = () => {
               console.error('Failed to refresh project after close:', err)
             })
           }}
-        />
-      )}
-      {modals.invoice && project && (
-        <InvoiceProjectModal
-          visible
-          project={project}
-          onClose={() => closeActionModal('invoice')}
-          onSubmit={() => {
-            closeActionModal('invoice')
-            triggerCommercialRefresh()
-            fetchProjectFinanceData().catch((err) => {
-              console.error('Failed to refresh project finance data:', err)
-            })
-          }}
-        />
-      )}
-      {modals.do && project && (
-        <DeliveryOrderModal
-          visible
-          project={project}
-          onClose={() => closeActionModal('do')}
-          onCreated={triggerCommercialRefresh}
-        />
-      )}
-      {modals.jd14 && project && (
-        <Jd14Modal
-          visible
-          project={project}
-          onClose={() => closeActionModal('jd14')}
-          onCreated={triggerCommercialRefresh}
         />
       )}
     </>

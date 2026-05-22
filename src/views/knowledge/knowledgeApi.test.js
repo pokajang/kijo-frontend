@@ -3,6 +3,7 @@ import {
   archiveKnowledgeArticle,
   getKnowledgeArticle,
   getKnowledgeArticles,
+  getMyKnowledgeArticles,
   publishKnowledgeArticle,
   saveKnowledgeArticle,
   unpublishKnowledgeArticle,
@@ -26,6 +27,17 @@ describe('knowledgeApi', () => {
     await getKnowledgeArticles()
 
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('knowledge/articles'), {
+      credentials: 'include',
+      signal: undefined,
+    })
+  })
+
+  it('loads the staff article workspace with session credentials', async () => {
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue(mockJsonResponse())
+
+    await getMyKnowledgeArticles()
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('knowledge/articles/my'), {
       credentials: 'include',
       signal: undefined,
     })
@@ -55,16 +67,18 @@ describe('knowledgeApi', () => {
     })
   })
 
-  it('supports publish, unpublish, and archive actions', async () => {
+  it('supports publish, unpublish, and archive actions with optional remarks', async () => {
     const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue(mockJsonResponse())
 
-    await publishKnowledgeArticle(3)
+    await publishKnowledgeArticle(3, { edit_remarks: 'Ready for staff use.' })
     await unpublishKnowledgeArticle(3)
     await archiveKnowledgeArticle(3)
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, expect.stringContaining('/3/publish'), {
       method: 'POST',
       credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ edit_remarks: 'Ready for staff use.' }),
     })
     expect(fetchMock).toHaveBeenNthCalledWith(2, expect.stringContaining('/3/unpublish'), {
       method: 'POST',

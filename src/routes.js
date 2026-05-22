@@ -81,6 +81,7 @@ const TaskDetailPage = React.lazy(() => import('./views/task-manager/TaskDetailP
 // Vendor pages
 const CreateVendor = React.lazy(() => import('./views/vendor/create/CreateVendor'))
 const ManageVendor = React.lazy(() => import('./views/vendor/manage/ManageVendor'))
+const FrozenVendors = React.lazy(() => import('./views/vendor/manage/FrozenVendors'))
 const FrozenVendorDetailPage = React.lazy(
   () => import('./views/vendor/manage/FrozenVendorDetailPage'),
 )
@@ -97,12 +98,17 @@ const CreateProject = React.lazy(() => import('./views/project/create/CreateProj
 
 // Commercial Pages
 const Invoice = React.lazy(() => import('./views/commercial/invoice/Invoice'))
+const InvoiceCreatePage = React.lazy(() => import('./views/commercial/invoice/InvoiceCreatePage'))
 const InvoiceDetailPage = React.lazy(() => import('./views/commercial/invoice/InvoiceDetailPage'))
 const DeliveryOrder = React.lazy(() => import('./views/commercial/delivery-order/DeliveryOrder'))
+const DeliveryOrderCreatePage = React.lazy(
+  () => import('./views/commercial/delivery-order/DeliveryOrderCreatePage'),
+)
 const DeliveryOrderDetailPage = React.lazy(
   () => import('./views/commercial/delivery-order/DeliveryOrderDetailPage'),
 )
 const JD14 = React.lazy(() => import('./views/commercial/jd14/JD14'))
+const JD14CreatePage = React.lazy(() => import('./views/commercial/jd14/JD14CreatePage'))
 const JD14DetailPage = React.lazy(() => import('./views/commercial/jd14/JD14DetailPage'))
 const VendorLoa = React.lazy(() => import('./views/commercial/vendor-loa/VendorLoa'))
 const VendorLoaDetailPage = React.lazy(
@@ -714,6 +720,12 @@ const routes = [
     name: 'Frozen Vendor Details',
     element: FrozenVendorDetailPage,
   },
+  {
+    path: '/vendor/frozen/:vendorId',
+    name: 'Frozen Vendor Details',
+    element: FrozenVendorDetailPage,
+  },
+  { path: '/vendor/frozen', name: 'Frozen Vendors', element: FrozenVendors },
   { path: '/vendor/manage', name: 'Manage Vendor', element: ManageVendor },
   {
     path: '/vendor/pay/history/:paymentId',
@@ -734,14 +746,25 @@ const routes = [
   { path: '/project/create', name: 'Create Project', element: CreateProject },
 
   // Commercial paths
+  {
+    path: '/commercial/invoice/create/:projectId',
+    name: 'Create Invoice',
+    element: InvoiceCreatePage,
+  },
   { path: '/commercial/invoice/:id', name: 'Invoice Details', element: InvoiceDetailPage },
   { path: '/commercial/invoice', name: 'Invoice', element: Invoice },
+  {
+    path: '/commercial/delivery-order/create/:projectId',
+    name: 'Create Delivery Order',
+    element: DeliveryOrderCreatePage,
+  },
   {
     path: '/commercial/delivery-order/:id',
     name: 'Delivery Order Details',
     element: DeliveryOrderDetailPage,
   },
   { path: '/commercial/delivery-order', name: 'Delivery Order', element: DeliveryOrder },
+  { path: '/commercial/jd14/create/:projectId', name: 'Create JD 14', element: JD14CreatePage },
   { path: '/commercial/jd14/:id', name: 'JD 14 Details', element: JD14DetailPage },
   { path: '/commercial/jd14', name: 'JD 14', element: JD14 },
   { path: '/commercial/vendor-loa/:id', name: 'Vendor LOA Details', element: VendorLoaDetailPage },

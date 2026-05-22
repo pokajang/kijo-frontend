@@ -364,6 +364,53 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
                   getRowKey={(row) => row.month}
                   desktopBreakpoint="md"
                   shellStyle={shouldScrollTable ? { maxHeight: '40rem' } : undefined}
+                  mobileClassName="dashboard-metric-mobile-list"
+                  renderMobileItem={(row) => {
+                    const amount = Number(row.amount) || 0
+                    const count = Number(row.count) || 0
+
+                    return (
+                      <div className="data-table-mobile-item dashboard-metric-mobile-row">
+                        <div className="dashboard-metric-mobile-main">
+                          <div className="dashboard-metric-mobile-title">
+                            {formatMonthLabel(row.month)}
+                          </div>
+                        </div>
+                        <div className="dashboard-metric-mobile-values">
+                          {showValueSeries && (
+                            <div className="dashboard-metric-mobile-primary">
+                              RM {amount.toLocaleString()}
+                            </div>
+                          )}
+                          {showCountSeries && (
+                            <div className="dashboard-metric-mobile-secondary">
+                              Quotes {count.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  }}
+                  renderMobileFooterItem={() => (
+                    <div className="data-table-mobile-item data-table-mobile-footer-item dashboard-metric-mobile-row dashboard-metric-mobile-total-row">
+                      <div className="dashboard-metric-mobile-main">
+                        <div className="dashboard-metric-mobile-title">Total</div>
+                        <div className="dashboard-metric-mobile-subtitle">Selected period</div>
+                      </div>
+                      <div className="dashboard-metric-mobile-values">
+                        {showValueSeries && (
+                          <div className="dashboard-metric-mobile-primary">
+                            RM {periodTotal.toLocaleString()}
+                          </div>
+                        )}
+                        {showCountSeries && (
+                          <div className="dashboard-metric-mobile-secondary">
+                            Quotes {periodCountTotal.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 />
               </CCol>
             )}

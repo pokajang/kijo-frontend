@@ -133,6 +133,41 @@ const RankedMetricBreakdownCard = ({
               footerRows={footerRows}
               getRowKey={(item) => `${item.label || 'item'}-${item.value || 0}`}
               desktopBreakpoint="md"
+              mobileClassName="dashboard-metric-mobile-list"
+              renderMobileItem={(item, index) => {
+                const share = totalValue ? Math.round((item.value / totalValue) * 100) : 0
+                const barWidth = share > 0 ? `${share}%` : '2px'
+
+                return (
+                  <div className="data-table-mobile-item dashboard-metric-mobile-row dashboard-metric-mobile-row--with-bar">
+                    <div className="dashboard-metric-mobile-main">
+                      <div className="dashboard-metric-mobile-kicker">#{index + 1}</div>
+                      <div className="dashboard-metric-mobile-title">{item.label}</div>
+                      <div className="dashboard-metric-mobile-subtitle">{labelHeader}</div>
+                    </div>
+                    <div className="dashboard-metric-mobile-values">
+                      <div className="dashboard-metric-mobile-primary">
+                        {formatValue(item.value)}
+                      </div>
+                      <div className="dashboard-metric-mobile-secondary">Share {share}%</div>
+                    </div>
+                    <div className="dashboard-metric-mobile-bar">
+                      <div className={barColorClass} style={{ width: barWidth }} />
+                    </div>
+                  </div>
+                )
+              }}
+              renderMobileFooterItem={() => (
+                <div className="data-table-mobile-item data-table-mobile-footer-item dashboard-metric-mobile-row dashboard-metric-mobile-total-row">
+                  <div className="dashboard-metric-mobile-main">
+                    <div className="dashboard-metric-mobile-title">Total</div>
+                    <div className="dashboard-metric-mobile-subtitle">{totalLabel}</div>
+                  </div>
+                  <div className="dashboard-metric-mobile-values">
+                    <div className="dashboard-metric-mobile-primary">{formatValue(totalValue)}</div>
+                  </div>
+                </div>
+              )}
             />
           </>
         )}

@@ -21,24 +21,12 @@ import { DataTableLoadingState } from '../../components/datatable'
 import {
   archiveKnowledgeArticle,
   getKnowledgeArticles,
+  getMyKnowledgeArticles,
   publishKnowledgeArticle,
   unpublishKnowledgeArticle,
 } from './knowledgeApi'
+import { searchKnowledgeArticles } from './knowledgeSearch'
 import { formatDateTime } from './knowledgeUtils'
-
-const matchesSearch = (article, query) => {
-  if (!query) return true
-  const haystack = [
-    article.title,
-    article.summary,
-    article.category,
-    article.created_by_name_code,
-    ...(article.tags || []),
-  ]
-    .join(' ')
-    .toLowerCase()
-  return haystack.includes(query.toLowerCase())
-}
 
 const KnowledgeHub = () => {
   const navigate = useNavigate()
@@ -51,6 +39,7 @@ const KnowledgeHub = () => {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [tag, setTag] = useState('')
+  const [status, setStatus] = useState('published')
 
   const loadArticles = useCallback(async ({ signal, showLoader = true } = {}) => {
     if (showLoader) {
@@ -59,7 +48,14 @@ const KnowledgeHub = () => {
     setError('')
 
     try {
-      const json = await getKnowledgeArticles({ signal })
+      let json
+      try {
+        json = await getMyKnowledgeArticles({ signal })
+      } catch (err) {
+        if (err.name === 'AbortError') throw err
+        if (![401, 403].includes(err.status)) throw err
+        json = await getKnowledgeArticles({ signal })
+      }
       setArticles(Array.isArray(json.data) ? json.data : [])
       setMeta(json.meta || {})
     } catch (err) {
@@ -99,16 +95,16 @@ const KnowledgeHub = () => {
     [articles],
   )
 
-  const filteredArticles = useMemo(
-    () =>
-      articles.filter(
-        (article) =>
-          matchesSearch(article, search) &&
-          (!category || article.category === category) &&
-          (!tag || (article.tags || []).includes(tag)),
-      ),
-    [articles, category, search, tag],
-  )
+  const filteredArticles = useMemo(() => {
+    const hardFiltered = articles.filter(
+      (article) =>
+        (!category || article.category === category) &&
+        (!tag || (article.tags || []).includes(tag)) &&
+        (!status || article.status === status),
+    )
+
+    return search ? searchKnowledgeArticles(hardFiltered, search) : hardFiltered
+  }, [articles, category, search, status, tag])
 
   const featuredArticles = filteredArticles.slice(0, 3)
   const latestArticles = filteredArticles.slice(3)
@@ -119,6 +115,7 @@ const KnowledgeHub = () => {
     const articlePath = `/knowledge/${article.status === 'published' ? article.slug : article.id}`
     const canManage = Boolean(meta.staff_id || meta.can_moderate)
     const busy = actionId === article.id
+    const isArchived = article.status === 'archived'
 
     return (
       <CCol sm={6} lg={4} key={article.id}>
@@ -143,14 +140,12 @@ const KnowledgeHub = () => {
                   <CIcon icon={cilOptions} />
                 </CDropdownToggle>
                 <CDropdownMenu onClick={(event) => event.stopPropagation()}>
-                  {article.status === 'published' && (
-                    <CDropdownItem onClick={() => navigate(`/knowledge/${article.slug}`)}>
-                      View
+                  <CDropdownItem onClick={() => navigate(articlePath)}>View</CDropdownItem>
+                  {!isArchived && (
+                    <CDropdownItem onClick={() => navigate(`/knowledge/${article.id}/edit`)}>
+                      Edit
                     </CDropdownItem>
                   )}
-                  <CDropdownItem onClick={() => navigate(`/knowledge/${article.id}/edit`)}>
-                    Edit
-                  </CDropdownItem>
                   {article.status !== 'published' && article.status !== 'archived' && (
                     <CDropdownItem onClick={() => runAction(article, publishKnowledgeArticle)}>
                       Publish
@@ -240,7 +235,7 @@ const KnowledgeHub = () => {
             {error && <CAlert color="danger">{error}</CAlert>}
             {success && <CAlert color="success">{success}</CAlert>}
             <CRow className="g-2 mb-4">
-              <CCol md={6}>
+              <CCol md={4}>
                 <CFormInput
                   value={search}
                   placeholder="Search guides, tags, modules..."
@@ -265,6 +260,14 @@ const KnowledgeHub = () => {
                       {item}
                     </option>
                   ))}
+                </CFormSelect>
+              </CCol>
+              <CCol md={2}>
+                <CFormSelect value={status} onChange={(event) => setStatus(event.target.value)}>
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
+                  <option value="">All Statuses</option>
                 </CFormSelect>
               </CCol>
             </CRow>

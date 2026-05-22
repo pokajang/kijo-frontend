@@ -822,6 +822,39 @@ describe('datatable shared components', () => {
     expect(within(mobileFooter).getByText('25')).toBeInTheDocument()
   })
 
+  it('supports custom embedded mobile footer rendering', () => {
+    const { container } = render(
+      <DataTableEmbeddedList
+        rows={[{ id: 1, code: 'SVC-1', amount: 25 }]}
+        columns={[
+          { key: 'code', label: 'Service Code' },
+          { key: 'amount', label: 'Amount', align: 'right' },
+        ]}
+        footerRows={[
+          {
+            key: 'total',
+            cells: [
+              { key: 'code', content: 'Total' },
+              { key: 'amount', content: '25', align: 'right' },
+            ],
+          },
+        ]}
+        renderMobileFooterItem={(row, index, cells) => (
+          <div className="custom-mobile-footer">
+            {row.key}:{index}:{cells.length}
+          </div>
+        )}
+      />,
+    )
+
+    const mobileFooter = container.querySelector('.custom-mobile-footer')
+    expect(mobileFooter).toBeInTheDocument()
+    expect(mobileFooter).toHaveTextContent('total:0:2')
+    expect(
+      container.querySelector('.data-table-mobile-footer-item--summary'),
+    ).not.toBeInTheDocument()
+  })
+
   it('renders multi-cell embedded footer rows with mobile labels', () => {
     const { container } = render(
       <DataTableEmbeddedList

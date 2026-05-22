@@ -70,6 +70,15 @@ const InvoiceDetailPage = () => {
 
   const actions = invoice
     ? [
+        invoice.projectId || invoice.raw?.project_id
+          ? {
+              key: 'back-project',
+              label: 'Back to Project',
+              buttonColor: 'secondary',
+              onClick: () =>
+                navigate(`/project/manage/${invoice.projectId || invoice.raw.project_id}`),
+            }
+          : null,
         {
           key: 'edit',
           label: 'Edit',

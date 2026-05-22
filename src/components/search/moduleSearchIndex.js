@@ -178,7 +178,11 @@ const itemEnhancements = {
   },
   '/vendor/manage': {
     aliases: ['vendor list', 'supplier list'],
-    intentPhrases: ['manage vendor', 'manage supplier', 'frozen vendor', 'vendor record'],
+    intentPhrases: ['manage vendor', 'manage supplier', 'vendor record'],
+  },
+  '/vendor/frozen': {
+    aliases: ['frozen vendor', 'inactive vendor', 'deactivated vendor'],
+    intentPhrases: ['frozen vendor', 'inactive vendor', 'reactivate vendor'],
   },
   '/catalog/supplier-po': {
     aliases: ['catalog supplier po', 'award supplier po'],

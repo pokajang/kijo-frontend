@@ -8,6 +8,9 @@ import {
   CModalBody,
   CModalFooter,
   CCard,
+  CCardHeader,
+  CCardBody,
+  CCardFooter,
   CButton,
 } from '@coreui/react'
 
@@ -25,6 +28,7 @@ import {
 import dialog from '../../../../components/dialog/dialogService'
 import {
   confirmExistingCommercialDocs,
+  hasProjectCommercialDocGroups,
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
@@ -74,9 +78,20 @@ const fetchersByType = {
   ],
 }
 
-export default function InvoiceProjectModal({ visible, project, onClose, onSubmit }) {
+export default function InvoiceProjectModal({
+  visible = true,
+  project,
+  onClose,
+  onSubmit,
+  asPage = false,
+}) {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
+  const isActive = asPage || visible
+  const commercialDocs = useProjectCommercialDocs(project?.id, isActive)
+  const showCommercialDocsNotice =
+    commercialDocs.loading ||
+    commercialDocs.error ||
+    hasProjectCommercialDocGroups(commercialDocs.groups)
   const fetchedRef = useRef(false)
   const draftAppliedRef = useRef(false)
   const isSupportedType = Boolean(fetchersByType[project?.project_type])
@@ -213,7 +228,7 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
 
   // Load saved draft once per project when modal opens
   useEffect(() => {
-    if (!visible || !draftKey || draftReady) return
+    if (!isActive || !draftKey || draftReady) return
     const rawDraft = localStorage.getItem(draftKey)
     if (rawDraft) {
       try {
@@ -239,11 +254,11 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
       }
     }
     setDraftReady(true)
-  }, [visible, draftKey, draftReady])
+  }, [isActive, draftKey, draftReady])
 
   // Persist draft while editing
   useEffect(() => {
-    if (!visible || !draftKey || !draftReady) return
+    if (!isActive || !draftKey || !draftReady) return
     const draft = {
       version: 1,
       clientOverrides,
@@ -254,7 +269,7 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
     }
     localStorage.setItem(draftKey, JSON.stringify(draft))
   }, [
-    visible,
+    isActive,
     draftKey,
     draftReady,
     clientOverrides,
@@ -392,7 +407,7 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
     }
   }
 
-  if (!visible) return null
+  if (!isActive) return null
 
   const invoiceDetails = {
     invoiceRef: '',
@@ -412,6 +427,102 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
     overridePaymentTerms: clientOverrides.overridePaymentTerms,
   }
 
+  const commercialDocsNotice = (
+    <ProjectCommercialDocsNotice
+      groups={commercialDocs.groups}
+      loading={commercialDocs.loading}
+      error={commercialDocs.error}
+      recordLabel="commercial records"
+      createLabel="another invoice"
+    />
+  )
+
+  const formContent = (
+    <>
+      <InvoiceFormShell
+        mode="create"
+        client={clientOverrides}
+        onClientChange={(e) => {
+          const { name, value } = e.target
+          setClientOverrides((prev) => ({
+            ...prev,
+            [name]: value,
+          }))
+        }}
+        showPaymentMethod={project?.project_type === 'Training'}
+        paymentMethod={effectivePaymentMethod}
+        onPaymentMethodChange={setPaymentMethodOverride}
+        project={project || {}}
+        quoteDetails={quoteDetails}
+        onProjectChange={setProjectMeta}
+        invoiceDetails={invoiceDetails}
+        onInvoiceDetailsChange={(e) => {
+          if (!e?.target) return
+          const { name, value, checked } = e.target
+          if (name === 'loaNo') setLoaNo(value)
+          if (name === 'overridePaymentTerms') {
+            setClientOverrides((prev) => ({
+              ...prev,
+              overridePaymentTerms: checked,
+              paymentTermsSource: checked ? 'invoice_override' : prev.paymentTermsBaseSource,
+              paymentTermsDays: checked ? prev.paymentTermsDays : prev.paymentTermsBaseDays,
+            }))
+          }
+          if (name === 'paymentTermsDays') {
+            setClientOverrides((prev) => ({
+              ...prev,
+              paymentTermsDays: value,
+              paymentTermsSource: 'invoice_override',
+              overridePaymentTerms: true,
+            }))
+          }
+        }}
+        pricing={pricing}
+        setPricing={setPricing}
+        grantApprovalNo={grantApprovalNo}
+        onGrantApprovalChange={(e) => setGrantApprovalNo(e.target.value)}
+      />
+    </>
+  )
+
+  const footerContent = (
+    <>
+      <CButton color="secondary" size="sm" onClick={onClose}>
+        Cancel
+      </CButton>
+      <CButton
+        color="primary"
+        size="sm"
+        onClick={handleGenerateInvoice}
+        disabled={
+          !project ||
+          !isSupportedType ||
+          (requiresQuote && !quoteDetails) ||
+          missingTrainingDates ||
+          commercialDocs.loading
+        }
+      >
+        Create Invoice
+      </CButton>
+    </>
+  )
+
+  if (asPage) {
+    return (
+      <CCard className="mb-4">
+        <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+          <strong>Generate Invoice</strong>
+          <CButton color="secondary" size="sm" variant="outline" onClick={onClose}>
+            Back
+          </CButton>
+        </CCardHeader>
+        {showCommercialDocsNotice && <CCardBody>{commercialDocsNotice}</CCardBody>}
+        {formContent}
+        <CCardFooter className="d-flex justify-content-end gap-2">{footerContent}</CCardFooter>
+      </CCard>
+    )
+  }
+
   return (
     <CModal
       visible={visible}
@@ -425,78 +536,10 @@ export default function InvoiceProjectModal({ visible, project, onClose, onSubmi
         <CModalTitle>Generate Invoice</CModalTitle>
       </CModalHeader>
       <CModalBody>
-        <ProjectCommercialDocsNotice
-          groups={commercialDocs.groups}
-          loading={commercialDocs.loading}
-          error={commercialDocs.error}
-          recordLabel="commercial records"
-          createLabel="another invoice"
-        />
-        <CCard>
-          <InvoiceFormShell
-            mode="create"
-            client={clientOverrides}
-            onClientChange={(e) => {
-              const { name, value } = e.target
-              setClientOverrides((prev) => ({
-                ...prev,
-                [name]: value,
-              }))
-            }}
-            showPaymentMethod={project?.project_type === 'Training'}
-            paymentMethod={effectivePaymentMethod}
-            onPaymentMethodChange={setPaymentMethodOverride}
-            project={project || {}}
-            quoteDetails={quoteDetails}
-            onProjectChange={setProjectMeta}
-            invoiceDetails={invoiceDetails}
-            onInvoiceDetailsChange={(e) => {
-              if (!e?.target) return
-              const { name, value, checked } = e.target
-              if (name === 'loaNo') setLoaNo(value)
-              if (name === 'overridePaymentTerms') {
-                setClientOverrides((prev) => ({
-                  ...prev,
-                  overridePaymentTerms: checked,
-                  paymentTermsSource: checked ? 'invoice_override' : prev.paymentTermsBaseSource,
-                  paymentTermsDays: checked ? prev.paymentTermsDays : prev.paymentTermsBaseDays,
-                }))
-              }
-              if (name === 'paymentTermsDays') {
-                setClientOverrides((prev) => ({
-                  ...prev,
-                  paymentTermsDays: value,
-                  paymentTermsSource: 'invoice_override',
-                  overridePaymentTerms: true,
-                }))
-              }
-            }}
-            pricing={pricing}
-            setPricing={setPricing}
-            grantApprovalNo={grantApprovalNo}
-            onGrantApprovalChange={(e) => setGrantApprovalNo(e.target.value)}
-          />
-        </CCard>
+        {commercialDocsNotice}
+        <CCard>{formContent}</CCard>
       </CModalBody>
-      <CModalFooter>
-        <CButton color="secondary" size="sm" onClick={onClose}>
-          Cancel
-        </CButton>
-        <CButton
-          color="primary"
-          size="sm"
-          onClick={handleGenerateInvoice}
-          disabled={
-            !project ||
-            !isSupportedType ||
-            (requiresQuote && !quoteDetails) ||
-            missingTrainingDates ||
-            commercialDocs.loading
-          }
-        >
-          Create Invoice
-        </CButton>
-      </CModalFooter>
+      <CModalFooter>{footerContent}</CModalFooter>
     </CModal>
   )
 }

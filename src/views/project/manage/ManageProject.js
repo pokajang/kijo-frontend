@@ -7,9 +7,6 @@ import { fetchProjects, handleDeleteProject } from './actionHandlers'
 import slugify from '../../../lib/slugify'
 
 import CloseProjectModal from './CloseProjectModal'
-import InvoiceProjectModal from './InvoiceProjectModal'
-import DeliveryOrderModal from './DeliveryOrderModal'
-import Jd14Modal from './Jd14Modal'
 import dialog from '../../../components/dialog/dialogService'
 
 export default function ManageProject() {
@@ -22,9 +19,6 @@ export default function ManageProject() {
   const [selectedCloseType, setSelectedCloseType] = useState('Completed')
   const [modals, setModals] = useState({
     close: false,
-    invoice: false,
-    do: false,
-    jd14: false,
   })
 
   const loadProjects = () => {
@@ -64,6 +58,10 @@ export default function ManageProject() {
     }
   }
 
+  const openCommercialCreatePage = (type, project) => {
+    navigate(`/commercial/${type}/create/${project.id}`, { state: { project } })
+  }
+
   return (
     <>
       <ProjectTable
@@ -75,9 +73,9 @@ export default function ManageProject() {
           navigate(`/project/manage/${p.id}/${typeSlug}/${nameSlug}`, { state: { project: p } })
         }}
         onClose={(p, closeType) => open('close', p, { closeType })}
-        onGenerateInvoice={(p) => open('invoice', p)}
-        onGenerateDO={(p) => open('do', p)}
-        onGenerateJD14={(p) => open('jd14', p)}
+        onGenerateInvoice={(p) => openCommercialCreatePage('invoice', p)}
+        onGenerateDO={(p) => openCommercialCreatePage('delivery-order', p)}
+        onGenerateJD14={(p) => openCommercialCreatePage('jd14', p)}
         onDelete={handleDelete}
         onCreateProject={() => navigate('/project/create')}
       />
@@ -93,23 +91,6 @@ export default function ManageProject() {
             loadProjects()
           }}
         />
-      )}
-      {modals.invoice && selected && (
-        <InvoiceProjectModal
-          visible
-          project={selected}
-          onClose={() => close('invoice')}
-          onSubmit={() => {
-            close('invoice')
-            loadProjects()
-          }}
-        />
-      )}
-      {modals.do && selected && (
-        <DeliveryOrderModal visible project={selected} onClose={() => close('do')} />
-      )}
-      {modals.jd14 && selected && (
-        <Jd14Modal visible project={selected} onClose={() => close('jd14')} />
       )}
     </>
   )

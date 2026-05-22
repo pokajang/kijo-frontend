@@ -481,6 +481,10 @@
   padding-bottom: 0.75rem;
 }
 
+.dashboard-metric-mobile-total-row {
+  background: var(--app-surface-raised);
+}
+
 .dashboard-metric-mobile-main,
 .dashboard-metric-mobile-values {
   min-width: 0;

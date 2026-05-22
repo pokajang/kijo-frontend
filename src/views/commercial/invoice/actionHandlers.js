@@ -100,6 +100,7 @@ export const fetchAllInvoices = async (setInvoices, setLoading) => {
         return {
           id: invoice_ref_no,
           rawId,
+          projectId: row.project_id,
           serviceType: service_type,
           purpose: invoice_purpose,
           serviceStartDate: service_start_date || '',

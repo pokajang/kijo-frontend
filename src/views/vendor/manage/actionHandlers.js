@@ -171,7 +171,7 @@ export const handleSaveVendor = async (formData, setVendors, setEditModalVisible
   }
 }
 
-export const handleVendorDelete = async (vendor, setVendors, fetchAllVendors) => {
+export const handleVendorDelete = async (vendor, setVendors) => {
   const confirmed = await dialog.confirm(
     `Are you sure you want to deactivate "${vendor.vendorName}"? This will move the vendor to the Frozen Vendor list.`,
   )
@@ -196,7 +196,6 @@ export const handleVendorDelete = async (vendor, setVendors, fetchAllVendors) =>
     if (result?.status === 'success' || result?.success === true) {
       setVendors((prev) => prev.filter((v) => v.id !== vendor.id))
       dialog.alert(`✅ Vendor "${vendor.vendorName}" was deactivated.`)
-      fetchAllVendors('inactive')
     } else {
       dialog.alert(`❌ Failed to deactivate vendor: ${result.message}`)
     }
@@ -206,7 +205,7 @@ export const handleVendorDelete = async (vendor, setVendors, fetchAllVendors) =>
   }
 }
 
-export const handleDeactivateVendor = async (vendor, setVendors, fetchAllVendors) => {
+export const handleDeactivateVendor = async (vendor, setVendors, refreshVendors) => {
   const confirmed = await dialog.confirm(
     `Are you sure you want to permanently delete "${vendor.vendorName}"? This action cannot be undone.`,
   )
@@ -226,7 +225,7 @@ export const handleDeactivateVendor = async (vendor, setVendors, fetchAllVendors
     if (result?.status === 'success' || result?.success === true) {
       setVendors((prev) => prev.filter((v) => v.id !== vendor.id))
       dialog.alert(`✅ Vendor "${vendor.vendorName}" has been permanently deleted.`)
-      fetchAllVendors('inactive')
+      refreshVendors()
     } else {
       dialog.alert(`❌ Failed to delete vendor: ${result.message}`)
     }
@@ -236,7 +235,7 @@ export const handleDeactivateVendor = async (vendor, setVendors, fetchAllVendors
   }
 }
 
-export const handleReactivateVendor = async (vendor, fetchAllVendors) => {
+export const handleReactivateVendor = async (vendor, refreshVendors) => {
   const confirmed = await dialog.confirm(`Reactivate vendor "${vendor.vendorName}"?`)
   if (!confirmed) return
 
@@ -253,8 +252,7 @@ export const handleReactivateVendor = async (vendor, fetchAllVendors) => {
 
     if (result?.status === 'success' || result?.success === true) {
       dialog.alert(`✅ Vendor "${vendor.vendorName}" has been reactivated.`)
-      fetchAllVendors('inactive')
-      fetchAllVendors('active')
+      refreshVendors()
     } else {
       dialog.alert(`❌ Failed to reactivate vendor: ${result.message}`)
     }

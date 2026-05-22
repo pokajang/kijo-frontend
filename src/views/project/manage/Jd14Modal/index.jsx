@@ -8,6 +8,9 @@ import {
   CModalBody,
   CModalFooter,
   CCard,
+  CCardHeader,
+  CCardBody,
+  CCardFooter,
   CButton,
 } from '@coreui/react'
 import EmployerDetails from './EmployerDetails'
@@ -15,12 +18,18 @@ import TrainingDetails from './TrainingDetails'
 import dialog from '../../../../components/dialog/dialogService'
 import {
   confirmExistingCommercialDocs,
+  hasProjectCommercialDocGroups,
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
-const Jd14Modal = ({ visible, onClose, onCreated, project }) => {
+const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false }) => {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
+  const isActive = asPage || visible
+  const commercialDocs = useProjectCommercialDocs(project?.id, isActive)
+  const showCommercialDocsNotice =
+    commercialDocs.loading ||
+    commercialDocs.error ||
+    hasProjectCommercialDocGroups(commercialDocs.groups)
 
   // — Employer state (starts empty, then syncs from `project`) —
   const [employerDetails, setEmployerDetails] = useState({
@@ -135,16 +144,11 @@ const Jd14Modal = ({ visible, onClose, onCreated, project }) => {
 
       if (result.status === 'success') {
         onCreated?.(result)
-        const goToList = await dialog.confirm('JD14 created. Go to list?', {
-          title: 'JD14 Created',
-          confirmText: 'Go to list',
-          cancelText: 'Stay here',
+        navigate(`/commercial/jd14/${result.form_number}`, {
+          state: {
+            fromProjectId: project?.id,
+          },
         })
-        if (goToList) {
-          navigate('/commercial/jd14')
-        } else {
-          onClose?.()
-        }
       } else {
         dialog.alert(result.message || '❌ Failed to create JD14 form.')
       }
@@ -152,6 +156,63 @@ const Jd14Modal = ({ visible, onClose, onCreated, project }) => {
       console.error('JD14 Submission Error:', err)
       dialog.alert('❌ Something went wrong. Form may have been created. Please check manually.')
     }
+  }
+
+  const commercialDocsNotice = (
+    <ProjectCommercialDocsNotice
+      groups={commercialDocs.groups}
+      loading={commercialDocs.loading}
+      error={commercialDocs.error}
+      recordLabel="commercial records"
+      createLabel="another JD14 form"
+    />
+  )
+
+  const formContent = (
+    <>
+      <EmployerDetails
+        employerDetails={employerDetails}
+        employerCode={employerCode}
+        onChange={handleEmployerChange}
+      />
+      <TrainingDetails
+        trainingDetails={trainingDetails}
+        onChange={handleTrainingChange}
+        employerAddress={employerDetails.address}
+      />
+    </>
+  )
+
+  const footerContent = (
+    <>
+      <CButton color="secondary" size="sm" onClick={onClose}>
+        Cancel
+      </CButton>
+      <CButton
+        color="primary"
+        size="sm"
+        onClick={handleSubmitJd14}
+        disabled={commercialDocs.loading}
+      >
+        Generate JD14
+      </CButton>
+    </>
+  )
+
+  if (asPage) {
+    return (
+      <CCard className="mb-4">
+        <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+          <strong>Generate JD14</strong>
+          <CButton color="secondary" size="sm" variant="outline" onClick={onClose}>
+            Back
+          </CButton>
+        </CCardHeader>
+        {showCommercialDocsNotice && <CCardBody>{commercialDocsNotice}</CCardBody>}
+        {formContent}
+        <CCardFooter className="d-flex justify-content-end gap-2">{footerContent}</CCardFooter>
+      </CCard>
+    )
   }
 
   return (
@@ -167,39 +228,10 @@ const Jd14Modal = ({ visible, onClose, onCreated, project }) => {
         <CModalTitle>Generate JD14</CModalTitle>
       </CModalHeader>
       <CModalBody>
-        <ProjectCommercialDocsNotice
-          groups={commercialDocs.groups}
-          loading={commercialDocs.loading}
-          error={commercialDocs.error}
-          recordLabel="commercial records"
-          createLabel="another JD14 form"
-        />
-        <CCard>
-          <EmployerDetails
-            employerDetails={employerDetails}
-            employerCode={employerCode}
-            onChange={handleEmployerChange}
-          />
-          <TrainingDetails
-            trainingDetails={trainingDetails}
-            onChange={handleTrainingChange}
-            employerAddress={employerDetails.address}
-          />
-        </CCard>
+        {commercialDocsNotice}
+        <CCard>{formContent}</CCard>
       </CModalBody>
-      <CModalFooter>
-        <CButton color="secondary" size="sm" onClick={onClose}>
-          Cancel
-        </CButton>
-        <CButton
-          color="primary"
-          size="sm"
-          onClick={handleSubmitJd14}
-          disabled={commercialDocs.loading}
-        >
-          Generate JD14
-        </CButton>
-      </CModalFooter>
+      <CModalFooter>{footerContent}</CModalFooter>
     </CModal>
   )
 }

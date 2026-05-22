@@ -56,14 +56,6 @@ const CreateTemplate = () => {
             <div className="d-flex flex-wrap gap-2">
               <CButton
                 size="sm"
-                color="info"
-                variant="outline"
-                onClick={() => navigate('/knowledge/how-to-create-a-proposal')}
-              >
-                Help
-              </CButton>
-              <CButton
-                size="sm"
                 color="secondary"
                 variant="outline"
                 onClick={() => navigate(returnTo)}

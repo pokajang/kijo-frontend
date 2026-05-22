@@ -317,41 +317,39 @@ const PaymentTable = ({
         scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
         loading={loading}
       />
-      <div className="data-table-filter-row records-filter-row mb-3 row g-2 align-items-center">
-        <DataTableRecordControls
-          searchValue={searchText}
-          onSearchChange={setSearchText}
-          searchPlaceholder={searchPlaceholder}
-          searchAriaLabel="Search vendor payment records"
-          showAdvancedFilters={showAdvancedFilters}
-          setShowAdvancedFilters={setShowAdvancedFilters}
-          activeFilterCount={methodFilter !== 'all' ? 1 : 0}
-          activeChips={activeChips}
-          clearChip={clearChip}
-          resetFilters={resetFilters}
-          desktopToolsId="vendor-payment-records-table-tools"
-          mobileToolsId="vendor-payment-records-mobile-table-tools"
-          searchColProps={{ xs: 12, lg: 5 }}
-          actionColProps={{ xs: 12, lg: 3 }}
-          advancedClassName="mt-2"
-          loading={loading}
-        >
-          <CCol xs={12} md={4}>
-            <CFormLabel htmlFor="vendorPaymentRecordsMethodFilter">Method</CFormLabel>
-            <CFormSelect
-              id="vendorPaymentRecordsMethodFilter"
-              value={methodFilter}
-              onChange={(e) => setMethodFilter(e.target.value)}
-            >
-              <option value="all">All</option>
-              {methodOptions.map((method) => (
-                <option key={method} value={method}>
-                  {method}
-                </option>
-              ))}
-            </CFormSelect>
-          </CCol>
-        </DataTableRecordControls>
+      <DataTableRecordControls
+        searchValue={searchText}
+        onSearchChange={setSearchText}
+        searchPlaceholder={searchPlaceholder}
+        searchAriaLabel="Search vendor payment records"
+        showAdvancedFilters={showAdvancedFilters}
+        setShowAdvancedFilters={setShowAdvancedFilters}
+        activeFilterCount={(methodFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0)}
+        activeChips={activeChips}
+        clearChip={clearChip}
+        resetFilters={resetFilters}
+        desktopToolsId="vendor-payment-records-table-tools"
+        mobileToolsId="vendor-payment-records-mobile-table-tools"
+        searchColProps={{ xs: 12, lg: 5 }}
+        actionColProps={{ xs: 12, lg: 7 }}
+        advancedClassName="mt-2"
+        loading={loading}
+      >
+        <CCol xs={12} md={4}>
+          <CFormLabel htmlFor="vendorPaymentRecordsMethodFilter">Method</CFormLabel>
+          <CFormSelect
+            id="vendorPaymentRecordsMethodFilter"
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value)}
+          >
+            <option value="all">All</option>
+            {methodOptions.map((method) => (
+              <option key={method} value={method}>
+                {method}
+              </option>
+            ))}
+          </CFormSelect>
+        </CCol>
         <CCol xs={12} md={4}>
           <CFormLabel htmlFor="vendorPaymentRecordsStatusFilter">Status</CFormLabel>
           <CFormSelect
@@ -367,7 +365,7 @@ const PaymentTable = ({
             ))}
           </CFormSelect>
         </CCol>
-      </div>
+      </DataTableRecordControls>
 
       <DataTableRecordList
         rows={filteredPayments}

@@ -8,6 +8,9 @@ import {
   CModalBody,
   CModalFooter,
   CCard,
+  CCardHeader,
+  CCardBody,
+  CCardFooter,
   CButton,
 } from '@coreui/react'
 
@@ -17,12 +20,24 @@ import ItemsDetails from './ItemsDetails'
 import dialog from '../../../../components/dialog/dialogService'
 import {
   confirmExistingCommercialDocs,
+  hasProjectCommercialDocGroups,
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
-export default function DeliveryOrderModal({ visible, onClose, onCreated, project }) {
+export default function DeliveryOrderModal({
+  visible = true,
+  onClose,
+  onCreated,
+  project,
+  asPage = false,
+}) {
   const navigate = useNavigate()
-  const commercialDocs = useProjectCommercialDocs(project?.id, visible)
+  const isActive = asPage || visible
+  const commercialDocs = useProjectCommercialDocs(project?.id, isActive)
+  const showCommercialDocsNotice =
+    commercialDocs.loading ||
+    commercialDocs.error ||
+    hasProjectCommercialDocGroups(commercialDocs.groups)
 
   // 1) State for each section
   const [clientDetails, setClientDetails] = useState({
@@ -224,16 +239,11 @@ export default function DeliveryOrderModal({ visible, onClose, onCreated, projec
         if (confirm) return handleGenerateDO(true, true)
       } else if (result.status === 'success') {
         onCreated?.(result)
-        const goToList = await dialog.confirm(`DO ${result.do_number} created. Go to list?`, {
-          title: 'Delivery Order Created',
-          confirmText: 'Go to list',
-          cancelText: 'Stay here',
+        navigate(`/commercial/delivery-order/${result.do_id}`, {
+          state: {
+            fromProjectId: project?.id,
+          },
         })
-        if (goToList) {
-          navigate('/commercial/delivery-order')
-        } else {
-          onClose?.()
-        }
       } else {
         dialog.alert(result.message || '❌ Failed to create Delivery Order.')
       }
@@ -243,7 +253,62 @@ export default function DeliveryOrderModal({ visible, onClose, onCreated, projec
     }
   }
 
+  const commercialDocsNotice = (
+    <ProjectCommercialDocsNotice
+      groups={commercialDocs.groups}
+      loading={commercialDocs.loading}
+      error={commercialDocs.error}
+      recordLabel="commercial records"
+      createLabel="another delivery order"
+    />
+  )
+
+  const formContent = (
+    <>
+      <DeliveryDetails
+        client={clientDetails}
+        setClient={setClientDetails}
+        company={companyDetails}
+        setCompany={setCompanyDetails}
+      />
+      <ProjectDetails project={projectDetails} setProject={setProjectDetails} />
+      <ItemsDetails items={items} setItems={setItems} />
+    </>
+  )
+
+  const footerContent = (
+    <>
+      <CButton color="secondary" size="sm" onClick={onClose}>
+        Cancel
+      </CButton>
+      <CButton
+        color="primary"
+        size="sm"
+        disabled={items.length === 0 || commercialDocs.loading}
+        onClick={() => handleGenerateDO(false)}
+      >
+        Generate DO
+      </CButton>
+    </>
+  )
+
   // 5) Render
+  if (asPage) {
+    return (
+      <CCard className="mb-4">
+        <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+          <strong>Generate Delivery Order</strong>
+          <CButton color="secondary" size="sm" variant="outline" onClick={onClose}>
+            Back
+          </CButton>
+        </CCardHeader>
+        {showCommercialDocsNotice && <CCardBody>{commercialDocsNotice}</CCardBody>}
+        {formContent}
+        <CCardFooter className="d-flex justify-content-end gap-2">{footerContent}</CCardFooter>
+      </CCard>
+    )
+  }
+
   return (
     <CModal
       visible={visible}
@@ -257,37 +322,10 @@ export default function DeliveryOrderModal({ visible, onClose, onCreated, projec
         <CModalTitle>Generate Delivery Order</CModalTitle>
       </CModalHeader>
       <CModalBody>
-        <ProjectCommercialDocsNotice
-          groups={commercialDocs.groups}
-          loading={commercialDocs.loading}
-          error={commercialDocs.error}
-          recordLabel="commercial records"
-          createLabel="another delivery order"
-        />
-        <CCard>
-          <DeliveryDetails
-            client={clientDetails}
-            setClient={setClientDetails}
-            company={companyDetails}
-            setCompany={setCompanyDetails}
-          />
-          <ProjectDetails project={projectDetails} setProject={setProjectDetails} />
-          <ItemsDetails items={items} setItems={setItems} />
-        </CCard>
+        {commercialDocsNotice}
+        <CCard>{formContent}</CCard>
       </CModalBody>
-      <CModalFooter>
-        <CButton color="secondary" size="sm" onClick={onClose}>
-          Cancel
-        </CButton>
-        <CButton
-          color="primary"
-          size="sm"
-          disabled={items.length === 0 || commercialDocs.loading}
-          onClick={() => handleGenerateDO(false)}
-        >
-          Generate DO
-        </CButton>
-      </CModalFooter>
+      <CModalFooter>{footerContent}</CModalFooter>
     </CModal>
   )
 }

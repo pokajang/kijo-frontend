@@ -13,7 +13,7 @@ const FrozenVendorDetailPage = () => {
   const { vendorId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/vendor/manage'
+  const returnTo = location.state?.returnTo || '/vendor/frozen'
   const [vendor, setVendor] = useState(location.state?.record || null)
   const vendorRef = useRef(vendor)
   const [loading, setLoading] = useState(!location.state?.record)

@@ -44,7 +44,7 @@ export const systemAdminModuleTabs = [
 
 export const vendorModuleTabs = [
   { key: 'manage', label: 'Manage Vendors', to: '/vendor/manage' },
-  { key: 'pay', label: 'Pay Vendors', to: '/vendor/pay' },
+  { key: 'frozen', label: 'Frozen Vendors', to: '/vendor/frozen' },
   { key: 'payment-records', label: 'Payment Records', to: '/vendor/payment-records' },
 ]
 

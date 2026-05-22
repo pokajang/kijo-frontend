@@ -1,6 +1,7 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PaymentRecords from './PaymentRecords'
 import dialog from '../../../components/dialog/dialogService'
 
@@ -33,6 +34,13 @@ vi.mock('../../../components/dialog/dialogService', () => ({
 }))
 
 describe('PaymentRecords', () => {
+  const renderPaymentRecords = () =>
+    render(
+      <MemoryRouter>
+        <PaymentRecords />
+      </MemoryRouter>,
+    )
+
   beforeEach(() => {
     vi.clearAllMocks()
     dialog.confirm.mockResolvedValue(true)
@@ -42,8 +50,12 @@ describe('PaymentRecords', () => {
     })
   })
 
+  afterEach(() => {
+    cleanup()
+  })
+
   it('approves vendor payments with the backend PATCH route', async () => {
-    render(<PaymentRecords />)
+    renderPaymentRecords()
 
     fireEvent.click(screen.getByRole('button', { name: 'approve' }))
 
@@ -53,5 +65,11 @@ describe('PaymentRecords', () => {
       method: 'PATCH',
       credentials: 'include',
     })
+  })
+
+  it('shows request payment as a card header action', () => {
+    renderPaymentRecords()
+
+    expect(screen.getByRole('button', { name: /request vendor payment/i })).toBeInTheDocument()
   })
 })

@@ -563,28 +563,20 @@ export const createInvoiceForType = async (
     const data = await res.json()
 
     if (data.status === 'success') {
-      const goToList = await dialog.confirm(
-        'Invoice created: ' + data.invoice_ref_no + '. Go to invoice list?',
-        {
-          title: 'Invoice Created',
-          confirmText: 'Go to list',
-          cancelText: 'Stay here',
-        },
-      )
-      if (goToList) navigate('/commercial/invoice')
-      return { success: true }
+      if (data.invoice_id) navigate(`/commercial/invoice/${data.invoice_id}`)
+      return { success: true, invoiceId: data.invoice_id, invoiceRefNo: data.invoice_ref_no }
     }
     if (data.status === 'exists') {
-      const goToList = await dialog.confirm(
-        'Invoice already exists: ' + data.message + '. Go to invoice list?',
+      const openExisting = await dialog.confirm(
+        'Invoice already exists: ' + data.message + '. Open existing invoice?',
         {
           title: 'Invoice Exists',
-          confirmText: 'Go to list',
+          confirmText: 'Open invoice',
           cancelText: 'Stay here',
         },
       )
-      if (goToList) navigate('/commercial/invoice')
-      return { success: false }
+      if (openExisting && data.invoice_id) navigate(`/commercial/invoice/${data.invoice_id}`)
+      return { success: false, invoiceId: data.invoice_id }
     }
     dialog.alert('Invoice creation failed: ' + (data.message || 'Unknown error.'))
     return { success: false }

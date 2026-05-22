@@ -96,6 +96,16 @@ describe('module search index', () => {
     expect(result.suggestion?.correctedQuery).toBe('vendor payment')
   })
 
+  it('finds frozen vendors for inactive vendor intent', () => {
+    const results = searchModuleItems('inactive vendor', ['Staff'])
+
+    expect(results[0]).toMatchObject({
+      label: 'Frozen Vendors',
+      group: 'Vendors',
+      to: '/vendor/frozen',
+    })
+  })
+
   it('finds commercial invoice for invoice intent', () => {
     const results = searchModuleItems('invoice', ['Staff'])
 

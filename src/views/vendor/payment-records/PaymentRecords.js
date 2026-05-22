@@ -1,7 +1,10 @@
 ﻿// src/components/PaymentRecords.js
 
 import React, { useState } from 'react'
-import { CCard, CCardHeader, CCardBody } from '@coreui/react'
+import { useNavigate } from 'react-router-dom'
+import CIcon from '@coreui/icons-react'
+import { cilPlus } from '@coreui/icons'
+import { CButton, CCard, CCardHeader, CCardBody } from '@coreui/react'
 import usePaymentData from './usePaymentData'
 import PaymentTable from './PaymentTable'
 import PaymentViewModal from './PaymentViewModal'
@@ -10,6 +13,7 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { vendorModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 const PaymentRecords = () => {
   const API_BASE = import.meta.env.VITE_API_BASE
+  const navigate = useNavigate()
   const [viewModalVisible, setViewModalVisible] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState(null)
 
@@ -58,8 +62,12 @@ const PaymentRecords = () => {
     <>
       <ModuleNavStrip tabs={vendorModuleTabs} ariaLabel="Vendor sections" />
       <CCard className="mb-4">
-        <CCardHeader>
+        <CCardHeader className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
           <strong>Vendor Payment Records</strong>
+          <CButton size="sm" color="primary" onClick={() => navigate('/vendor/pay')}>
+            <CIcon icon={cilPlus} className="me-1" />
+            Request Vendor Payment
+          </CButton>
         </CCardHeader>
         <CCardBody>
           <PaymentTable

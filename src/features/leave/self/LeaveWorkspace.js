@@ -42,24 +42,14 @@ const LeaveWorkspace = ({ routeSection }) => {
               Apply Leave
             </CButton>
           ) : (
-            <>
-              <CButton
-                color="info"
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/knowledge/how-to-apply-leave')}
-              >
-                Help
-              </CButton>
-              <CButton
-                color="secondary"
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(sectionPath('records'))}
-              >
-                Back
-              </CButton>
-            </>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(sectionPath('records'))}
+            >
+              Back
+            </CButton>
           )}
         </div>
       </CCardHeader>

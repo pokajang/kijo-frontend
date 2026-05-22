@@ -316,6 +316,48 @@ const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
                   getRowKey={(row) => row.month}
                   desktopBreakpoint="md"
                   shellStyle={shouldScrollTable ? { maxHeight: '40rem' } : undefined}
+                  mobileClassName="dashboard-metric-mobile-list"
+                  renderMobileItem={(row) => (
+                    <div className="data-table-mobile-item dashboard-metric-mobile-row">
+                      <div className="dashboard-metric-mobile-main">
+                        <div className="dashboard-metric-mobile-title">
+                          {formatMonthLabel(row.month)}
+                        </div>
+                      </div>
+                      <div className="dashboard-metric-mobile-values">
+                        {showInvoicedSeries && (
+                          <div className="dashboard-metric-mobile-primary">
+                            Invoiced RM {formatAmount(row.invoiced)}
+                          </div>
+                        )}
+                        {showReceivedSeries && (
+                          <div className="dashboard-metric-mobile-secondary">
+                            Received RM {formatAmount(row.received)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  renderMobileFooterItem={() => (
+                    <div className="data-table-mobile-item data-table-mobile-footer-item dashboard-metric-mobile-row dashboard-metric-mobile-total-row">
+                      <div className="dashboard-metric-mobile-main">
+                        <div className="dashboard-metric-mobile-title">Total</div>
+                        <div className="dashboard-metric-mobile-subtitle">Selected period</div>
+                      </div>
+                      <div className="dashboard-metric-mobile-values">
+                        {showInvoicedSeries && (
+                          <div className="dashboard-metric-mobile-primary">
+                            Invoiced RM {formatAmount(periodInvoiced)}
+                          </div>
+                        )}
+                        {showReceivedSeries && (
+                          <div className="dashboard-metric-mobile-secondary">
+                            Received RM {formatAmount(periodReceived)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 />
               </CCol>
             )}

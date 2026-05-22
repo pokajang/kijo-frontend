@@ -394,6 +394,26 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                       </div>
                     )
                   }}
+                  renderMobileFooterItem={() => (
+                    <div className="data-table-mobile-item data-table-mobile-footer-item dashboard-metric-mobile-row dashboard-metric-mobile-total-row">
+                      <div className="dashboard-metric-mobile-main">
+                        <div className="dashboard-metric-mobile-title">Total</div>
+                        <div className="dashboard-metric-mobile-subtitle">Selected period</div>
+                      </div>
+                      <div className="dashboard-metric-mobile-values">
+                        {showValueSeries && (
+                          <div className="dashboard-metric-mobile-primary">
+                            RM {periodTotal.toLocaleString()}
+                          </div>
+                        )}
+                        {showCountSeries && (
+                          <div className="dashboard-metric-mobile-secondary">
+                            Realized Jobs {periodQuoteTotal.toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 />
               </CCol>
             )}

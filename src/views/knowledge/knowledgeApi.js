@@ -3,7 +3,10 @@ import { API_BASE } from './constants'
 const parseJson = async (res) => {
   const data = await res.json().catch(() => ({}))
   if (!res.ok || data?.status === 'error') {
-    throw new Error(data?.message || res.statusText || 'Request failed.')
+    const error = new Error(data?.message || res.statusText || 'Request failed.')
+    error.status = res.status
+    error.data = data
+    throw error
   }
   return data
 }
@@ -11,6 +14,14 @@ const parseJson = async (res) => {
 export const getKnowledgeArticles = async ({ signal } = {}) =>
   parseJson(
     await fetch(`${API_BASE}knowledge/articles`, {
+      credentials: 'include',
+      signal,
+    }),
+  )
+
+export const getMyKnowledgeArticles = async ({ signal } = {}) =>
+  parseJson(
+    await fetch(`${API_BASE}knowledge/articles/my`, {
       credentials: 'include',
       signal,
     }),
@@ -33,26 +44,37 @@ export const saveKnowledgeArticle = async ({ articleId, payload }) =>
     }),
   )
 
-export const publishKnowledgeArticle = async (articleId) =>
+const statusActionOptions = (payload = null, method = 'POST') => {
+  const options = {
+    method,
+    credentials: 'include',
+  }
+
+  if (payload && Object.keys(payload).length > 0) {
+    options.headers = { 'Content-Type': 'application/json' }
+    options.body = JSON.stringify(payload)
+  }
+
+  return options
+}
+
+export const publishKnowledgeArticle = async (articleId, payload = null) =>
   parseJson(
     await fetch(`${API_BASE}knowledge/articles/${articleId}/publish`, {
-      method: 'POST',
-      credentials: 'include',
+      ...statusActionOptions(payload),
     }),
   )
 
-export const unpublishKnowledgeArticle = async (articleId) =>
+export const unpublishKnowledgeArticle = async (articleId, payload = null) =>
   parseJson(
     await fetch(`${API_BASE}knowledge/articles/${articleId}/unpublish`, {
-      method: 'POST',
-      credentials: 'include',
+      ...statusActionOptions(payload),
     }),
   )
 
-export const archiveKnowledgeArticle = async (articleId) =>
+export const archiveKnowledgeArticle = async (articleId, payload = null) =>
   parseJson(
     await fetch(`${API_BASE}knowledge/articles/${articleId}`, {
-      method: 'DELETE',
-      credentials: 'include',
+      ...statusActionOptions(payload, 'DELETE'),
     }),
   )

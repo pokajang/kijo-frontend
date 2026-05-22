@@ -210,7 +210,11 @@ const PayVendor = () => {
 
   return (
     <>
-      <ModuleNavStrip tabs={vendorModuleTabs} ariaLabel="Vendor sections" />
+      <ModuleNavStrip
+        tabs={vendorModuleTabs}
+        activeTab="payment-records"
+        ariaLabel="Vendor sections"
+      />
       <CCard className="mb-4">
         <CCardHeader>
           <strong>Request Vendor Payment</strong>

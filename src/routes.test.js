@@ -53,6 +53,36 @@ describe('client vendor registration routes', () => {
   })
 })
 
+describe('vendor frozen routes', () => {
+  it('includes the frozen vendor list, detail, and legacy detail routes', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/vendor/frozen/:vendorId',
+          name: 'Frozen Vendor Details',
+        }),
+        expect.objectContaining({
+          path: '/vendor/frozen',
+          name: 'Frozen Vendors',
+        }),
+        expect.objectContaining({
+          path: '/vendor/manage/frozen/:vendorId',
+          name: 'Frozen Vendor Details',
+        }),
+      ]),
+    )
+  })
+
+  it('keeps the frozen vendor detail route before the frozen vendor list route', () => {
+    const detailIndex = routes.findIndex((route) => route.path === '/vendor/frozen/:vendorId')
+    const listIndex = routes.findIndex((route) => route.path === '/vendor/frozen')
+
+    expect(detailIndex).toBeGreaterThanOrEqual(0)
+    expect(listIndex).toBeGreaterThanOrEqual(0)
+    expect(detailIndex).toBeLessThan(listIndex)
+  })
+})
+
 describe('staff leave admin routes', () => {
   it('limits entitlement and workflow admin routes to HR and System Admin', () => {
     const protectedPaths = [
@@ -66,6 +96,25 @@ describe('staff leave admin routes', () => {
       const route = routes.find((item) => item.path === path)
 
       expect(route?.element?.props?.allowedRoles).toEqual(['System Admin', 'HR'])
+    })
+  })
+})
+
+describe('commercial create routes', () => {
+  it('keeps project create routes before commercial detail routes', () => {
+    const routePairs = [
+      ['/commercial/invoice/create/:projectId', '/commercial/invoice/:id'],
+      ['/commercial/delivery-order/create/:projectId', '/commercial/delivery-order/:id'],
+      ['/commercial/jd14/create/:projectId', '/commercial/jd14/:id'],
+    ]
+
+    routePairs.forEach(([createPath, detailPath]) => {
+      const createIndex = routes.findIndex((route) => route.path === createPath)
+      const detailIndex = routes.findIndex((route) => route.path === detailPath)
+
+      expect(createIndex).toBeGreaterThanOrEqual(0)
+      expect(detailIndex).toBeGreaterThanOrEqual(0)
+      expect(createIndex).toBeLessThan(detailIndex)
     })
   })
 })

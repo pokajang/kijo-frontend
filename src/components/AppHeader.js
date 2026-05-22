@@ -22,6 +22,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import {
+  cilBook,
   cilDollar,
   cilGift,
   cilListRich,
@@ -37,6 +38,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
 import PersonalSignature from './signature/PersonalSignature'
+import { useKnowledgePanel } from '../views/knowledge/KnowledgePanelContext'
 
 const getSignatureDismissalKey = (staffId) =>
   staffId ? `kijo:signature-warning:dismissed:${staffId}` : null
@@ -73,6 +75,7 @@ const AppHeader = () => {
   const [signatureStatus, setSignatureStatus] = useState({ checked: false, url: null })
   const [signatureDismissed, setSignatureDismissed] = useState(false)
   const [unreadWhatsNewCount, setUnreadWhatsNewCount] = useState(0)
+  const { openKnowledgeSearch } = useKnowledgePanel()
 
   useEffect(() => {
     const onScroll = () => {
@@ -204,7 +207,22 @@ const AppHeader = () => {
           <span className="app-bottom-nav-label">Menu</span>
         </CHeaderToggler>
 
-        <AppModuleSearch />
+        <div className="app-header-search-help">
+          <AppModuleSearch />
+          <CTooltip content="Open Knowledge" placement="bottom">
+            <CButton
+              type="button"
+              color="secondary"
+              variant="outline"
+              className="app-knowledge-header-help"
+              onClick={openKnowledgeSearch}
+              aria-label="Open Knowledge help"
+            >
+              <CIcon icon={cilBook} />
+              <span className="app-knowledge-header-help__label">Help</span>
+            </CButton>
+          </CTooltip>
+        </div>
 
         <CHeaderNav className="d-flex align-items-center ms-auto app-bottom-nav-actions">
           <CNavItem className="me-2 app-bottom-nav-entry d-md-none">

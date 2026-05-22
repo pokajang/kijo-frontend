@@ -175,6 +175,14 @@ const DeliveryOrderDetailPage = () => {
         error={error}
         record={record}
         actions={[
+          record?.project_id
+            ? {
+                key: 'back-project',
+                label: 'Back to Project',
+                buttonColor: 'secondary',
+                onClick: () => navigate(`/project/manage/${record.project_id}`),
+              }
+            : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
           { key: 'pdf', label: 'Generate PDF', onClick: handleGeneratePdf },
           {

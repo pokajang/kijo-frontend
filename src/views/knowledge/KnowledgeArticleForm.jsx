@@ -385,10 +385,11 @@ const KnowledgeArticleForm = ({ mode = 'create' }) => {
       })
 
       if (isEditing && json.data?.id && json.data.status !== status) {
+        const statusRemarks = { edit_remarks: form.edit_remarks.trim() }
         json =
           status === 'published'
-            ? await publishKnowledgeArticle(json.data.id)
-            : await unpublishKnowledgeArticle(json.data.id)
+            ? await publishKnowledgeArticle(json.data.id, statusRemarks)
+            : await unpublishKnowledgeArticle(json.data.id, statusRemarks)
       }
 
       setSuccess(json.message || 'Knowledge article saved.')

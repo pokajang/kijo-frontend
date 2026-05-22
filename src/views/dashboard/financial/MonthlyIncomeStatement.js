@@ -452,7 +452,11 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                   {
                     key: 'amount',
                     label: 'Amount',
-                    value: `RM ${formatInvoiceAmount(invoice.grand_total)}`,
+                    value: (
+                      <span className="fw-semibold text-warning">
+                        RM {formatInvoiceAmount(invoice.grand_total)}
+                      </span>
+                    ),
                   },
                 ],
               }}

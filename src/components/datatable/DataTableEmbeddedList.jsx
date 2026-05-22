@@ -60,6 +60,7 @@ const DataTableEmbeddedList = ({
   getRowKey = (row, index) => row?.id || index,
   renderCell,
   renderMobileItem,
+  renderMobileFooterItem,
   footerRows = [],
   summaryRows = [],
   rowProps,
@@ -215,6 +216,14 @@ const DataTableEmbeddedList = ({
 
   const renderMobileFooterRow = (row, rowIndex) => {
     const cells = getFooterCells(row)
+
+    if (typeof renderMobileFooterItem === 'function') {
+      return (
+        <React.Fragment key={row.key || `mobile-footer-${rowIndex}`}>
+          {renderMobileFooterItem(row, rowIndex, cells)}
+        </React.Fragment>
+      )
+    }
 
     if (cells.length === 2 && row.mobileLayout !== 'details' && row.mobileSummary !== false) {
       return (

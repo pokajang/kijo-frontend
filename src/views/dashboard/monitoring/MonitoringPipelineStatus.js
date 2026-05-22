@@ -89,7 +89,7 @@ const WeeklyStatusMobileList = ({ rows, weeks, totals }) => (
         </div>
       </div>
     ))}
-    <div className="dashboard-table-mobile-card fw-semibold">
+    <div className="dashboard-table-mobile-card dashboard-metric-mobile-total-row fw-semibold">
       <div className="d-flex justify-content-between gap-2 mb-2">
         <div>Total</div>
         <div className="text-end">

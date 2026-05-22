@@ -10,20 +10,13 @@ import {
   CCardBody,
   CCardHeader,
   CCol,
-  CFormCheck,
   CFormLabel,
   CFormSelect,
-  CModal,
-  CModalBody,
-  CModalFooter,
-  CModalHeader,
-  CModalTitle,
   CRow,
 } from '@coreui/react'
 
 import EditVendorModal from './edit/EditVendorModal'
 import ViewVendorModal from './view/ViewVendorModal'
-import FrozenVendorTable from './FrozenVendorTable'
 import VendorListTable from './VendorListTable'
 import { DataTableRecordControls } from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
@@ -35,41 +28,25 @@ import {
   handleVendorView,
   handleSaveVendor,
   handleVendorDelete,
-  handleDeactivateVendor,
-  handleReactivateVendor,
 } from './actionHandlers'
 
 const ManageVendor = () => {
   const navigate = useNavigate()
   const [vendors, setVendors] = useState([])
-  const [inactiveVendors, setInactiveVendors] = useState([])
 
   const [selectedVendor, setSelectedVendor] = useState(null)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [viewModalVisible, setViewModalVisible] = useState(false)
-  const [showFrozen, setShowFrozen] = useState(false)
 
   const [searchText, setSearchText] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
-  const fetchAllVendors = (status) => fetchVendorsByStatus(status, setVendors, setInactiveVendors)
+  const fetchActiveVendors = () => fetchVendorsByStatus('active', setVendors, () => {})
 
   useEffect(() => {
-    fetchAllVendors('active')
+    fetchActiveVendors()
   }, [])
-
-  const handleFrozenCheckboxChange = (e) => {
-    const checked = e.target.checked
-    if (checked && inactiveVendors.length === 0) {
-      fetchAllVendors('inactive')
-    }
-    setShowFrozen(checked)
-  }
-
-  const handleCloseFrozenModal = () => {
-    setShowFrozen(false)
-  }
 
   const availableCategories = useMemo(() => {
     const categories = new Set()
@@ -144,12 +121,6 @@ const ManageVendor = () => {
             <CCardHeader className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
               <strong>Manage Vendors</strong>
               <div className="d-flex align-items-center justify-content-end gap-3 flex-wrap">
-                <CFormCheck
-                  label="Show Frozen Vendors"
-                  checked={showFrozen}
-                  onChange={handleFrozenCheckboxChange}
-                  className="mb-0"
-                />
                 <CButton size="sm" color="primary" onClick={() => navigate('/vendor/create')}>
                   <CIcon icon={cilPlus} className="me-1" />
                   Create Vendor
@@ -192,7 +163,7 @@ const ManageVendor = () => {
                 vendors={filteredVendors}
                 onEdit={(v) => handleVendorEdit(v, setSelectedVendor, setEditModalVisible)}
                 onView={(v) => handleVendorView(v, setSelectedVendor, setViewModalVisible)}
-                onDelete={(v) => handleVendorDelete(v, setVendors, fetchAllVendors)}
+                onDelete={(v) => handleVendorDelete(v, setVendors)}
                 desktopToolsId="vendor-manage-table-tools"
                 mobileToolsId="vendor-manage-mobile-table-tools"
               />
@@ -200,35 +171,6 @@ const ManageVendor = () => {
           </CCard>
         </CCol>
       </CRow>
-
-      <CModal
-        visible={showFrozen}
-        onClose={handleCloseFrozenModal}
-        size="xl"
-        alignment="center"
-        scrollable
-      >
-        <CModalHeader onClose={handleCloseFrozenModal}>
-          <CModalTitle>Frozen Vendors</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <FrozenVendorTable
-            inactiveVendors={inactiveVendors}
-            onDeleteVendor={(v) => handleDeactivateVendor(v, setInactiveVendors, fetchAllVendors)}
-            onReactivateVendor={(v) => handleReactivateVendor(v, fetchAllVendors)}
-            onViewVendor={(vendor) =>
-              navigate(`/vendor/manage/frozen/${vendor.id}`, {
-                state: { record: vendor, returnTo: '/vendor/manage' },
-              })
-            }
-          />
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={handleCloseFrozenModal}>
-            Close
-          </CButton>
-        </CModalFooter>
-      </CModal>
 
       {selectedVendor && (
         <EditVendorModal

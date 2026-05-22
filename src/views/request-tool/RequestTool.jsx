@@ -73,16 +73,6 @@ export default function RequestTool() {
   return (
     <>
       <ModuleNavStrip tabs={supportModuleTabs} ariaLabel="Support sections" />
-      <div className="d-flex justify-content-end mb-2">
-        <CButton
-          color="info"
-          variant="outline"
-          size="sm"
-          onClick={() => navigate('/knowledge/how-to-submit-a-support-request')}
-        >
-          Help
-        </CButton>
-      </div>
 
       <CModal visible={showRequestForm} onClose={handleFormCancel} size="lg" alignment="center">
         <CModalHeader closeButton>
