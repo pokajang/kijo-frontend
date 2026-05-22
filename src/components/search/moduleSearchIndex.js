@@ -268,7 +268,17 @@ const itemEnhancements = {
   },
   '/internal-tools': {
     aliases: ['internal tools', 'tools'],
-    intentPhrases: ['free osh', 'free iso', 'assessment tool', 'gap analysis'],
+    intentPhrases: ['free osh', 'free iso', 'assessment tool', 'gap analysis', 'legal compliance'],
+  },
+  '/internal-tools/legal-compliance': {
+    aliases: ['legal compliance', 'osh assessment', 'osha checklist'],
+    intentPhrases: [
+      'legal compliance assessment',
+      'osh legal compliance',
+      'osha checklist',
+      'compliance form',
+      'assessment report',
+    ],
   },
   '/system-admin/dashboard': {
     aliases: ['system admin', 'migration status', 'email test'],
@@ -277,6 +287,14 @@ const itemEnhancements = {
 }
 
 const standaloneItems = [
+  {
+    label: 'Legal Compliance Assessment',
+    group: 'Tools & Resources',
+    to: '/internal-tools/legal-compliance',
+    keywords: ['legal compliance', 'osh assessment', 'osha checklist', 'internal tools'],
+    aliases: ['legal compliance', 'osh assessment', 'osha checklist'],
+    intentPhrases: ['legal compliance assessment', 'osh legal compliance', 'compliance form'],
+  },
   {
     label: 'Task Manager',
     group: 'Tools & Resources',

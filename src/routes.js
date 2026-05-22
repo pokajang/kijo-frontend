@@ -137,6 +137,9 @@ const KnowledgeHub = React.lazy(() => import('./views/knowledge/KnowledgeHub'))
 const KnowledgeArticleDetail = React.lazy(() => import('./views/knowledge/KnowledgeArticleDetail'))
 const KnowledgeArticleForm = React.lazy(() => import('./views/knowledge/KnowledgeArticleForm'))
 const InternalTools = React.lazy(() => import('./views/internal-tools/InternalTools'))
+const LegalComplianceAssessment = React.lazy(
+  () => import('./views/internal-tools/legal-compliance/LegalComplianceAssessment'),
+)
 const TaskManager = React.lazy(() => import('./views/task-manager/TaskManager'))
 const RequestDetailPage = React.lazy(() => import('./views/request-tool/RequestDetailPage'))
 const RequestTool = React.lazy(() => import('./views/request-tool/RequestTool'))
@@ -840,6 +843,11 @@ const routes = [
   },
   { path: '/knowledge/:slug', name: 'Knowledge Article', element: KnowledgeArticleDetail },
   { path: 'internal-tools', name: 'Internal Tools', element: InternalTools },
+  {
+    path: 'internal-tools/legal-compliance',
+    name: 'Legal Compliance Assessment',
+    element: LegalComplianceAssessment,
+  },
   // Support paths
   {
     path: '/support',
