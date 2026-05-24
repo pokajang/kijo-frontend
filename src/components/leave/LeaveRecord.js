@@ -19,6 +19,13 @@ const formatDays = (value) => {
   return Number.isInteger(number) ? String(number) : number.toFixed(1)
 }
 
+const normalizeStatus = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase()
+
+const formatRequestCount = (count) => `${count} pending request${count === 1 ? '' : 's'}`
+
 export const buildLeaveRecordStats = (leaveRecords = [], entitlements = [], year = currentYear) => {
   const currentYearEntitlements = entitlements.filter(
     (entitlement) => Number(entitlement.year) === year,
@@ -41,8 +48,12 @@ export const buildLeaveRecordStats = (leaveRecords = [], entitlements = [], year
     (sum, entitlement) => sum + toNumber(entitlement.remaining),
     0,
   )
-  const pendingRows = currentYearRecords.filter((record) => record.status === 'Pending')
-  const cancelledRows = currentYearRecords.filter((record) => record.status === 'Cancelled')
+  const pendingRows = currentYearRecords.filter(
+    (record) => normalizeStatus(record.status) === 'pending',
+  )
+  const cancelledRows = currentYearRecords.filter(
+    (record) => normalizeStatus(record.status) === 'cancelled',
+  )
   const pendingDays = pendingRows.reduce((sum, record) => sum + toNumber(record.duration), 0)
   const cancelledDays = cancelledRows.reduce((sum, record) => sum + toNumber(record.duration), 0)
 
@@ -63,6 +74,7 @@ export const buildLeaveRecordStats = (leaveRecords = [], entitlements = [], year
       key: 'pending',
       label: 'Days Pending Approval',
       value: formatDays(pendingDays),
+      sublabel: formatRequestCount(pendingRows.length),
       tone: 'warning',
     },
     {
