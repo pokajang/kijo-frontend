@@ -34,6 +34,7 @@ import {
   entryTypes,
   entryTypeAllowsEstimatedRm,
   formatDate,
+  getPipelineEntryValidationError,
   normalizeBulkRow,
   serviceCategories,
   serviceCategoryLabel,
@@ -62,11 +63,6 @@ const sourceSelectStyles = {
   }),
   indicatorsContainer: (base) => ({ ...base, height: 36, minHeight: 36 }),
 }
-
-const hasInvalidEstimatedRm = (row) =>
-  row.estimated_rm !== '' &&
-  row.estimated_rm !== null &&
-  (!Number.isFinite(Number(row.estimated_rm)) || Number(row.estimated_rm) < 0)
 
 const bulkDraftStorageKey = 'marketing.pipeline-entries.bulk-add-draft.v1'
 const maxBulkSaveRows = 100
@@ -101,8 +97,11 @@ const sanitizeBulkRow = (row, fallback = createBlankEntryRow()) => ({
   source: typeof row?.source === 'string' ? row.source : fallback.source,
   segment_type: typeof row?.segment_type === 'string' ? row.segment_type : '',
   service_category: typeof row?.service_category === 'string' ? row.service_category : '',
-  estimated_rm:
-    row?.estimated_rm === null || row?.estimated_rm === undefined ? '' : String(row.estimated_rm),
+  estimated_rm: entryTypeAllowsEstimatedRm(row?.entry_type)
+    ? row?.estimated_rm === null || row?.estimated_rm === undefined
+      ? ''
+      : String(row.estimated_rm)
+    : '',
   prospect_name: typeof row?.prospect_name === 'string' ? row.prospect_name : '',
   notes: typeof row?.notes === 'string' ? row.notes : '',
   photoFile: null,
@@ -231,16 +230,11 @@ const PipelineEntriesBulkAdd = () => {
 
   const addDraftToBatch = () => {
     const normalizedDraft = normalizeBulkRow(draft)
-    if (!normalizedDraft.prospect_name) {
-      setError('Company or prospect is required before adding to batch.')
-      return
-    }
-    if (!normalizedDraft.source.trim()) {
-      setError('Source is required before adding to batch.')
-      return
-    }
-    if (hasInvalidEstimatedRm(normalizedDraft)) {
-      setError('Estimated RM must be zero or more.')
+    const validationError = getPipelineEntryValidationError(normalizedDraft, {
+      prospectLabel: 'Company or prospect',
+    })
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -304,12 +298,11 @@ const PipelineEntriesBulkAdd = () => {
       setError('Add at least one entry to batch before saving.')
       return
     }
-    if (validRows.some((row) => !row.source.trim())) {
-      setError('Source is required for every entry.')
-      return
-    }
-    if (validRows.some(hasInvalidEstimatedRm)) {
-      setError('Estimated RM must be zero or more.')
+    const validationError = validRows
+      .map((row) => getPipelineEntryValidationError(row, { prospectLabel: 'Company or prospect' }))
+      .find(Boolean)
+    if (validationError) {
+      setError(validationError)
       return
     }
     if (validRows.length > maxBulkSaveRows) {
@@ -556,7 +549,7 @@ const PipelineEntriesBulkAdd = () => {
                 <span className="text-muted">{readyBulkRows} ready</span>
               </div>
               {batchRows.length === 0 ? (
-                <div className="rounded-4 bg-light text-muted px-3 py-3">
+                <div className="rounded-4 app-surface-panel text-muted px-3 py-3">
                   No batch entries yet. Fill the row above, then add it to the batch.
                 </div>
               ) : (
@@ -567,7 +560,7 @@ const PipelineEntriesBulkAdd = () => {
                       lg={6}
                       key={`${entry.prospect_name}-${entry.entry_date}-${index}`}
                     >
-                      <div className="h-100 rounded-4 border bg-light p-3">
+                      <div className="h-100 rounded-4 border app-surface-panel p-3">
                         <div className="d-flex align-items-start justify-content-between gap-3">
                           <div className="min-w-0">
                             <div className="d-flex align-items-center gap-2 flex-wrap">
@@ -610,7 +603,7 @@ const PipelineEntriesBulkAdd = () => {
                             <LoadingImage
                               src={entry.photoPreviewUrl}
                               alt={`Screenshot proof for ${entry.prospect_name}`}
-                              className="rounded border bg-white"
+                              className="rounded border app-proof-image"
                               style={{ width: 72, height: 48, objectFit: 'cover' }}
                               placeholderStyle={{ width: 72, minHeight: 48, height: 48 }}
                             />

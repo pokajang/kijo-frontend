@@ -21,9 +21,12 @@ export const entryTypes = [
   { value: 'negotiation', label: 'Negotiation' },
   { value: 'closed', label: 'Closed' },
 ]
+export const entryTypeValues = entryTypes.map((type) => type.value)
 export const entryTypeAllowsEstimatedRm = (entryType) => ['proposal', 'closed'].includes(entryType)
+export const legalComplianceAssessmentSource = 'Free Legal Compliance Assessment'
 
 export const entrySources = [
+  legalComplianceAssessmentSource,
   'Management Provided',
   'Online Pitching',
   'Physical Meeting',
@@ -70,6 +73,9 @@ export const serviceCategories = [
 ]
 export const serviceCategoryLabel = (value, fallback = 'Not classified') =>
   serviceCategories.find((service) => service.value === (value || ''))?.label || fallback
+export const serviceCategoryValues = serviceCategories
+  .map((service) => service.value)
+  .filter((value) => value !== '')
 export const pageSizeOptions = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
 
 export const normalizeClassificationType = (value) => {
@@ -115,6 +121,60 @@ export const createBlankEntryRow = () => ({
   photoFile: null,
   photoInputKey: 0,
 })
+
+export const hasInvalidEstimatedRm = (value) =>
+  value !== '' &&
+  value !== null &&
+  value !== undefined &&
+  (!Number.isFinite(Number(value)) || Number(value) < 0)
+
+export const getPipelineEntryValidationError = (
+  entry,
+  {
+    requireProspect = true,
+    requireCoreFields = true,
+    requireClosedRevenueFields = true,
+    prospectLabel = 'Prospect name',
+  } = {},
+) => {
+  const entryType = entry?.entry_type || ''
+  const estimatedRm = entry?.estimated_rm
+
+  if (requireProspect && !String(entry?.prospect_name || '').trim()) {
+    return `${prospectLabel} is required.`
+  }
+
+  if (requireCoreFields) {
+    if (!entryTypeValues.includes(entryType)) {
+      return 'Entry type is required.'
+    }
+
+    if (!entry?.entry_date) {
+      return 'Entry date is required.'
+    }
+
+    if (!String(entry?.source || '').trim()) {
+      return 'Source is required.'
+    }
+  }
+
+  if (hasInvalidEstimatedRm(estimatedRm)) {
+    return 'Estimated RM must be zero or more.'
+  }
+
+  if (requireClosedRevenueFields && entryType === 'closed') {
+    if (!serviceCategoryValues.includes(entry?.service_category || '')) {
+      return 'Closed manual entries require a service category.'
+    }
+
+    const amount = Number(estimatedRm)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return 'Closed manual entries require Estimated RM greater than zero.'
+    }
+  }
+
+  return ''
+}
 
 const canvasToBlob = (canvas, type, quality) =>
   new Promise((resolve) => {
@@ -204,7 +264,12 @@ export const normalizeBulkRow = (row) => ({
   source: row.source.trim(),
   segment_type: normalizeClassificationType(row.segment_type),
   service_category: row.service_category || '',
-  estimated_rm: row.estimated_rm === '' || row.estimated_rm === null ? '' : row.estimated_rm,
+  estimated_rm:
+    entryTypeAllowsEstimatedRm(row.entry_type) &&
+    row.estimated_rm !== '' &&
+    row.estimated_rm !== null
+      ? row.estimated_rm
+      : '',
   prospect_name: row.prospect_name.trim(),
   notes: row.notes.trim(),
   photoFile: row.photoFile || null,

@@ -60,21 +60,19 @@ const AppSidebar = () => {
 
   return (
     <CSidebar
-      className="border-end bg-light"
-      colorScheme="light"
+      className="border-end"
       position="fixed"
       unfoldable={unfoldable}
       visible={sidebarShow}
       onVisibleChange={(visible) => dispatch({ type: 'set', sidebarShow: visible })}
     >
-      <CSidebarHeader className="border-bottom bg-light">
+      <CSidebarHeader className="border-bottom">
         <CSidebarBrand to="/">
           <img src={logoUrl} className="sidebar-brand-full" alt="logo" height="32" />
           <img src={sygnetUrl} className="sidebar-brand-narrow" alt="sygnet" height="32" />
         </CSidebarBrand>
         <CCloseButton
           className="d-lg-none"
-          dark
           onClick={() => dispatch({ type: 'set', sidebarShow: false })}
         />
       </CSidebarHeader>
@@ -82,7 +80,7 @@ const AppSidebar = () => {
       {/* Pass only the cleaned nav items here */}
       <AppSidebarNav items={filteredNav} />
 
-      <CSidebarFooter className="border-top bg-light d-none d-lg-flex">
+      <CSidebarFooter className="border-top d-none d-lg-flex">
         <CSidebarToggler
           onClick={() => dispatch({ type: 'set', sidebarUnfoldable: !unfoldable })}
         />

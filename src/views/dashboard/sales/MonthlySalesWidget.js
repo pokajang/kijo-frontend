@@ -16,7 +16,7 @@ import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
-import { useChartTickColor } from '../../../utils/chartTheme'
+import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
 
 // helper to format YYYY-MM to "Mon YYYY"
 const formatMonthLabel = (ym) => {
@@ -34,6 +34,7 @@ const formatAxisTick = (value) => {
 
 const MonthlySalesWidget = ({ period, startDate, endDate }) => {
   const tickColor = useChartTickColor()
+  const chartColors = useChartSemanticColors()
   const [monthlySales, setMonthlySales] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -181,8 +182,8 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
           {
             label: 'Sales Value (RM)',
             backgroundColor: 'transparent',
-            borderColor: '#2eb85c',
-            pointBackgroundColor: '#2eb85c',
+            borderColor: chartColors.success,
+            pointBackgroundColor: chartColors.success,
             data: valuePoints,
             yAxisID: 'yValue',
           },
@@ -193,8 +194,8 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
           {
             label: 'Realized Jobs',
             backgroundColor: 'transparent',
-            borderColor: '#f9b115',
-            pointBackgroundColor: '#f9b115',
+            borderColor: chartColors.warning,
+            pointBackgroundColor: chartColors.warning,
             data: quotePoints,
             yAxisID: 'yCount',
           },

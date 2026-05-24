@@ -10,7 +10,7 @@ const MonitoringSheetCard = ({ title, scopeLabel, headerActions, children, tourT
           font: inherit;
           line-height: inherit;
           min-width: 0;
-          text-decoration: underline dotted rgba(88, 86, 214, 0.55);
+          text-decoration: underline dotted rgba(var(--cui-primary-rgb), 0.55);
           text-underline-offset: 3px;
         }
 

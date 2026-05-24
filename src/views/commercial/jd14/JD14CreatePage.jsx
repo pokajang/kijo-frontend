@@ -95,6 +95,28 @@ const JD14CreatePage = () => {
     )
   }
 
+  if (project.project_type !== 'Training') {
+    return (
+      <CRow>
+        <CCol xs={12}>
+          <CCard className="mb-4">
+            <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+              <strong>Generate JD14</strong>
+              <CButton color="secondary" size="sm" variant="outline" onClick={backToProject}>
+                Back to Project
+              </CButton>
+            </CCardHeader>
+            <CCardBody>
+              <CAlert color="warning" className="mb-0">
+                JD14 forms can only be generated for Training projects.
+              </CAlert>
+            </CCardBody>
+          </CCard>
+        </CCol>
+      </CRow>
+    )
+  }
+
   return (
     <CRow>
       <CCol xs={12}>

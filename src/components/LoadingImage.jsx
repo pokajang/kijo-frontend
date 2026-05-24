@@ -28,7 +28,7 @@ const LoadingImage = ({
     <div className={wrapperClassName} style={{ position: 'relative' }}>
       {!loaded && (
         <div
-          className="border rounded bg-light text-muted d-flex align-items-center justify-content-center"
+          className="border rounded app-surface-panel text-muted d-flex align-items-center justify-content-center"
           style={{
             minHeight: 160,
             width: '100%',

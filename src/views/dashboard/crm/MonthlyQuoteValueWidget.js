@@ -16,7 +16,7 @@ import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
-import { useChartTickColor } from '../../../utils/chartTheme'
+import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
 
 // helper to format YYYY-MM to "Mon YYYY"
 const formatMonthLabel = (ym) => {
@@ -34,6 +34,7 @@ const formatAxisTick = (value) => {
 
 const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
   const tickColor = useChartTickColor()
+  const chartColors = useChartSemanticColors()
   const [monthlyQuotes, setMonthlyQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -185,8 +186,8 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
           {
             label: 'Quote Value (RM)',
             backgroundColor: 'transparent',
-            borderColor: '#4f5dff',
-            pointBackgroundColor: '#4f5dff',
+            borderColor: chartColors.primary,
+            pointBackgroundColor: chartColors.primary,
             data: valuePoints,
             yAxisID: 'yValue',
           },
@@ -197,8 +198,8 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
           {
             label: 'Quote Count',
             backgroundColor: 'transparent',
-            borderColor: '#f9b115',
-            pointBackgroundColor: '#f9b115',
+            borderColor: chartColors.warning,
+            pointBackgroundColor: chartColors.warning,
             data: countPoints,
             yAxisID: 'yCount',
           },

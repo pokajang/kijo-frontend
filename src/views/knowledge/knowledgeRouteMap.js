@@ -3,7 +3,13 @@ export const knowledgeRouteMap = {
   '/my/kpi': 'how-to-set-up-and-update-your-kpi',
   '/my/kpi/update': 'how-to-set-up-and-update-your-kpi',
   '/my/kpi/parameters': 'how-to-set-up-and-update-your-kpi',
+  '/dashboard': 'how-to-read-dashboard-statistics',
+  '/dashboard/sales': 'how-to-read-dashboard-statistics',
+  '/dashboard/crm': 'how-to-read-dashboard-statistics',
+  '/dashboard/financial': 'how-to-read-dashboard-statistics',
   '/dashboard/monitoring': 'how-to-add-manual-pipeline-entries-and-read-monitoring',
+  '/pipeline/find': 'how-to-find-prospects-and-manage-call-records',
+  '/pipeline/call-records': 'how-to-find-prospects-and-manage-call-records',
   '/pipeline/entries': 'how-to-add-manual-pipeline-entries-and-read-monitoring',
   '/task-manager': 'how-to-create-and-manage-daily-tasks',
   '/templates/create': 'how-to-create-a-proposal',
@@ -22,8 +28,20 @@ export const knowledgeRouteMap = {
   '/commercial/vendor-loa': 'how-to-use-commercial-records',
   '/commercial/supplier-po': 'how-to-use-commercial-records',
   '/commercial/debtors': 'how-to-track-and-create-manual-debtors',
+  '/internal-tools/legal-compliance/select-template':
+    'how-to-create-legal-compliance-templates-and-manage-assessment-reports',
+  '/internal-tools/legal-compliance/records':
+    'how-to-create-legal-compliance-templates-and-manage-assessment-reports',
+  '/internal-tools/legal-compliance/templates':
+    'how-to-create-legal-compliance-templates-and-manage-assessment-reports',
+  '/internal-tools/legal-compliance':
+    'how-to-create-legal-compliance-templates-and-manage-assessment-reports',
+  '/support/feedback': 'how-to-submit-and-track-system-feedback-tickets',
   '/support/requests': 'how-to-submit-a-support-request',
   '/request-tool': 'how-to-submit-a-support-request',
+  '/administration/meetings': 'how-to-create-and-manage-meeting-minutes',
+  '/administration/procedures': 'how-to-upload-and-manage-standard-operating-procedures',
+  '/administration/sport-time': 'how-to-record-and-track-sport-time-events',
 }
 
 export const getKnowledgeSlugForPathname = (pathname = '') => {

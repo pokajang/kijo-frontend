@@ -61,7 +61,7 @@ const InquiryProofsPanel = ({ inquiry }) => {
                 <LoadingImage
                   src={src}
                   alt={proof.originalName || `Inquiry proof ${index + 1}`}
-                  className="img-fluid rounded border bg-white d-block"
+                  className="img-fluid rounded border app-proof-image d-block"
                   style={{
                     width: '100%',
                     maxHeight: '360px',

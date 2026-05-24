@@ -40,6 +40,7 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
     groupClaimed: '',
   })
   const [employerCode, setEmployerCode] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   // Sync employerDetails whenever `project` updates
   useEffect(() => {
@@ -78,15 +79,15 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
   // If you have training-specific fields on `project`, you can sync here:
   useEffect(() => {
     if (project) {
-      setTrainingDetails((prev) => ({
-        ...prev,
+      setTrainingDetails({
         topic: project.project_name || '',
         commencedDate: project.service_start_date || '',
         endDate: project.service_end_date || '',
         trainingVenue: project.training_venue || '',
+        noOfPax: '',
         amountApproved: project.quote_value || '',
         amountClaimed: project.quote_value || '',
-      }))
+      })
     }
   }, [project])
 
@@ -119,6 +120,13 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
   })
 
   const handleSubmitJd14 = async () => {
+    if (submitting) return
+
+    if (project?.project_type !== 'Training') {
+      dialog.alert('JD14 forms can only be generated for Training projects.')
+      return
+    }
+
     if (
       !(await confirmExistingCommercialDocs({
         ...commercialDocs,
@@ -132,6 +140,7 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
 
     const payload = prepareJd14Data()
 
+    setSubmitting(true)
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE}jd14-forms`, {
         credentials: 'include',
@@ -156,6 +165,7 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
       console.error('JD14 Submission Error:', err)
       dialog.alert('❌ Something went wrong. Form may have been created. Please check manually.')
     }
+    setSubmitting(false)
   }
 
   const commercialDocsNotice = (
@@ -192,9 +202,9 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
         color="primary"
         size="sm"
         onClick={handleSubmitJd14}
-        disabled={commercialDocs.loading}
+        disabled={commercialDocs.loading || submitting || project?.project_type !== 'Training'}
       >
-        Generate JD14
+        {submitting ? 'Generating...' : 'Generate JD14'}
       </CButton>
     </>
   )

@@ -27,6 +27,8 @@ const SelectClientCard = ({
   title = 'Select Client',
   onBack,
   onCreateClient,
+  addressLabel = 'Quote Address',
+  contactLabel = 'Contact Information',
   shell = 'card',
 }) => {
   const navigate = useNavigate()
@@ -50,6 +52,7 @@ const SelectClientCard = ({
 
   const normalizePic = useCallback(
     (pic = {}) => ({
+      pic_id: pic.pic_id ?? pic.picId ?? null,
       full_name: pic.full_name ?? pic.fullName ?? pic.pic_name ?? '',
       email: pic.email ?? pic.pic_email ?? '',
       mobile_number: pic.mobile_number ?? pic.mobileNumber ?? pic.pic_phone ?? '',
@@ -463,7 +466,9 @@ const SelectClientCard = ({
   const selectedClientOption = selectedClient
     ? clientOptions.find((opt) => String(opt.value) === String(selectedClient.company_id)) || {
         value: selectedClient.company_id,
-        label: `${selectedClient.company_name || selectedClient.hq_company_name || 'Selected client'} - Loading details...`,
+        label: selectedClient.company_id
+          ? `${selectedClient.company_name || selectedClient.hq_company_name || 'Selected client'} - Loading details...`
+          : selectedClient.company_name || selectedClient.hq_company_name || 'Selected client',
         data: selectedClient,
       }
     : null
@@ -550,7 +555,7 @@ const SelectClientCard = ({
 
               {hasAddressRadios && (
                 <div className={hideCompanySummary ? '' : 'mt-3'}>
-                  <CFormLabel>Quote Address</CFormLabel>
+                  <CFormLabel>{addressLabel}</CFormLabel>
                   <div className="d-flex flex-column gap-2">
                     {addressOptions.map((option) => {
                       const selectedKey = selectedClient.selected_branch
@@ -561,7 +566,9 @@ const SelectClientCard = ({
                       return (
                         <label
                           key={option.key}
-                          className={`border rounded p-2 d-flex align-items-start gap-2 ${isSelected ? 'border-primary bg-light' : ''}`}
+                          className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
+                            isSelected ? 'app-selectable-card--selected' : ''
+                          }`}
                           style={{ cursor: 'pointer' }}
                         >
                           <CFormCheck
@@ -586,7 +593,7 @@ const SelectClientCard = ({
             </CCol>
 
             <CCol md={5}>
-              <CFormLabel>Contact Information</CFormLabel>
+              <CFormLabel>{contactLabel}</CFormLabel>
               {selectedClient.all_pics?.length > 1 ? (
                 <div className="d-flex flex-column gap-2">
                   <div className="d-flex gap-2 mb-1">
@@ -612,7 +619,9 @@ const SelectClientCard = ({
                     return (
                       <label
                         key={`${pic.email || 'no-email'}-${pic.full_name || 'no-name'}-${index}`}
-                        className={`border rounded p-2 d-flex align-items-start gap-2 ${isSelected ? 'border-primary bg-light' : ''}`}
+                        className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
+                          isSelected ? 'app-selectable-card--selected' : ''
+                        }`}
                         style={{ cursor: 'pointer' }}
                       >
                         <CFormCheck

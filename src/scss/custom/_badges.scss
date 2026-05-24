@@ -1,0 +1,113 @@
+.badge {
+  --cui-badge-font-weight: 400;
+}
+
+.badge[class*='bg-'],
+.badge[class*='text-bg-'] {
+  --cui-bg-opacity: 0.14;
+  border: 1px solid transparent;
+}
+
+.badge.bg-primary:not([class*='text-']) {
+  color: var(--cui-primary);
+}
+
+.badge.text-bg-primary {
+  color: var(--cui-primary) !important;
+}
+
+.badge.bg-primary,
+.badge.text-bg-primary {
+  border-color: rgba(var(--cui-primary-rgb), 0.28);
+}
+
+.badge.bg-secondary:not([class*='text-']) {
+  color: var(--cui-secondary);
+}
+
+.badge.text-bg-secondary {
+  color: var(--cui-secondary) !important;
+}
+
+.badge.bg-secondary,
+.badge.text-bg-secondary {
+  border-color: rgba(var(--cui-secondary-rgb), 0.28);
+}
+
+.badge.bg-success:not([class*='text-']) {
+  color: var(--cui-success);
+}
+
+.badge.text-bg-success {
+  color: var(--cui-success) !important;
+}
+
+.badge.bg-success,
+.badge.text-bg-success {
+  border-color: rgba(var(--cui-success-rgb), 0.28);
+}
+
+.badge.bg-info:not([class*='text-']) {
+  color: var(--cui-info);
+}
+
+.badge.text-bg-info {
+  color: var(--cui-info) !important;
+}
+
+.badge.bg-info,
+.badge.text-bg-info {
+  border-color: rgba(var(--cui-info-rgb), 0.28);
+}
+
+.badge.bg-warning:not([class*='text-']) {
+  color: color-mix(in srgb, var(--cui-warning) 72%, var(--app-text-base) 28%);
+}
+
+.badge.text-bg-warning {
+  color: color-mix(in srgb, var(--cui-warning) 72%, var(--app-text-base) 28%) !important;
+}
+
+.badge.bg-warning,
+.badge.text-bg-warning {
+  border-color: rgba(var(--cui-warning-rgb), 0.36);
+}
+
+.badge.bg-danger:not([class*='text-']) {
+  color: var(--cui-danger);
+}
+
+.badge.text-bg-danger {
+  color: var(--cui-danger) !important;
+}
+
+.badge.bg-danger,
+.badge.text-bg-danger {
+  border-color: rgba(var(--cui-danger-rgb), 0.28);
+}
+
+.badge.bg-light:not([class*='text-']) {
+  color: var(--app-text-secondary);
+}
+
+.badge.text-bg-light {
+  color: var(--app-text-secondary) !important;
+}
+
+.badge.bg-light,
+.badge.text-bg-light {
+  border-color: var(--app-border);
+}
+
+.badge.bg-dark:not([class*='text-']) {
+  color: var(--app-text-strong);
+}
+
+.badge.text-bg-dark {
+  color: var(--app-text-strong) !important;
+}
+
+.badge.bg-dark,
+.badge.text-bg-dark {
+  border-color: rgba(var(--cui-dark-rgb), 0.24);
+}

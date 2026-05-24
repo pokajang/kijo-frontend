@@ -280,6 +280,32 @@ const itemEnhancements = {
       'assessment report',
     ],
   },
+  '/internal-tools/legal-compliance/records': {
+    aliases: ['legal compliance records', 'assessment records', 'osh records'],
+    intentPhrases: [
+      'legal compliance records',
+      'saved legal compliance assessments',
+      'assessment records',
+      'see all records',
+    ],
+  },
+  '/internal-tools/legal-compliance/templates': {
+    aliases: ['legal compliance templates', 'assessment templates', 'osh template builder'],
+    intentPhrases: [
+      'manage legal compliance templates',
+      'edit assessment template',
+      'create compliance form',
+      'form template builder',
+    ],
+  },
+  '/internal-tools/legal-compliance/templates/:templateId/groups/:groupKey': {
+    aliases: ['legal compliance group editor', 'edit legislation group', 'edit clauses'],
+    intentPhrases: ['edit legal compliance clauses', 'edit legislation group clauses'],
+  },
+  '/internal-tools/legal-compliance/templates/:templateId': {
+    aliases: ['legal compliance template detail', 'template legislation groups'],
+    intentPhrases: ['open legal compliance template', 'manage template groups'],
+  },
   '/system-admin/dashboard': {
     aliases: ['system admin', 'migration status', 'email test'],
     intentPhrases: ['admin dashboard', 'laravel migration', 'mail diagnostics', 'schema sync'],
@@ -294,6 +320,22 @@ const standaloneItems = [
     keywords: ['legal compliance', 'osh assessment', 'osha checklist', 'internal tools'],
     aliases: ['legal compliance', 'osh assessment', 'osha checklist'],
     intentPhrases: ['legal compliance assessment', 'osh legal compliance', 'compliance form'],
+  },
+  {
+    label: 'Legal Compliance Records',
+    group: 'Tools & Resources',
+    to: '/internal-tools/legal-compliance/records',
+    keywords: ['legal compliance records', 'assessment records', 'osh records', 'internal tools'],
+    aliases: ['legal compliance records', 'assessment records', 'osh records'],
+    intentPhrases: ['saved legal compliance assessments', 'see all records'],
+  },
+  {
+    label: 'Legal Compliance Templates',
+    group: 'Tools & Resources',
+    to: '/internal-tools/legal-compliance/templates',
+    keywords: ['legal compliance templates', 'assessment templates', 'form builder'],
+    aliases: ['legal compliance templates', 'assessment templates', 'osh template builder'],
+    intentPhrases: ['manage legal compliance templates', 'edit assessment template'],
   },
   {
     label: 'Task Manager',

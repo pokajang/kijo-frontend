@@ -5,7 +5,11 @@ import { DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { API_BASE } from '../../marketing/pipeline/pipelineEntryUtils'
 import MonitoringSheetCard from './MonitoringSheetCard'
-import { useChartTickColor } from '../../../utils/chartTheme'
+import {
+  useChartPalette,
+  useChartSemanticColors,
+  useChartTickColor,
+} from '../../../utils/chartTheme'
 import { StatsStrip } from '../../../components/stats'
 
 const trendPeriods = [
@@ -15,12 +19,12 @@ const trendPeriods = [
 ]
 
 const stageColumns = [
-  { key: 'LEADS', label: 'Leads', color: '#3399ff' },
-  { key: 'QUALIFIED', label: 'Qualified', color: '#5856d6' },
-  { key: 'MEETING/ PITCHING', label: 'Meeting / Pitching', color: '#f9b115' },
-  { key: 'PROPOSAL', label: 'Proposal', color: '#2eb85c' },
-  { key: 'NEGOTIATION', label: 'Negotiation', color: '#6f42c1' },
-  { key: 'CLOSED', label: 'Closed', color: '#e55353' },
+  { key: 'LEADS', label: 'Leads' },
+  { key: 'QUALIFIED', label: 'Qualified' },
+  { key: 'MEETING/ PITCHING', label: 'Meeting / Pitching' },
+  { key: 'PROPOSAL', label: 'Proposal' },
+  { key: 'NEGOTIATION', label: 'Negotiation' },
+  { key: 'CLOSED', label: 'Closed' },
 ]
 
 const formatAxisTick = (value) => {
@@ -56,6 +60,8 @@ const MonitoringTrends = ({
   reloadKey = 0,
 }) => {
   const tickColor = useChartTickColor()
+  const chartColors = useChartSemanticColors()
+  const chartPalette = useChartPalette()
   const [trendPeriod, setTrendPeriod] = useState('last6')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -179,31 +185,35 @@ const MonitoringTrends = ({
 
   const stageDatasets = useMemo(
     () =>
-      stageColumns.map((stage) => ({
-        label: stage.label,
-        backgroundColor: stage.color,
-        borderColor: stage.color,
-        borderWidth: 1,
-        data: series.map((row) => Number(row.stages?.[stage.key] || 0)),
-        maxBarThickness: 38,
-      })),
-    [series],
+      stageColumns.map((stage, index) => {
+        const color = chartPalette[index % chartPalette.length]
+
+        return {
+          label: stage.label,
+          backgroundColor: color,
+          borderColor: color,
+          borderWidth: 1,
+          data: series.map((row) => Number(row.stages?.[stage.key] || 0)),
+          maxBarThickness: 38,
+        }
+      }),
+    [chartPalette, series],
   )
 
   const revenueDatasets = useMemo(
     () => [
       {
         label: 'Proposal RM',
-        backgroundColor: '#3399ff',
-        borderColor: '#3399ff',
+        backgroundColor: chartColors.info,
+        borderColor: chartColors.info,
         data: series.map((row) => Number(row.proposalRm || 0)),
         maxBarThickness: 34,
         yAxisID: 'yValue',
       },
       {
         label: 'Revenue RM',
-        backgroundColor: '#2eb85c',
-        borderColor: '#2eb85c',
+        backgroundColor: chartColors.success,
+        borderColor: chartColors.success,
         data: series.map((row) => Number(row.revenueRm || 0)),
         maxBarThickness: 34,
         yAxisID: 'yValue',
@@ -212,15 +222,15 @@ const MonitoringTrends = ({
         type: 'line',
         label: 'Win rate',
         data: series.map((row) => Number(row.winRate || 0)),
-        borderColor: '#f9b115',
-        backgroundColor: '#f9b115',
+        borderColor: chartColors.warning,
+        backgroundColor: chartColors.warning,
         borderWidth: 2,
         pointRadius: 3,
         tension: 0.35,
         yAxisID: 'yRate',
       },
     ],
-    [series],
+    [chartColors, series],
   )
 
   return (

@@ -461,13 +461,13 @@ const InquiryEditModal = ({ visible, inquiry, onClose, onSaved }) => {
                 {form.proofs.map((proof, index) => (
                   <div
                     key={proof.id || proof.localId || `${proof.originalName}-${index}`}
-                    className="border rounded p-2 bg-white"
+                    className="border rounded p-2 app-proof-card"
                     style={{ width: 176 }}
                   >
                     <LoadingImage
                       src={getInquiryProofUrl(form.id, proof)}
                       alt={proof.originalName || `Inquiry proof ${index + 1}`}
-                      className="rounded border bg-white w-100"
+                      className="rounded border app-proof-image w-100"
                       style={{ height: 104, objectFit: 'cover' }}
                       placeholderStyle={{ minHeight: 104, height: 104 }}
                     />

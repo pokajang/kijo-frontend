@@ -12,6 +12,7 @@ const CreateClient = () => {
   const [cameFromQuote, setCameFromQuote] = useState(false)
   const [cameFromDebtor, setCameFromDebtor] = useState(false)
   const [cameFromVendorRegistration, setCameFromVendorRegistration] = useState(false)
+  const [cameFromLegalComplianceAssessment, setCameFromLegalComplianceAssessment] = useState(false)
   const [cameFromInquiryId, setCameFromInquiryId] = useState('')
 
   useEffect(() => {
@@ -23,6 +24,9 @@ const CreateClient = () => {
     }
     if (sessionStorage.getItem('cameFromVendorRegistration') === 'true') {
       setCameFromVendorRegistration(true)
+    }
+    if (sessionStorage.getItem('cameFromLegalComplianceAssessment') === 'true') {
+      setCameFromLegalComplianceAssessment(true)
     }
     fetchClientCompanies()
     fetchPICs()
@@ -330,9 +334,11 @@ const CreateClient = () => {
               ? 'Client created successfully. Return to debtor?'
               : cameFromVendorRegistration
                 ? 'Client created successfully. Return to vendor registration?'
-                : cameFromQuote
-                  ? 'Client created successfully. Return to quotation?'
-                  : 'Client created successfully. Go to client list?',
+                : cameFromLegalComplianceAssessment
+                  ? 'Client created successfully. Return to assessment?'
+                  : cameFromQuote
+                    ? 'Client created successfully. Return to quotation?'
+                    : 'Client created successfully. Go to client list?',
           {
             title: 'Client Created',
             confirmText: cameFromInquiryId
@@ -341,9 +347,11 @@ const CreateClient = () => {
                 ? 'Go to debtor'
                 : cameFromVendorRegistration
                   ? 'Go to vendor registration'
-                  : cameFromQuote
-                    ? 'Go to quotation'
-                    : 'Go to list',
+                  : cameFromLegalComplianceAssessment
+                    ? 'Go to assessment'
+                    : cameFromQuote
+                      ? 'Go to quotation'
+                      : 'Go to list',
             cancelText: 'Create another',
           },
         )
@@ -362,6 +370,13 @@ const CreateClient = () => {
               sessionStorage.getItem('vendorRegistrationReturnPath') ||
               '/client/vendor-registration/create'
             sessionStorage.removeItem('vendorRegistrationReturnPath')
+            navigate(returnPath)
+          } else if (cameFromLegalComplianceAssessment) {
+            sessionStorage.removeItem('cameFromLegalComplianceAssessment')
+            const returnPath =
+              sessionStorage.getItem('legalComplianceAssessmentReturnPath') ||
+              '/internal-tools/legal-compliance/select-template'
+            sessionStorage.removeItem('legalComplianceAssessmentReturnPath')
             navigate(returnPath)
           } else if (cameFromQuote) {
             sessionStorage.removeItem('cameFromQuote')
@@ -418,6 +433,15 @@ const CreateClient = () => {
         sessionStorage.getItem('vendorRegistrationReturnPath') ||
         '/client/vendor-registration/create'
       sessionStorage.removeItem('vendorRegistrationReturnPath')
+      navigate(returnPath)
+      return
+    }
+    if (cameFromLegalComplianceAssessment) {
+      sessionStorage.removeItem('cameFromLegalComplianceAssessment')
+      const returnPath =
+        sessionStorage.getItem('legalComplianceAssessmentReturnPath') ||
+        '/internal-tools/legal-compliance/select-template'
+      sessionStorage.removeItem('legalComplianceAssessmentReturnPath')
       navigate(returnPath)
       return
     }

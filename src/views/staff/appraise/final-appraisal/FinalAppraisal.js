@@ -244,6 +244,7 @@ const FinalAppraisal = () => {
                   ) : previousError ? (
                     <CAlert color="danger">{previousError}</CAlert>
                   ) : normalizedPreviousEvaluations.length > 0 ? (
+                    // datatable-exempt: compact embedded previous-evaluation summary
                     <CTable
                       hover
                       bordered

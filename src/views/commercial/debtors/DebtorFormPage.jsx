@@ -278,8 +278,8 @@ const DebtorClientSelector = ({
                   return (
                     <label
                       key={contactKey(pic, index)}
-                      className={`border rounded p-2 d-flex align-items-start gap-2 ${
-                        isSelected ? 'border-primary bg-light' : ''
+                      className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
+                        isSelected ? 'app-selectable-card--selected' : ''
                       }`}
                       style={{ cursor: 'pointer' }}
                     >

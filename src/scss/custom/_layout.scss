@@ -34,8 +34,8 @@ body,
 
   &:hover,
   &.highlighted {
-    background-color: #deebff;
-    color: #000;
+    background-color: var(--app-accent-bg-hover);
+    color: var(--app-accent-text-hover);
   }
 }
 

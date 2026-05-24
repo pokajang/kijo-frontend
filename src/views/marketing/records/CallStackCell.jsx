@@ -54,14 +54,14 @@ const CallStackCell = ({ calls = [], currentUser, onDelete }) => {
   }
 
   return (
-    <div className="small text-dark" style={{ maxHeight: 160, overflowY: 'auto' }}>
+    <div className="small text-body" style={{ maxHeight: 160, overflowY: 'auto' }}>
       {calls.map((call, idx) => {
         const colorClass = outcomeColor[call.outcome] || 'text-muted'
         return (
           <div key={call.id || idx} className="mb-1 position-relative calllog-row">
             <div className="d-flex align-items-center flex-wrap gap-2 pe-4">
               <span className={`${colorClass} fw-semibold`}>{call.outcome || '-'}</span>
-              <span className="text-dark">{formatDT(call.called_at)}</span>
+              <span className="text-body">{formatDT(call.called_at)}</span>
 
               <div className="d-flex align-items-center text-primary">
                 - {call.called_by_code || '-'}

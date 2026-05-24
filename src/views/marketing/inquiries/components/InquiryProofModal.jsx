@@ -16,7 +16,7 @@ const InquiryProofModal = ({ inquiry, onClose }) => (
               <LoadingImage
                 src={getInquiryProofUrl(inquiry.id, proof)}
                 alt={proof.originalName || `Inquiry proof ${index + 1}`}
-                className="img-fluid rounded border bg-white d-block mx-auto"
+                className="img-fluid rounded border app-proof-image d-block mx-auto"
                 style={{ maxHeight: 'calc(100vh - 220px)', objectFit: 'contain' }}
                 placeholderStyle={{ minHeight: 220 }}
               />

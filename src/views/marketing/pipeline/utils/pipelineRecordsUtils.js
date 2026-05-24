@@ -164,6 +164,8 @@ export const requiredPipelineRecordColumns = new Set(['entryDate', 'entryType', 
 
 export const normalizePipelineRecord = (entry) => ({
   ...entry,
+  recordSource: entry.recordSource || 'manual',
+  legalAssessmentId: entry.legalAssessmentId || null,
   entryDateDisplay: formatDate(entry.entryDate),
   entryTypeLabel: typeLabel(entry.entryType),
   prospectNameValue: entry.prospectName || '',

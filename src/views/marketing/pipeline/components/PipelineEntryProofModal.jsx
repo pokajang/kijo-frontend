@@ -15,7 +15,7 @@ const PipelineEntryProofModal = ({ entry, onClose }) => (
         <LoadingImage
           src={getPipelineEntryPhotoUrl(entry)}
           alt={`Screenshot proof for ${entry?.prospectName || 'pipeline entry'}`}
-          className="img-fluid rounded border bg-white"
+          className="img-fluid rounded border app-proof-image"
           style={{ maxHeight: 'calc(100vh - 190px)', objectFit: 'contain' }}
           placeholderStyle={{ minHeight: 220 }}
         />

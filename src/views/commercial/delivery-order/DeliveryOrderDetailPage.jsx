@@ -17,6 +17,7 @@ const normalizeDeliveryOrder = (order = {}) => {
   return {
     ...order,
     do_id: order?.do_id ?? order?.id ?? null,
+    project_id: order?.project_id ?? order?.projectId ?? null,
     breakdown: normalizedItems.map((item) => ({
       item_name: item?.item_name || item?.name || '',
       description: item?.description || '',
@@ -37,6 +38,7 @@ const DeliveryOrderDetailPage = () => {
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
   const [editVisible, setEditVisible] = useState(false)
+  const projectId = record?.project_id ?? location.state?.fromProjectId ?? null
 
   useEffect(() => {
     recordRef.current = record
@@ -175,12 +177,12 @@ const DeliveryOrderDetailPage = () => {
         error={error}
         record={record}
         actions={[
-          record?.project_id
+          projectId
             ? {
                 key: 'back-project',
                 label: 'Back to Project',
                 buttonColor: 'secondary',
-                onClick: () => navigate(`/project/manage/${record.project_id}`),
+                onClick: () => navigate(`/project/manage/${projectId}`),
               }
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },

@@ -1,4 +1,5 @@
 export const normalizeContact = (pic = {}) => ({
+  pic_id: pic.pic_id ?? pic.picId ?? null,
   full_name: pic.full_name ?? pic.fullName ?? pic.pic_name ?? pic.picName ?? pic.name ?? '',
   email: pic.email ?? pic.pic_email ?? pic.picEmail ?? '',
   mobile_number:

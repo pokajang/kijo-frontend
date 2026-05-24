@@ -30,7 +30,7 @@ const AchievementCard = ({ title, achievement }) => {
   const metaValueTextClass = isBelowThreshold ? 'text-danger' : 'text-muted'
 
   return (
-    <div className="rounded-4 bg-light p-3 h-100">
+    <div className="rounded-4 app-surface-panel p-3 h-100">
       <div className="text-uppercase text-muted fw-semibold fs-6 mb-2">{title}</div>
       <div className="d-flex justify-content-between align-items-baseline mb-2">
         <span className="text-muted fw-medium fs-6">{achievement.label}</span>
@@ -168,7 +168,7 @@ const MonitoringPerformanceSummary = ({
             </div>
 
             {!companyAchievement ? (
-              <div className="rounded-4 bg-light px-3 py-3 text-muted">
+              <div className="rounded-4 app-surface-panel px-3 py-3 text-muted">
                 No target data available for this scope.
               </div>
             ) : (

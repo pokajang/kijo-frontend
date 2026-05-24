@@ -140,6 +140,21 @@ const InternalTools = React.lazy(() => import('./views/internal-tools/InternalTo
 const LegalComplianceAssessment = React.lazy(
   () => import('./views/internal-tools/legal-compliance/LegalComplianceAssessment'),
 )
+const LegalComplianceTemplateSelector = React.lazy(
+  () => import('./views/internal-tools/legal-compliance/LegalComplianceTemplateSelector'),
+)
+const LegalComplianceRecords = React.lazy(
+  () => import('./views/internal-tools/legal-compliance/LegalComplianceRecords'),
+)
+const LegalComplianceTemplates = React.lazy(
+  () => import('./views/internal-tools/legal-compliance/LegalComplianceTemplates'),
+)
+const LegalComplianceTemplateDetail = React.lazy(
+  () => import('./views/internal-tools/legal-compliance/LegalComplianceTemplateDetail'),
+)
+const LegalComplianceTemplateGroupEditor = React.lazy(
+  () => import('./views/internal-tools/legal-compliance/LegalComplianceTemplateGroupEditor'),
+)
 const TaskManager = React.lazy(() => import('./views/task-manager/TaskManager'))
 const RequestDetailPage = React.lazy(() => import('./views/request-tool/RequestDetailPage'))
 const RequestTool = React.lazy(() => import('./views/request-tool/RequestTool'))
@@ -847,6 +862,31 @@ const routes = [
     path: 'internal-tools/legal-compliance',
     name: 'Legal Compliance Assessment',
     element: LegalComplianceAssessment,
+  },
+  {
+    path: 'internal-tools/legal-compliance/select-template',
+    name: 'Choose Legal Compliance Template',
+    element: LegalComplianceTemplateSelector,
+  },
+  {
+    path: 'internal-tools/legal-compliance/records',
+    name: 'Legal Compliance Records',
+    element: LegalComplianceRecords,
+  },
+  {
+    path: 'internal-tools/legal-compliance/templates',
+    name: 'Legal Compliance Templates',
+    element: LegalComplianceTemplates,
+  },
+  {
+    path: 'internal-tools/legal-compliance/templates/:templateId/groups/:groupKey',
+    name: 'Legal Compliance Template Group Editor',
+    element: LegalComplianceTemplateGroupEditor,
+  },
+  {
+    path: 'internal-tools/legal-compliance/templates/:templateId',
+    name: 'Legal Compliance Template Detail',
+    element: LegalComplianceTemplateDetail,
   },
   // Support paths
   {

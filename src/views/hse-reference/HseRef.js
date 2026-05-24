@@ -53,7 +53,7 @@ const HseRef = () => {
           <div className="d-flex flex-column" style={{ height: '100%' }}>
             {chatStarted && (
               <div
-                className="flex-grow-1 overflow-auto p-3 bg-light border rounded mb-3"
+                className="flex-grow-1 overflow-auto p-3 app-surface-panel border rounded mb-3"
                 style={{ maxHeight: '75vh' }}
               >
                 {messages.map((msg, index) => (

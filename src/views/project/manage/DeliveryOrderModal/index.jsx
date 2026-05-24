@@ -60,6 +60,7 @@ export default function DeliveryOrderModal({
     servicePeriod: '',
   })
   const [items, setItems] = useState([])
+  const [submitting, setSubmitting] = useState(false)
 
   const shouldIncludeInvoiceItem = (item) => {
     const label = String(item?.item_description || '')
@@ -203,6 +204,8 @@ export default function DeliveryOrderModal({
 
   // 4) Submit handler (unchanged)
   const handleGenerateDO = async (forceCreate = false, skipExistingDocsConfirm = false) => {
+    if (submitting) return
+
     if (
       !skipExistingDocsConfirm &&
       !(await confirmExistingCommercialDocs({
@@ -224,6 +227,7 @@ export default function DeliveryOrderModal({
     }
 
     const payload = prepareDeliveryOrderData(forceCreate)
+    setSubmitting(true)
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE}delivery-orders`, {
         method: 'POST',
@@ -236,7 +240,10 @@ export default function DeliveryOrderModal({
         const confirm = await dialog.confirm(
           `A DO already exists (DO: ${result.existing_do_number}). Create another?`,
         )
-        if (confirm) return handleGenerateDO(true, true)
+        if (confirm) {
+          setSubmitting(false)
+          return handleGenerateDO(true, true)
+        }
       } else if (result.status === 'success') {
         onCreated?.(result)
         navigate(`/commercial/delivery-order/${result.do_id}`, {
@@ -251,6 +258,7 @@ export default function DeliveryOrderModal({
       console.error('Delivery Order Error:', err)
       dialog.alert('❌ Error occurred while submitting Delivery Order.')
     }
+    setSubmitting(false)
   }
 
   const commercialDocsNotice = (
@@ -284,10 +292,10 @@ export default function DeliveryOrderModal({
       <CButton
         color="primary"
         size="sm"
-        disabled={items.length === 0 || commercialDocs.loading}
+        disabled={items.length === 0 || commercialDocs.loading || submitting}
         onClick={() => handleGenerateDO(false)}
       >
-        Generate DO
+        {submitting ? 'Generating...' : 'Generate DO'}
       </CButton>
     </>
   )

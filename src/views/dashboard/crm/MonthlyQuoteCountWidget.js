@@ -3,7 +3,7 @@ import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
-import { useChartTickColor } from '../../../utils/chartTheme'
+import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
 
 const formatMonthLabel = (ym) => {
   const [y, m] = ym.split('-')
@@ -13,6 +13,7 @@ const formatMonthLabel = (ym) => {
 
 const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
   const tickColor = useChartTickColor()
+  const chartColors = useChartSemanticColors()
   const [monthlyQuoteCount, setMonthlyQuoteCount] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -124,8 +125,8 @@ const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
                       {
                         label: 'Quote Count',
                         backgroundColor: 'transparent',
-                        borderColor: '#f9b115',
-                        pointBackgroundColor: '#f9b115',
+                        borderColor: chartColors.warning,
+                        pointBackgroundColor: chartColors.warning,
                         data: dataPoints,
                       },
                     ],

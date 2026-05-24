@@ -1,135 +1,271 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import {
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CForm,
-  CFormInput,
-  CFormLabel,
-  CFormTextarea,
-  CRow,
-} from '@coreui/react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CForm, CRow } from '@coreui/react'
 
 import { useAuth } from '../../../auth/AuthProvider'
-import Select from '../../../components/forms/ThemedSelect'
-import { legalComplianceSections } from './legalComplianceTemplateData'
+import { DataTableLoadingState } from '../../../components/datatable'
+import SelectClientCard from '../../crm/quotes/SelectClientCard'
+import {
+  createLegalComplianceAssessmentRevision,
+  getDefaultLegalComplianceTemplate,
+  getLegalComplianceAssessment,
+  getLegalComplianceAssessmentPdfUrl,
+  getLegalComplianceTemplate,
+} from './api/legalComplianceApi'
+import AssessmentActionBar from './components/assessment/AssessmentActionBar'
+import AssessmentClauseAccordion from './components/assessment/AssessmentClauseAccordion'
+import AssessmentDetailsForm from './components/assessment/AssessmentDetailsForm'
+import AssessmentDetailsSummary from './components/assessment/AssessmentDetailsSummary'
+import AssessmentReviewReport from './components/assessment/AssessmentReviewReport'
+import SubmitReportModal from './components/assessment/SubmitReportModal'
+import useAssessmentDraft from './hooks/useAssessmentDraft'
+import useAssessmentPersistence from './hooks/useAssessmentPersistence'
+import { defaultLegalComplianceTemplate } from './legalComplianceTemplateData'
+import { clearLocalDraft } from './utils/assessmentDraftStorage'
+import {
+  createAssessmentStateFromRecord,
+  createAssessmentTemplateFromDetail,
+  createInitialAssessmentDetails,
+  createStaffOption,
+  getAssessmentDetailsFromClient,
+  getAssessmentDetailsFromProject,
+} from './utils/assessmentMappers'
+import {
+  createClauseResponses,
+  createEmptyClauseResponses,
+  getAssessmentProgress,
+  getClauseFields,
+  getTemplateSections,
+  isRequiredFieldComplete,
+} from './utils/templateContent'
 
-const initialAssessmentDetails = {
-  companyName: '',
-  siteLocation: '',
-  assessmentDate: '',
-  assessorName: '',
-  assessorEmail: '',
-  scopeRemarks: '',
-}
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/'
-
-const getStaffName = (staff = {}) =>
-  staff.full_name || staff.name || staff.staff_name || staff.name_code || ''
-
-const getStaffEmail = (staff = {}) => staff.email || staff.staff_email || ''
-
-const getStaffId = (staff = {}) =>
-  staff.staff_id || staff.id || staff.user_id || staff.name_code || getStaffName(staff)
-
-const createStaffOption = (staff = {}) => {
-  const name = getStaffName(staff)
-  const email = getStaffEmail(staff)
-  const code = staff.name_code || staff.code || ''
-
-  if (!name && !email) return null
-
-  return {
-    value: getStaffId(staff) || name || email,
-    label: [name, code ? `(${code})` : '', email ? `- ${email}` : ''].filter(Boolean).join(' '),
-    data: staff,
-  }
-}
-
-const getAssessorNames = (options = []) =>
-  options.map((option) => getStaffName(option.data) || option.label).filter(Boolean)
-
-const getAssessorEmails = (options = []) =>
-  options.map((option) => getStaffEmail(option.data)).filter(Boolean)
-
-const createInitialAssessmentDetails = (user) => ({
-  ...initialAssessmentDetails,
-  assessorName: getStaffName(user),
-  assessorEmail: getStaffEmail(user),
-})
-
-const createEmptyClauseResponses = () =>
-  legalComplianceSections
-    .flatMap((section) => section.clauses)
-    .reduce((responses, clause) => {
-      responses[clause.id] = {
-        finding: '',
-      }
-      return responses
-    }, {})
-
-const displayValue = (value) => value || '-'
-
-const AssessmentDetailsSummary = ({ assessmentDetails, actions }) => (
-  <CCard>
-    <CCardHeader>
-      <strong>Assessment Details</strong>
-    </CCardHeader>
-    <CCardBody>
-      <CRow className="g-3">
-        <CCol md={6} lg={2}>
-          <strong>Company</strong>
-          <div>{displayValue(assessmentDetails.companyName)}</div>
-        </CCol>
-        <CCol md={6} lg={2}>
-          <strong>Address</strong>
-          <div>{displayValue(assessmentDetails.siteLocation)}</div>
-        </CCol>
-        <CCol md={6} lg={2}>
-          <strong>Assessment Date</strong>
-          <div>{displayValue(assessmentDetails.assessmentDate)}</div>
-        </CCol>
-        <CCol md={6} lg={2}>
-          <strong>Assessor</strong>
-          <div>{displayValue(assessmentDetails.assessorName)}</div>
-        </CCol>
-        <CCol md={6} lg={2}>
-          <strong>Assessor Email</strong>
-          <div>{displayValue(assessmentDetails.assessorEmail)}</div>
-        </CCol>
-        <CCol md={6} lg={2}>
-          <strong>Scope</strong>
-          <div>{displayValue(assessmentDetails.scopeRemarks)}</div>
-        </CCol>
-      </CRow>
-      {actions && <div className="d-flex justify-content-end gap-2 flex-wrap mt-3">{actions}</div>}
-    </CCardBody>
-  </CCard>
-)
+const buildAutosaveChangeKey = ({
+  assessmentDetails,
+  clauseResponses,
+  selectedAssessors,
+  selectedClient,
+  isReviewing,
+}) =>
+  JSON.stringify({
+    assessmentDetails,
+    clauseResponses,
+    selectedAssessors,
+    selectedClient,
+    isReviewing,
+  })
 
 const LegalComplianceAssessment = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
+  const selectedTemplateId = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('templateId')
+  }, [location.search])
+  const selectedAssessmentId = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('assessmentId')
+  }, [location.search])
+  const shouldOpenAssessmentInReview = useMemo(() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('mode') === 'review'
+  }, [location.search])
+  const shouldStartNew = location.state?.startNew === true
+  const selectedProjectFromStart = location.state?.selectedProject || null
+  const isDraftPersistenceEnabled = useRef(!selectedAssessmentId)
+  const { localDraft } = useAssessmentDraft({
+    selectedAssessmentId,
+    selectedTemplateId,
+    shouldStartNew,
+  })
   const sessionAssessmentDetails = useMemo(() => createInitialAssessmentDetails(user), [user])
   const sessionAssessorOption = useMemo(() => createStaffOption(user), [user])
-  const [assessmentDetails, setAssessmentDetails] = useState(() =>
-    createInitialAssessmentDetails(user),
+  const initialTemplate = localDraft?.template || defaultLegalComplianceTemplate
+  const initialSections = getTemplateSections(initialTemplate.content)
+  const [template, setTemplate] = useState(initialTemplate)
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(
+    Boolean(selectedAssessmentId) || !localDraft?.template,
   )
-  const [clauseResponses, setClauseResponses] = useState(() => createEmptyClauseResponses())
-  const [isAssessmentSaved, setIsAssessmentSaved] = useState(false)
-  const [isReviewing, setIsReviewing] = useState(false)
-  const [staffOptions, setStaffOptions] = useState([])
-  const [selectedAssessors, setSelectedAssessors] = useState(() =>
-    sessionAssessorOption ? [sessionAssessorOption] : [],
+  const [templateError, setTemplateError] = useState('')
+  const sections = useMemo(() => getTemplateSections(template.content), [template])
+  const [assessmentId, setAssessmentId] = useState(() => localDraft?.assessmentId || null)
+  const [assessmentDetails, setAssessmentDetails] = useState(() => {
+    const baseDetails = localDraft?.assessmentDetails || createInitialAssessmentDetails(user)
+    return selectedProjectFromStart
+      ? { ...baseDetails, ...getAssessmentDetailsFromProject(selectedProjectFromStart) }
+      : baseDetails
+  })
+  const [selectedClient, setSelectedClient] = useState(() => localDraft?.selectedClient || null)
+  const [clauseResponses, setClauseResponses] = useState(() =>
+    createClauseResponses(localDraft?.clauseResponses, initialSections),
   )
-  const [isLoadingStaff, setIsLoadingStaff] = useState(false)
-  const [staffError, setStaffError] = useState('')
+  const [isAssessmentSaved, setIsAssessmentSaved] = useState(() =>
+    Boolean(localDraft?.isAssessmentSaved),
+  )
+  const [isReviewing, setIsReviewing] = useState(() => Boolean(localDraft?.isReviewing))
+  const [isSubmittedRecord, setIsSubmittedRecord] = useState(false)
+  const [selectedAssessors, setSelectedAssessors] = useState(
+    () => localDraft?.selectedAssessors || (sessionAssessorOption ? [sessionAssessorOption] : []),
+  )
+  const [isSubmitConfirmVisible, setIsSubmitConfirmVisible] = useState(false)
+  const [isCreatingRevision, setIsCreatingRevision] = useState(false)
+  const autosaveReadyRef = useRef(false)
+  const autosaveBaselineRef = useRef('')
+  const autosaveTimerRef = useRef(null)
+  const isSavingAssessmentRef = useRef(false)
+  const isReviewTransitionRef = useRef(false)
+  const saveAssessmentStageRef = useRef(null)
+  const [accordionState, setAccordionState] = useState(() => ({
+    key: 'initial',
+    activeItemKey: sections[0]?.id,
+  }))
+  const {
+    isSavingAssessment,
+    saveStatus,
+    saveError,
+    setSaveError,
+    saveAssessmentStage,
+    writeCurrentDraft,
+  } = useAssessmentPersistence({
+    assessmentId,
+    setAssessmentId,
+    assessmentDetails,
+    selectedClient,
+    clauseResponses,
+    selectedAssessors,
+    isAssessmentSaved,
+    isReviewing,
+    template,
+  })
+  const assessmentProgress = useMemo(
+    () => getAssessmentProgress(sections, clauseResponses),
+    [sections, clauseResponses],
+  )
+  const autosaveChangeKey = useMemo(
+    () =>
+      buildAutosaveChangeKey({
+        assessmentDetails,
+        clauseResponses,
+        selectedAssessors,
+        selectedClient,
+        isReviewing,
+      }),
+    [assessmentDetails, clauseResponses, isReviewing, selectedAssessors, selectedClient],
+  )
+  const saveStatusText = isSavingAssessment
+    ? 'Saving...'
+    : saveStatus === 'saved'
+      ? 'Saved just now'
+      : saveStatus === 'failed'
+        ? 'Save failed'
+        : ''
+  const saveStatusTone =
+    saveStatus === 'saved' ? 'success' : saveStatus === 'failed' ? 'danger' : 'secondary'
+  const templateTier = template.assessment_tier || template.content?.assessment_tier || 'free'
+  const isPaidAssessment = templateTier === 'paid'
+  const hasLinkedProject = Boolean(assessmentDetails.projectId)
 
   useEffect(() => {
+    isDraftPersistenceEnabled.current = !selectedAssessmentId
+  }, [selectedAssessmentId])
+
+  useEffect(() => {
+    isSavingAssessmentRef.current = isSavingAssessment
+  }, [isSavingAssessment])
+
+  useEffect(() => {
+    saveAssessmentStageRef.current = saveAssessmentStage
+  }, [saveAssessmentStage])
+
+  useEffect(() => {
+    if (isDraftPersistenceEnabled.current) writeCurrentDraft()
+  }, [writeCurrentDraft])
+
+  useEffect(() => {
+    if (selectedAssessmentId) return undefined
+    if (localDraft?.template && !shouldStartNew && !selectedTemplateId) return undefined
+
+    const controller = new AbortController()
+
+    ;(async () => {
+      try {
+        setIsLoadingTemplate(true)
+        setTemplateError('')
+        const payload = selectedTemplateId
+          ? await getLegalComplianceTemplate(selectedTemplateId, { signal: controller.signal })
+          : await getDefaultLegalComplianceTemplate({ signal: controller.signal })
+        const nextTemplate = selectedTemplateId
+          ? createAssessmentTemplateFromDetail(payload?.template)
+          : payload?.template
+
+        if (!nextTemplate?.content) {
+          throw new Error('Could not load legal compliance template.')
+        }
+
+        setTemplate(nextTemplate)
+        const nextSections = getTemplateSections(nextTemplate.content)
+        setClauseResponses((current) => createClauseResponses(current, nextSections))
+        setAccordionState({
+          key: `template-${nextTemplate.id || 'default'}-${Date.now()}`,
+          activeItemKey: nextSections[0]?.id,
+        })
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        const nextError = error.message || 'Could not load legal compliance template.'
+        setTemplateError(
+          selectedTemplateId ? nextError : `${nextError} Showing local fallback template.`,
+        )
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingTemplate(false)
+      }
+    })()
+
+    return () => controller.abort()
+  }, [localDraft?.template, selectedAssessmentId, selectedTemplateId, shouldStartNew])
+
+  useEffect(() => {
+    if (!selectedAssessmentId) return undefined
+
+    isDraftPersistenceEnabled.current = false
+    const controller = new AbortController()
+
+    ;(async () => {
+      try {
+        setIsLoadingTemplate(true)
+        setTemplateError('')
+        setSaveError('')
+        const payload = await getLegalComplianceAssessment(selectedAssessmentId, {
+          signal: controller.signal,
+        })
+        const recordState = createAssessmentStateFromRecord(payload.record)
+
+        setAssessmentId(recordState.assessmentId)
+        setTemplate(recordState.template)
+        setAssessmentDetails(recordState.assessmentDetails)
+        setSelectedClient(recordState.selectedClient)
+        setClauseResponses(recordState.clauseResponses)
+        setSelectedAssessors(recordState.selectedAssessors)
+        setIsAssessmentSaved(recordState.isAssessmentSaved)
+        setIsSubmittedRecord(recordState.isSubmittedRecord)
+        setIsReviewing(shouldOpenAssessmentInReview || payload.record.stage !== 'details_saved')
+        setAccordionState({
+          key: `assessment-${payload.record.id}-${Date.now()}`,
+          activeItemKey: recordState.sections[0]?.id,
+        })
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        setTemplateError(error.message || 'Could not load assessment record.')
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingTemplate(false)
+      }
+    })()
+
+    return () => controller.abort()
+  }, [selectedAssessmentId, setSaveError, shouldOpenAssessmentInReview])
+
+  useEffect(() => {
+    if (selectedAssessmentId) return
+
     setAssessmentDetails((current) => {
       if (current.assessorName || current.assessorEmail) return current
       return {
@@ -142,256 +278,426 @@ const LegalComplianceAssessment = () => {
       if (current.length > 0 || !sessionAssessorOption) return current
       return [sessionAssessorOption]
     })
-  }, [sessionAssessmentDetails, sessionAssessorOption])
+  }, [selectedAssessmentId, sessionAssessmentDetails, sessionAssessorOption])
 
-  const assessorOptions = useMemo(() => {
-    const optionsByValue = new Map()
+  useEffect(() => {
+    const canAutosave = Boolean(assessmentId && isAssessmentSaved && !isSubmittedRecord)
 
-    ;[sessionAssessorOption, ...staffOptions].filter(Boolean).forEach((option) => {
-      optionsByValue.set(String(option.value), option)
-    })
-
-    return Array.from(optionsByValue.values())
-  }, [sessionAssessorOption, staffOptions])
-
-  const loadStaffOptions = () => {
-    if (staffOptions.length > 0 || isLoadingStaff) return
-
-    const controller = new AbortController()
-
-    ;(async () => {
-      try {
-        setIsLoadingStaff(true)
-        setStaffError('')
-        const response = await fetch(`${API_BASE}staff/list`, {
-          credentials: 'include',
-          signal: controller.signal,
-        })
-        const payload = await response.json()
-
-        if (!response.ok || payload?.status !== 'success') {
-          throw new Error(payload?.message || 'Could not load staff list.')
-        }
-
-        const staff = Array.isArray(payload.staff) ? payload.staff : []
-        setStaffOptions(staff.map(createStaffOption).filter(Boolean))
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        setStaffError(error.message || 'Could not load staff list.')
-      } finally {
-        if (!controller.signal.aborted) setIsLoadingStaff(false)
+    if (!canAutosave) {
+      autosaveReadyRef.current = false
+      autosaveBaselineRef.current = ''
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current)
+        autosaveTimerRef.current = null
       }
-    })()
+      return undefined
+    }
+
+    if (isSavingAssessment) return undefined
+
+    if (!autosaveReadyRef.current) {
+      autosaveReadyRef.current = true
+      autosaveBaselineRef.current = autosaveChangeKey
+      return undefined
+    }
+
+    if (autosaveBaselineRef.current === autosaveChangeKey) return undefined
+
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+    }
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      autosaveTimerRef.current = null
+      if (isSavingAssessmentRef.current) return
+      autosaveBaselineRef.current = autosaveChangeKey
+      saveAssessmentStageRef.current?.(isReviewing ? 'review_ready' : 'details_saved', {
+        autosave: true,
+      })
+    }, 1500)
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current)
+        autosaveTimerRef.current = null
+      }
+    }
+  }, [
+    assessmentId,
+    autosaveChangeKey,
+    isAssessmentSaved,
+    isReviewing,
+    isSavingAssessment,
+    isSubmittedRecord,
+  ])
+
+  const suppressAutosaveForCurrentState = ({ nextIsReviewing = isReviewing } = {}) => {
+    autosaveReadyRef.current = true
+    autosaveBaselineRef.current = buildAutosaveChangeKey({
+      assessmentDetails,
+      clauseResponses,
+      selectedAssessors,
+      selectedClient,
+      isReviewing: nextIsReviewing,
+    })
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
   }
 
   const handleAssessmentChange = (field, value) => {
     setAssessmentDetails((current) => ({ ...current, [field]: value }))
   }
 
-  const handleAssessorChange = (options) => {
-    const nextAssessors = options || []
-    setSelectedAssessors(nextAssessors)
-    setAssessmentDetails((current) => ({
-      ...current,
-      assessorName: getAssessorNames(nextAssessors).join(', '),
-      assessorEmail: getAssessorEmails(nextAssessors).join(', '),
-    }))
+  const handleClientChange = (client) => {
+    setSelectedClient(client)
+    setAssessmentDetails((current) => {
+      if (!client) {
+        return {
+          ...current,
+          companyName: '',
+          siteLocation: '',
+          clientCompanyId: null,
+          clientBranchId: null,
+          clientPicId: null,
+          clientPicName: '',
+          clientPicEmail: '',
+        }
+      }
+
+      return {
+        ...current,
+        ...getAssessmentDetailsFromClient(client),
+      }
+    })
   }
 
-  const handleFindingChange = (clauseId, value) => {
+  const handleCreateClient = () => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('cameFromLegalComplianceAssessment', 'true')
+      window.sessionStorage.setItem(
+        'legalComplianceAssessmentReturnPath',
+        `${window.location.pathname}${window.location.search}`,
+      )
+    }
+    navigate('/client/create')
+  }
+
+  const handleFieldChange = (clauseId, fieldKey, value) => {
     setClauseResponses((current) => ({
       ...current,
       [clauseId]: {
-        ...current[clauseId],
-        finding: value,
+        ...(current[clauseId] || {}),
+        [fieldKey]: value,
       },
     }))
   }
 
-  const handleReset = () => {
-    setAssessmentDetails(sessionAssessmentDetails)
-    setClauseResponses(createEmptyClauseResponses())
-    setIsAssessmentSaved(false)
-    setIsReviewing(false)
-    setSelectedAssessors(sessionAssessorOption ? [sessionAssessorOption] : [])
-    setStaffError('')
+  const handleSaveAssessmentDraft = async () => {
+    suppressAutosaveForCurrentState()
+    const result = await saveAssessmentStage('details_saved')
+    if (result.ok) setIsSubmittedRecord(false)
   }
 
-  const handleSaveAssessmentDetails = (event) => {
+  const handleReset = () => {
+    suppressAutosaveForCurrentState()
+    isDraftPersistenceEnabled.current = true
+    setAssessmentId(null)
+    setAssessmentDetails(
+      selectedProjectFromStart
+        ? {
+            ...sessionAssessmentDetails,
+            ...getAssessmentDetailsFromProject(selectedProjectFromStart),
+          }
+        : sessionAssessmentDetails,
+    )
+    setSelectedClient(null)
+    setClauseResponses(createEmptyClauseResponses(sections))
+    setIsAssessmentSaved(false)
+    setIsReviewing(false)
+    setIsSubmittedRecord(false)
+    setAccordionState({
+      key: `reset-${Date.now()}`,
+      activeItemKey: sections[0]?.id,
+    })
+    setSelectedAssessors(sessionAssessorOption ? [sessionAssessorOption] : [])
+    setSaveError('')
+  }
+
+  const handleSaveAssessmentDetails = async (event) => {
     event.preventDefault()
+    if (!selectedAssessmentId && !assessmentDetails.projectId && !selectedClient?.company_id) {
+      setSaveError('Select a CRM client before saving assessment details.')
+      return
+    }
+    suppressAutosaveForCurrentState()
+    const result = await saveAssessmentStage('details_saved')
+    if (!result.ok) return
+    setIsSubmittedRecord(false)
     setIsAssessmentSaved(true)
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    setIsReviewing(true)
+    if (isSavingAssessment || isReviewTransitionRef.current) return
+
+    const firstIncompleteSection = sections.find((section) =>
+      section.clauses.some((clause) => {
+        const response = clauseResponses[clause.id] || {}
+        return getClauseFields(clause).some((field) => !isRequiredFieldComplete(field, response))
+      }),
+    )
+
+    if (firstIncompleteSection) {
+      setSaveError('Complete all required clause fields before reviewing the report.')
+      setAccordionState({
+        key: `missing-required-${firstIncompleteSection.id}-${Date.now()}`,
+        activeItemKey: firstIncompleteSection.id,
+      })
+      return
+    }
+
+    // Review is still inside the assessment workflow, so persist the current snapshot before preview.
+    isReviewTransitionRef.current = true
+    try {
+      suppressAutosaveForCurrentState({ nextIsReviewing: true })
+      const result = await saveAssessmentStage('review_ready')
+      if (!result.ok) return
+      setIsSubmittedRecord(false)
+      setIsReviewing(true)
+    } finally {
+      isReviewTransitionRef.current = false
+    }
+  }
+
+  const handleSaveReviewDraft = async () => {
+    suppressAutosaveForCurrentState()
+    const result = await saveAssessmentStage('review_ready')
+    if (result.ok) setIsSubmittedRecord(false)
+  }
+
+  const handleConfirmSubmitReport = async () => {
+    suppressAutosaveForCurrentState()
+    const result = await saveAssessmentStage('submitted')
+    if (!result.ok) return
+
+    isDraftPersistenceEnabled.current = false
+    clearLocalDraft()
+    setIsSubmittedRecord(true)
+    setIsSubmitConfirmVisible(false)
+    navigate('/internal-tools/legal-compliance/records', {
+      state: { submittedAssessmentId: result.id },
+    })
+  }
+
+  const handleExportPdf = () => {
+    if (!assessmentId) return
+    window.open(getLegalComplianceAssessmentPdfUrl(assessmentId), '_blank', 'noopener,noreferrer')
+  }
+
+  const handleCreateRevision = async () => {
+    if (!assessmentId || isCreatingRevision) return
+
+    try {
+      setIsCreatingRevision(true)
+      setSaveError('')
+      const payload = await createLegalComplianceAssessmentRevision(assessmentId)
+      const revisionId = payload?.data?.id
+      if (!revisionId) throw new Error('Assessment revision could not be created.')
+      navigate(`/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(revisionId)}`)
+    } catch (error) {
+      setSaveError(error.message || 'Assessment revision could not be created.')
+    } finally {
+      setIsCreatingRevision(false)
+    }
+  }
+
+  const renderSaveError = () =>
+    saveError ? (
+      <CCol xs={12}>
+        <CAlert color="warning" className="mb-0">
+          {saveError}
+        </CAlert>
+      </CCol>
+    ) : null
+
+  const isTargetedLoad = Boolean(selectedAssessmentId || selectedTemplateId)
+
+  if (isTargetedLoad && isLoadingTemplate) {
+    return (
+      <DataTableLoadingState
+        message={selectedAssessmentId ? 'Loading assessment record...' : 'Loading template...'}
+      />
+    )
+  }
+
+  if (isTargetedLoad && templateError) {
+    return (
+      <CRow>
+        <CCol xs={12}>
+          <CCard>
+            <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
+              <strong>
+                {selectedAssessmentId ? 'Assessment Not Loaded' : 'Template Not Loaded'}
+              </strong>
+              <CButton
+                color="secondary"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  navigate(
+                    selectedAssessmentId
+                      ? '/internal-tools/legal-compliance/records'
+                      : '/internal-tools/legal-compliance/select-template',
+                  )
+                }
+              >
+                Back
+              </CButton>
+            </CCardHeader>
+            <CCardBody>
+              <CAlert color="danger" className="mb-0">
+                {templateError}
+              </CAlert>
+            </CCardBody>
+          </CCard>
+        </CCol>
+      </CRow>
+    )
   }
 
   if (isReviewing) {
     return (
-      <CRow className="g-4">
-        <CCol xs={12}>
-          <AssessmentDetailsSummary
-            assessmentDetails={assessmentDetails}
-            actions={
-              <>
-                <CButton
-                  color="secondary"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsReviewing(false)}
-                >
-                  Edit Form
-                </CButton>
-                <CButton color="secondary" size="sm" onClick={() => navigate(-1)}>
-                  Back
-                </CButton>
-              </>
-            }
-          />
-        </CCol>
-
-        {legalComplianceSections.map((section) => (
-          <CCol xs={12} key={section.id}>
-            <CCard>
-              <CCardHeader>
-                <strong>{section.title}</strong>
-              </CCardHeader>
-              <CCardBody>
-                <CRow className="g-3">
-                  {section.clauses.map((clause) => {
-                    const response = clauseResponses[clause.id]
-                    return (
-                      <CCol xs={12} key={clause.id}>
-                        <div className="pb-3 border-bottom">
-                          <div className="fw-semibold">{clause.reference}</div>
-                          <div>{clause.title}</div>
-                          <p className="mt-2 mb-3">{clause.excerpt}</p>
-                          <strong>Assessment Finding</strong>
-                          <div>{displayValue(response.finding)}</div>
-                        </div>
-                      </CCol>
-                    )
-                  })}
-                </CRow>
-              </CCardBody>
-            </CCard>
+      <>
+        <CRow className="g-4">
+          {renderSaveError()}
+          <CCol xs={12}>
+            <AssessmentReviewReport
+              assessmentDetails={assessmentDetails}
+              sections={sections}
+              clauseResponses={clauseResponses}
+              isSavingAssessment={isSavingAssessment}
+              onBack={() =>
+                isSubmittedRecord
+                  ? navigate('/internal-tools/legal-compliance/records')
+                  : setIsReviewing(false)
+              }
+            />
           </CCol>
-        ))}
-      </CRow>
+
+          <CCol xs={12}>
+            <AssessmentActionBar sticky statusText={saveStatusText} statusTone={saveStatusTone}>
+              <CButton
+                color="secondary"
+                size="sm"
+                variant="outline"
+                onClick={isSubmittedRecord ? handleCreateRevision : () => setIsReviewing(false)}
+                disabled={isSavingAssessment || isCreatingRevision}
+              >
+                {isSubmittedRecord
+                  ? isCreatingRevision
+                    ? 'Creating...'
+                    : 'Create Revision'
+                  : 'Edit Form'}
+              </CButton>
+              {isSubmittedRecord ? (
+                <CButton
+                  color="primary"
+                  size="sm"
+                  onClick={handleExportPdf}
+                  disabled={isSavingAssessment || !assessmentId}
+                >
+                  Export PDF
+                </CButton>
+              ) : (
+                <>
+                  <CButton
+                    color="secondary"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSaveReviewDraft}
+                    disabled={isSavingAssessment}
+                  >
+                    {isSavingAssessment ? 'Saving...' : 'Save Assessment Draft'}
+                  </CButton>
+                  <CButton
+                    color="primary"
+                    size="sm"
+                    onClick={() => setIsSubmitConfirmVisible(true)}
+                    disabled={isSavingAssessment}
+                  >
+                    Submit Report
+                  </CButton>
+                </>
+              )}
+            </AssessmentActionBar>
+          </CCol>
+        </CRow>
+
+        <SubmitReportModal
+          visible={isSubmitConfirmVisible}
+          isSaving={isSavingAssessment}
+          onClose={() => setIsSubmitConfirmVisible(false)}
+          onConfirm={handleConfirmSubmitReport}
+        />
+      </>
     )
   }
 
   if (!isAssessmentSaved) {
     return (
-      <CForm onSubmit={handleSaveAssessmentDetails}>
-        <CRow className="g-4">
-          <CCol xs={12}>
-            <CCard>
-              <CCardHeader>
-                <strong>Assessment Details</strong>
-              </CCardHeader>
-              <CCardBody>
-                <CRow className="g-3">
-                  <CCol md={4}>
-                    <CFormLabel htmlFor="companyName">Company Name</CFormLabel>
-                    <CFormInput
-                      id="companyName"
-                      value={assessmentDetails.companyName}
-                      onChange={(event) =>
-                        handleAssessmentChange('companyName', event.target.value)
-                      }
-                      placeholder="Enter company name"
-                    />
-                  </CCol>
-                  <CCol md={4}>
-                    <CFormLabel htmlFor="siteLocation">Address</CFormLabel>
-                    <CFormInput
-                      id="siteLocation"
-                      value={assessmentDetails.siteLocation}
-                      onChange={(event) =>
-                        handleAssessmentChange('siteLocation', event.target.value)
-                      }
-                      placeholder="Enter address"
-                    />
-                  </CCol>
-                  <CCol md={4}>
-                    <CFormLabel htmlFor="assessmentDate">Assessment Date</CFormLabel>
-                    <CFormInput
-                      id="assessmentDate"
-                      type="date"
-                      value={assessmentDetails.assessmentDate}
-                      onChange={(event) =>
-                        handleAssessmentChange('assessmentDate', event.target.value)
-                      }
-                    />
-                  </CCol>
-                  <CCol md={4}>
-                    <CFormLabel htmlFor="assessorName">Assessor Name</CFormLabel>
-                    <Select
-                      inputId="assessorName"
-                      options={assessorOptions}
-                      value={selectedAssessors}
-                      onChange={handleAssessorChange}
-                      onMenuOpen={loadStaffOptions}
-                      isClearable
-                      isLoading={isLoadingStaff}
-                      isMulti
-                      placeholder="Select assessor or assistant..."
-                    />
-                    {staffError && <div className="text-danger mt-2">{staffError}</div>}
-                  </CCol>
-                  <CCol md={4}>
-                    <CFormLabel htmlFor="assessorEmail">Assessor Email</CFormLabel>
-                    <CFormInput
-                      id="assessorEmail"
-                      value={assessmentDetails.assessorEmail}
-                      onChange={(event) =>
-                        handleAssessmentChange('assessorEmail', event.target.value)
-                      }
-                      placeholder="name@example.com"
-                    />
-                  </CCol>
-                  <CCol md={4}>
-                    <CFormLabel htmlFor="scopeRemarks">Scope</CFormLabel>
-                    <CFormInput
-                      id="scopeRemarks"
-                      value={assessmentDetails.scopeRemarks}
-                      onChange={(event) =>
-                        handleAssessmentChange('scopeRemarks', event.target.value)
-                      }
-                      placeholder="Enter scope"
-                    />
-                  </CCol>
-                </CRow>
-                <div className="d-flex justify-content-end gap-2 flex-wrap mt-3">
-                  <CButton type="button" color="secondary" size="sm" onClick={() => navigate(-1)}>
-                    Back
-                  </CButton>
-                  <CButton
-                    type="button"
-                    color="danger"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleReset}
-                  >
-                    Reset
-                  </CButton>
-                  <CButton type="submit" color="primary" size="sm">
-                    Save Assessment Details
-                  </CButton>
-                </div>
-              </CCardBody>
-            </CCard>
-          </CCol>
-        </CRow>
-      </CForm>
+      <>
+        {saveError && <CRow className="g-4">{renderSaveError()}</CRow>}
+        {isPaidAssessment && hasLinkedProject ? (
+          <CRow className="g-4">
+            <CCol xs={12}>
+              <AssessmentDetailsSummary assessmentDetails={assessmentDetails} />
+            </CCol>
+          </CRow>
+        ) : (
+          <CRow className="g-4">
+            <SelectClientCard
+              selectedClient={selectedClient}
+              onClientChange={handleClientChange}
+              title="Assessment Client"
+              addressLabel="Assessment Address"
+              contactLabel="Client PIC"
+              onBack={() => navigate(-1)}
+              onCreateClient={handleCreateClient}
+            />
+          </CRow>
+        )}
+        <AssessmentDetailsForm
+          assessmentDetails={assessmentDetails}
+          isSavingAssessment={isSavingAssessment}
+          onSubmit={handleSaveAssessmentDetails}
+          onBack={() => navigate(-1)}
+          onReset={handleReset}
+          onAssessmentChange={handleAssessmentChange}
+        />
+      </>
     )
   }
 
   return (
     <CForm onSubmit={handleSubmit}>
       <CRow className="g-4">
+        {renderSaveError()}
+        {templateError && (
+          <CCol xs={12}>
+            <CAlert color="warning" className="mb-0">
+              {templateError}
+            </CAlert>
+          </CCol>
+        )}
+        {isLoadingTemplate && (
+          <CCol xs={12}>
+            <CAlert color="info" className="mb-0">
+              Loading legal compliance template...
+            </CAlert>
+          </CCol>
+        )}
         <CCol xs={12}>
           <AssessmentDetailsSummary
             assessmentDetails={assessmentDetails}
@@ -408,59 +714,46 @@ const LegalComplianceAssessment = () => {
           />
         </CCol>
 
-        {legalComplianceSections.map((section, sectionIndex) => (
-          <CCol xs={12} key={section.id}>
-            <CCard>
-              <CCardHeader>
-                <strong>{section.title}</strong>
-              </CCardHeader>
-              <CCardBody>
-                <CRow className="g-4">
-                  {section.clauses.map((clause) => {
-                    const response = clauseResponses[clause.id]
-                    return (
-                      <CCol xs={12} key={clause.id}>
-                        <div className="pb-4 border-bottom">
-                          <div className="fw-semibold">{clause.reference}</div>
-                          <div className="mb-2">{clause.title}</div>
-                          <p>{clause.excerpt}</p>
-                          <CFormLabel htmlFor={`${clause.id}-finding`}>
-                            Assessment Finding
-                          </CFormLabel>
-                          <CFormTextarea
-                            id={`${clause.id}-finding`}
-                            rows={4}
-                            value={response.finding}
-                            onChange={(event) => handleFindingChange(clause.id, event.target.value)}
-                          />
-                        </div>
-                      </CCol>
-                    )
-                  })}
-                </CRow>
-                {sectionIndex === legalComplianceSections.length - 1 && (
-                  <div className="d-flex justify-content-end gap-2 flex-wrap mt-3">
-                    <CButton type="button" color="secondary" size="sm" onClick={() => navigate(-1)}>
-                      Back
-                    </CButton>
-                    <CButton
-                      type="button"
-                      color="danger"
-                      size="sm"
-                      variant="outline"
-                      onClick={handleReset}
-                    >
-                      Reset
-                    </CButton>
-                    <CButton type="submit" color="primary" size="sm">
-                      Review Report
-                    </CButton>
-                  </div>
-                )}
-              </CCardBody>
-            </CCard>
-          </CCol>
-        ))}
+        <CCol xs={12}>
+          <div className="small text-body-secondary mb-2">
+            {assessmentProgress.total} clauses | {assessmentProgress.completed} completed |{' '}
+            {assessmentProgress.comply} comply | {assessmentProgress.notComply} not comply
+          </div>
+          <AssessmentClauseAccordion
+            sections={sections}
+            clauseResponses={clauseResponses}
+            accordionState={accordionState}
+            onFieldChange={handleFieldChange}
+          />
+        </CCol>
+
+        <CCol xs={12}>
+          <AssessmentActionBar sticky statusText={saveStatusText} statusTone={saveStatusTone}>
+            <CButton
+              type="button"
+              color="secondary"
+              size="sm"
+              variant="outline"
+              onClick={() => navigate(-1)}
+              disabled={isSavingAssessment}
+            >
+              Back
+            </CButton>
+            <CButton
+              type="button"
+              color="secondary"
+              size="sm"
+              variant="outline"
+              onClick={handleSaveAssessmentDraft}
+              disabled={isSavingAssessment}
+            >
+              {isSavingAssessment ? 'Saving...' : 'Save Assessment Draft'}
+            </CButton>
+            <CButton type="submit" color="primary" size="sm" disabled={isSavingAssessment}>
+              {isSavingAssessment ? 'Saving...' : 'Review Report'}
+            </CButton>
+          </AssessmentActionBar>
+        </CCol>
       </CRow>
     </CForm>
   )

@@ -722,7 +722,7 @@ const Negotiation = () => {
         </CModalHeader>
         <CModalBody>
           {decisionRow && (
-            <div className="border rounded p-3 mb-3 bg-light">
+            <div className="border rounded p-3 mb-3 app-surface-panel">
               <div className="d-flex justify-content-between gap-3 mb-2">
                 <span className="text-muted">Quote</span>
                 <span className="fw-semibold text-end">{decisionRow.request || 'Pre-quote'}</span>

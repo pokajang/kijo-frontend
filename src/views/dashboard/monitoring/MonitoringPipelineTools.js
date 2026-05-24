@@ -11,6 +11,7 @@ import {
   compressProofImage,
   defaultEntrySource,
   entryTypeAllowsEstimatedRm,
+  getPipelineEntryValidationError,
 } from '../../marketing/pipeline/pipelineEntryUtils'
 import {
   buildManualEntryRow,
@@ -47,32 +48,6 @@ const manualFormHasContent = (form, startDate, endDate) => {
     form.source !== initialForm.source ||
     form.segment_type !== initialForm.segment_type
   )
-}
-
-const hasInvalidEstimatedRm = (entry) =>
-  entry.estimated_rm !== '' &&
-  entry.estimated_rm !== null &&
-  (!Number.isFinite(Number(entry.estimated_rm)) || Number(entry.estimated_rm) < 0)
-
-const getManualEntryValidationError = (entry) => {
-  if (hasInvalidEstimatedRm(entry)) {
-    return 'Estimated RM must be zero or more.'
-  }
-
-  if (entry.entry_type !== 'closed') {
-    return ''
-  }
-
-  if (!entry.service_category) {
-    return 'Closed manual entries require a service category.'
-  }
-
-  const estimatedRm = Number(entry.estimated_rm)
-  if (!Number.isFinite(estimatedRm) || estimatedRm <= 0) {
-    return 'Closed manual entries require Estimated RM greater than zero.'
-  }
-
-  return ''
 }
 
 const normalizeDraftStaffCode = (staffCode) =>
@@ -380,12 +355,9 @@ const MonitoringPipelineTools = ({
       return
     }
 
-    if (entries.some((entry) => !entry.source.trim())) {
-      setManualError('Source is required.')
-      return
-    }
-
-    const entryValidationError = entries.map(getManualEntryValidationError).find(Boolean)
+    const entryValidationError = entries
+      .map((entry) => getPipelineEntryValidationError(entry))
+      .find(Boolean)
     if (entryValidationError) {
       setManualError(entryValidationError)
       return
@@ -469,7 +441,7 @@ const MonitoringPipelineTools = ({
       setManualError('Source is required.')
       return
     }
-    const draftValidationError = getManualEntryValidationError(nextDraft)
+    const draftValidationError = getPipelineEntryValidationError(nextDraft)
     if (draftValidationError) {
       setManualError(draftValidationError)
       return

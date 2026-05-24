@@ -100,6 +100,9 @@ export async function requestJson(path, options = {}) {
 export const listProjects = ({ signal } = {}) =>
   requestJson(`projects?year=${new Date().getFullYear()}`, { signal }).then(normalizeProjectList)
 
+export const listAllProjects = ({ signal } = {}) =>
+  requestJson('projects', { signal }).then(normalizeProjectList)
+
 export const getProjectDetails = (projectId, { signal } = {}) =>
   requestJson(`projects/${enc(projectId)}`, {
     signal,

@@ -232,7 +232,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none records-table-sort-btn"
                       onClick={() => toggleSort('quotationId')}
                     >
                       Quotation ID
@@ -247,7 +247,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none records-table-sort-btn"
                       onClick={() => toggleSort('client')}
                     >
                       Client
@@ -262,7 +262,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none records-table-sort-btn"
                       onClick={() => toggleSort('email')}
                     >
                       Email
@@ -278,7 +278,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark text-center w-100 records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none text-center w-100 records-table-sort-btn"
                       onClick={() => toggleSort('status')}
                     >
                       Status
@@ -293,7 +293,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none records-table-sort-btn"
                       onClick={() => toggleSort('subject')}
                     >
                       Subject
@@ -309,7 +309,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark text-center w-100 records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none text-center w-100 records-table-sort-btn"
                       onClick={() => toggleSort('amount')}
                     >
                       Amount
@@ -325,7 +325,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark text-center w-100 records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none text-center w-100 records-table-sort-btn"
                       onClick={() => toggleSort('created')}
                     >
                       Created
@@ -341,7 +341,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark text-center w-100 records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none text-center w-100 records-table-sort-btn"
                       onClick={() => toggleSort('age')}
                     >
                       Age
@@ -356,7 +356,7 @@ const ServiceRecordsTableBase = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-link p-0 text-decoration-none text-dark records-table-sort-btn"
+                      className="btn btn-link p-0 text-decoration-none records-table-sort-btn"
                       onClick={() => toggleSort('pic')}
                     >
                       PIC

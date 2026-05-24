@@ -221,31 +221,44 @@ const PipelineEntriesRecords = () => {
   }
 
   const getActions = (entry) =>
-    [
-      entry.canUpdate || entry.canDelete
-        ? {
-            key: 'edit',
-            label: 'Edit',
-            onClick: () => setEditEntry(entry),
-          }
-        : null,
-      entry.photoUrl
-        ? {
-            key: 'screenshot',
-            label: 'View Screenshot',
-            onClick: () => setProofPreviewEntry(entry),
-          }
-        : null,
-      entry.canDelete
-        ? {
-            key: 'delete',
-            label: 'Delete',
-            danger: true,
-            dividerBefore: Boolean(entry.photoUrl || entry.canUpdate),
-            onClick: () => deleteEntry(entry),
-          }
-        : null,
-    ].filter(Boolean)
+    entry.recordSource === 'legal_compliance'
+      ? [
+          {
+            key: 'view-assessment',
+            label: 'View Assessment',
+            onClick: () =>
+              navigate(
+                `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(
+                  entry.legalAssessmentId,
+                )}&mode=review`,
+              ),
+          },
+        ]
+      : [
+          entry.canUpdate || entry.canDelete
+            ? {
+                key: 'edit',
+                label: 'Edit',
+                onClick: () => setEditEntry(entry),
+              }
+            : null,
+          entry.photoUrl
+            ? {
+                key: 'screenshot',
+                label: 'View Screenshot',
+                onClick: () => setProofPreviewEntry(entry),
+              }
+            : null,
+          entry.canDelete
+            ? {
+                key: 'delete',
+                label: 'Delete',
+                danger: true,
+                dividerBefore: Boolean(entry.photoUrl || entry.canUpdate),
+                onClick: () => deleteEntry(entry),
+              }
+            : null,
+        ].filter(Boolean)
 
   const renderCell = (entry, column) => {
     if (column.key === 'entryDate') return entry.entryDateDisplay
@@ -497,7 +510,7 @@ const PipelineEntriesRecords = () => {
             getRowKey={(entry, index) => entry.id || index}
             renderCell={renderCell}
             getActions={getActions}
-            onRowOpen={(entry) => navigate(`/pipeline/entries/${entry.id}`)}
+            onRowOpen={(entry) => navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}`)}
             getRowOpenDisabled={(entry) => !entry?.id}
             getMobileTitle={(entry) => entry.prospectName}
             getMobileSubtitle={(entry) => entry.source}

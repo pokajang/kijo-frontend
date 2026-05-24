@@ -125,7 +125,7 @@ const MonitoringProofModal = ({ proof, onClose }) => (
         <img
           src={proof.photoUrl}
           alt={`Screenshot proof for ${proof?.clientName || 'monitoring record'}`}
-          className="img-fluid rounded border bg-white"
+          className="img-fluid rounded border app-proof-image"
           style={{ maxHeight: 'calc(100vh - 190px)', objectFit: 'contain' }}
         />
       )}

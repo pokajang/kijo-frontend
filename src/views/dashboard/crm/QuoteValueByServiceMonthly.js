@@ -4,9 +4,7 @@ import { CChartBar } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
-import { useChartTickColor } from '../../../utils/chartTheme'
-
-const CHART_COLORS = ['#4f5dff', '#2eb85c', '#f9b115', '#e55353', '#3399ff', '#9c27b0']
+import { useChartPalette, useChartTickColor } from '../../../utils/chartTheme'
 
 const formatMonthLabel = (ym) => {
   const [y, m] = ym.split('-')
@@ -23,6 +21,7 @@ const formatAxisTick = (value) => {
 
 const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
   const tickColor = useChartTickColor()
+  const chartPalette = useChartPalette()
   const [months, setMonths] = useState([])
   const [stats, setStats] = useState([])
   const [loading, setLoading] = useState(true)
@@ -119,7 +118,7 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
 
   const chartDatasets = sortedStats.map((item, index) => ({
     label: item.serviceGroup,
-    backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+    backgroundColor: chartPalette[index % chartPalette.length],
     borderColor: 'transparent',
     borderWidth: 0,
     data: months.map((_, monthIndex) => Number(item.monthlyValues?.[monthIndex] || 0)),

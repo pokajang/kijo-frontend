@@ -65,7 +65,7 @@ const ScreenshotProofThumbnail = ({ file, prospectName, onPreview }) => {
       <img
         src={previewUrl}
         alt={`Screenshot proof for ${prospectName}`}
-        className="rounded border bg-white"
+        className="rounded border app-proof-image"
         style={{ width: 132, height: 92, objectFit: 'cover' }}
       />
     </button>
@@ -97,7 +97,7 @@ const ScreenshotProofPreviewModal = ({ preview, onClose }) => {
           <img
             src={previewUrl}
             alt={`Screenshot proof for ${preview?.prospectName || 'entry'}`}
-            className="img-fluid rounded border bg-white"
+            className="img-fluid rounded border app-proof-image"
             style={{ maxHeight: 'calc(100vh - 190px)', objectFit: 'contain' }}
           />
         )}
@@ -159,7 +159,36 @@ const ManualPipelineEntryModal = ({
 
   return (
     <>
-      <CModal visible={visible} onClose={onClose} alignment="center" backdrop="static" size="lg">
+      <style>{`
+        .monitoring-manual-entry-editor {
+          background: transparent;
+          border-color: var(--app-border-card) !important;
+          color: var(--cui-body-color);
+        }
+
+        .monitoring-manual-entry-editor .form-label {
+          color: var(--app-text-label);
+          margin-bottom: 0.35rem;
+        }
+
+        .monitoring-manual-entry-empty,
+        .monitoring-manual-entry-batch-row {
+          background: transparent;
+          color: var(--cui-body-color);
+        }
+
+        .monitoring-manual-entry-batch-row {
+          border-color: var(--app-border-subtle) !important;
+        }
+      `}</style>
+      <CModal
+        visible={visible}
+        onClose={onClose}
+        alignment="center"
+        backdrop="static"
+        size="lg"
+        className="monitoring-manual-entry-modal"
+      >
         <CModalHeader>
           <CModalTitle>Add Manual Pipeline Entry</CModalTitle>
         </CModalHeader>
@@ -230,12 +259,7 @@ const ManualPipelineEntryModal = ({
               <div className="text-muted">Up to 5 entries per quick add</div>
             </div>
 
-            <div className="rounded border bg-light p-3 monitoring-manual-entry-editor">
-              <style>{`
-              .monitoring-manual-entry-editor .form-label {
-                margin-bottom: 0.35rem;
-              }
-            `}</style>
+            <div className="rounded border p-3 monitoring-manual-entry-editor">
               <div className="row g-3">
                 <div className="col-md-4">
                   <CFormInput
@@ -353,7 +377,9 @@ const ManualPipelineEntryModal = ({
                 <div className="text-muted">{pendingManualEntryCount}/5 ready</div>
               </div>
               {manualForm.batch.length === 0 ? (
-                <div className="rounded bg-light text-muted px-3 py-2">No batch entries yet.</div>
+                <div className="rounded monitoring-manual-entry-empty text-muted px-3 py-2">
+                  No batch entries yet.
+                </div>
               ) : (
                 <div className="rounded border overflow-hidden">
                   {manualForm.batch.map((entry, index) => {
@@ -379,7 +405,7 @@ const ManualPipelineEntryModal = ({
                     return (
                       <div
                         key={entry.rowId || `${entry.prospect_name}-${index}`}
-                        className={`d-flex align-items-start justify-content-between gap-3 px-3 py-2 border-bottom bg-light ${
+                        className={`d-flex align-items-start justify-content-between gap-3 px-3 py-2 border-bottom monitoring-manual-entry-batch-row ${
                           isEditingRow ? 'border-start border-primary border-3' : ''
                         }`}
                       >

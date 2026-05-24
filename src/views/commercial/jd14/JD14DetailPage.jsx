@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailShell } from '../../../components/datatable'
 import { DetailField, DetailSection } from '../shared/CommercialDetailFields'
 import EditJd14Modal from './EditJd14Modal'
 import dialog from '../../../components/dialog/dialogService'
 
+const sameId = (left, right) => String(left ?? '') === String(right ?? '')
+
 const JD14DetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -36,7 +39,15 @@ const JD14DetailPage = () => {
     fetchForms()
   }, [])
 
-  const record = useMemo(() => forms.find((form) => String(form.id) === String(id)), [forms, id])
+  const record = useMemo(
+    () =>
+      forms.find(
+        (form) =>
+          sameId(form.id, id) || sameId(form.form_number, id) || sameId(form.approval_no, id),
+      ),
+    [forms, id],
+  )
+  const projectId = record?.project_id ?? record?.projectId ?? location.state?.fromProjectId ?? null
 
   const handleGeneratePdf = () => {
     window.open(
@@ -83,12 +94,12 @@ const JD14DetailPage = () => {
         error={error}
         record={record}
         actions={[
-          record?.project_id
+          projectId
             ? {
                 key: 'back-project',
                 label: 'Back to Project',
                 buttonColor: 'secondary',
-                onClick: () => navigate(`/project/manage/${record.project_id}`),
+                onClick: () => navigate(`/project/manage/${projectId}`),
               }
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },

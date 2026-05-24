@@ -59,7 +59,7 @@ const DataTableSheet = ({
       <div
         className={appendClassNames(
           `d-none d-${desktopBreakpoint}-block`,
-          'border rounded p-3 text-muted',
+          'border rounded p-3 app-surface-panel text-muted',
           shellClassName,
         )}
       >

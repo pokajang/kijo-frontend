@@ -184,7 +184,7 @@ const AgendaTable = ({
           <CTableBody>
             {sortedDayKeys.map((day) => (
               <React.Fragment key={day}>
-                <CTableRow className="bg-light fw-bold">
+                <CTableRow className="app-surface-panel fw-bold">
                   <CTableDataCell colSpan={4}>Day {day}</CTableDataCell>
                 </CTableRow>
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { CAlert, CCol, CRow } from '@coreui/react'
 import { useNavigate, useParams } from 'react-router-dom'
 import LoadingImage from '../../../components/LoadingImage'
@@ -58,7 +58,7 @@ const PipelineEntryProofPanel = ({ entry }) => {
           <LoadingImage
             src={src}
             alt={`Screenshot proof for ${entry?.prospectName || 'pipeline entry'}`}
-            className="img-fluid rounded border bg-white d-block"
+            className="img-fluid rounded border app-proof-image d-block"
             style={{
               width: '100%',
               maxHeight: '360px',
@@ -77,6 +77,8 @@ const PipelineEntryProofPanel = ({ entry }) => {
 
 const normalizeEntry = (entry) => ({
   ...entry,
+  recordSource: entry.recordSource || 'manual',
+  legalAssessmentId: entry.legalAssessmentId || null,
   entryDateDisplay: formatDate(entry.entryDate),
   entryTypeLabel: typeLabel(entry.entryType),
   prospectNameValue: entry.prospectName || '',
@@ -99,7 +101,7 @@ const normalizeEntry = (entry) => ({
 const PipelineEntryDetailPage = () => {
   const navigate = useNavigate()
   const { id } = useParams()
-  const [entries, setEntries] = useState([])
+  const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -107,46 +109,44 @@ const PipelineEntryDetailPage = () => {
   const [editEntry, setEditEntry] = useState(null)
   const [reloadKey, setReloadKey] = useState(0)
 
-  const loadEntries = useCallback(async (signal) => {
-    setLoading(true)
-    setLoadError('')
+  const loadEntry = useCallback(
+    async (signal) => {
+      setLoading(true)
+      setLoadError('')
 
-    try {
-      const response = await fetchJsonGet(
-        `${API_BASE}stats/monitoring-manual-pipeline-entries`,
-        { q: '', start_date: '', end_date: '' },
-        { silentError: true },
-        signal,
-      )
+      try {
+        const response = await fetchJsonGet(
+          `${API_BASE}stats/monitoring-manual-pipeline-entry/${encodeURIComponent(id || '')}`,
+          {},
+          { silentError: true },
+          signal,
+        )
 
-      if (signal.aborted) return
+        if (signal.aborted) return
 
-      if (response?.status === 'success') {
-        setEntries(Array.isArray(response.entries) ? response.entries.map(normalizeEntry) : [])
-      } else {
-        setEntries([])
-        setLoadError(response?.message || 'Unable to load pipeline entry.')
+        if (response?.status === 'success') {
+          setEntry(response.entry ? normalizeEntry(response.entry) : null)
+        } else {
+          setEntry(null)
+          setLoadError(response?.message || 'Unable to load pipeline entry.')
+        }
+      } catch (err) {
+        if (isAbortError(err)) return
+        setEntry(null)
+        setLoadError(err?.message || 'Unable to load pipeline entry.')
+      } finally {
+        if (signal.aborted) return
+        setLoading(false)
       }
-    } catch (err) {
-      if (isAbortError(err)) return
-      setEntries([])
-      setLoadError(err?.message || 'Unable to load pipeline entry.')
-    } finally {
-      if (signal.aborted) return
-      setLoading(false)
-    }
-  }, [])
+    },
+    [id],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
-    loadEntries(controller.signal)
+    loadEntry(controller.signal)
     return () => controller.abort()
-  }, [loadEntries, reloadKey])
-
-  const entry = useMemo(
-    () => entries.find((item) => String(item?.id) === String(id)) || null,
-    [entries, id],
-  )
+  }, [loadEntry, reloadKey])
 
   const showInfo = (message) => {
     setInfo(message)
@@ -190,23 +190,36 @@ const PipelineEntryDetailPage = () => {
   }
 
   const actions = entry
-    ? [
-        entry.canUpdate || entry.canDelete
-          ? {
-              key: 'edit',
-              label: 'Edit',
-              onClick: () => setEditEntry(entry),
-            }
-          : null,
-        entry.canDelete
-          ? {
-              key: 'delete',
-              label: 'Delete',
-              danger: true,
-              onClick: deleteEntry,
-            }
-          : null,
-      ].filter(Boolean)
+    ? entry.recordSource === 'legal_compliance'
+      ? [
+          {
+            key: 'view-assessment',
+            label: 'View Assessment',
+            onClick: () =>
+              navigate(
+                `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(
+                  entry.legalAssessmentId,
+                )}&mode=review`,
+              ),
+          },
+        ]
+      : [
+          entry.canUpdate || entry.canDelete
+            ? {
+                key: 'edit',
+                label: 'Edit',
+                onClick: () => setEditEntry(entry),
+              }
+            : null,
+          entry.canDelete
+            ? {
+                key: 'delete',
+                label: 'Delete',
+                danger: true,
+                onClick: deleteEntry,
+              }
+            : null,
+        ].filter(Boolean)
     : []
 
   return (

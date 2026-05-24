@@ -15,15 +15,39 @@ import {
 
 const TrainingDetails = ({ trainingDetails, onChange, employerAddress }) => {
   // local state for radio selector
-  const [venueOption, setVenueOption] = useState('same')
+  const [venueOption, setVenueOption] = useState(() =>
+    trainingDetails.trainingVenue && trainingDetails.trainingVenue !== employerAddress
+      ? 'other'
+      : 'same',
+  )
+
+  useEffect(() => {
+    if (trainingDetails.trainingVenue && trainingDetails.trainingVenue !== employerAddress) {
+      setVenueOption('other')
+    }
+  }, [employerAddress, trainingDetails.trainingVenue])
 
   // whenever the radio changes, update the field
   useEffect(() => {
-    const nextVenue = venueOption === 'same' ? employerAddress : ''
+    if (venueOption !== 'same') return
+    const nextVenue = venueOption === 'same' ? employerAddress || '' : ''
+    if (trainingDetails.trainingVenue && trainingDetails.trainingVenue !== nextVenue) return
     if (trainingDetails.trainingVenue === nextVenue) return
 
     onChange('trainingVenue')({ target: { value: nextVenue } })
   }, [venueOption, employerAddress, onChange, trainingDetails.trainingVenue])
+
+  const selectSameVenue = () => {
+    setVenueOption('same')
+    onChange('trainingVenue')({ target: { value: employerAddress || '' } })
+  }
+
+  const selectOtherVenue = () => {
+    setVenueOption('other')
+    if (trainingDetails.trainingVenue === employerAddress) {
+      onChange('trainingVenue')({ target: { value: '' } })
+    }
+  }
 
   return (
     <>
@@ -43,7 +67,7 @@ const TrainingDetails = ({ trainingDetails, onChange, employerAddress }) => {
                   name="venueOption"
                   label="Same as above"
                   checked={venueOption === 'same'}
-                  onChange={() => setVenueOption('same')}
+                  onChange={selectSameVenue}
                 />
                 <CFormCheck
                   inline
@@ -51,7 +75,7 @@ const TrainingDetails = ({ trainingDetails, onChange, employerAddress }) => {
                   name="venueOption"
                   label="Other Venue"
                   checked={venueOption === 'other'}
-                  onChange={() => setVenueOption('other')}
+                  onChange={selectOtherVenue}
                 />
               </div>
             </CCol>

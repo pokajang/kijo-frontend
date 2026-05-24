@@ -23,6 +23,7 @@ import {
   entrySourceOptions,
   entryTypes,
   entryTypeAllowsEstimatedRm,
+  getPipelineEntryValidationError,
   serviceCategories,
 } from './pipelineEntryUtils'
 
@@ -41,9 +42,6 @@ const createFormState = (entry) => ({
   photoFile: null,
   photoInputKey: Date.now(),
 })
-
-const hasInvalidEstimatedRm = (value) =>
-  value !== '' && value !== null && (!Number.isFinite(Number(value)) || Number(value) < 0)
 
 const PipelineEntryEditModal = ({ visible, entry, onClose, onSaved }) => {
   const [form, setForm] = useState(() => createFormState(entry))
@@ -105,20 +103,9 @@ const PipelineEntryEditModal = ({ visible, entry, onClose, onSaved }) => {
       setError('Please wait for screenshot proof processing to finish.')
       return
     }
-    if (!form.prospect_name.trim()) {
-      setError('Prospect is required.')
-      return
-    }
-    if (!form.entry_date) {
-      setError('Date is required.')
-      return
-    }
-    if (!form.source.trim()) {
-      setError('Source is required.')
-      return
-    }
-    if (hasInvalidEstimatedRm(form.estimated_rm)) {
-      setError('Estimated RM must be zero or more.')
+    const validationError = getPipelineEntryValidationError(form, { prospectLabel: 'Prospect' })
+    if (validationError) {
+      setError(validationError)
       return
     }
 

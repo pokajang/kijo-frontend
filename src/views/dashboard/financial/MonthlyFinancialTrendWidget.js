@@ -14,7 +14,7 @@ import {
 } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
-import { useChartTickColor } from '../../../utils/chartTheme'
+import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 
@@ -37,6 +37,7 @@ const formatAmount = (value) => Number(value || 0).toLocaleString()
 
 const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
   const tickColor = useChartTickColor()
+  const chartColors = useChartSemanticColors()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -159,8 +160,8 @@ const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
           {
             label: 'Invoiced (RM)',
             backgroundColor: 'transparent',
-            borderColor: '#4f5dff',
-            pointBackgroundColor: '#4f5dff',
+            borderColor: chartColors.primary,
+            pointBackgroundColor: chartColors.primary,
             data: invoicedPoints,
             yAxisID: 'yValue',
           },
@@ -171,8 +172,8 @@ const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
           {
             label: 'Received (RM)',
             backgroundColor: 'transparent',
-            borderColor: '#2eb85c',
-            pointBackgroundColor: '#2eb85c',
+            borderColor: chartColors.success,
+            pointBackgroundColor: chartColors.success,
             data: receivedPoints,
             yAxisID: 'yValue',
           },

@@ -1,0 +1,28 @@
+.app-surface-panel {
+  background: var(--cui-tertiary-bg, var(--app-surface-raised)) !important;
+  border-color: var(--cui-border-color, var(--app-border-card)) !important;
+  color: var(--cui-body-color) !important;
+}
+
+.app-selectable-card {
+  background: var(--cui-body-bg) !important;
+  border-color: var(--cui-border-color, var(--app-border-card)) !important;
+  color: var(--cui-body-color) !important;
+}
+
+.app-selectable-card--selected {
+  background: var(--cui-primary-bg-subtle, var(--app-accent-bg)) !important;
+  border-color: var(--cui-primary-border-subtle, var(--app-accent-border)) !important;
+  color: var(--cui-body-color) !important;
+}
+
+.app-proof-card {
+  background: var(--cui-body-bg) !important;
+  border-color: var(--cui-border-color, var(--app-border-card)) !important;
+  color: var(--cui-body-color) !important;
+}
+
+.app-proof-image {
+  background: var(--cui-tertiary-bg, var(--app-surface-raised)) !important;
+  border-color: var(--cui-border-color, var(--app-border-card)) !important;
+}

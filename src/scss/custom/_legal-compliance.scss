@@ -1,0 +1,353 @@
+.legal-compliance-template-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.legal-compliance-template-tile {
+  position: relative;
+  min-width: 0;
+  min-height: 7.25rem;
+  transition:
+    color 0.15s ease-in-out,
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out;
+}
+
+.internal-tools-card-actions {
+  width: 100%;
+}
+
+.internal-tools-card-kebab {
+  width: 2rem;
+  height: 2rem;
+  padding: 0 !important;
+  color: var(--cui-secondary-color);
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.internal-tools-card-kebab:hover,
+.internal-tools-card-kebab:focus,
+.internal-tools-card-kebab:active,
+.internal-tools-card-kebab.show {
+  color: var(--cui-body-color);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.legal-compliance-template-tile-content {
+  min-width: 0;
+  padding-right: 2.5rem;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.legal-compliance-template-tile-content strong,
+.legal-compliance-template-tile-content .text-body-secondary {
+  display: block;
+  white-space: normal;
+}
+
+.legal-compliance-template-tile:hover,
+.legal-compliance-template-tile:focus-visible {
+  color: var(--cui-primary);
+  background-color: rgba(var(--cui-primary-rgb), 0.08);
+  border-color: rgba(var(--cui-primary-rgb), 0.35) !important;
+  outline: 0;
+}
+
+.legal-compliance-template-tile:hover .text-body-secondary,
+.legal-compliance-template-tile:focus-visible .text-body-secondary {
+  color: var(--cui-primary) !important;
+}
+
+.legal-compliance-template-tile--create {
+  color: var(--cui-primary);
+  background-color: rgba(var(--cui-primary-rgb), 0.08);
+  border-color: rgba(var(--cui-primary-rgb), 0.35) !important;
+}
+
+.legal-compliance-template-tile--create .text-body-secondary {
+  color: var(--cui-primary) !important;
+}
+
+.legal-compliance-template-tile--create:hover,
+.legal-compliance-template-tile--create:focus-visible {
+  background-color: rgba(var(--cui-primary-rgb), 0.14);
+  border-color: rgba(var(--cui-primary-rgb), 0.55) !important;
+}
+
+.legal-compliance-template-actions {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 2;
+}
+
+.legal-compliance-template-action-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 !important;
+  color: var(--cui-body-color);
+  border-radius: 999px;
+}
+
+.legal-compliance-template-action-toggle:hover,
+.legal-compliance-template-action-toggle:focus {
+  color: var(--cui-primary);
+}
+
+.legal-compliance-template-detail-edit {
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.legal-compliance-template-detail-header:hover .legal-compliance-template-detail-edit {
+  opacity: 1;
+}
+
+.legal-compliance-header-main {
+  min-width: 0;
+  max-width: min(52rem, 70vw);
+}
+
+.legal-compliance-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.legal-compliance-breadcrumb-item {
+  display: block;
+  min-width: 0;
+  max-width: min(24rem, 34vw);
+  overflow: hidden;
+  color: var(--cui-secondary-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legal-compliance-breadcrumb-item--active {
+  color: var(--cui-body-color);
+  font-weight: 700;
+}
+
+.legal-compliance-breadcrumb-separator {
+  color: var(--cui-secondary-color);
+  flex: 0 0 auto;
+}
+
+.legal-compliance-breadcrumb-description {
+  max-width: min(42rem, 64vw);
+  overflow: hidden;
+  color: var(--cui-secondary-color);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legal-compliance-group-tile {
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out;
+}
+
+.legal-compliance-group-tile:hover,
+.legal-compliance-group-tile:focus-visible {
+  background-color: rgba(var(--cui-primary-rgb), 0.04);
+  border-color: rgba(var(--cui-primary-rgb), 0.35) !important;
+  outline: 0;
+}
+
+.legal-compliance-group-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.75rem;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.legal-compliance-group-main {
+  min-width: 0;
+}
+
+.legal-compliance-group-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legal-compliance-group-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.legal-compliance-group-tile:hover .legal-compliance-group-actions,
+.legal-compliance-group-tile:focus-within .legal-compliance-group-actions {
+  opacity: 1;
+}
+
+.legal-compliance-clause-tile {
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out;
+}
+
+.legal-compliance-clause-tile:hover,
+.legal-compliance-clause-tile:focus-visible,
+.legal-compliance-clause-tile:focus-within {
+  background-color: rgba(var(--cui-primary-rgb), 0.03);
+  border-color: rgba(var(--cui-primary-rgb), 0.25) !important;
+  outline: 0;
+}
+
+.legal-compliance-clause-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.75rem;
+  align-items: start;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.legal-compliance-clause-main {
+  min-width: 0;
+}
+
+.legal-compliance-clause-title,
+.legal-compliance-clause-excerpt {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legal-compliance-clause-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.legal-compliance-clause-tile:hover .legal-compliance-clause-actions,
+.legal-compliance-clause-tile:focus-within .legal-compliance-clause-actions {
+  opacity: 1;
+}
+
+.legal-compliance-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.legal-compliance-assessment-clause {
+  padding-bottom: 1rem;
+}
+
+.legal-compliance-assessment-clause + .legal-compliance-assessment-clause {
+  padding-top: 0.75rem;
+}
+
+.legal-compliance-accordion-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+  padding-inline-end: 0.75rem;
+}
+
+.legal-compliance-accordion-title {
+  display: block;
+  min-width: 0;
+  max-width: min(52rem, 58vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legal-compliance-accordion-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.legal-compliance-accordion .accordion-button:not(.collapsed) {
+  color: var(--cui-body-color);
+  background-color: var(--cui-body-bg);
+}
+
+.legal-compliance-accordion .legal-compliance-accordion-item--complete .accordion-button {
+  color: var(--cui-primary);
+  background-color: rgba(var(--cui-primary-rgb), 0.12);
+}
+
+.legal-compliance-accordion
+  .legal-compliance-accordion-item--complete
+  .accordion-button:not(.collapsed) {
+  color: var(--cui-primary);
+  background-color: rgba(var(--cui-primary-rgb), 0.16);
+}
+
+@media (max-width: 767.98px) {
+  .legal-compliance-template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .legal-compliance-group-actions,
+  .legal-compliance-clause-actions {
+    opacity: 1;
+  }
+
+  .legal-compliance-group-row {
+    grid-template-columns: minmax(0, 1fr) 4.25rem;
+  }
+
+  .legal-compliance-clause-row {
+    grid-template-columns: minmax(0, 1fr) 4.25rem;
+  }
+
+  .legal-compliance-accordion-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .legal-compliance-accordion-title {
+    max-width: calc(100vw - 7rem);
+  }
+
+  .legal-compliance-accordion-summary {
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .legal-compliance-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

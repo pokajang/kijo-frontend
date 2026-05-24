@@ -17,7 +17,7 @@ const VersionNotifier = () => {
     return (
       <div
         className="position-fixed top-0 start-0 end-0 bottom-0 d-flex align-items-center justify-content-center p-3"
-        style={{ zIndex: 2000, background: 'rgba(15, 23, 42, 0.45)' }}
+        style={{ zIndex: 2000, background: 'rgba(var(--cui-dark-rgb), 0.45)' }}
       >
         <CAlert color="danger" className="mb-0 shadow-sm" style={{ maxWidth: '32rem' }}>
           <div className="fw-semibold mb-2">This version is no longer supported.</div>

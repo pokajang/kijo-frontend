@@ -363,8 +363,8 @@ const AppDialogProvider = ({ children }) => {
                   return (
                     <label
                       key={value}
-                      className={`border rounded p-2 d-flex align-items-start gap-2 ${
-                        isSelected ? 'border-primary bg-light' : ''
+                      className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
+                        isSelected ? 'app-selectable-card--selected' : ''
                       }`}
                       style={{ cursor: 'pointer' }}
                     >
@@ -425,7 +425,9 @@ const AppDialogProvider = ({ children }) => {
                           return (
                             <label
                               key={`${group.key}-${value}`}
-                              className="border rounded p-2 d-flex align-items-start gap-2"
+                              className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
+                                isChecked ? 'app-selectable-card--selected' : ''
+                              }`}
                               style={{ cursor: 'pointer' }}
                             >
                               <CFormCheck

@@ -78,6 +78,64 @@ const fetchersByType = {
   ],
 }
 
+const getInitialPricing = () => ({
+  // Training
+  training_total: 0,
+  training_qty: 1,
+  training_unit: 'Lot',
+  meal_total: 0,
+  meal_qty: 1,
+  meal_unit: 'Lot',
+  mobilization_cost: 0,
+  mobilization_qty: 1,
+  mobilization_unit: 'Lot',
+  discount_amount: 0,
+  discount_qty: 1,
+  discount_unit: 'Lot',
+  subtotal: 0,
+  sst_rate: 0,
+  sst_amount: 0,
+  grand_total: 0,
+  // Equipment
+  sub_total: 0,
+  discount: 0,
+  discount_unit_price: 0,
+  delivery_charge: 0,
+  delivery_qty: 1,
+  delivery_unit: 'Lot',
+  delivery_unit_price: 0,
+  misc_charge: 0,
+  misc_qty: 1,
+  misc_unit: 'Lot',
+  misc_unit_price: 0,
+  sst_percent: 0,
+  equipment_items: [],
+  // Manpower
+  month: '',
+  duration: 0,
+  quantity: 0,
+  unit_cost: 0,
+  unit: 'pax-mth',
+  manpower_items: [],
+  claim_type: 'single',
+  claim_months_text: '',
+  // Hygiene
+  sample_counts: 0,
+  sample_unit: 'sample(s)',
+  num_work_units: 0,
+  unit_price: 0,
+  travel_charge: 0,
+  travel_qty: 1,
+  travel_unit: 'Lot',
+  travel_unit_price: 0,
+  hygiene_items: [],
+  // Form fields
+  service_title: '',
+  remarks: '',
+  training_items: [],
+  special_items: [],
+})
+
 export default function InvoiceProjectModal({
   visible = true,
   project,
@@ -114,63 +172,7 @@ export default function InvoiceProjectModal({
     ...getProjectPaymentTerms(project),
   })
 
-  const [pricing, setPricing] = useState({
-    // Training
-    training_total: 0,
-    training_qty: 1,
-    training_unit: 'Lot',
-    meal_total: 0,
-    meal_qty: 1,
-    meal_unit: 'Lot',
-    mobilization_cost: 0,
-    mobilization_qty: 1,
-    mobilization_unit: 'Lot',
-    discount_amount: 0,
-    discount_qty: 1,
-    discount_unit: 'Lot',
-    subtotal: 0,
-    sst_rate: 0,
-    sst_amount: 0,
-    grand_total: 0,
-    // Equipment
-    sub_total: 0,
-    discount: 0,
-    discount_unit_price: 0,
-    delivery_charge: 0,
-    delivery_qty: 1,
-    delivery_unit: 'Lot',
-    delivery_unit_price: 0,
-    misc_charge: 0,
-    misc_qty: 1,
-    misc_unit: 'Lot',
-    misc_unit_price: 0,
-    sst_percent: 0,
-    equipment_items: [],
-    // Manpower
-    month: '',
-    duration: 0,
-    quantity: 0,
-    unit_cost: 0,
-    unit: 'pax-mth',
-    manpower_items: [],
-    claim_type: 'single',
-    claim_months_text: '',
-    // Hygiene
-    sample_counts: 0,
-    sample_unit: 'sample(s)',
-    num_work_units: 0,
-    unit_price: 0,
-    travel_charge: 0,
-    travel_qty: 1,
-    travel_unit: 'Lot',
-    travel_unit_price: 0,
-    hygiene_items: [],
-    // Form fields
-    service_title: '',
-    remarks: '',
-    training_items: [],
-    special_items: [],
-  })
+  const [pricing, setPricing] = useState(getInitialPricing)
   const [projectMeta, setProjectMeta] = useState({
     project_name: project.project_name || '',
     project_type: project.project_type || '',
@@ -183,6 +185,8 @@ export default function InvoiceProjectModal({
   const [grantApprovalNo, setGrantApprovalNo] = useState('')
   const [paymentMethodOverride, setPaymentMethodOverride] = useState('')
   const [draftReady, setDraftReady] = useState(false)
+  const [loadedDraftKey, setLoadedDraftKey] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const effectivePaymentMethod =
     paymentMethodOverride || (quoteDetails?.payment_method || '').trim().toLowerCase()
   const missingTrainingDates =
@@ -200,7 +204,11 @@ export default function InvoiceProjectModal({
     fetchedRef.current = false
     draftAppliedRef.current = false
     setDraftReady(false)
+    setLoadedDraftKey(null)
     setQuoteDetails(null)
+    setPricing(getInitialPricing())
+    setGrantApprovalNo('')
+    setLoaNo(project?.po_loa_number || project?.client_award_ref_no || '')
     setClientOverrides({
       clientName: project?.client_name || '',
       clientSSM: project?.client_ssm || '',
@@ -253,12 +261,13 @@ export default function InvoiceProjectModal({
         console.warn('Failed to load invoice draft:', err)
       }
     }
+    setLoadedDraftKey(draftKey)
     setDraftReady(true)
   }, [isActive, draftKey, draftReady])
 
   // Persist draft while editing
   useEffect(() => {
-    if (!isActive || !draftKey || !draftReady) return
+    if (!isActive || !draftKey || !draftReady || loadedDraftKey !== draftKey) return
     const draft = {
       version: 1,
       clientOverrides,
@@ -277,6 +286,7 @@ export default function InvoiceProjectModal({
     paymentMethodOverride,
     grantApprovalNo,
     loaNo,
+    loadedDraftKey,
   ])
 
   // 1) Fetch quote data exactly once
@@ -361,6 +371,8 @@ export default function InvoiceProjectModal({
 
   // 3) Generate invoice
   const handleGenerateInvoice = async () => {
+    if (submitting) return
+
     if (!isSupportedType) {
       dialog.alert(`Unsupported project type: ${project?.project_type || 'Unknown'}`)
       return
@@ -387,23 +399,28 @@ export default function InvoiceProjectModal({
       return
     }
 
-    const result = await createInvoiceForType(project.project_type, {
-      project,
-      quoteDetails,
-      pricing,
-      projectMeta,
-      grantApprovalNo,
-      clientOverrides,
-      paymentMethodOverride: effectivePaymentMethod,
-      allowWithoutQuote: allowsManualInvoice,
-      loaNo,
-      paymentTermsDays: clientOverrides.paymentTermsDays,
-      overridePaymentTerms: clientOverrides.overridePaymentTerms,
-      navigate,
-    })
-    if (result?.success) {
-      if (draftKey) localStorage.removeItem(draftKey)
-      if (onSubmit) onSubmit()
+    setSubmitting(true)
+    try {
+      const result = await createInvoiceForType(project.project_type, {
+        project,
+        quoteDetails,
+        pricing,
+        projectMeta,
+        grantApprovalNo,
+        clientOverrides,
+        paymentMethodOverride: effectivePaymentMethod,
+        allowWithoutQuote: allowsManualInvoice,
+        loaNo,
+        paymentTermsDays: clientOverrides.paymentTermsDays,
+        overridePaymentTerms: clientOverrides.overridePaymentTerms,
+        navigate,
+      })
+      if (result?.success) {
+        if (draftKey) localStorage.removeItem(draftKey)
+        if (onSubmit) onSubmit()
+      }
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -499,10 +516,11 @@ export default function InvoiceProjectModal({
           !isSupportedType ||
           (requiresQuote && !quoteDetails) ||
           missingTrainingDates ||
-          commercialDocs.loading
+          commercialDocs.loading ||
+          submitting
         }
       >
-        Create Invoice
+        {submitting ? 'Creating...' : 'Create Invoice'}
       </CButton>
     </>
   )

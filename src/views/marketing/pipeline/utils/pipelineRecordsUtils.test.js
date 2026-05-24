@@ -103,4 +103,29 @@ describe('pipeline record utilities', () => {
     ])
     expect(chips.find((chip) => chip.key === 'staff_code')?.label).toBe('Owner: Alice (AA)')
   })
+
+  it('normalizes legal compliance assessment records as read-only meeting entries', () => {
+    const normalized = normalizePipelineRecord({
+      id: 'legal-compliance:20:assessor:BOB',
+      recordSource: 'legal_compliance',
+      legalAssessmentId: 20,
+      entryDate: '2026-05-16',
+      entryType: 'meeting_pitching',
+      prospectName: 'Filtered Legal Prospect',
+      source: 'Free Legal Compliance Assessment',
+      ownerStaffCode: 'BOB',
+      ownerStaffName: 'Bob Tester',
+      notes: 'Free Legal Compliance Assessment | Shah Alam',
+      canUpdate: false,
+      canDelete: false,
+    })
+
+    expect(normalized.recordSource).toBe('legal_compliance')
+    expect(normalized.legalAssessmentId).toBe(20)
+    expect(normalized.entryTypeLabel).toBe('Meeting/ Pitching')
+    expect(normalized.source).toBe('Free Legal Compliance Assessment')
+    expect(normalized.canUpdate).toBe(false)
+    expect(normalized.canDelete).toBe(false)
+    expect(getPipelineEntryTypeTone(normalized.entryType)).toBe('primary')
+  })
 })

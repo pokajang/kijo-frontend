@@ -14,6 +14,7 @@ export const QuoteReviewTable = ({
   ...tableProps
 }) => (
   <div className={`data-table-embedded-shell ${shellClassName}`.trim()}>
+    {/* datatable-exempt: reusable embedded quote review layout table */}
     <CTable
       hover={hover}
       responsive={responsive}

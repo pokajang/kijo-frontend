@@ -85,7 +85,7 @@ const monitoringTourStyles = {
     zIndex: 2200,
     primaryColor: 'var(--cui-primary)',
     textColor: 'var(--app-text-strong)',
-    overlayColor: 'rgba(17, 24, 39, 0.52)',
+    overlayColor: 'rgba(var(--cui-dark-rgb), 0.52)',
   },
   tooltip: {
     backgroundColor: 'var(--app-surface-page)',
@@ -126,7 +126,7 @@ const monitoringTourStyles = {
     backgroundColor: 'var(--cui-primary)',
     border: '1px solid var(--cui-primary)',
     borderRadius: 999,
-    color: '#fff',
+    color: 'var(--cui-white)',
     fontSize: 13,
     fontWeight: 500,
     lineHeight: 1.2,
@@ -245,17 +245,18 @@ const MonitoringDashboard = ({
     <section className="mb-5">
       <style>{`
         .monitoring-tour-tooltip {
-          border: 1px solid #d8dbe0;
+          background: var(--app-surface-page);
+          border: 1px solid var(--app-border-card);
           border-radius: 8px;
-          box-shadow: 0 10px 28px rgba(8, 15, 40, 0.16);
-          color: #334155;
+          box-shadow: var(--app-shadow-lg);
+          color: var(--app-text-base);
           max-width: min(390px, calc(100vw - 32px));
           position: relative;
           width: min(390px, calc(100vw - 32px));
         }
 
         .monitoring-tour-close {
-          color: #6b7280;
+          color: var(--app-text-muted);
           height: 26px;
           line-height: 1;
           position: absolute;
@@ -270,7 +271,7 @@ const MonitoringDashboard = ({
         }
 
         .monitoring-tour-title {
-          color: #1f2937;
+          color: var(--app-text-strong);
           font-size: 16px;
           font-weight: 600;
           margin-bottom: 8px;
@@ -279,7 +280,7 @@ const MonitoringDashboard = ({
         }
 
         .monitoring-tour-content {
-          color: #4b5563;
+          color: var(--app-text-secondary);
           font-size: 14px;
           line-height: 1.45;
           text-align: center;
@@ -287,7 +288,7 @@ const MonitoringDashboard = ({
 
         .monitoring-tour-footer {
           align-items: center;
-          border-top: 1px solid #eef0f4;
+          border-top: 1px solid var(--app-border-subtle);
           display: flex;
           gap: 8px;
           justify-content: flex-end;
