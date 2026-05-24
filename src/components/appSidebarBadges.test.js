@@ -27,4 +27,16 @@ describe('applySidebarBadges', () => {
 
     expect(rows[0].badge).toBeUndefined()
   })
+
+  it('adds the workflow action badge to Staff Management', () => {
+    const rows = applySidebarBadges([{ name: 'Staff Management', to: '/staff/leaves' }], {
+      getRouteGroupCount: (route) => (route === '/staff/leaves' ? 1 : 0),
+    })
+
+    expect(rows[0].badge).toEqual({
+      color: 'warning',
+      text: '1',
+      title: 'Leave requests need attention',
+    })
+  })
 })

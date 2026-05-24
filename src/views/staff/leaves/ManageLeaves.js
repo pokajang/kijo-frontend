@@ -120,6 +120,8 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         onManageWorkflow={
           canManageLeaveAdmin ? () => navigate('/staff/leaves/workflow') : undefined
         }
+        canRecommendActions={hasAnyAllowedRole(roles, ['HR'])}
+        canApproveActions={hasAnyAllowedRole(roles, ['Manager', 'System Admin'])}
         onViewRecord={(record) =>
           navigate(`/staff/leaves/records/${record.id}`, {
             state: { record, returnTo: '/staff/leaves' },

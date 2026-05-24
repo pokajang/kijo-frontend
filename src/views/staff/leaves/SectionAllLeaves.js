@@ -36,6 +36,7 @@ import {
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
 import { formatCount, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
 import * as AH from './actionHandlers'
 
 const dataColumns = [
@@ -241,8 +242,11 @@ const SectionAllLeaves = ({
   onManageEntitlements,
   onAssignLeave,
   onManageWorkflow,
+  canRecommendActions = true,
+  canApproveActions = true,
   onViewRecord,
 }) => {
+  const { getModuleCount } = useAppNotifications()
   const [searchText, setSearchText] = useState('')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [filterType, setFilterType] = useState('')
@@ -441,6 +445,7 @@ const SectionAllLeaves = ({
 
   const statsItems = useMemo(() => {
     const pendingRows = normalizedRecords.filter((record) => record.status === 'Pending')
+    const pendingActionCount = Number(getModuleCount('staff.leaves') || 0)
     const approvedRows = normalizedRecords.filter((record) => record.status === 'Approved')
     const topStaff = getTopGroupBySum(
       normalizedRecords,
@@ -456,10 +461,11 @@ const SectionAllLeaves = ({
         tone: 'primary',
       },
       {
-        key: 'pending',
-        label: 'Pending',
-        value: formatCount(pendingRows.length),
-        tone: 'warning',
+        key: 'pending-actions',
+        label: 'Pending Actions',
+        value: formatCount(pendingActionCount),
+        sublabel: `${formatCount(pendingRows.length)} pending visible`,
+        tone: pendingActionCount > 0 ? 'warning' : 'secondary',
         onClick: () => {
           setFilterStatus('Pending')
           setShowAdvancedFilters(true)
@@ -486,7 +492,7 @@ const SectionAllLeaves = ({
         tone: 'secondary',
       },
     ]
-  }, [normalizedRecords])
+  }, [getModuleCount, normalizedRecords])
 
   const getActions = (record) => {
     const isPending = record.status === 'Pending'
@@ -496,20 +502,20 @@ const SectionAllLeaves = ({
       {
         key: 'recommend',
         label: 'Recommend',
-        disabled: !isPending || hasReviewed,
+        disabled: !isPending || hasReviewed || !canRecommendActions,
         onClick: () => openActionModal(record.id, 'recommend'),
       },
       {
         key: 'approve',
         label: 'Approve',
-        disabled: !isPending || !hasReviewed,
+        disabled: !isPending || !hasReviewed || !canApproveActions,
         onClick: () => openActionModal(record.id, 'approve'),
       },
       {
         key: 'reject',
         label: 'Reject',
         danger: true,
-        disabled: !isPending,
+        disabled: !isPending || (hasReviewed ? !canApproveActions : !canRecommendActions),
         dividerBefore: true,
         onClick: () => openActionModal(record.id, 'reject'),
       },
@@ -574,6 +580,20 @@ const SectionAllLeaves = ({
     }
 
     const hasReviewed = Boolean(record.reviewed_by)
+    const canActOnCurrentStage = hasReviewed ? canApproveActions : canRecommendActions
+    if (!canActOnCurrentStage) {
+      return (
+        <DataTableTextCell
+          value={hasReviewed ? 'Pending approval' : 'Pending recommendation'}
+          maxWidth="260px"
+          title="Workflow"
+          mode="expandable"
+          previewCharThreshold={62}
+          className="small text-muted"
+        />
+      )
+    }
+
     const primaryAction = hasReviewed
       ? { action: 'approve', label: 'Approve', color: 'success' }
       : { action: 'recommend', label: 'Recommend', color: 'primary' }

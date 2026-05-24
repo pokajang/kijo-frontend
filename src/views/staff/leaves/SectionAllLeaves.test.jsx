@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   default as SectionAllLeaves,
@@ -6,9 +6,11 @@ import {
   getLeaveStatusSortPriority,
   getLeaveWorkflowText,
 } from './SectionAllLeaves'
+import AppNotificationProvider from '../../../notifications/AppNotificationProvider'
 
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
 })
 
 describe('SectionAllLeaves', () => {
@@ -88,9 +90,91 @@ describe('SectionAllLeaves', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /actions/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^actions$/i }))
     fireEvent.click(screen.getByText('Email Workflow'))
 
     expect(onManageWorkflow).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the notification summary count for the pending actions stat', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        status: 'success',
+        data: {
+          total: 3,
+          by_module: { 'staff.leaves': 3 },
+          by_route_group: { '/staff/leaves': 3 },
+          by_tab: { 'staff.leaves': 3 },
+        },
+      }),
+    })
+
+    render(
+      <AppNotificationProvider>
+        <SectionAllLeaves
+          allLeaveRecords={[
+            {
+              id: 1,
+              status: 'Pending',
+              type: 'Annual',
+              duration_days: 1,
+              applied_at: '2026-05-20 09:15:00',
+              start_date: '2026-06-01',
+              start_time: '08:30',
+              end_date: '2026-06-01',
+              end_time: '17:30',
+            },
+            {
+              id: 2,
+              status: 'Pending',
+              type: 'Medical',
+              duration_days: 1,
+              applied_at: '2026-05-21 09:15:00',
+              start_date: '2026-06-02',
+              start_time: '08:30',
+              end_date: '2026-06-02',
+              end_time: '17:30',
+            },
+          ]}
+          fetchAllLeaveRecords={vi.fn()}
+        />
+      </AppNotificationProvider>,
+    )
+
+    await waitFor(() => {
+      const card = screen.getByText('Pending Actions').closest('.stats-strip-widget')
+      expect(within(card).getByText('3')).toBeInTheDocument()
+      expect(within(card).getByText('2 pending visible')).toBeInTheDocument()
+    })
+  })
+
+  it('does not render approval controls for users outside the approval stage', () => {
+    render(
+      <SectionAllLeaves
+        allLeaveRecords={[
+          {
+            id: 1,
+            status: 'Pending',
+            type: 'Annual',
+            duration_days: 1,
+            applied_at: '2026-05-20 09:15:00',
+            start_date: '2026-06-01',
+            start_time: '08:30',
+            end_date: '2026-06-01',
+            end_time: '17:30',
+            reviewed_by: 20,
+            reviewed_status: 'Recommended',
+          },
+        ]}
+        fetchAllLeaveRecords={vi.fn()}
+        canRecommendActions
+        canApproveActions={false}
+      />,
+    )
+
+    expect(screen.getByText('Pending approval')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument()
   })
 })

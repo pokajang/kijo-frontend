@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { normalizeVisibleColumns } from '../../utils/datatable/columnVisibility'
 
+const getBrowserLocalStorage = () => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
 export const useColumnPreferences = ({
   storageKey,
   apiKey,
@@ -29,7 +39,7 @@ export const useColumnPreferences = ({
 
     if (storageKey) {
       try {
-        const raw = localStorage.getItem(storageKey)
+        const raw = getBrowserLocalStorage()?.getItem(storageKey)
         if (raw) {
           const parsed = JSON.parse(raw)
           if (isActive) {
@@ -87,7 +97,7 @@ export const useColumnPreferences = ({
       stableRequiredColumns,
     )
     try {
-      localStorage.setItem(storageKey, JSON.stringify(normalized))
+      getBrowserLocalStorage()?.setItem(storageKey, JSON.stringify(normalized))
     } catch {
       // ignore storage failures
     }
