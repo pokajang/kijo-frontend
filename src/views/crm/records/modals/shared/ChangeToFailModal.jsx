@@ -34,10 +34,21 @@ const ChangeToFailModal = ({
         />
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onCancel} disabled={isSubmitting}>
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </CButton>
-        <CButton color="danger" onClick={onConfirm} disabled={!value.trim() || isSubmitting}>
+        <CButton
+          color="danger"
+          size="sm"
+          onClick={onConfirm}
+          disabled={!value.trim() || isSubmitting}
+        >
           {isSubmitting ? 'Submitting...' : 'Confirm Failure'}
         </CButton>
       </CModalFooter>

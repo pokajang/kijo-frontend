@@ -527,7 +527,12 @@ export default function MeetingMinuteForm() {
 
   const handleDeleteMeeting = async () => {
     if (!recordId || !isViewMode) return
-    if (!(await dialog.confirm('Delete this meeting minute record? This action cannot be undone.')))
+    if (
+      !(await dialog.confirm('Delete this meeting minute record? This action cannot be undone.', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
       return
 
     setAlert({ color: 'info', text: '' })
@@ -815,7 +820,13 @@ export default function MeetingMinuteForm() {
   }
 
   const handleDiscardDraft = async () => {
-    if (!(await dialog.confirm('Discard this meeting draft? This action cannot be undone.'))) return
+    if (
+      !(await dialog.confirm('Discard this meeting draft? This action cannot be undone.', {
+        confirmText: 'Discard',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     clearCreateDraft()
     clearRecordDraft(recordId)
     if (recordId <= 0) {
@@ -1036,7 +1047,7 @@ export default function MeetingMinuteForm() {
           <CModalFooter>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-outline-secondary btn-sm"
               onClick={() => closeCompleteActionModal()}
               disabled={completeActionModal.submitting}
             >
@@ -1044,7 +1055,7 @@ export default function MeetingMinuteForm() {
             </button>
             <button
               type="button"
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
               onClick={handleCompleteActionModalSubmit}
               disabled={
                 completeActionModal.submitting || (completeActionModal.items || []).length === 0

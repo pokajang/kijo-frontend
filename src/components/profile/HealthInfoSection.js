@@ -76,6 +76,7 @@ const HealthInfoSection = ({ profile, onChange, onUpdate, onCancel, profileIncom
         <CCol xs="auto">
           <CButton
             color="primary"
+            size="sm"
             onClick={onUpdate}
             // disabled={profileIncomplete}
           >
@@ -83,7 +84,7 @@ const HealthInfoSection = ({ profile, onChange, onUpdate, onCancel, profileIncom
           </CButton>
         </CCol>
         <CCol xs="auto">
-          <CButton color="secondary" onClick={onCancel}>
+          <CButton color="secondary" variant="outline" size="sm" onClick={onCancel}>
             Cancel
           </CButton>
         </CCol>

@@ -16,6 +16,7 @@ import {
 } from '@coreui/react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
+import { fetchDetailJson } from '../../../utils/detailPages'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'Choose category...' },
@@ -69,11 +70,16 @@ export default function EditProcedure() {
       setLoading(true)
       setAlert({ visible: false, color: 'success', message: '' })
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}procedures/${id}`, {
+        const detail = await fetchDetailJson(`${import.meta.env.VITE_API_BASE}procedures/${id}`, {
           credentials: 'include',
         })
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok || data?.success === false) {
+        if (detail.notFound) {
+          setLoaded(false)
+          setAlert({ visible: true, color: 'warning', message: 'Procedure not found.' })
+          return
+        }
+        const data = detail.data || {}
+        if (!detail.ok || data?.success === false) {
           throw new Error(data?.message || 'Failed to load procedure.')
         }
 
@@ -328,8 +334,8 @@ export default function EditProcedure() {
                 </CRow>
 
                 <CRow>
-                  <CCol>
-                    <CButton type="submit" color="primary" disabled={submitting} className="me-2">
+                  <CCol className="d-flex justify-content-end gap-2 flex-wrap flex-row-reverse">
+                    <CButton type="submit" color="primary" size="sm" disabled={submitting}>
                       {submitting ? (
                         <>
                           <CSpinner size="sm" className="me-2" /> Saving...
@@ -342,6 +348,7 @@ export default function EditProcedure() {
                       type="button"
                       color="secondary"
                       variant="outline"
+                      size="sm"
                       onClick={handleReset}
                       disabled={submitting}
                     >
@@ -351,7 +358,7 @@ export default function EditProcedure() {
                       type="button"
                       color="secondary"
                       variant="outline"
-                      className="ms-2"
+                      size="sm"
                       onClick={() =>
                         navigate(
                           id
@@ -373,6 +380,7 @@ export default function EditProcedure() {
                     type="button"
                     color="secondary"
                     variant="outline"
+                    size="sm"
                     onClick={() => navigate('/administration/procedures')}
                   >
                     Back to List

@@ -6,6 +6,7 @@ import { DetailField, DetailSection } from '../../commercial/shared/CommercialDe
 import EditCatalogModal from './EditCatalogModal'
 import dialog from '../../../components/dialog/dialogService'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
+import { fetchDetailJson } from '../../../utils/detailPages'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const emptyValue = '-'
@@ -45,10 +46,14 @@ const CatalogDetailPage = () => {
     setError('')
 
     try {
-      const response = await fetch(`${API_BASE}catalog/items/${id}`, {
-        credentials: 'include',
+      const detail = await fetchDetailJson(`${API_BASE}catalog/items/${id}`, {
+        notFoundMessage: 'Catalog item not found.',
       })
-      const result = await response.json()
+      if (detail.notFound) {
+        setItem(null)
+        return
+      }
+      const result = detail.data
 
       if (result.status !== 'success' || !result.data) {
         throw new Error(result.message || 'Unable to load catalog item.')
@@ -56,7 +61,6 @@ const CatalogDetailPage = () => {
 
       setItem(result.data)
     } catch (err) {
-      console.error('Catalog item detail fetch error:', err)
       setItem(null)
       setError(err.message || 'Unable to load catalog item.')
     } finally {
@@ -70,7 +74,10 @@ const CatalogDetailPage = () => {
 
   const handleDelete = async () => {
     if (!item) return
-    const confirmed = await dialog.confirm(`Are you sure you want to delete ${item.item_name}?`)
+    const confirmed = await dialog.confirm(`Are you sure you want to delete ${item.item_name}?`, {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!confirmed) return
 
     try {

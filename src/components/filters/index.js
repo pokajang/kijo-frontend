@@ -10,3 +10,11 @@ export {
   isDateInPeriodRange,
   isDefaultPeriodRange,
 } from './PeriodRangeSelector'
+export {
+  getActivityPeriodParams,
+  getPeriodDateParams,
+  getPeriodYears,
+  getYearScopedParamSets,
+  isAllTimePeriod,
+  mergeUniqueRecordsById,
+} from './periodFetchUtils'

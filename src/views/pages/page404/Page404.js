@@ -29,7 +29,9 @@ const Page404 = () => {
                 <CIcon icon={cilMagnifyingGlass} />
               </CInputGroupText>
               <CFormInput type="text" placeholder="What are you looking for?" />
-              <CButton color="info">Search</CButton>
+              <CButton color="primary" size="sm">
+                Search
+              </CButton>
             </CInputGroup>
           </CCol>
         </CRow>

@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   CAlert,
@@ -22,22 +22,20 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import {
-  cilBook,
-  cilDollar,
   cilGift,
   cilListRich,
   cilMenu,
   cilMoon,
   cilPaperPlane,
+  cilSpeech,
   cilSpeedometer,
   cilSun,
 } from '@coreui/icons'
-import { AppHeaderDropdown } from './header/index'
+import { AppHeaderDropdown, AppNotificationsDropdown } from './header/index'
 import AppModuleSearch from './search/AppModuleSearch'
 import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
-import PersonalSignature from './signature/PersonalSignature'
 import { useKnowledgePanel } from '../views/knowledge/KnowledgePanelContext'
 
 const getSignatureDismissalKey = (staffId) =>
@@ -63,6 +61,7 @@ const clearSignatureWarningDismissal = (staffId) => {
 
 const AppHeader = () => {
   const headerRef = useRef()
+  const navigate = useNavigate()
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
@@ -71,11 +70,15 @@ const AppHeader = () => {
   const [ticketMessage, setTicketMessage] = useState('')
   const [ticketSubmitting, setTicketSubmitting] = useState(false)
   const [accountActive, setAccountActive] = useState(false)
-  const [signatureModalVisible, setSignatureModalVisible] = useState(false)
   const [signatureStatus, setSignatureStatus] = useState({ checked: false, url: null })
   const [signatureDismissed, setSignatureDismissed] = useState(false)
   const [unreadWhatsNewCount, setUnreadWhatsNewCount] = useState(0)
-  const { openKnowledgeSearch } = useKnowledgePanel()
+  const {
+    closeKnowledgePanel,
+    isOpen: knowledgePanelOpen,
+    openKnowledgeSearch,
+  } = useKnowledgePanel()
+  const lastKnowledgePointerOpenRef = useRef(0)
 
   useEffect(() => {
     const onScroll = () => {
@@ -114,6 +117,18 @@ const AppHeader = () => {
     loadSignatureStatus(sessionUser.staff_id)
   }, [sessionUser?.staff_id, loadSignatureStatus])
 
+  useEffect(() => {
+    const refreshSignatureStatus = () => {
+      loadSignatureStatus(sessionUser?.staff_id)
+    }
+
+    window.addEventListener('kijo:signature-updated', refreshSignatureStatus)
+
+    return () => {
+      window.removeEventListener('kijo:signature-updated', refreshSignatureStatus)
+    }
+  }, [loadSignatureStatus, sessionUser?.staff_id])
+
   const loadWhatsNewStatus = React.useCallback(async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE}whats-new/latest`, {
@@ -151,6 +166,30 @@ const AppHeader = () => {
   const closeTicketModal = () => {
     setTicketModalVisible(false)
     setTicketMessage('')
+  }
+
+  const toggleKnowledgeHelp = (event) => {
+    event?.preventDefault?.()
+    if (knowledgePanelOpen) {
+      closeKnowledgePanel()
+      return
+    }
+
+    openKnowledgeSearch()
+  }
+
+  const handleKnowledgePointerDown = (event) => {
+    if (event.pointerType === 'mouse') return
+    lastKnowledgePointerOpenRef.current = Date.now()
+    toggleKnowledgeHelp(event)
+  }
+
+  const handleKnowledgeClick = (event) => {
+    if (Date.now() - lastKnowledgePointerOpenRef.current < 700) {
+      event.preventDefault()
+      return
+    }
+    toggleKnowledgeHelp(event)
   }
 
   const handleTicketSubmit = async () => {
@@ -209,16 +248,21 @@ const AppHeader = () => {
 
         <div className="app-header-search-help">
           <AppModuleSearch />
-          <CTooltip content="Open Knowledge" placement="bottom">
+          <CTooltip
+            content={knowledgePanelOpen ? 'Close Learn Kijo help' : 'Open Learn Kijo help'}
+            placement="bottom"
+          >
             <CButton
               type="button"
-              color="secondary"
+              color="primary"
               variant="outline"
-              className="app-knowledge-header-help"
-              onClick={openKnowledgeSearch}
-              aria-label="Open Knowledge help"
+              className={`app-knowledge-header-help${knowledgePanelOpen ? ' active' : ''}`}
+              onPointerDown={handleKnowledgePointerDown}
+              onClick={handleKnowledgeClick}
+              aria-label={knowledgePanelOpen ? 'Close Knowledge help' : 'Open Knowledge help'}
+              aria-pressed={knowledgePanelOpen}
             >
-              <CIcon icon={cilBook} />
+              <CIcon icon={cilSpeech} />
               <span className="app-knowledge-header-help__label">Help</span>
             </CButton>
           </CTooltip>
@@ -236,7 +280,7 @@ const AppHeader = () => {
             </CNavLink>
           </CNavItem>
 
-          <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
+          <CNavItem className="me-2 app-bottom-nav-entry">
             <CButton
               type="button"
               color="link"
@@ -252,10 +296,11 @@ const AppHeader = () => {
                   <CIcon icon={colorMode === 'dark' ? cilSun : cilMoon} />
                 </span>
               </CTooltip>
+              <span className="app-bottom-nav-label">Theme</span>
             </CButton>
           </CNavItem>
 
-          <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
+          <CNavItem className="me-2 app-bottom-nav-entry">
             <CNavLink
               to="/whats-new"
               as={NavLink}
@@ -287,17 +332,6 @@ const AppHeader = () => {
           </CNavItem>
 
           <CNavItem className="me-2 app-bottom-nav-entry">
-            <CNavLink to="/crm/quotes" as={NavLink} className="app-bottom-nav-link">
-              <CTooltip content="Manage Quotes" placement="bottom">
-                <span className="app-bottom-nav-icon" aria-hidden="true">
-                  <CIcon icon={cilDollar} />
-                </span>
-              </CTooltip>
-              <span className="app-bottom-nav-label">Quotes</span>
-            </CNavLink>
-          </CNavItem>
-
-          <CNavItem className="me-2 app-bottom-nav-entry">
             <CButton
               type="button"
               color="link"
@@ -314,6 +348,8 @@ const AppHeader = () => {
               <span className="app-bottom-nav-label">Ticket</span>
             </CButton>
           </CNavItem>
+
+          <AppNotificationsDropdown />
 
           <AppHeaderDropdown
             sessionUser={sessionUser}
@@ -333,7 +369,7 @@ const AppHeader = () => {
               color="warning"
               variant="outline"
               className="ms-auto"
-              onClick={() => setSignatureModalVisible(true)}
+              onClick={() => navigate('/my/signature')}
             >
               Upload Signature
             </CButton>
@@ -367,36 +403,21 @@ const AppHeader = () => {
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             onClick={closeTicketModal}
             disabled={ticketSubmitting}
           >
             Cancel
           </CButton>
-          <CButton color="primary" onClick={handleTicketSubmit} disabled={ticketSubmitting}>
+          <CButton
+            color="primary"
+            size="sm"
+            onClick={handleTicketSubmit}
+            disabled={ticketSubmitting}
+          >
             {ticketSubmitting ? 'Submitting...' : 'Submit'}
           </CButton>
         </CModalFooter>
-      </CModal>
-
-      <CModal
-        visible={signatureModalVisible}
-        onClose={() => setSignatureModalVisible(false)}
-        alignment="center"
-        size="lg"
-      >
-        <CModalHeader closeButton>
-          <CModalTitle>Digital Signature</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <PersonalSignature
-            onClose={async () => {
-              setSignatureModalVisible(false)
-              clearSignatureWarningDismissal(sessionUser?.staff_id)
-              setSignatureDismissed(false)
-              await loadSignatureStatus(sessionUser?.staff_id)
-            }}
-          />
-        </CModalBody>
       </CModal>
     </CHeader>
   )

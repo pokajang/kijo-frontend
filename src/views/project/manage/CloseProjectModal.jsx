@@ -16,18 +16,23 @@ import {
   CFormCheck,
 } from '@coreui/react'
 import dialog from '../../../components/dialog/dialogService'
+import { formatLocalDate } from '../../../components/filters'
+import { closeProject } from './projectApi'
+import { PROJECT_CLOSE_TYPES } from './projectStatus'
 
-const validCloseTypes = new Set(['Completed', 'Terminated'])
+const validCloseTypes = new Set(Object.values(PROJECT_CLOSE_TYPES))
 
 const CloseProjectModal = ({
   visible,
   project,
-  initialCloseType = 'Completed',
+  initialCloseType = PROJECT_CLOSE_TYPES.COMPLETED,
   onClose,
   onConfirm,
 }) => {
-  const today = new Date().toISOString().split('T')[0]
-  const selectedCloseType = validCloseTypes.has(initialCloseType) ? initialCloseType : 'Completed'
+  const today = formatLocalDate(new Date())
+  const selectedCloseType = validCloseTypes.has(initialCloseType)
+    ? initialCloseType
+    : PROJECT_CLOSE_TYPES.COMPLETED
 
   const [payload, setPayload] = useState({
     closeDate: today,
@@ -54,7 +59,7 @@ const CloseProjectModal = ({
   }, [project?.id, selectedCloseType, today, visible])
 
   useEffect(() => {
-    if (payload.closeType === 'Terminated') {
+    if (payload.closeType === PROJECT_CLOSE_TYPES.TERMINATED) {
       setChecks({ claims: false, vendors: false, services: false })
     }
   }, [payload.closeType])
@@ -71,10 +76,10 @@ const CloseProjectModal = ({
 
   const hasRemarks = payload.reason.trim() !== ''
   const isFormValid =
-    payload.closeType === 'Terminated'
+    payload.closeType === PROJECT_CLOSE_TYPES.TERMINATED
       ? hasRemarks
       : Object.values(checks).every(Boolean) && hasRemarks
-  const isTermination = payload.closeType === 'Terminated'
+  const isTermination = payload.closeType === PROJECT_CLOSE_TYPES.TERMINATED
   const actionLabel = isTermination ? 'Terminate Project' : 'Complete Project'
   const remarksLabel = isTermination ? 'Termination Cause' : 'Closure Remarks'
   const remarksTitle = isTermination ? 'Termination Details' : 'Closure Remarks'
@@ -87,14 +92,22 @@ const CloseProjectModal = ({
 
   const handleCloseProject = async () => {
     if (isSubmitting) return
+    setIsSubmitting(true)
 
     const confirmed = await dialog.confirm(
       isTermination
         ? 'Are you sure you want to terminate this project?'
         : 'Are you sure you want to complete this project?',
+      {
+        confirmText: isTermination ? 'Terminate' : 'Complete',
+        confirmColor: isTermination ? 'danger' : 'primary',
+      },
     )
 
-    if (!confirmed) return
+    if (!confirmed) {
+      setIsSubmitting(false)
+      return
+    }
 
     const finalPayload = {
       project_id: project.id,
@@ -106,18 +119,8 @@ const CloseProjectModal = ({
       services: checks.services,
     }
 
-    setIsSubmitting(true)
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(project.id)}/close`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(finalPayload),
-        },
-      )
-      const data = await res.json()
+      const data = await closeProject(project.id, finalPayload)
 
       if (data.status === 'success') {
         dialog.alert(
@@ -169,7 +172,7 @@ const CloseProjectModal = ({
                 <CFormInput id="closeType" name="closeType" value={payload.closeType} disabled />
               </CCol>
 
-              {payload.closeType === 'Completed' && (
+              {payload.closeType === PROJECT_CLOSE_TYPES.COMPLETED && (
                 <CCol md={12}>
                   <CFormLabel>Closure Checks</CFormLabel>
                   <div className="d-flex gap-4">
@@ -216,7 +219,13 @@ const CloseProjectModal = ({
         </CCard>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" size="sm" onClick={handleCancel} disabled={isSubmitting}>
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={handleCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </CButton>
         <CButton

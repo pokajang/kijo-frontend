@@ -238,8 +238,29 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
 
           <CRow className="mt-4">
             <CCol>
-              <div className="d-flex gap-2">
-                <CButton color="primary" onClick={onSave} disabled={saving}>
+              <div className="d-flex justify-content-end gap-2">
+                {isEdit ? (
+                  <CButton
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(location.state?.returnTo || returnPath)}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </CButton>
+                ) : (
+                  <CButton
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    onClick={onReset}
+                    disabled={saving}
+                  >
+                    Reset
+                  </CButton>
+                )}
+                <CButton color="primary" size="sm" onClick={onSave} disabled={saving}>
                   {saving
                     ? finalizingBmTranslation
                       ? 'Saving BM Proposal...'
@@ -252,21 +273,6 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
                         ? 'Update Changes'
                         : 'Save Template'}
                 </CButton>
-
-                {isEdit ? (
-                  <CButton
-                    color="secondary"
-                    variant="outline"
-                    onClick={() => navigate(location.state?.returnTo || returnPath)}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </CButton>
-                ) : (
-                  <CButton color="secondary" variant="outline" onClick={onReset} disabled={saving}>
-                    Reset
-                  </CButton>
-                )}
               </div>
             </CCol>
           </CRow>

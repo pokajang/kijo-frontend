@@ -239,7 +239,12 @@ export default function CallList() {
           </p>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={() => setShowAbout(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAbout(false)}
+          >
             Close
           </CButton>
         </CModalFooter>

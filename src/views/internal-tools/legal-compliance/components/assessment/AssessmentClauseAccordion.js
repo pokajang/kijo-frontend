@@ -13,7 +13,11 @@ import {
   CRow,
   CTooltip,
 } from '@coreui/react'
-import { getClauseFields, getSectionProgress } from '../../utils/templateContent'
+import {
+  formatLegalGroupTitle,
+  getClauseFields,
+  getSectionProgress,
+} from '../../utils/templateContent'
 
 export const getComplyBadgeColor = ({ comply, total }) => {
   if (total === 0) return 'secondary'
@@ -86,9 +90,10 @@ const AssessmentClauseAccordion = ({
       className="handbook-accordion legal-compliance-accordion"
       activeItemKey={accordionState.activeItemKey}
     >
-      {sections.map((section) => {
+      {sections.map((section, sectionIndex) => {
         const progress = getSectionProgress(section, clauseResponses)
         const complyBadgeColor = getComplyBadgeColor(progress)
+        const groupTitle = formatLegalGroupTitle(section, sectionIndex)
 
         return (
           <CAccordionItem
@@ -102,8 +107,8 @@ const AssessmentClauseAccordion = ({
           >
             <CAccordionHeader>
               <span className="legal-compliance-accordion-title-row">
-                <CTooltip content={section.title} placement="top">
-                  <strong className="legal-compliance-accordion-title">{section.title}</strong>
+                <CTooltip content={groupTitle} placement="top">
+                  <strong className="legal-compliance-accordion-title">{groupTitle}</strong>
                 </CTooltip>
                 <span className="legal-compliance-accordion-summary">
                   <CBadge color={complyBadgeColor}>

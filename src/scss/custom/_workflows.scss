@@ -1,0 +1,32 @@
+.workflow-settings-intro {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.5rem;
+  background: var(--cui-body-bg);
+  color: var(--cui-secondary-color);
+  font-size: 0.9375rem;
+}
+
+.workflow-settings-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.workflow-settings-step {
+  padding: 1rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.5rem;
+  background: var(--cui-tertiary-bg);
+}
+
+.workflow-settings-step__title {
+  font-weight: 700;
+}
+
+.workflow-settings-step__fallback {
+  margin-top: 0.25rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.875rem;
+}

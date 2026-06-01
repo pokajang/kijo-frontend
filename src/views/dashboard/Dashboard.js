@@ -1,9 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CContainer, CDropdown, CDropdownItem, CDropdownMenu, CDropdownToggle } from '@coreui/react'
+import {
+  CButton,
+  CContainer,
+  CDropdown,
+  CDropdownItem,
+  CDropdownMenu,
+  CDropdownToggle,
+} from '@coreui/react'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import PeriodSelector from './shared/PeriodSelector'
-import { fetchJsonGet, isAbortError } from './shared/fetchUtils'
+import { buildQueryUrl, fetchJsonGet, isAbortError } from './shared/fetchUtils'
 import { formatLocalISODate } from '../marketing/pipeline/pipelineEntryUtils'
 import { useAuth } from '../../auth/AuthProvider'
 import { extractRolesFromSession } from '../../utils/roles'
@@ -11,57 +18,9 @@ import SalesDashboard from './sales/SalesDashboard'
 import CrmDashboard from './crm/CrmDashboard'
 import FinancialDashboard from './financial/FinancialDashboard'
 import MonitoringDashboard from './monitoring/MonitoringDashboard'
+import WorkloadDashboard from './workload/WorkloadDashboard'
 
 const formatISO = formatLocalISODate
-const formatMonthValue = (date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-
-const monthLabelFormatter = new Intl.DateTimeFormat('en-MY', {
-  month: 'short',
-  year: 'numeric',
-})
-
-const formatMonthLabel = (monthValue) => {
-  const [yearValue, monthNumberValue] = String(monthValue || '').split('-')
-  const year = Number(yearValue)
-  const monthIndex = Number(monthNumberValue) - 1
-
-  if (!year || monthIndex < 0 || monthIndex > 11) {
-    return monthLabelFormatter.format(new Date())
-  }
-
-  return monthLabelFormatter.format(new Date(year, monthIndex, 1))
-}
-
-const getMonitoringMonthOptions = () => {
-  const now = new Date()
-  const options = []
-
-  for (let offset = 0; offset < 18; offset += 1) {
-    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1)
-    const value = formatMonthValue(date)
-    options.push({
-      value,
-      label: formatMonthLabel(value),
-    })
-  }
-
-  return options
-}
-
-const getMonthRange = (monthValue) => {
-  const [yearValue, monthNumberValue] = String(monthValue || '').split('-')
-  const year = Number(yearValue)
-  const monthIndex = Number(monthNumberValue) - 1
-
-  if (!year || monthIndex < 0 || monthIndex > 11) {
-    return getMonthRange(formatMonthValue(new Date()))
-  }
-
-  const start = new Date(year, monthIndex, 1)
-  const end = new Date(year, monthIndex + 1, 0)
-  return { startDate: formatISO(start), endDate: formatISO(end) }
-}
 
 const getPeriodRange = (period) => {
   const now = new Date()
@@ -109,6 +68,18 @@ const canViewOtherMonitoringStaff = (roles) =>
     )
   })
 
+const canViewMonthlyDashboardReport = (roles) =>
+  (Array.isArray(roles) ? roles : []).some((role) => {
+    const roleText = String(role || '').toLowerCase()
+    return roleText === 'manager' || roleText === 'system admin'
+  })
+
+const getPreviousReportMonth = () => {
+  const now = new Date()
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  return `${previousMonth.getFullYear()}-${String(previousMonth.getMonth() + 1).padStart(2, '0')}`
+}
+
 const getCurrentMonitoringStaffOption = (user) => {
   const value = normalizeMonitoringStaffCode(user?.name_code)
   if (!value) return null
@@ -146,50 +117,12 @@ const getSelectedMonitoringStaffLabel = (staffOptions, selectedStaffCode, user) 
   )
 }
 
-const MonitoringMonthSelector = ({
-  month,
-  onMonthChange,
-  compact = false,
-  dropdownClassName = '',
-  toggleClassName = '',
-  toggleStyle,
-}) => {
-  const monthOptions = getMonitoringMonthOptions()
-  const widthStyle = toggleStyle || { width: compact ? '138px' : '154px' }
-
-  return (
-    <CDropdown alignment="end" className={dropdownClassName}>
-      <CDropdownToggle
-        size="sm"
-        color="primary"
-        variant="outline"
-        data-api-busy-allow="true"
-        className={`d-inline-flex align-items-center justify-content-between ${compact ? 'px-2' : 'px-3'} ${toggleClassName}`}
-        style={widthStyle}
-        aria-label="Monitoring month"
-      >
-        <span className="text-truncate">{formatMonthLabel(month)}</span>
-      </CDropdownToggle>
-      <CDropdownMenu style={{ maxHeight: '320px', overflowY: 'auto' }}>
-        {monthOptions.map((option) => (
-          <CDropdownItem
-            key={option.value}
-            active={month === option.value}
-            onClick={() => onMonthChange(option.value)}
-          >
-            {option.label}
-          </CDropdownItem>
-        ))}
-      </CDropdownMenu>
-    </CDropdown>
-  )
-}
-
 const dashboardTabs = [
-  { key: 'sales', label: 'Sales', to: '/dashboard/sales' },
-  { key: 'crm', label: 'CRM', to: '/dashboard/crm' },
-  { key: 'financial', label: 'Financial', to: '/dashboard/financial' },
-  { key: 'monitoring', label: 'Monitoring', to: '/dashboard/monitoring' },
+  { key: 'sales', label: 'Sales Tracking', to: '/dashboard/sales' },
+  { key: 'crm', label: 'CRM Tracking', to: '/dashboard/crm' },
+  { key: 'financial', label: 'Financial Tracking', to: '/dashboard/financial' },
+  { key: 'monitoring', label: 'Pipeline Monitoring', to: '/dashboard/monitoring' },
+  { key: 'workload', label: 'Workload Tracking', to: '/dashboard/workload' },
 ]
 
 const getTabFromPath = (dashboardTab) => {
@@ -231,7 +164,6 @@ const Dashboard = () => {
     if (canViewOtherMonitoringStaff(initialRoles)) return ''
     return getCurrentMonitoringStaffOption(user)?.value || ''
   })
-  const [monitoringMonth, setMonitoringMonth] = useState(() => formatMonthValue(new Date()))
   const [dashboardLoading, setDashboardLoading] = useState(true)
   const [monitoringStatusData, setMonitoringStatusData] = useState(null)
   const [monitoringStatusLoading, setMonitoringStatusLoading] = useState(false)
@@ -242,15 +174,16 @@ const Dashboard = () => {
   const dashboardLoadStartedAtRef = useRef(Date.now())
 
   const dashboardLoadKey = useMemo(
-    () =>
-      [activeTab, period, startDate, endDate, monitoringMonth, selectedMonitoringStaffCode].join(
-        '|',
-      ),
-    [activeTab, period, startDate, endDate, monitoringMonth, selectedMonitoringStaffCode],
+    () => [activeTab, period, startDate, endDate, selectedMonitoringStaffCode].join('|'),
+    [activeTab, period, startDate, endDate, selectedMonitoringStaffCode],
   )
   const monitoringUserRoles = useMemo(() => extractRolesFromSession({ user }), [user])
   const canViewOtherMonitoringStaffData = useMemo(
     () => canViewOtherMonitoringStaff(monitoringUserRoles),
+    [monitoringUserRoles],
+  )
+  const canViewMonthlyReport = useMemo(
+    () => canViewMonthlyDashboardReport(monitoringUserRoles),
     [monitoringUserRoles],
   )
   const allowedMonitoringStaffOptions = useMemo(
@@ -312,8 +245,6 @@ const Dashboard = () => {
       setStartDate(nextEndDate)
     }
   }
-
-  const monitoringRange = getMonthRange(monitoringMonth)
 
   useEffect(() => {
     pendingDashboardRequestsRef.current.clear()
@@ -400,8 +331,9 @@ const Dashboard = () => {
         const response = await fetchJsonGet(
           `${import.meta.env.VITE_API_BASE}stats/monitoring-pipeline-status`,
           {
-            start_date: monitoringRange.startDate,
-            end_date: monitoringRange.endDate,
+            start_date: startDate,
+            end_date: endDate,
+            period,
             staff_code: selectedMonitoringStaffCode,
           },
           controller.signal,
@@ -431,10 +363,11 @@ const Dashboard = () => {
     return () => controller.abort()
   }, [
     activeTab,
-    monitoringRange.startDate,
-    monitoringRange.endDate,
     monitoringStatusReloadKey,
+    endDate,
+    period,
     selectedMonitoringStaffCode,
+    startDate,
   ])
 
   useEffect(() => {
@@ -496,67 +429,82 @@ const Dashboard = () => {
     user,
   )
 
-  const dashboardStripControls = (
-    <>
-      {activeTab === 'monitoring' && (
-        <CDropdown alignment="end">
-          <CDropdownToggle
-            size="sm"
-            color="primary"
-            variant="outline"
-            data-api-busy-allow="true"
-            className="px-3 d-inline-flex align-items-center justify-content-between"
-            style={{ width: '112px' }}
+  const monitoringStaffSelector = (
+    <CDropdown alignment="start">
+      <CDropdownToggle
+        size="sm"
+        color="primary"
+        variant="outline"
+        data-api-busy-allow="true"
+        className="px-3 d-inline-flex align-items-center justify-content-between"
+        style={{ width: '148px' }}
+        aria-label="Monitoring staff"
+      >
+        <span className="text-truncate d-inline-block" style={{ maxWidth: '100px' }}>
+          {selectedMonitoringStaffLabel}
+        </span>
+      </CDropdownToggle>
+      <CDropdownMenu>
+        {showAllMonitoringStaffOption && (
+          <CDropdownItem
+            active={!selectedMonitoringStaffCode}
+            onClick={() => setSelectedMonitoringStaffCode('')}
           >
-            <span className="text-truncate d-inline-block" style={{ maxWidth: '64px' }}>
-              {selectedMonitoringStaffLabel}
-            </span>
-          </CDropdownToggle>
-          <CDropdownMenu>
-            {showAllMonitoringStaffOption && (
-              <CDropdownItem
-                active={!selectedMonitoringStaffCode}
-                onClick={() => setSelectedMonitoringStaffCode('')}
-              >
-                All staff
-              </CDropdownItem>
-            )}
-            {allowedMonitoringStaffOptions.map((option) => (
-              <CDropdownItem
-                key={option.value}
-                active={
-                  normalizeMonitoringStaffCode(selectedMonitoringStaffCode) ===
-                  normalizeMonitoringStaffCode(option.value)
-                }
-                onClick={() => setSelectedMonitoringStaffCode(option.value)}
-              >
-                {option.label}
-              </CDropdownItem>
-            ))}
-          </CDropdownMenu>
-        </CDropdown>
+            All staff
+          </CDropdownItem>
+        )}
+        {allowedMonitoringStaffOptions.map((option) => (
+          <CDropdownItem
+            key={option.value}
+            active={
+              normalizeMonitoringStaffCode(selectedMonitoringStaffCode) ===
+              normalizeMonitoringStaffCode(option.value)
+            }
+            onClick={() => setSelectedMonitoringStaffCode(option.value)}
+          >
+            {option.label}
+          </CDropdownItem>
+        ))}
+      </CDropdownMenu>
+    </CDropdown>
+  )
+
+  const dashboardStripControls = (
+    <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
+      <PeriodSelector
+        period={period}
+        startDate={startDate}
+        endDate={endDate}
+        onPeriodChange={handlePeriodChange}
+        onStartDateChange={handleStartDateChange}
+        onEndDateChange={handleEndDateChange}
+        compact
+        buttonColor="primary"
+        buttonVariant="outline"
+        buttonClassName="px-3"
+        ariaLabel={activeTab === 'monitoring' ? 'Monitoring reporting period' : 'Reporting period'}
+      />
+      {canViewMonthlyReport && (
+        <CButton
+          type="button"
+          size="sm"
+          color="primary"
+          variant="outline"
+          className="px-3"
+          data-api-busy-allow="true"
+          onClick={() => {
+            window.open(
+              buildQueryUrl(`${import.meta.env.VITE_API_BASE}stats/monthly-dashboard-report/pdf`, {
+                month: getPreviousReportMonth(),
+              }),
+              '_blank',
+            )
+          }}
+        >
+          Monthly Report
+        </CButton>
       )}
-      {activeTab === 'monitoring' ? (
-        <MonitoringMonthSelector
-          month={monitoringMonth}
-          onMonthChange={setMonitoringMonth}
-          toggleClassName="px-3"
-        />
-      ) : (
-        <PeriodSelector
-          period={period}
-          startDate={startDate}
-          endDate={endDate}
-          onPeriodChange={handlePeriodChange}
-          onStartDateChange={handleStartDateChange}
-          onEndDateChange={handleEndDateChange}
-          compact
-          buttonColor="primary"
-          buttonVariant="outline"
-          buttonClassName="px-3"
-        />
-      )}
-    </>
+    </div>
   )
 
   return (
@@ -592,15 +540,21 @@ const Dashboard = () => {
 
           {activeTab === 'monitoring' && (
             <MonitoringDashboard
-              startDate={monitoringRange.startDate}
-              endDate={monitoringRange.endDate}
+              period={period}
+              startDate={startDate}
+              endDate={endDate}
               selectedStaffCode={selectedMonitoringStaffCode}
               selectedStaffLabel={selectedMonitoringStaffLabel}
+              staffSelector={monitoringStaffSelector}
               statusData={monitoringStatusData}
               statusLoading={monitoringStatusLoading}
               statusError={monitoringStatusError}
               onManualEntrySaved={() => setMonitoringStatusReloadKey((key) => key + 1)}
             />
+          )}
+
+          {activeTab === 'workload' && (
+            <WorkloadDashboard startDate={startDate} endDate={endDate} />
           )}
         </div>
       </div>

@@ -1,0 +1,166 @@
+@media (max-width: 767.98px) {
+  .kpi-workspace .card-body {
+    padding: 1rem;
+  }
+
+  .kpi-workspace-header {
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .kpi-workspace-actions-row {
+    justify-content: flex-end;
+  }
+
+  .kpi-workspace-action-cluster {
+    flex: 0 0 auto;
+  }
+
+  .kpi-workspace-action-dropdown,
+  .kpi-workspace-action-toggle {
+    width: auto;
+  }
+
+  .kpi-workspace-action-toggle {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+  }
+
+  .kpi-workspace-action-cluster > .btn {
+    flex: 0 0 auto;
+  }
+
+  .kpi-year-card {
+    min-height: 3.5rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .kpi-year-card-panel {
+    margin-bottom: 1.25rem;
+  }
+
+  .kpi-tracker-month-card-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-tracker-period-selector {
+    margin-bottom: 1.25rem;
+  }
+
+  .kpi-weighted-score-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .kpi-weighted-score-metrics {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.625rem;
+  }
+
+  .kpi-weighted-score-value,
+  .kpi-weighted-score-percent {
+    font-size: 1rem;
+  }
+
+  .kpi-weighted-score-panel {
+    padding: 0.875rem;
+  }
+
+  .kpi-weighted-bar {
+    margin-top: 0.125rem;
+  }
+
+  .kpi-content-sections {
+    gap: 1.25rem;
+  }
+
+  .kpi-section-title {
+    margin-bottom: 1rem;
+  }
+
+  .kpi-overview-widget .card-body {
+    gap: 0.75rem;
+    padding: 0.875rem 0.875rem 0.75rem;
+  }
+
+  .kpi-overview-widget .fs-4 {
+    margin-bottom: 0.5rem;
+  }
+
+  .kpi-widget-months {
+    gap: 0.1875rem;
+    padding-top: 0.3rem;
+  }
+
+  .kpi-widget-month-cell {
+    min-height: 2.25rem;
+    padding: 0.2rem 0.125rem;
+  }
+
+  .kpi-weighted-score-panel {
+    margin-top: 0.25rem;
+  }
+
+  .kpi-remarks-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .kpi-remarks-months {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-parameter-toolbar,
+  .kpi-parameter-summary,
+  .kpi-parameter-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-parameter-row {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .kpi-parameter-status {
+    text-align: left;
+  }
+
+  .kpi-parameter-actions,
+  .kpi-parameter-editor-actions {
+    justify-content: flex-start;
+  }
+
+  .kpi-parameter-template-results {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-tracker-batch-summary,
+  .kpi-tracker-batch-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-tracker-batch-row {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .kpi-tracker-batch-current {
+    text-align: left;
+  }
+
+  .kpi-tracker-batch-title {
+    white-space: normal;
+  }
+
+  .kpi-tracker-batch-actions {
+    justify-content: flex-start;
+  }
+
+  .kpi-tracker-batch-editor-actions {
+    justify-content: flex-start;
+  }
+}

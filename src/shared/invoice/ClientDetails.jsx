@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/ClientDetails.jsx
+// src/shared/invoice/ClientDetails.jsx
 import React from 'react'
 import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CFormInput } from '@coreui/react'
 

@@ -174,6 +174,10 @@ export const handleSaveVendor = async (formData, setVendors, setEditModalVisible
 export const handleVendorDelete = async (vendor, setVendors) => {
   const confirmed = await dialog.confirm(
     `Are you sure you want to deactivate "${vendor.vendorName}"? This will move the vendor to the Frozen Vendor list.`,
+    {
+      confirmText: 'Deactivate',
+      confirmColor: 'danger',
+    },
   )
   if (!confirmed) return
 
@@ -208,6 +212,10 @@ export const handleVendorDelete = async (vendor, setVendors) => {
 export const handleDeactivateVendor = async (vendor, setVendors, refreshVendors) => {
   const confirmed = await dialog.confirm(
     `Are you sure you want to permanently delete "${vendor.vendorName}"? This action cannot be undone.`,
+    {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    },
   )
   if (!confirmed) return
 

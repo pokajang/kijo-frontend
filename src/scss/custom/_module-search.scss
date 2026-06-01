@@ -13,7 +13,7 @@
   align-self: stretch;
   flex: 1 1 auto;
   min-width: 12rem;
-  max-width: 42rem;
+  max-width: 30rem;
   margin: 0 1rem;
   gap: 0.5rem;
 }
@@ -33,7 +33,21 @@
   min-width: 4.75rem;
   height: 2rem;
   padding-inline: 0.7rem;
+  color: var(--cui-primary);
+  background: rgba(var(--cui-primary-rgb), 0.08);
+  border-color: rgba(var(--cui-primary-rgb), 0.42);
+  font-weight: 500;
   white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.app-knowledge-header-help:hover,
+.app-knowledge-header-help:focus,
+.app-knowledge-header-help:active {
+  color: var(--cui-primary);
+  background: rgba(var(--cui-primary-rgb), 0.14);
+  border-color: rgba(var(--cui-primary-rgb), 0.62);
+  box-shadow: 0 0 0 0.12rem rgba(var(--cui-primary-rgb), 0.12);
 }
 
 .app-knowledge-header-help svg {
@@ -184,13 +198,15 @@
 .app-module-search-fab {
   position: fixed;
   right: max(1rem, env(safe-area-inset-right));
-  bottom: calc(4.55rem + env(safe-area-inset-bottom));
+  bottom: var(--app-mobile-floating-action-bottom);
   z-index: 1045;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.85rem;
-  height: 2.85rem;
+  width: var(--app-mobile-icon-target);
+  min-width: var(--app-mobile-icon-target);
+  height: var(--app-mobile-icon-target);
+  min-height: var(--app-mobile-icon-target);
   padding: 0;
   border-radius: 50%;
   box-shadow: var(--app-shadow-lg);
@@ -212,6 +228,18 @@
   box-shadow: none;
 }
 
+.app-module-search-modal .app-module-search__field {
+  min-height: 2.5rem;
+}
+
+.app-module-search-modal .app-module-search__input {
+  height: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.75rem;
+  font-size: var(--app-font-size-sm);
+  line-height: 1.35;
+}
+
 @media (min-width: 768px) {
   .app-module-search-fab {
     display: none;
@@ -229,15 +257,17 @@
 
   .app-knowledge-header-help {
     position: fixed;
-    right: calc(max(1rem, env(safe-area-inset-right)) + 3.35rem);
-    bottom: calc(4.55rem + env(safe-area-inset-bottom));
-    z-index: 1045;
-    width: 2.85rem;
-    min-width: 2.85rem;
-    height: 2.85rem;
+    right: calc(max(1rem, env(safe-area-inset-right)) + var(--app-mobile-icon-target) + 0.5rem);
+    bottom: var(--app-mobile-floating-action-bottom);
+    z-index: 1046;
+    width: var(--app-mobile-icon-target);
+    min-width: var(--app-mobile-icon-target);
+    height: var(--app-mobile-icon-target);
+    min-height: var(--app-mobile-icon-target);
     padding: 0;
     border-radius: 50%;
     box-shadow: var(--app-shadow-lg);
+    pointer-events: auto;
   }
 
   .app-knowledge-header-help svg {
@@ -247,6 +277,53 @@
 
   .app-knowledge-header-help__label {
     display: none;
+  }
+
+  .app-module-search-modal .modal-dialog {
+    position: fixed;
+    inset-block-start: auto;
+    inset-block-end: calc(var(--app-mobile-fixed-bottom-inset) + 0.65rem);
+    inset-inline-start: max(0.75rem, env(safe-area-inset-left));
+    inset-inline-end: max(0.75rem, env(safe-area-inset-right));
+    width: auto;
+    max-width: none;
+    margin: 0;
+  }
+
+  .app-module-search-modal .modal-content {
+    max-height: calc(100dvh - var(--app-mobile-fixed-bottom-inset) - 1.7rem);
+    border-radius: var(--app-radius-lg);
+    overflow: hidden;
+  }
+
+  .app-module-search-modal .modal-header {
+    min-height: 3rem;
+    padding: 0.75rem 1rem 0.5rem;
+  }
+
+  .app-module-search-modal .modal-title {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .app-module-search-modal .modal-body {
+    padding: 0.35rem 1rem 1rem;
+    overflow-y: auto;
+  }
+
+  .app-module-search-modal .app-module-search {
+    display: block;
+  }
+
+  .app-module-search-modal .app-module-search__results {
+    max-height: min(45vh, 18rem);
+  }
+
+  .app-module-search__result,
+  .app-module-search__empty,
+  .app-module-search__suggestion-button,
+  .app-module-search-modal .btn-close {
+    min-height: var(--app-mobile-touch-target);
   }
 }
 

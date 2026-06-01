@@ -66,7 +66,13 @@ export default function IhProposals() {
   )
 
   const handleDelete = async (id) => {
-    if (!(await dialog.confirm('Are you sure you want to delete this proposal?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this proposal?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const result = await deleteTemplate('ih', id)
       if (isSuccess(result)) {

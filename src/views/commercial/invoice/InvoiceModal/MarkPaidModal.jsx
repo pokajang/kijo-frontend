@@ -75,10 +75,10 @@ const MarkPaidModal = ({ visible, onClose, invoice, onConfirmed }) => {
         </CForm>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={handleConfirm}>
+        <CButton color="primary" size="sm" onClick={handleConfirm}>
           Confirm
         </CButton>
       </CModalFooter>

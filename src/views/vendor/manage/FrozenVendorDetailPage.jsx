@@ -76,6 +76,10 @@ const FrozenVendorDetailPage = () => {
     if (
       !(await dialog.confirm(
         `Are you sure you want to permanently delete "${vendor?.vendorName}"? This action cannot be undone.`,
+        {
+          confirmText: 'Delete',
+          confirmColor: 'danger',
+        },
       ))
     ) {
       return

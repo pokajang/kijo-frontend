@@ -6,6 +6,7 @@ import dialog from '../../../components/dialog/dialogService'
 import { DataTableActionButtonGroup, DataTableStatusBadge } from '../../../components/datatable'
 import { useAuth } from '../../../auth/AuthProvider'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
+import { fetchDetailJson } from '../../../utils/detailPages'
 
 const formatDate = (s) => {
   if (!s) return '-'
@@ -37,11 +38,15 @@ export default function ViewProcedure() {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}procedures/${id}`, {
+        const detail = await fetchDetailJson(`${import.meta.env.VITE_API_BASE}procedures/${id}`, {
           credentials: 'include',
         })
-        const data = await res.json()
-        if (!res.ok || data?.success === false) {
+        if (detail.notFound) {
+          setItem(null)
+          return
+        }
+        const data = detail.data
+        if (!detail.ok || data?.success === false) {
           throw new Error(data?.message || 'Failed to load procedure.')
         }
         const rec = data?.item || (Array.isArray(data?.items) ? data.items[0] : null)
@@ -72,7 +77,10 @@ export default function ViewProcedure() {
 
   const handleDelete = async () => {
     if (!item?.id) return
-    const ok = await dialog.confirm('Delete this procedure? This action cannot be undone.')
+    const ok = await dialog.confirm('Delete this procedure? This action cannot be undone.', {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!ok) return
 
     try {

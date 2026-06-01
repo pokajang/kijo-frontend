@@ -180,7 +180,6 @@ const CallTable = ({
   onDeleteContact,
   currentUser,
   showInlineStats = true,
-  statsScopeLabel,
   renderQuickFilters,
   desktopUtilityPortalId,
   mobileUtilityPortalId,
@@ -342,9 +341,7 @@ const CallTable = ({
 
   return (
     <>
-      {showInlineStats && (
-        <StatsStrip loading={loading} items={statsItems} scopeLabel={statsScopeLabel} />
-      )}
+      {showInlineStats && <StatsStrip loading={loading} items={statsItems} />}
       {beforeList}
       <DataTableRecordList
         rows={rows}

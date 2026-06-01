@@ -37,15 +37,81 @@ export const supportModuleTabs = [
   { key: 'feedback', label: 'System Feedback', to: '/support/feedback' },
 ]
 
+export const accountModuleTabs = [
+  { key: 'profile', label: 'Profile', to: '/my/profile' },
+  { key: 'signature', label: 'Signature', to: '/my/signature' },
+  { key: 'password', label: 'Password', to: '/my/password' },
+]
+
+export const salarySelfModuleTabs = [
+  { key: 'apply', label: 'Apply Salary', to: '/my/salary/apply' },
+  {
+    key: 'records',
+    label: 'Salary Records',
+    to: '/my/salary/records',
+    notificationTabKey: 'my.salary.records',
+  },
+  { key: 'other-claim-apply', label: 'Apply Other Claim', to: '/my/salary/other-claims/apply' },
+  {
+    key: 'other-claim-records',
+    label: 'Other Claim Records',
+    to: '/my/salary/other-claims/records',
+    notificationTabKey: 'my.salary.other-claim-records',
+  },
+  { key: 'settings', label: 'Settings', to: '/my/salary/settings' },
+]
+
 export const systemAdminModuleTabs = [
   { key: 'migration-status', label: 'Migration Status' },
   { key: 'email-test', label: 'Email Test' },
+  { key: 'monthly-report-test', label: 'Monthly Report Test' },
+  {
+    key: 'ai-workload-governance',
+    label: 'AI Workload Governance',
+    notificationTabKey: 'system-admin.ai-workload-governance',
+  },
+  { key: 'ai-assistant-governance', label: 'AI Assistant Governance' },
 ]
 
 export const vendorModuleTabs = [
+  {
+    key: 'payment-records',
+    label: 'Payment Queue',
+    to: '/vendor/payment-records',
+    notificationTabKey: 'vendor.payment-records',
+  },
+  { key: 'paid', label: 'Vendor Ledger', to: '/vendor/paid' },
   { key: 'manage', label: 'Manage Vendors', to: '/vendor/manage' },
   { key: 'frozen', label: 'Frozen Vendors', to: '/vendor/frozen' },
-  { key: 'payment-records', label: 'Payment Records', to: '/vendor/payment-records' },
+  {
+    key: 'workflow',
+    label: 'Workflow Settings',
+    to: '/workflows/vendor-payment',
+    allowedRoles: ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank'],
+  },
+]
+
+export const workflowModuleTabs = [
+  { key: 'salary-application', label: 'Salary', to: '/workflows/salary-application' },
+  { key: 'vendor-payment', label: 'Vendor Payment', to: '/workflows/vendor-payment' },
+  { key: 'leave-application', label: 'Leave Application', to: '/workflows/leave-application' },
+  { key: 'quote-price-exception', label: 'Negotiation', to: '/workflows/quote-price-exception' },
+]
+
+export const financialModuleTabs = [
+  {
+    key: 'salary-records',
+    label: 'Salary Records',
+    to: '/financial/salary-records',
+    notificationTabKey: 'financial.salary-records',
+  },
+  {
+    key: 'other-claim-records',
+    label: 'Other Claim Records',
+    to: '/financial/other-claim-records',
+    notificationTabKey: 'financial.other-claim-records',
+  },
+  { key: 'balance-sheet', label: 'Balance Sheet', to: '/financial/balance-sheet' },
 ]
 
 export const catalogModuleTabs = [

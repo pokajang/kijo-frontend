@@ -23,14 +23,14 @@ const LeaveWithoutSavingModal = ({
       <CButton color="secondary" variant="outline" size="sm" onClick={onClose} disabled={isSaving}>
         Stay
       </CButton>
+      <CButton color="danger" size="sm" onClick={onDiscard} disabled={isSaving}>
+        Discard Changes
+      </CButton>
       {isDirty && !hasUnsavedClauseForm && (
-        <CButton color="secondary" size="sm" onClick={onSaveAndLeave} disabled={isSaving}>
+        <CButton color="primary" size="sm" onClick={onSaveAndLeave} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save Template Draft and Leave'}
         </CButton>
       )}
-      <CButton color="danger" variant="outline" size="sm" onClick={onDiscard} disabled={isSaving}>
-        Discard Changes
-      </CButton>
     </CModalFooter>
   </CModal>
 )

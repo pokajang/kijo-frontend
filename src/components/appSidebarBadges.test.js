@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { applySidebarBadges } from './appSidebarBadges'
 
 describe('applySidebarBadges', () => {
-  it('adds a danger badge to Clients for expired vendor registrations', () => {
+  it('adds a standard notification badge to Clients for expired vendor registrations', () => {
     const rows = applySidebarBadges(
       [
         { name: 'Clients', to: '/client/manage' },
@@ -13,7 +13,7 @@ describe('applySidebarBadges', () => {
     )
 
     expect(rows[0].badge).toEqual({
-      color: 'danger',
+      color: 'warning',
       text: '3',
       title: 'Vendor registrations need attention',
     })
@@ -37,6 +37,18 @@ describe('applySidebarBadges', () => {
       color: 'warning',
       text: '1',
       title: 'Leave requests need attention',
+    })
+  })
+
+  it('adds the workflow action badge to Vendors', () => {
+    const rows = applySidebarBadges([{ name: 'Vendors', to: '/vendor/payment-records' }], {
+      getRouteGroupCount: (route) => (route === '/vendor/payment-records' ? 4 : 0),
+    })
+
+    expect(rows[0].badge).toEqual({
+      color: 'warning',
+      text: '4',
+      title: 'Vendor payments need attention',
     })
   })
 })

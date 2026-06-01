@@ -2,9 +2,11 @@
 @use 'custom/dark';
 @use 'custom/scrollbars';
 @use 'custom/layout';
+@use 'custom/modals';
 @use 'custom/sidebar';
 @use 'custom/nav';
 @use 'custom/module-search';
+@use 'custom/internal-tools';
 @use 'custom/records';
 @use 'custom/data-table';
 @use 'custom/meetings';
@@ -13,7 +15,11 @@
 @use 'custom/kpi';
 @use 'custom/stats';
 @use 'custom/leave';
+@use 'custom/salary';
+@use 'custom/workflows';
+@use 'custom/account';
 @use 'custom/whats-new';
+@use 'custom/right-drawer';
 @use 'custom/knowledge';
 @use 'custom/badges';
 @use 'custom/theme-surfaces';

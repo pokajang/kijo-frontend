@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailFields, DataTableDetailShell } from '../../../components/datatable'
 import dialog from '../../../components/dialog/dialogService'
-import { fetchJson, findRecordById, getArrayFromPayload } from '../../../utils/detailPages'
+import {
+  fetchDetailJson,
+  fetchJson,
+  findRecordById,
+  getArrayFromPayload,
+} from '../../../utils/detailPages'
 import AppraisalModal from './AppraisalModal'
 import { deleteAppraisalRecord, handleInputChange, updateAppraisalRecord } from './actionHandlers'
 import infoDetails from './infoDetails'
@@ -53,7 +58,15 @@ const AppraisalRecordDetailPage = ({ mode = 'personal' }) => {
     setError('')
     try {
       if (isStaffMode) {
-        const data = await fetchJson(`${API_BASE}hr/appraisals/${encodeURIComponent(appraisalId)}`)
+        const detailResult = await fetchDetailJson(
+          `${API_BASE}hr/appraisals/${encodeURIComponent(appraisalId)}`,
+          { notFoundMessage: 'Appraisal record not found.' },
+        )
+        if (detailResult.notFound) {
+          setRecord(null)
+          return
+        }
+        const data = detailResult.data
         const found = data?.record || data?.data || data?.appraisal || data
         setRecord(normalizeAppraisal(found?.id ? found : null))
         if (!found?.id) setError('Appraisal record not found.')
@@ -108,7 +121,13 @@ const AppraisalRecordDetailPage = ({ mode = 'personal' }) => {
   }
 
   const removeRecord = useCallback(async () => {
-    if (!(await dialog.confirm('Delete this appraisal record?'))) return
+    if (
+      !(await dialog.confirm('Delete this appraisal record?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       await deleteAppraisalRecord(appraisalId)
       dialog.alert('Appraisal deleted.')

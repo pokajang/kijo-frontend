@@ -61,8 +61,29 @@ const Form = ({
       {/* Action Buttons */}
       <CRow className="mt-4">
         <CCol>
-          <div className="d-flex gap-2">
-            <CButton color="primary" onClick={handleSave} disabled={saving}>
+          <div className="d-flex justify-content-end gap-2">
+            {isEdit ? (
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+                disabled={saving}
+              >
+                Cancel
+              </CButton>
+            ) : (
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                disabled={saving}
+              >
+                Reset
+              </CButton>
+            )}
+            <CButton color="primary" size="sm" onClick={handleSave} disabled={saving}>
               {saving
                 ? finalizingBmTranslation
                   ? 'Saving BM Proposal...'
@@ -75,15 +96,6 @@ const Form = ({
                     ? 'Update Changes'
                     : 'Save Template'}
             </CButton>
-            {isEdit ? (
-              <CButton color="secondary" variant="outline" onClick={handleCancel} disabled={saving}>
-                Cancel
-              </CButton>
-            ) : (
-              <CButton color="secondary" variant="outline" onClick={handleReset} disabled={saving}>
-                Reset
-              </CButton>
-            )}
           </div>
         </CCol>
       </CRow>

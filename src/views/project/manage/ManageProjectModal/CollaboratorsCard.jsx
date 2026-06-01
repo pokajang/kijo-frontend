@@ -15,10 +15,6 @@ import {
   CTableHeaderCell,
   CTableRow,
   CTableDataCell,
-  CDropdown,
-  CDropdownMenu,
-  CDropdownItem,
-  CDropdownToggle,
   CModal,
   CModalHeader,
   CModalTitle,
@@ -26,10 +22,8 @@ import {
   CModalFooter,
 } from '@coreui/react'
 
-import CIcon from '@coreui/icons-react'
-import { cilOptions } from '@coreui/icons'
 import Select from '../../../../components/forms/ThemedSelect'
-import { DataTableLoadingState } from '../../../../components/datatable'
+import { DataTableActionMenu, DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
 import {
   addProjectCollaborator,
@@ -157,7 +151,13 @@ const CollaboratorsCard = ({ projectId, onProgressUpdate }) => {
 
   const handleRemoveCollaborator = async (staffId) => {
     if (removingStaffId != null || !staffId || !projectId) return
-    if (!(await dialog.confirm('Remove this collaborator from the project?'))) return
+    if (
+      !(await dialog.confirm('Remove this collaborator from the project?', {
+        confirmText: 'Remove',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     try {
       setRemovingStaffId(staffId)
@@ -195,7 +195,10 @@ const CollaboratorsCard = ({ projectId, onProgressUpdate }) => {
   return (
     <>
       <CCardHeader className="rounded-0 d-flex align-items-center justify-content-between">
-        <strong>Collaborators</strong>
+        <div className="d-flex align-items-center gap-2">
+          <strong>Collaborators</strong>
+          {!loading && <small className="text-medium-emphasis">({collaborators.length})</small>}
+        </div>
         <CButton
           color="primary"
           variant="outline"
@@ -253,22 +256,22 @@ const CollaboratorsCard = ({ projectId, onProgressUpdate }) => {
                       </CTableDataCell>
 
                       <CTableDataCell className="text-end">
-                        <CDropdown portal>
-                          <CDropdownToggle color="transparent" size="sm">
-                            <CIcon icon={cilOptions} />
-                          </CDropdownToggle>
-                          <CDropdownMenu>
-                            <CDropdownItem
-                              className="text-danger"
-                              disabled={removingStaffId != null}
-                              onClick={() => handleRemoveCollaborator(staff.staff_id)}
-                            >
-                              {removingStaffId === staff.staff_id
-                                ? 'Removing...'
-                                : 'Remove Collaborator'}
-                            </CDropdownItem>
-                          </CDropdownMenu>
-                        </CDropdown>
+                        <DataTableActionMenu
+                          record={staff}
+                          actions={[
+                            {
+                              key: 'remove-collaborator',
+                              label:
+                                removingStaffId === staff.staff_id
+                                  ? 'Removing...'
+                                  : 'Remove Collaborator',
+                              danger: true,
+                              disabled: removingStaffId != null,
+                              onClick: () => handleRemoveCollaborator(staff.staff_id),
+                            },
+                          ]}
+                          ariaLabel="Collaborator actions"
+                        />
                       </CTableDataCell>
                     </CTableRow>
                   ))
@@ -335,7 +338,6 @@ const CollaboratorsCard = ({ projectId, onProgressUpdate }) => {
           <CButton
             color="primary"
             size="sm"
-            variant="outline"
             onClick={handleAddCollaborator}
             disabled={!selectedStaff || !selectedRole || addingCollaborator}
           >

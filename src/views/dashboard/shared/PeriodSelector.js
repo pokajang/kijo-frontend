@@ -37,6 +37,7 @@ const PeriodSelector = ({
   buttonColor = 'primary',
   buttonVariant = 'outline',
   buttonClassName = '',
+  ariaLabel = 'Reporting period',
 }) => {
   const idBase = useId()
   const startDateId = `${idBase}-startDate`
@@ -49,6 +50,7 @@ const PeriodSelector = ({
     color: buttonColor,
     className: buttonClassName,
     'data-api-busy-allow': 'true',
+    'aria-label': ariaLabel,
   }
 
   if (buttonVariant) {

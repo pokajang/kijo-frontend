@@ -125,7 +125,12 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
                   <CTableDataCell>{item.quantity}</CTableDataCell>
                   <CTableDataCell>{item.unit || 'pcs'}</CTableDataCell>
                   <CTableDataCell>
-                    <CButton color="danger" size="sm" onClick={() => handleRemoveItem(idx)}>
+                    <CButton
+                      color="danger"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveItem(idx)}
+                    >
                       Remove
                     </CButton>
                   </CTableDataCell>
@@ -184,7 +189,7 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
           </CCol>
 
           <CCol md={1} className="d-flex align-items-end">
-            <CButton color="primary" variant="outline" onClick={handleAddItem} disabled={!isValid}>
+            <CButton color="primary" size="sm" onClick={handleAddItem} disabled={!isValid}>
               Add
             </CButton>
           </CCol>

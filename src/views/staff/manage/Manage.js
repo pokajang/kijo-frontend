@@ -2,12 +2,16 @@
 
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CRow, CCol, CCard, CCardBody, CCardHeader, CInputGroup, CFormInput } from '@coreui/react'
+import { CRow, CCol, CCard, CCardBody, CInputGroup, CFormInput } from '@coreui/react'
 
+import { DataTableCardHeader, DataTableStatsToggle } from '../../../components/datatable'
 import StaffTable from './StaffTable'
 import ViewStaffModal from './ViewStaffModal'
 import dialog from '../../../components/dialog/dialogService'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 export default function Manage() {
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('staff.manage')
   const [staffList, setStaffList] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [viewModalVisible, setViewModalVisible] = useState(false)
@@ -54,7 +58,13 @@ export default function Manage() {
 
   // terminate
   const handleTerminateStaff = async (staffId) => {
-    if (!(await dialog.confirm('Are you sure? This cannot be undone.'))) return
+    if (
+      !(await dialog.confirm('Are you sure? This cannot be undone.', {
+        confirmText: 'Terminate',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}/terminate`,
@@ -103,26 +113,34 @@ export default function Manage() {
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4">
-            <CCardHeader>
-              <strong>Manage Staff</strong>
-            </CCardHeader>
+            <DataTableCardHeader title="Manage Staff">
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
+              />
+            </DataTableCardHeader>
             <CCardBody>
               {/* Search bar sits here, above the table */}
-              <CCol>
-                <CInputGroup>
-                  <CFormInput
-                    placeholder="Search by name, code, email, mobile, position, or department…"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </CInputGroup>
-              </CCol>
+              {controlsVisible && (
+                <CCol>
+                  <CInputGroup>
+                    <CFormInput
+                      placeholder="Search by name, code, email, mobile, position, or department…"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </CInputGroup>
+                </CCol>
+              )}
               {/* Staff table */}
               <StaffTable
                 staffList={filteredStaff}
                 onView={handleViewStaff}
                 onEdit={handleEditStaff}
                 onTerminate={handleTerminateStaff}
+                statsVisible={statsVisible}
               />
             </CCardBody>
           </CCard>

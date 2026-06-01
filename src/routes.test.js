@@ -83,12 +83,24 @@ describe('vendor frozen routes', () => {
   })
 })
 
+describe('vendor workflow routes', () => {
+  it('redirects the old payment workflow settings route to central workflows', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/vendor/workflow',
+          name: 'Vendor Payment Workflow',
+        }),
+      ]),
+    )
+  })
+})
+
 describe('staff leave admin routes', () => {
-  it('limits entitlement and workflow admin routes to HR and System Admin', () => {
+  it('limits entitlement admin routes to HR and System Admin', () => {
     const protectedPaths = [
       '/staff/leaves/entitlements',
       '/staff/leaves/assign',
-      '/staff/leaves/workflow',
       '/staff/leaves/entitlements/:entitlementId/edit',
     ]
 
@@ -98,6 +110,142 @@ describe('staff leave admin routes', () => {
       expect(route?.element?.props?.allowedRoles).toEqual(['System Admin', 'HR'])
     })
   })
+
+  it('redirects the old leave workflow route to central workflows', () => {
+    const route = routes.find((item) => item.path === '/staff/leaves/workflow')
+
+    expect(route).toBeTruthy()
+    expect(route?.element?.props?.allowedRoles).toBeUndefined()
+  })
+})
+
+describe('personal salary routes', () => {
+  it('includes salary records and apply workspace routes', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/my/salary/records',
+          name: 'My Salary Records',
+        }),
+        expect.objectContaining({
+          path: '/my/salary',
+          name: 'My Salary Records',
+        }),
+        expect.objectContaining({
+          path: '/my/salary/apply',
+          name: 'Apply Salary',
+        }),
+        expect.objectContaining({
+          path: '/my/salary/settings',
+          name: 'My Salary Settings',
+        }),
+        expect.objectContaining({
+          path: '/my/salary/records/:salaryRecordId',
+          name: 'My Salary Details',
+        }),
+      ]),
+    )
+  })
+
+  it('keeps the salary detail route before the salary records route', () => {
+    const detailIndex = routes.findIndex(
+      (route) => route.path === '/my/salary/records/:salaryRecordId',
+    )
+    const recordsIndex = routes.findIndex((route) => route.path === '/my/salary/records')
+
+    expect(detailIndex).toBeGreaterThanOrEqual(0)
+    expect(recordsIndex).toBeGreaterThanOrEqual(0)
+    expect(detailIndex).toBeLessThan(recordsIndex)
+  })
+
+  it('redirects the old salary root to the records tab URL', () => {
+    const route = routes.find((item) => item.path === '/my/salary')
+
+    expect(route?.element?.props?.to).toBe('/my/salary/records')
+    expect(route?.element?.props?.replace).toBe(true)
+  })
+})
+
+describe('financial routes', () => {
+  it('includes the internal operations financial salary records page', () => {
+    const route = routes.find((item) => item.path === '/financial/salary-records')
+
+    expect(route).toEqual(
+      expect.objectContaining({
+        path: '/financial/salary-records',
+        name: 'Salary Records',
+      }),
+    )
+    expect(route?.element?.props?.allowedRoles).toEqual([
+      'System Admin',
+      'Manager',
+      'HR',
+      'Finance',
+      'Account',
+      'Bank',
+    ])
+  })
+
+  it('includes the financial balance sheet page', () => {
+    const route = routes.find((item) => item.path === '/financial/balance-sheet')
+
+    expect(route).toEqual(
+      expect.objectContaining({
+        path: '/financial/balance-sheet',
+        name: 'Balance Sheet',
+      }),
+    )
+    expect(route?.element?.props?.allowedRoles).toEqual([
+      'System Admin',
+      'Manager',
+      'HR',
+      'Finance',
+      'Account',
+      'Bank',
+    ])
+  })
+})
+
+describe('central workflow routes', () => {
+  it('redirects the workflow root and includes template settings routes', () => {
+    const root = routes.find((item) => item.path === '/workflows')
+    const settings = routes.find((item) => item.path === '/workflows/:templateKey')
+
+    expect(root?.element?.props?.to).toBe('/workflows/salary-application')
+    expect(settings?.element?.props?.allowedRoles).toEqual([
+      'System Admin',
+      'Manager',
+      'HR',
+      'Finance',
+      'Account',
+      'Bank',
+    ])
+  })
+})
+
+describe('personal account routes', () => {
+  it('includes profile, signature, and password pages', () => {
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/my/account',
+          name: 'My Account',
+        }),
+        expect.objectContaining({
+          path: '/my/profile',
+          name: 'My Profile',
+        }),
+        expect.objectContaining({
+          path: '/my/signature',
+          name: 'My Signature',
+        }),
+        expect.objectContaining({
+          path: '/my/password',
+          name: 'My Password',
+        }),
+      ]),
+    )
+  })
 })
 
 describe('commercial create routes', () => {
@@ -106,6 +254,8 @@ describe('commercial create routes', () => {
       ['/commercial/invoice/create/:projectId', '/commercial/invoice/:id'],
       ['/commercial/delivery-order/create/:projectId', '/commercial/delivery-order/:id'],
       ['/commercial/jd14/create/:projectId', '/commercial/jd14/:id'],
+      ['/commercial/vendor-loa/create/:projectId', '/commercial/vendor-loa/:id'],
+      ['/commercial/supplier-po/create/:projectId', '/commercial/supplier-po/:id'],
     ]
 
     routePairs.forEach(([createPath, detailPath]) => {

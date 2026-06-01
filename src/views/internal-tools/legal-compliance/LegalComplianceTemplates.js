@@ -39,6 +39,7 @@ import LegalComplianceTemplateGrid from './LegalComplianceTemplateGrid'
 
 const LegalComplianceTemplates = () => {
   const navigate = useNavigate()
+  const templatesPath = '/internal-tools/legal-compliance/templates'
   const [templates, setTemplates] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -142,6 +143,7 @@ const LegalComplianceTemplates = () => {
       setCreateDisclaimerText('')
       navigate(
         `/internal-tools/legal-compliance/templates/${payload?.data?.slug || createTemplateSlug(name)}?mode=edit`,
+        { state: { returnTo: templatesPath } },
       )
     } catch (createError) {
       setError(createError.message || 'Could not create template.')
@@ -207,6 +209,7 @@ const LegalComplianceTemplates = () => {
       setMessage(payload.message || 'Template duplicated.')
       navigate(
         `/internal-tools/legal-compliance/templates/${payload?.data?.slug || createTemplateSlug(name)}?mode=edit`,
+        { state: { returnTo: templatesPath } },
       )
     } catch (duplicateError) {
       setError(duplicateError.message || 'Could not duplicate template.')
@@ -310,6 +313,7 @@ const LegalComplianceTemplates = () => {
       onClick: () =>
         navigate(
           `/internal-tools/legal-compliance/templates/${getTemplateRouteKey(template)}?mode=edit`,
+          { state: { returnTo: templatesPath } },
         ),
     },
     {
@@ -381,8 +385,9 @@ const LegalComplianceTemplates = () => {
           <CModalBody>
             <CRow className="g-3">
               <CCol xs={12}>
-                <CFormLabel>Template Name</CFormLabel>
+                <CFormLabel htmlFor="legal-template-create-name">Template Name</CFormLabel>
                 <CFormInput
+                  id="legal-template-create-name"
                   value={createName}
                   onChange={(event) => setCreateName(event.target.value)}
                   placeholder="Enter template name"
@@ -391,8 +396,9 @@ const LegalComplianceTemplates = () => {
                 />
               </CCol>
               <CCol xs={12}>
-                <CFormLabel>Description</CFormLabel>
+                <CFormLabel htmlFor="legal-template-create-description">Description</CFormLabel>
                 <CFormInput
+                  id="legal-template-create-description"
                   value={createDescription}
                   onChange={(event) => setCreateDescription(event.target.value)}
                   placeholder="Enter template description"
@@ -400,8 +406,9 @@ const LegalComplianceTemplates = () => {
                 />
               </CCol>
               <CCol xs={12}>
-                <CFormLabel>Assessment Tier</CFormLabel>
+                <CFormLabel htmlFor="legal-template-create-tier">Assessment Tier</CFormLabel>
                 <CFormSelect
+                  id="legal-template-create-tier"
                   value={createTier}
                   onChange={(event) => {
                     const nextTier = normalizeAssessmentTier(event.target.value)
@@ -424,8 +431,9 @@ const LegalComplianceTemplates = () => {
                 </CFormSelect>
               </CCol>
               <CCol xs={12}>
-                <CFormLabel>Report Title</CFormLabel>
+                <CFormLabel htmlFor="legal-template-create-report-title">Report Title</CFormLabel>
                 <CFormInput
+                  id="legal-template-create-report-title"
                   value={createReportTitle}
                   onChange={(event) => setCreateReportTitle(event.target.value)}
                   placeholder={getDefaultReportTitle(createName.trim(), createTier)}
@@ -433,8 +441,9 @@ const LegalComplianceTemplates = () => {
                 />
               </CCol>
               <CCol xs={12}>
-                <CFormLabel>Disclaimer Text</CFormLabel>
+                <CFormLabel htmlFor="legal-template-create-disclaimer">Disclaimer Text</CFormLabel>
                 <CFormTextarea
+                  id="legal-template-create-disclaimer"
                   rows={4}
                   value={createDisclaimerText}
                   onChange={(event) => setCreateDisclaimerText(event.target.value)}
@@ -467,8 +476,9 @@ const LegalComplianceTemplates = () => {
             <CModalTitle>Duplicate Template</CModalTitle>
           </CModalHeader>
           <CModalBody>
-            <CFormLabel>Template Name</CFormLabel>
+            <CFormLabel htmlFor="legal-template-duplicate-name">Template Name</CFormLabel>
             <CFormInput
+              id="legal-template-duplicate-name"
               value={duplicateName}
               onChange={(event) => setDuplicateName(event.target.value)}
               placeholder="Enter duplicated template name"
@@ -499,8 +509,9 @@ const LegalComplianceTemplates = () => {
             <CModalTitle>Rename Template</CModalTitle>
           </CModalHeader>
           <CModalBody>
-            <CFormLabel>Template Name</CFormLabel>
+            <CFormLabel htmlFor="legal-template-rename-name">Template Name</CFormLabel>
             <CFormInput
+              id="legal-template-rename-name"
               value={renameName}
               onChange={(event) => setRenameName(event.target.value)}
               placeholder="Enter template name"

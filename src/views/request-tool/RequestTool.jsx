@@ -119,10 +119,15 @@ export default function RequestTool() {
           )}
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={() => setShowPendingNotice(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPendingNotice(false)}
+          >
             Close
           </CButton>
-          <CButton color="primary" onClick={handleUpdatePendingAchievement}>
+          <CButton color="primary" size="sm" onClick={handleUpdatePendingAchievement}>
             Update Achievement
           </CButton>
         </CModalFooter>

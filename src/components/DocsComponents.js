@@ -27,7 +27,7 @@ const DocsComponents = (props) => (
       </div>
       <div className="col-md-auto col-12 mt-3 mt-lg-0">
         <a
-          className="btn btn-primary text-nowrap text-white"
+          className="btn btn-primary btn-sm text-nowrap text-white"
           href={`https://coreui.io/react/docs/${props.href}`}
           target="_blank"
           rel="noopener noreferrer"

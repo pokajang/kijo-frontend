@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 import { DataTableLoadingState } from '../../../components/datatable'
 import {
@@ -19,8 +19,10 @@ import {
   getTemplateRouteKey,
   resolveTemplateIdFromRouteKey,
 } from './legalComplianceTemplateUtils'
+import { insertItem, moveItem } from './utils/reorder'
 
 const LegalComplianceTemplateGroupEditor = () => {
+  const location = useLocation()
   const navigate = useNavigate()
   const { templateId: templateRouteKey, groupKey } = useParams()
   const [template, setTemplate] = useState(null)
@@ -34,6 +36,8 @@ const LegalComplianceTemplateGroupEditor = () => {
   const [activeClauseForm, setActiveClauseForm] = useState(null)
   const [clauseTitle, setClauseTitle] = useState('')
   const [clauseExcerpt, setClauseExcerpt] = useState('')
+  const [newClauseInsertIndex, setNewClauseInsertIndex] = useState(null)
+  const [isRearrangingClauses, setIsRearrangingClauses] = useState(false)
 
   const draftContent = useMemo(
     () => template?.draft_content || emptyContent(template?.name),
@@ -54,6 +58,12 @@ const LegalComplianceTemplateGroupEditor = () => {
   const activeGroup = activeGroupIndex >= 0 ? groups[activeGroupIndex] : null
   const templatePathKey = template ? getTemplateRouteKey(template, template.name) : templateRouteKey
   const returnPath = `/internal-tools/legal-compliance/templates/${templatePathKey}?mode=edit`
+  const returnNavigationState =
+    typeof location.state?.returnTo === 'string'
+      ? {
+          returnTo: location.state.returnTo,
+        }
+      : undefined
   const activeClause =
     typeof activeClauseForm === 'number' ? activeGroup?.clauses?.[activeClauseForm] : null
   const hasUnsavedClauseForm =
@@ -74,6 +84,8 @@ const LegalComplianceTemplateGroupEditor = () => {
       setIsDirty(false)
       setSaveState('loaded')
       setPendingNavigation(null)
+      setNewClauseInsertIndex(null)
+      setIsRearrangingClauses(false)
     } catch (loadError) {
       setError(loadError.message || 'Could not load template.')
     } finally {
@@ -91,6 +103,18 @@ const LegalComplianceTemplateGroupEditor = () => {
     return () => window.clearTimeout(timer)
   }, [message])
 
+  useEffect(() => {
+    if (!isDirty && !hasUnsavedClauseForm) return undefined
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedClauseForm, isDirty])
+
   const updateContent = (updater) => {
     setTemplate((current) => {
       const currentContent = current?.draft_content || emptyContent(current?.name)
@@ -107,8 +131,10 @@ const LegalComplianceTemplateGroupEditor = () => {
     })
   }
 
-  const openAddClauseForm = () => {
+  const openAddClauseForm = (insertIndex = activeGroup?.clauses?.length || 0) => {
     setActiveClauseForm('new')
+    setNewClauseInsertIndex(insertIndex)
+    setIsRearrangingClauses(false)
     setClauseTitle('')
     setClauseExcerpt('')
   }
@@ -116,12 +142,14 @@ const LegalComplianceTemplateGroupEditor = () => {
   const openEditClauseForm = (clauseIndex) => {
     const clause = activeGroup?.clauses?.[clauseIndex]
     setActiveClauseForm(clauseIndex)
+    setNewClauseInsertIndex(null)
     setClauseTitle(clause?.title || '')
     setClauseExcerpt(clause?.excerpt || '')
   }
 
   const closeClauseForm = () => {
     setActiveClauseForm(null)
+    setNewClauseInsertIndex(null)
     setClauseTitle('')
     setClauseExcerpt('')
   }
@@ -133,7 +161,7 @@ const LegalComplianceTemplateGroupEditor = () => {
     }
 
     if (navigation.type === 'back') {
-      navigate(returnPath)
+      navigate(returnPath, { state: returnNavigationState })
       return
     }
 
@@ -148,7 +176,7 @@ const LegalComplianceTemplateGroupEditor = () => {
     closeClauseForm()
 
     if (navigation?.type === 'back') {
-      navigate(returnPath)
+      navigate(returnPath, { state: returnNavigationState })
       return
     }
 
@@ -187,7 +215,11 @@ const LegalComplianceTemplateGroupEditor = () => {
 
         return {
           ...group,
-          clauses: [...(group.clauses || []), nextClause],
+          clauses: insertItem(
+            group.clauses || [],
+            nextClause,
+            newClauseInsertIndex ?? group.clauses?.length ?? 0,
+          ),
         }
       }),
     }))
@@ -210,6 +242,30 @@ const LegalComplianceTemplateGroupEditor = () => {
           : group,
       ),
     }))
+  }
+
+  const moveClause = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return
+    updateContent((content) => {
+      let didMove = false
+      const nextGroups = (content.groups || []).map((group, index) => {
+        if (index !== activeGroupIndex) return group
+        const currentClauses = group.clauses || []
+        const nextClauses = moveItem(currentClauses, fromIndex, toIndex)
+        if (nextClauses === currentClauses) return group
+        didMove = true
+        return {
+          ...group,
+          clauses: nextClauses,
+        }
+      })
+
+      if (!didMove) return content
+      return {
+        ...content,
+        groups: nextGroups,
+      }
+    })
   }
 
   const saveDraft = async ({ returnAfterSave = false } = {}) => {
@@ -235,7 +291,7 @@ const LegalComplianceTemplateGroupEditor = () => {
         updated_at: payload?.data?.updated_at || current?.updated_at,
       }))
       setMessage(payload.message || 'Template draft saved.')
-      if (returnAfterSave) navigate(returnPath)
+      if (returnAfterSave) navigate(returnPath, { state: returnNavigationState })
       return true
     } catch (saveError) {
       setError(saveError.message || 'Could not save template draft.')
@@ -248,6 +304,7 @@ const LegalComplianceTemplateGroupEditor = () => {
   const returnToGroups = () => requestNavigation({ type: 'back' })
 
   const handleClauseRowKeyDown = (event, clauseIndex) => {
+    if (isRearrangingClauses) return
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
     if (isSaving) return
@@ -365,7 +422,7 @@ const LegalComplianceTemplateGroupEditor = () => {
                           <CButton
                             color="primary"
                             size="sm"
-                            onClick={openAddClauseForm}
+                            onClick={() => openAddClauseForm(0)}
                             disabled={isSaving}
                           >
                             Add Clause
@@ -379,20 +436,34 @@ const LegalComplianceTemplateGroupEditor = () => {
                     <ClauseList
                       clauses={activeGroup.clauses || []}
                       activeClauseForm={activeClauseForm}
+                      newClauseInsertIndex={newClauseInsertIndex}
                       isSaving={isSaving}
+                      isRearranging={isRearrangingClauses}
                       renderClauseForm={renderClauseForm}
                       onEditClause={(clauseIndex) =>
                         requestNavigation({ type: 'editClause', clauseIndex })
                       }
                       onClauseKeyDown={handleClauseRowKeyDown}
                       onRemoveClause={removeClause}
+                      onInsertClause={openAddClauseForm}
+                      onMoveClause={moveClause}
                     />
-                    {activeClauseForm === 'new' && <div className="mt-3">{renderClauseForm()}</div>}
-                    <div className="d-flex justify-content-end mt-3">
+                    <div className="d-flex justify-content-end gap-2 flex-wrap mt-3">
+                      {(activeGroup.clauses || []).length > 1 && (
+                        <CButton
+                          color="secondary"
+                          variant={isRearrangingClauses ? undefined : 'outline'}
+                          size="sm"
+                          onClick={() => setIsRearrangingClauses((current) => !current)}
+                          disabled={isSaving || activeClauseForm !== null}
+                        >
+                          {isRearrangingClauses ? 'Done' : 'Rearrange'}
+                        </CButton>
+                      )}
                       <CButton
                         color="primary"
                         size="sm"
-                        onClick={openAddClauseForm}
+                        onClick={() => openAddClauseForm(activeGroup.clauses?.length || 0)}
                         disabled={isSaving || activeClauseForm !== null}
                       >
                         Add Clause

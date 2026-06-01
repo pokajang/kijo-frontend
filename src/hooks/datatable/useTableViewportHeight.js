@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+const TABLE_VIEWPORT_BOTTOM_RESERVE = 8
+
 export const useTableViewportHeight = (deps = []) => {
   const [tableViewportHeight, setTableViewportHeight] = useState(null)
   const tableViewportRef = useRef(null)
@@ -12,11 +14,12 @@ export const useTableViewportHeight = (deps = []) => {
 
       const footerHeight = tableFooterRef.current?.offsetHeight || 0
       const viewportRect = viewportEl.getBoundingClientRect()
-      const bottomPadding = 24
       const minHeight = 220
       const nextHeight = Math.max(
         minHeight,
-        Math.floor(window.innerHeight - viewportRect.top - footerHeight - bottomPadding),
+        Math.floor(
+          window.innerHeight - viewportRect.top - footerHeight - TABLE_VIEWPORT_BOTTOM_RESERVE,
+        ),
       )
 
       setTableViewportHeight((prev) => (prev === nextHeight ? prev : nextHeight))

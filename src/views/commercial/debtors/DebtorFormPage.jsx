@@ -222,7 +222,6 @@ const DebtorClientSelector = ({
                   No client found.{' '}
                   <CButton
                     color="primary"
-                    variant="outline"
                     size="sm"
                     onMouseDown={(event) => {
                       event.preventDefault()
@@ -321,10 +320,18 @@ const DebtorClientSelector = ({
   )
 }
 
+const ReviewItem = ({ label, value }) => (
+  <CCol xs={12} md={4}>
+    <div className="text-body-secondary small">{label}</div>
+    <div className="fw-semibold">{value || '-'}</div>
+  </CCol>
+)
+
 const DebtorFormPage = () => {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
+  const [step, setStep] = useState('edit')
   const [form, setForm] = useState(blankForm)
   const [attachment, setAttachment] = useState(null)
   const [loading, setLoading] = useState(isEdit)
@@ -695,13 +702,16 @@ const DebtorFormPage = () => {
     return data
   }
 
-  const handleSubmit = async (event) => {
+  const handleReview = (event) => {
     event.preventDefault()
     if (!selectedClient) {
       dialog.alert('Please select or create a client before saving the debtor.')
       return
     }
+    setStep('review')
+  }
 
+  const handleSubmit = async () => {
     setSaving(true)
     try {
       const endpoint = isEdit
@@ -716,6 +726,7 @@ const DebtorFormPage = () => {
       if (!res.ok || payload?.status !== 'success') {
         throw new Error(payload?.message || `Request failed with HTTP ${res.status}`)
       }
+      setStep('success')
       navigate('/commercial/debtors')
     } catch (error) {
       dialog.alert(error?.message || 'Unable to save manual debtor.')
@@ -747,8 +758,73 @@ const DebtorFormPage = () => {
           <CCardBody>
             {loading ? (
               <div className="text-center text-muted py-4">Loading manual debtor...</div>
+            ) : step === 'review' ? (
+              <>
+                <h5 className="mb-3">Review Manual Debtor</h5>
+                <CRow className="g-3">
+                  <ReviewItem label="Client" value={form.client_name} />
+                  <ReviewItem label="PIC" value={form.pic_name} />
+                  <ReviewItem label="Invoice Ref" value={form.invoice_ref_no} />
+                  <ReviewItem label="Invoice Date" value={form.invoice_date} />
+                  <ReviewItem label="Due Date" value={form.due_date} />
+                  <ReviewItem label="Payment Terms" value={getManualTermsLabel(form)} />
+                  <ReviewItem
+                    label="Grand Total"
+                    value={form.grand_total ? `RM ${form.grand_total}` : ''}
+                  />
+                  <ReviewItem label="Service" value={form.service_type} />
+                  <ReviewItem
+                    label="Service Period"
+                    value={buildServicePeriod(
+                      form.service_start_date,
+                      form.service_end_date,
+                      form.service_period,
+                    )}
+                  />
+                  <ReviewItem label="Status" value={form.status} />
+                  <ReviewItem label="Payment Method" value={form.payment_method} />
+                  <ReviewItem
+                    label="Attachment"
+                    value={attachment?.name || form.attachmentOriginalName}
+                  />
+                  {form.status === 'Paid' && (
+                    <>
+                      <ReviewItem label="Paid Date" value={form.paid_date} />
+                      <ReviewItem label="Paid Amount" value={form.paid_amount} />
+                      <ReviewItem label="Paid Remarks" value={form.paid_remarks} />
+                    </>
+                  )}
+                  <CCol xs={12}>
+                    <div className="text-body-secondary small">Remarks</div>
+                    <div className="fw-semibold" style={{ whiteSpace: 'pre-wrap' }}>
+                      {form.purpose || '-'}
+                    </div>
+                  </CCol>
+                </CRow>
+                <div className="d-flex justify-content-end gap-2 mt-4">
+                  <CButton
+                    type="button"
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStep('edit')}
+                    disabled={saving}
+                  >
+                    Back to Edit
+                  </CButton>
+                  <CButton
+                    type="button"
+                    color="primary"
+                    size="sm"
+                    disabled={saving}
+                    onClick={handleSubmit}
+                  >
+                    {saving ? 'Saving...' : isEdit ? 'Save Manual Debtor' : 'Create Manual Debtor'}
+                  </CButton>
+                </div>
+              </>
             ) : (
-              <CForm onSubmit={handleSubmit}>
+              <CForm onSubmit={handleReview}>
                 <DebtorClientSelector
                   clientOptions={clientOptions}
                   clientLoading={clientLoading}
@@ -970,7 +1046,7 @@ const DebtorFormPage = () => {
                   </CButton>
                   {selectedClient && (
                     <CButton type="submit" color="primary" size="sm" disabled={saving}>
-                      {saving ? 'Saving...' : 'Save'}
+                      Review Manual Debtor
                     </CButton>
                   )}
                 </div>

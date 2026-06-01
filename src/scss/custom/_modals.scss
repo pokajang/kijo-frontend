@@ -1,0 +1,24 @@
+.modal-header {
+  min-height: 0;
+  padding: 0.65rem 0.875rem;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.modal-header .btn-close {
+  padding: 0.35rem;
+  margin: -0.35rem -0.35rem -0.35rem auto;
+}
+
+.modal-footer {
+  gap: 0.5rem;
+  padding: 0.55rem 0.875rem;
+}
+
+.modal-footer > * {
+  margin: 0;
+}

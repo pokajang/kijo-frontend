@@ -135,8 +135,6 @@ export const createHandlers = ({
   setQuotes,
   setShowFailModal,
   setShowSuccessModal,
-  setShowViewModal,
-  setSelectedRecord,
   setSelectedRecordIdForFail,
   setSelectedRecordIdForSuccess,
   setFailureReason,
@@ -200,17 +198,15 @@ export const createHandlers = ({
   }
 
   return {
-    // View Action
-    handleView: (record) => {
-      setSelectedRecord(record)
-      setShowViewModal(true)
-      setShowFailModal(false)
-      setShowSuccessModal(false)
-    },
-
     // Delete Action
     handleDelete: async (id) => {
-      if (!(await dialog.confirm('Are you sure you want to delete this quotation record?'))) return
+      if (
+        !(await dialog.confirm('Are you sure you want to delete this quotation record?', {
+          confirmText: 'Delete',
+          confirmColor: 'danger',
+        }))
+      )
+        return
       try {
         const result = await fetchJsonCompat(urls.delete(id), {
           method: 'DELETE',
@@ -280,6 +276,7 @@ export const createHandlers = ({
       awardDate,
       clientLoaRefNo,
       selectedRecordIdForSuccess,
+      projectCollaborators,
     }) => {
       if (!successReason.trim()) {
         dialog.alert('Please enter a success reason.')
@@ -297,6 +294,7 @@ export const createHandlers = ({
             description,
             award_date: awardDateStr,
             client_award_ref_no: clientLoaRefNo || null,
+            project_collaborators: projectCollaborators,
           }),
         })
         if (isSuccess(result)) {
@@ -323,6 +321,7 @@ export const createHandlers = ({
       awardDate,
       clientLoaRefNo,
       selectedRecordIdForSuccess,
+      projectCollaborators,
     }) => {
       if (!urls.reAward) {
         dialog.alert('Re-award is not available for this service yet.')
@@ -344,6 +343,7 @@ export const createHandlers = ({
             description,
             award_date: awardDateStr,
             client_award_ref_no: clientLoaRefNo || null,
+            project_collaborators: projectCollaborators,
           }),
         })
         if (isSuccess(result)) {

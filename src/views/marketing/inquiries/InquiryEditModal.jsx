@@ -477,7 +477,7 @@ const InquiryEditModal = ({ visible, inquiry, onClose, onSaved }) => {
                     <CButton
                       type="button"
                       size="sm"
-                      color="secondary"
+                      color="danger"
                       variant="outline"
                       className="mt-2 w-100"
                       disabled={saving || proofProcessing}
@@ -502,10 +502,15 @@ const InquiryEditModal = ({ visible, inquiry, onClose, onSaved }) => {
         </CRow>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" variant="outline" disabled={saving} onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" disabled={saving} onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" disabled={saving || proofProcessing} onClick={saveChanges}>
+        <CButton
+          color="primary"
+          size="sm"
+          disabled={saving || proofProcessing}
+          onClick={saveChanges}
+        >
           {saving ? 'Saving...' : 'Save Changes'}
         </CButton>
       </CModalFooter>

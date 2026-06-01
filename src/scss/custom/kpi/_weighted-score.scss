@@ -1,0 +1,123 @@
+.kpi-weighted-score-panel {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.5rem;
+  background: var(--cui-body-bg);
+}
+
+.kpi-weighted-score-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.kpi-weighted-score-label {
+  color: var(--cui-secondary-color);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.kpi-weighted-score-metrics {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kpi-weighted-score-value {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cui-body-color);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2rem;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.kpi-weighted-score-value:hover,
+.kpi-weighted-score-value:focus {
+  color: var(--cui-primary);
+}
+
+.kpi-score-calculation-popover {
+  max-width: 22rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.kpi-score-calculation-total {
+  margin-bottom: 0.625rem;
+  color: var(--cui-body-color);
+}
+
+.kpi-score-calculation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.kpi-score-calculation-item {
+  color: var(--cui-secondary-color);
+}
+
+.kpi-weighted-score-separator {
+  color: var(--cui-secondary-color);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.kpi-weighted-score-percent {
+  color: var(--cui-body-color);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.kpi-weighted-bar {
+  display: flex;
+  gap: 0.125rem;
+  width: 100%;
+  height: 0.875rem;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.kpi-weighted-segment {
+  flex-basis: 0;
+  min-width: 0.375rem;
+  overflow: hidden;
+  background: var(--cui-tertiary-bg, rgba(0, 0, 0, 0.06));
+  outline-offset: 2px;
+}
+
+.kpi-weighted-segment:first-child {
+  border-top-left-radius: 999px;
+  border-bottom-left-radius: 999px;
+}
+
+.kpi-weighted-segment:last-child {
+  border-top-right-radius: 999px;
+  border-bottom-right-radius: 999px;
+}
+
+.kpi-weighted-segment-fill {
+  height: 100%;
+  min-width: 0;
+}
+
+.kpi-weighted-score-note {
+  margin-top: 0.375rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+

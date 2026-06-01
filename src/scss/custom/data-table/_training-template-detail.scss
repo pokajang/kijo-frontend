@@ -1,0 +1,125 @@
+.training-history-table,
+.template-detail-embedded-table {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-collapse: separate;
+  border-radius: var(--app-radius-lg);
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.training-history-table thead tr:first-child th:first-child,
+.template-detail-embedded-table thead tr:first-child th:first-child {
+  border-top-left-radius: var(--app-radius-lg);
+}
+
+.training-history-table thead tr:first-child th:last-child,
+.template-detail-embedded-table thead tr:first-child th:last-child {
+  border-top-right-radius: var(--app-radius-lg);
+}
+
+.training-history-table tbody tr:last-child td:first-child,
+.template-detail-embedded-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: var(--app-radius-lg);
+}
+
+.training-history-table tbody tr:last-child td:last-child,
+.template-detail-embedded-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: var(--app-radius-lg);
+}
+
+.training-history-mobile-list,
+.template-detail-mobile-list {
+  border-radius: var(--app-radius-lg);
+  overflow: hidden;
+}
+
+.training-history-toggle-badge,
+.template-history-toggle-badge {
+  --cui-btn-padding-y: 0.05rem;
+  --cui-btn-padding-x: 0.4rem;
+  --cui-btn-font-size: var(--app-font-size-xs);
+  --cui-btn-border-radius: var(--app-radius-pill);
+  line-height: 1.2;
+}
+
+.data-table-detail-label,
+.records-detail-field > .small.text-muted:first-child,
+.records-detail-field > .form-label:first-child,
+.records-detail-field .records-detail-label {
+  margin-bottom: 0.25rem;
+}
+
+@media (max-width: 767.98px) {
+  .data-table-detail-field,
+  .records-detail-field,
+  .records-detail-field--inline,
+  .training-detail-mobile-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .data-table-detail-label,
+  .records-detail-field > .small.text-muted:first-child,
+  .records-detail-field > .form-label:first-child,
+  .records-detail-field .records-detail-label,
+  .records-detail-field--inline .records-detail-label,
+  .training-detail-mobile-label {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+    color: var(--app-text-label);
+  }
+
+  .data-table-detail-value,
+  .records-detail-field > :last-child,
+  .records-detail-field .records-detail-value,
+  .records-detail-field--inline .records-detail-value,
+  .training-detail-mobile-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .modal-body .row > [class*='col-']:has(> .form-label + div) {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .modal-body .row > [class*='col-']:has(> .form-label + div) > .form-label {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+    color: var(--app-text-label);
+  }
+
+  .modal-body .row > [class*='col-']:has(> .form-label + div) > .form-label + div {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .training-detail-mobile-row--top {
+    margin-top: 0.35rem;
+  }
+
+  .data-table-action-toggle,
+  .data-table-scroll-tip-btn,
+  .data-table-action-menu .dropdown-item,
+  .training-history-toggle-badge,
+  .template-history-toggle-badge,
+  .embedded-data-table .dropdown-toggle {
+    min-height: var(--app-mobile-touch-target);
+  }
+
+  .data-table-action-toggle,
+  .data-table-scroll-tip-btn {
+    min-width: var(--app-mobile-icon-target);
+  }
+}
+

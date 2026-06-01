@@ -81,6 +81,7 @@ const CreateTemplate = () => {
                       <CButton
                         variant="outline"
                         key={opt.key}
+                        size="sm"
                         className="me-2 mb-2"
                         color={type === opt.key ? 'primary' : 'secondary'}
                         onClick={() => selectService(opt.key)}

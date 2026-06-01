@@ -209,7 +209,15 @@ const buildStatsItems = (type, rows) => {
   ]
 }
 
-const TemplateProposalTable = ({ type, data = [], onDelete, onCreateBmCopy, loading = false }) => {
+const TemplateProposalTable = ({
+  type,
+  data = [],
+  onDelete,
+  onCreateBmCopy,
+  loading = false,
+  statsVisible = true,
+  controlsVisible = true,
+}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const config = templateConfigs[type]
@@ -392,9 +400,10 @@ const TemplateProposalTable = ({ type, data = [], onDelete, onCreateBmCopy, load
 
   return (
     <>
-      <StatsStrip items={statsItems} loading={loading} />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
 
       <DataTableRecordControls
+        visible={controlsVisible}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search title, code, description, or creator"

@@ -124,7 +124,7 @@ const ItemsDetails = ({ items, setItems }) => {
             </select>
           </CCol>
           <CCol md={2} className="d-flex align-items-end">
-            <CButton color="primary" onClick={handleAddItem}>
+            <CButton color="primary" size="sm" onClick={handleAddItem}>
               Add Item
             </CButton>
           </CCol>
@@ -185,7 +185,12 @@ const ItemsDetails = ({ items, setItems }) => {
                     </select>
                   </CTableDataCell>
                   <CTableDataCell>
-                    <CButton color="danger" size="sm" onClick={() => handleRemoveItem(item.id)}>
+                    <CButton
+                      color="danger"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveItem(item.id)}
+                    >
                       Remove
                     </CButton>
                   </CTableDataCell>

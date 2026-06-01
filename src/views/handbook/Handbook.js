@@ -245,6 +245,10 @@ const Handbook = () => {
 
     const confirmed = await dialog.confirm(
       'Discard the shared active handbook draft changes for all handbook owners?',
+      {
+        confirmText: 'Discard',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) {
       return

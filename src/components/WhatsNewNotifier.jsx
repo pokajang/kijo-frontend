@@ -21,6 +21,16 @@ const dismissNoticeForSession = (staffId, noticeId) => {
   window.sessionStorage.setItem(key, '1')
 }
 
+const isAbortLikeError = (error) => {
+  const message = String(error?.message || '').toLowerCase()
+  return (
+    error?.name === 'AbortError' ||
+    error?.code === 20 ||
+    message.includes('abort') ||
+    message.includes('failed to fetch')
+  )
+}
+
 const resolveUnreadCount = (data) => {
   const metaCount = Number(data?.meta?.unread_count)
   if (Number.isFinite(metaCount)) return Math.max(0, metaCount)
@@ -38,12 +48,14 @@ const WhatsNewNotifier = () => {
     if (!isAuthenticated || !user?.staff_id) return
 
     let cancelled = false
+    const controller = new AbortController()
 
     const loadNotice = async () => {
       try {
         const res = await fetch(`${API_BASE}whats-new/latest`, {
           credentials: 'include',
           silentError: true,
+          signal: controller.signal,
         })
         const data = await res.json()
 
@@ -58,7 +70,9 @@ const WhatsNewNotifier = () => {
         setUnreadCount(nextUnreadCount)
         setVisible(true)
       } catch (err) {
-        console.error("Failed to load What's New notice:", err)
+        if (!cancelled && !isAbortLikeError(err)) {
+          console.error("Failed to load What's New notice:", err)
+        }
       }
     }
 
@@ -66,6 +80,7 @@ const WhatsNewNotifier = () => {
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [isAuthenticated, user?.staff_id])
 

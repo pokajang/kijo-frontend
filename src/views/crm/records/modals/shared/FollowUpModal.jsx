@@ -76,11 +76,12 @@ const FollowUpModal = ({
         </CRow>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onCancel} disabled={busy}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onCancel} disabled={busy}>
           Cancel
         </CButton>
         <CButton
           color="primary"
+          size="sm"
           onClick={onConfirm}
           disabled={!remarks.trim() || !followUpDate || busy}
         >

@@ -27,10 +27,10 @@ const renderField = (label, value, options = {}) => {
   const content = value || emptyValue
 
   return (
-    <>
+    <div className="records-detail-field">
       <div className="small text-muted">{label}</div>
       <div className={valueClassName}>{content}</div>
-    </>
+    </div>
   )
 }
 
@@ -93,7 +93,10 @@ const ClientVendorRegistrationDetailPage = () => {
 
   const deleteRegistration = async () => {
     if (!detail) return
-    const ok = await dialog.confirm(`Delete vendor registration for ${detail.client}?`)
+    const ok = await dialog.confirm(`Delete vendor registration for ${detail.client}?`, {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!ok) return
 
     try {

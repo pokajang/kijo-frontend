@@ -86,7 +86,7 @@ export const buildLeaveRecordStats = (leaveRecords = [], entitlements = [], year
   ]
 }
 
-const LeaveRecord = () => {
+const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible = true }) => {
   const navigate = useNavigate()
   const [entitlements, setEntitlements] = useState([])
   const [loadingEntitlements, setLoadingEntitlements] = useState(false)
@@ -149,6 +149,13 @@ const LeaveRecord = () => {
     () => buildLeaveRecordStats(leaveRecords, entitlements),
     [entitlements, leaveRecords],
   )
+  const scopeLabel = `YTD ${currentYear}`
+
+  useEffect(() => {
+    if (typeof onScopeLabelChange !== 'function') return undefined
+    onScopeLabelChange(scopeLabel)
+    return () => onScopeLabelChange('')
+  }, [onScopeLabelChange, scopeLabel])
 
   return (
     <>
@@ -163,13 +170,12 @@ const LeaveRecord = () => {
         </CAlert>
       )}
 
-      <StatsStrip
-        items={statsItems}
-        loading={loadingRecords || loadingEntitlements}
-        scopeLabel={`YTD ${currentYear}`}
-      />
+      {statsVisible && (
+        <StatsStrip items={statsItems} loading={loadingRecords || loadingEntitlements} />
+      )}
 
       <LeaveRecordTable
+        controlsVisible={controlsVisible}
         leaveRecords={leaveRecords}
         loading={loadingRecords}
         handleCancel={handleCancel}

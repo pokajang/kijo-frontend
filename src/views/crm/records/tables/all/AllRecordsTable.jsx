@@ -61,6 +61,9 @@ const AllRecordsTable = ({
   onSyncClientDetails,
   onEmail,
   onSharePdf,
+  onStatsScopeLabelChange,
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   const desktopBreakpoint = recordsDesktopBreakpoint
   const truncateStyle = recordsTruncateStyle
@@ -278,6 +281,12 @@ const AllRecordsTable = ({
       sortedRecords,
     ],
   )
+  const statsScopeLabel = periodRange ? getPeriodRangeScopeLabel(periodRange) : ''
+
+  useEffect(() => {
+    onStatsScopeLabelChange?.(statsScopeLabel)
+    return () => onStatsScopeLabelChange?.('')
+  }, [onStatsScopeLabelChange, statsScopeLabel])
 
   useEffect(() => {
     const sortFieldVisible = REQUIRED_COLUMNS.has(sortField) || isColumnVisible(sortField)
@@ -592,11 +601,9 @@ const AllRecordsTable = ({
 
   return (
     <>
-      <StatsStrip
-        items={statsItems}
-        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-      />
+      {statsVisible && <StatsStrip items={statsItems} />}
       <AllRecordsFilterPanel
+        visible={controlsVisible}
         searchInput={searchInput}
         setSearchInput={setSearchInput}
         periodRange={periodRange}

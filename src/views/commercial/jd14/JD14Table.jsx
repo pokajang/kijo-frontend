@@ -138,12 +138,12 @@ const getStatusTone = (status) => {
 const JD14Table = ({
   forms = [],
   loading = false,
-  scopeLabel = 'All years',
   beforeList,
   renderQuickFilters,
   desktopUtilityPortalId,
   mobileUtilityPortalId,
   onStatFilter,
+  statsVisible = true,
 }) => {
   const navigate = useNavigate()
   const [editJd14Visible, setEditJd14Visible] = useState(false)
@@ -164,6 +164,10 @@ const JD14Table = ({
   const handleDeleteJd14 = async (form) => {
     const confirmDelete = await dialog.confirm(
       `Are you sure you want to delete JD14 record: ${form.approval_no}?`,
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmDelete) return
 
@@ -280,7 +284,7 @@ const JD14Table = ({
 
   return (
     <>
-      <StatsStrip items={statsItems} scopeLabel={scopeLabel} loading={loading} />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
       {beforeList}
       <DataTableRecordList
         rows={normalizedForms}

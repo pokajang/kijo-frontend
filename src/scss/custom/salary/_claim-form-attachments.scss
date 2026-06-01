@@ -1,0 +1,197 @@
+.salary-form-panel > .salary-claim-list:first-of-type {
+  margin-top: 0.75rem;
+}
+
+.salary-claim-list {
+  margin-top: 0.75rem;
+}
+
+.salary-claim-field-row {
+  align-items: flex-end;
+}
+
+.salary-claim-grow-col {
+  min-width: 0;
+}
+
+.salary-claim-date-col {
+  flex: 0 0 11rem;
+  max-width: 11rem;
+}
+
+.salary-claim-amount-col {
+  flex: 0 0 8.5rem;
+  max-width: 8.5rem;
+}
+
+.salary-claim-km-col {
+  flex: 0 0 6rem;
+  max-width: 6rem;
+}
+
+.salary-claim-attachment-col {
+  min-width: 0;
+}
+
+.salary-claim-attachment-col .salary-attachment-field {
+  width: 100%;
+  margin-top: 0;
+}
+
+.salary-settings-month-col {
+  flex: 0 0 13rem;
+  max-width: 13rem;
+}
+
+@media (min-width: 768px) {
+  .salary-claim-field-row {
+    flex-wrap: nowrap;
+  }
+
+  .salary-claim-date-col {
+    flex: 0.8 1 0;
+    max-width: none;
+  }
+
+  .salary-claim-amount-col {
+    flex: 0.6 1 0;
+    max-width: none;
+  }
+
+  .salary-claim-km-col {
+    flex: 0.75 1 0;
+    max-width: none;
+  }
+
+  .salary-settings-month-col {
+    flex: 0.9 1 0;
+    max-width: none;
+  }
+
+  .salary-claim-attachment-col {
+    flex: 0 0 auto;
+    max-width: max-content;
+  }
+
+  .salary-claim-grow-col {
+    flex: 1.7 1 0;
+  }
+}
+
+.salary-claim-draft-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.salary-claim-draft-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.salary-settings-draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.salary-settings-draft-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.salary-settings-notice,
+.salary-attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.salary-settings-notice {
+  justify-content: space-between;
+}
+
+.salary-attachment-actions {
+  justify-content: flex-end;
+}
+
+.salary-attachment-name {
+  max-width: 12rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.salary-attachment-field {
+  margin-top: 0.75rem;
+}
+
+.salary-attachment-label {
+  margin-bottom: 0.25rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.875rem;
+}
+
+.salary-attachment-control {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.salary-attachment-choose {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: calc(1.5em + 0.75rem + 2px);
+  align-items: center;
+  margin: 0;
+  padding: 0.375rem 0.75rem;
+}
+
+.salary-attachment-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.salary-attachment-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.salary-attachment-preview-body {
+  min-height: min(70vh, 42rem);
+  padding: 0;
+}
+
+.salary-attachment-preview-frame {
+  display: block;
+  width: 100%;
+  height: min(70vh, 42rem);
+  border: 0;
+}
+
+.salary-attachment-preview-image {
+  display: block;
+  max-width: 100%;
+  max-height: min(70vh, 42rem);
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.salary-attachment-preview-fallback {
+  padding: 1rem;
+  color: var(--cui-secondary-color);
+}
+

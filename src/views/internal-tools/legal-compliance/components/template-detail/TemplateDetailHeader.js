@@ -10,7 +10,6 @@ const TemplateDetailHeader = ({
   isSaving,
   statusText,
   onEditDetails,
-  onEditTemplate,
   onBack,
 }) => (
   <CCardHeader className="legal-compliance-template-detail-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
@@ -52,17 +51,6 @@ const TemplateDetailHeader = ({
       )}
     </div>
     <div className="d-flex align-items-center gap-2 flex-wrap">
-      {!isEditMode && template && (
-        <CButton
-          color="secondary"
-          variant="outline"
-          size="sm"
-          onClick={onEditTemplate}
-          disabled={isSaving}
-        >
-          Edit Template
-        </CButton>
-      )}
       <CButton color="secondary" variant="outline" size="sm" onClick={onBack} disabled={isSaving}>
         Back
       </CButton>

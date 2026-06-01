@@ -1,7 +1,7 @@
 // src/components/PaymentTable.jsx
 
 import React, { useMemo, useState } from 'react'
-import { CCol, CFormLabel, CFormSelect } from '@coreui/react'
+import { CButton, CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import {
   DataTableRecordControls,
   DataTableRecordList,
@@ -12,7 +12,6 @@ import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
   getPeriodRangePreset,
-  getPeriodRangeScopeLabel,
   isDateInPeriodRange,
   isDefaultPeriodRange,
 } from '../../../components/filters'
@@ -75,6 +74,16 @@ const dataColumns = [
     shrinkToFit: true,
   },
   {
+    key: 'workflow',
+    label: 'Workflow',
+    width: '260px',
+    sortable: true,
+    sortType: 'string',
+    textMode: 'expandable',
+    cellMaxWidth: '260px',
+    previewCharThreshold: 42,
+  },
+  {
     key: 'amount',
     label: 'Amount (RM)',
     width: '130px',
@@ -93,10 +102,11 @@ const defaultVisibleColumns = {
   paymentType: true,
   method: false,
   status: true,
+  workflow: true,
   amount: true,
 }
 
-const requiredColumns = new Set(['vendor', 'status', 'amount'])
+const requiredColumns = new Set(['vendor', 'status', 'workflow', 'amount'])
 
 const getStatusTone = (status) => {
   switch (status) {
@@ -115,38 +125,135 @@ const getStatusTone = (status) => {
 const grandTotal = (payments) =>
   payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
 
+const getWorkflowText = (payment = {}) => {
+  if (payment.status === 'Pending') return 'Pending review'
+  if (payment.status === 'Checked') return 'Pending approval'
+  if (payment.status === 'Approved') return 'Ready for payment'
+  if (payment.status === 'Paid') return 'Paid'
+  if (payment.status === 'Rejected') return 'Rejected'
+  return payment.status || '-'
+}
+
+const parseWorkflowProgress = (payment = {}) => {
+  const raw =
+    payment.workflow_progress || payment.workflowProgress || payment.workflow_progress_json
+  if (Array.isArray(raw)) return raw
+  if (typeof raw !== 'string' || raw.trim() === '') return []
+
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const getProgressLabel = (entry = {}) => {
+  const stageType = entry.stageType || entry.stage_type || ''
+  const levelNo = Number(entry.levelNo || entry.level_no || 0)
+  if (entry.label) return entry.label
+  if (stageType === 'review') return levelNo > 1 ? `Review Level ${levelNo}` : 'Review'
+  if (stageType === 'approval') return levelNo > 1 ? `Approval Level ${levelNo}` : 'Approval'
+  if (stageType === 'finance') return 'Finance'
+  return 'Workflow'
+}
+
+const getProgressStatus = (entry = {}) => {
+  const stageType = entry.stageType || entry.stage_type || ''
+  if (entry.status) return entry.status
+  if (stageType === 'review') return 'Reviewed'
+  if (stageType === 'approval') return 'Approved'
+  if (stageType === 'finance') return 'Paid'
+  return 'Completed'
+}
+
+const getProgressActor = (entry = {}) => {
+  const actorName = entry.actorName || entry.actor_name || ''
+  const actorCode = entry.actorCode || entry.actor_code || ''
+  const staffId = entry.staffId || entry.staff_id || ''
+  if (actorName && actorCode) return `${actorName} (${actorCode})`
+  if (actorName) return actorName
+  if (actorCode) return actorCode
+  return staffId ? `Staff #${staffId}` : ''
+}
+
+const buildWorkflowProgressStep = (entry = {}) =>
+  [
+    `${getProgressLabel(entry)}: ${getProgressStatus(entry)}`,
+    getProgressActor(entry) ? `by ${getProgressActor(entry)}` : '',
+    entry.completedAt || entry.completed_at ? `at ${entry.completedAt || entry.completed_at}` : '',
+    entry.remarks ? `Remarks: ${entry.remarks}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+const getWorkflowSteps = (payment = {}) =>
+  parseWorkflowProgress(payment).map(buildWorkflowProgressStep).filter(Boolean)
+
 const PaymentTable = ({
   payments = [],
   loading = false,
+  periodRange,
+  onPeriodRangeChange,
   staffRoles = [],
   onView,
+  onCheck,
   onApprove,
+  onReject,
+  onReturn,
+  onMarkPaid,
   onDelete,
   searchPlaceholder = 'Search payments',
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   const [searchText, setSearchText] = useState('')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const selectedPeriodRange = periodRange || localPeriodRange
+  const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
+  const [statusFilter, setStatusFilter] = useState('actionable')
   const [methodFilter, setMethodFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const normalizedRoles = useMemo(
+    () => staffRoles.map((role) => String(role || '').toLowerCase()),
+    [staffRoles],
+  )
+  const canCheckApprove = normalizedRoles.some((role) =>
+    ['manager', 'system admin'].some((allowedRole) => role.includes(allowedRole)),
+  )
+  const canMarkPaid = normalizedRoles.some((role) =>
+    ['manager', 'system admin', 'finance', 'account', 'bank'].some((allowedRole) =>
+      role.includes(allowedRole),
+    ),
+  )
 
   const normalizedPayments = useMemo(
     () =>
-      payments.map((payment) => ({
-        ...payment,
-        vendor: payment.vendor_name || '-',
-        requested: payment.created_at || '',
-        requestedDisplay: `${payment.created_at?.split(' ')[0] || '-'} (${payment.created_by_name_code || '-'})`,
-        approved: payment.date_approved || '',
-        approvedDisplay: `${payment.date_approved?.split(' ')[0] || '-'} (${payment.approved_by_name_code || '-'})`,
-        paymentFor: payment.project_name || payment.payment_context || '-',
-        remarks: payment.remarks || 'No remarks provided',
-        paymentType: payment.payment_type || '-',
-        method: payment.method || '-',
-        status: payment.status || '-',
-        amount: Number(payment.amount || 0),
-        amountDisplay: `RM ${Number(payment.amount || 0).toFixed(2)}`,
-      })),
+      payments.map((payment) => {
+        const workflowSteps = getWorkflowSteps(payment)
+        const pendingWorkflowText = getWorkflowText(payment)
+        return {
+          ...payment,
+          vendor: payment.vendor_name || '-',
+          requested: payment.created_at || '',
+          requestedDisplay: `${payment.created_at?.split(' ')[0] || '-'} (${payment.created_by_name_code || '-'})`,
+          approved: payment.date_approved || '',
+          approvedDisplay: `${payment.date_approved?.split(' ')[0] || '-'} (${payment.approved_by_name_code || '-'})`,
+          paymentFor: payment.project_name || payment.payment_context || '-',
+          remarks: payment.remarks || 'No remarks provided',
+          paymentType: payment.payment_type || '-',
+          method: payment.method || '-',
+          status: payment.status || '-',
+          workflowSteps,
+          workflow: [...workflowSteps, pendingWorkflowText].filter(Boolean).join('\n'),
+          pendingWorkflowText,
+          amount: Number(payment.amount || 0),
+          amountDisplay: `RM ${Number(payment.amount || 0).toFixed(2)}`,
+          paidDate: payment.paid_date || '',
+          checkedBy: payment.checked_by || '',
+          approvedBy: payment.approved_by || '',
+        }
+      }),
     [payments],
   )
 
@@ -178,6 +285,7 @@ const PaymentTable = ({
           payment.paymentType,
           payment.method,
           payment.status,
+          payment.workflow,
           payment.created_by_name_code,
           payment.approved_by_name_code,
         ].some((value) =>
@@ -186,11 +294,15 @@ const PaymentTable = ({
             .includes(q),
         )
       const matchesMethod = methodFilter === 'all' || payment.method === methodFilter
-      const matchesStatus = statusFilter === 'all' || payment.status === statusFilter
-      const matchesPeriod = isDateInPeriodRange(payment.requested, periodRange)
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'actionable' &&
+          ['Pending', 'Checked', 'Approved'].includes(payment.status)) ||
+        payment.status === statusFilter
+      const matchesPeriod = isDateInPeriodRange(payment.requested, selectedPeriodRange)
       return matchesSearch && matchesPeriod && matchesMethod && matchesStatus
     })
-  }, [methodFilter, normalizedPayments, periodRange, searchText, statusFilter])
+  }, [methodFilter, normalizedPayments, selectedPeriodRange, searchText, statusFilter])
 
   const statsItems = useMemo(() => {
     const pendingRows = filteredPayments.filter((payment) => payment.status === 'Pending')
@@ -238,48 +350,164 @@ const PaymentTable = ({
 
   const resetFilters = () => {
     setSearchText('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
-    setStatusFilter('all')
+    handlePeriodRangeChange(getPeriodRangePreset('ytd'))
+    setStatusFilter('actionable')
     setMethodFilter('all')
   }
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
-    if (key === 'status') setStatusFilter('all')
+    if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
+    if (key === 'status') setStatusFilter('actionable')
     if (key === 'method') setMethodFilter('all')
   }
 
   const activeChips = [
     searchText.trim() ? { key: 'search', label: `Search: ${searchText.trim()}` } : null,
-    periodRange && !isDefaultPeriodRange(periodRange)
-      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+    selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
+      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
       : null,
-    statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
+    statusFilter !== 'actionable' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
     methodFilter !== 'all' ? { key: 'method', label: `Method: ${methodFilter}` } : null,
   ].filter(Boolean)
 
-  const getActions = (payment) => {
-    const canManage = staffRoles.includes('Manager')
+  const getPaymentPermissions = (payment) => {
+    const canCheck = typeof payment.can_check === 'boolean' ? payment.can_check : canCheckApprove
+    const canApprove =
+      typeof payment.can_approve === 'boolean' ? payment.can_approve : canCheckApprove
+    const canReturn = typeof payment.can_return === 'boolean' ? payment.can_return : canCheckApprove
+    const canReject = typeof payment.can_reject === 'boolean' ? payment.can_reject : canCheckApprove
+    const canDelete = typeof payment.can_delete === 'boolean' ? payment.can_delete : canCheckApprove
+    const canPay = typeof payment.can_mark_paid === 'boolean' ? payment.can_mark_paid : canMarkPaid
+
+    return { canCheck, canApprove, canReturn, canReject, canDelete, canPay }
+  }
+
+  const getWorkflowActions = (payment) => {
+    const paymentId = payment.id || payment.payment_id
+    const status = payment.status
+    const { canCheck, canApprove, canReturn, canReject, canPay } = getPaymentPermissions(payment)
+
     return [
-      { key: 'view', label: 'View Payment', onClick: () => onView(payment) },
-      payment.status === 'Pending'
+      status === 'Pending' && canCheck && typeof onCheck === 'function'
         ? {
-            key: 'approve',
-            label: 'Approve Payment',
-            disabled: !canManage,
-            onClick: canManage ? () => onApprove(payment.id) : undefined,
+            key: 'check',
+            label: 'Check',
+            color: 'info',
+            onClick: () => onCheck(paymentId),
           }
         : null,
-      {
-        key: 'delete',
-        label: 'Delete Payment',
-        danger: canManage,
-        disabled: !canManage,
-        dividerBefore: true,
-        onClick: canManage ? () => onDelete(payment.id) : undefined,
-      },
+      ['Pending', 'Checked'].includes(status) && canReturn && typeof onReturn === 'function'
+        ? {
+            key: 'return',
+            label: 'Return',
+            color: 'secondary',
+            onClick: () => onReturn(paymentId),
+          }
+        : null,
+      ['Pending', 'Checked'].includes(status) && canReject && typeof onReject === 'function'
+        ? {
+            key: 'reject',
+            label: 'Reject',
+            color: 'danger',
+            onClick: () => onReject(paymentId),
+          }
+        : null,
+      status === 'Checked' && canApprove && typeof onApprove === 'function'
+        ? {
+            key: 'approve',
+            label: 'Approve',
+            color: 'success',
+            onClick: () => onApprove(paymentId),
+          }
+        : null,
+      status === 'Approved' && canPay && typeof onMarkPaid === 'function'
+        ? {
+            key: 'mark-paid',
+            label: 'Mark Paid',
+            color: 'success',
+            onClick: () => onMarkPaid(payment),
+          }
+        : null,
     ].filter(Boolean)
+  }
+
+  const getActions = (payment) => {
+    const paymentId = payment.id || payment.payment_id
+    const status = payment.status
+    const { canDelete } = getPaymentPermissions(payment)
+    const canRunDelete = canDelete && typeof onDelete === 'function'
+
+    return [
+      typeof onView === 'function'
+        ? { key: 'view', label: 'View Payment', onClick: () => onView(payment) }
+        : null,
+      ['Pending', 'Checked'].includes(status)
+        ? {
+            key: 'delete',
+            label: 'Delete Payment',
+            danger: canRunDelete,
+            disabled: !canRunDelete,
+            dividerBefore: true,
+            onClick: canRunDelete ? () => onDelete(paymentId) : undefined,
+          }
+        : null,
+    ].filter(Boolean)
+  }
+
+  const renderWorkflowCell = (payment) => {
+    const actions = getWorkflowActions(payment)
+
+    if (!actions.length) {
+      return (
+        <DataTableTextCell
+          value={payment.workflow || payment.pendingWorkflowText}
+          maxWidth="260px"
+          title="Workflow"
+          mode="expandable"
+          previewCharThreshold={62}
+          className="small text-muted"
+        />
+      )
+    }
+
+    const handleActionClick = (event, action) => {
+      event.stopPropagation()
+      action.onClick()
+    }
+
+    return (
+      <div className="small text-muted" style={{ maxWidth: '260px' }}>
+        {payment.workflowSteps?.length > 0 && (
+          <div className="mb-1">
+            <DataTableTextCell
+              value={payment.workflowSteps.join('\n')}
+              maxWidth="260px"
+              title="Workflow"
+              mode="expandable"
+              previewCharThreshold={44}
+              className="small text-muted"
+            />
+          </div>
+        )}
+        <div className="d-flex align-items-center flex-wrap gap-1">
+          {actions.map((action) => (
+            <CButton
+              key={action.key}
+              color={action.color}
+              size="sm"
+              variant="outline"
+              className="py-0 px-2"
+              data-no-row-open="true"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => handleActionClick(event, action)}
+            >
+              {action.label}
+            </CButton>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   const renderCell = (payment, column) => {
@@ -306,25 +534,25 @@ const PaymentTable = ({
         </DataTableStatusBadge>
       )
     }
+    if (column.key === 'workflow') return renderWorkflowCell(payment)
     if (column.key === 'amount') return payment.amountDisplay
     return payment[column.key] || '-'
   }
 
   return (
     <>
-      <StatsStrip
-        items={statsItems}
-        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-        loading={loading}
-      />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
       <DataTableRecordControls
+        visible={controlsVisible}
         searchValue={searchText}
         onSearchChange={setSearchText}
         searchPlaceholder={searchPlaceholder}
         searchAriaLabel="Search vendor payment records"
         showAdvancedFilters={showAdvancedFilters}
         setShowAdvancedFilters={setShowAdvancedFilters}
-        activeFilterCount={(methodFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0)}
+        activeFilterCount={
+          (methodFilter !== 'all' ? 1 : 0) + (statusFilter !== 'actionable' ? 1 : 0)
+        }
         activeChips={activeChips}
         clearChip={clearChip}
         resetFilters={resetFilters}
@@ -357,6 +585,7 @@ const PaymentTable = ({
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
+            <option value="actionable">Actionable</option>
             <option value="all">All</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>
@@ -374,7 +603,7 @@ const PaymentTable = ({
         dataColumns={dataColumns}
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
-        storageKey="vendor.payment-records.visible-columns.v5"
+        storageKey="vendor.payment-records.visible-columns.v6"
         idPrefix="vendor-payment-record"
         emptyMessage="No payment records found."
         exportFilename={`payment-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -386,8 +615,8 @@ const PaymentTable = ({
         showMobileUtilityRow={false}
         renderQuickFilters={() => (
           <PeriodRangeSelector
-            value={periodRange}
-            onChange={setPeriodRange}
+            value={selectedPeriodRange}
+            onChange={handlePeriodRangeChange}
             className="d-none d-lg-block"
           />
         )}
@@ -419,6 +648,7 @@ const PaymentTable = ({
             },
           ],
           kv: (payment) => [
+            { key: 'workflow', label: 'Workflow', value: payment.workflow },
             { key: 'requested', label: 'Requested', value: payment.requestedDisplay },
             { key: 'method', label: 'Method', value: payment.method },
           ],
@@ -426,7 +656,7 @@ const PaymentTable = ({
         initialSortField="requested"
         initialSortDir="desc"
         initialSortDirByField={{ requested: 'desc', approved: 'desc', amount: 'desc' }}
-        resetDeps={[payments, searchText, periodRange, statusFilter, methodFilter]}
+        resetDeps={[payments, searchText, selectedPeriodRange, statusFilter, methodFilter]}
       />
       <div className="text-end fw-bold mt-2">
         Grand Total: RM {grandTotal(filteredPayments).toFixed(2)}

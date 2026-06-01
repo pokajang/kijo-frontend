@@ -153,6 +153,7 @@ const AgendaTable = ({
             <CButton
               key={value}
               color={duration === value ? 'primary' : 'secondary'}
+              size="sm"
               variant={duration === value ? '' : 'outline'}
               onClick={() => handleDurationSelect(value)}
               className="me-2 mb-2"
@@ -243,12 +244,7 @@ const AgendaTable = ({
 
                 <CTableRow>
                   <CTableDataCell colSpan={4}>
-                    <CButton
-                      color="primary"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddRowToDay(day)}
-                    >
+                    <CButton color="primary" size="sm" onClick={() => handleAddRowToDay(day)}>
                       Add Row to Day {day}
                     </CButton>
                   </CTableDataCell>

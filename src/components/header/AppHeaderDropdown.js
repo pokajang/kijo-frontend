@@ -18,12 +18,15 @@ import {
 import { useNavigate } from 'react-router-dom'
 import {
   cilAccountLogout,
+  cilCalendar,
+  cilCalendarCheck,
+  cilCash,
   cilDescription,
-  cilList,
   cilLockLocked,
-  cilNotes,
   cilPencil,
+  cilSettings,
   cilSpeedometer,
+  cilSpreadsheet,
   cilUser,
 } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
@@ -32,10 +35,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { getRouteNotificationBadge } from '../../notifications/notificationRegistry'
 
-import StaffProfile from '../profile/StaffProfile'
-import UserSetting from '../user-setting/UserSetting'
 import AppraisalRecords from '../appraisal/AppraisalRecords'
-import PersonalSignature from '../signature/PersonalSignature'
 import dialog from '../dialog/dialogService'
 const menuSections = [
   {
@@ -44,15 +44,39 @@ const menuSections = [
     items: [
       {
         key: 'applyLeave',
-        label: 'Apply',
+        label: 'Apply Leave',
         to: '/my/leaves/apply',
-        icon: cilNotes,
+        icon: cilCalendarCheck,
       },
       {
         key: 'leaveRecords',
-        label: 'Records',
+        label: 'Leave Records',
         to: '/my/leaves',
-        icon: cilList,
+        icon: cilCalendar,
+      },
+    ],
+  },
+  {
+    title: 'Salary',
+    headerClass: 'app-header-dropdown-heading',
+    items: [
+      {
+        key: 'applySalary',
+        label: 'Apply Salary',
+        to: '/my/salary/apply',
+        icon: cilCash,
+      },
+      {
+        key: 'salaryRecords',
+        label: 'Salary Records',
+        to: '/my/salary',
+        icon: cilSpreadsheet,
+      },
+      {
+        key: 'salarySettings',
+        label: 'Salary Settings',
+        to: '/my/salary/settings',
+        icon: cilSettings,
       },
     ],
   },
@@ -88,22 +112,19 @@ const menuSections = [
       {
         key: 'userProfile',
         label: 'Profile',
-        modalTitle: 'My Profile',
-        component: StaffProfile,
+        to: '/my/profile',
         icon: cilUser,
       },
       {
         key: 'personalSignature',
         label: 'Signature',
-        modalTitle: 'Digital Signature',
-        component: PersonalSignature,
+        to: '/my/signature',
         icon: cilPencil,
       },
       {
         key: 'userSetting',
         label: 'Password',
-        modalTitle: 'User Settings',
-        component: UserSetting,
+        to: '/my/password',
         icon: cilLockLocked,
       },
     ],
@@ -126,6 +147,8 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
   const navigate = useNavigate()
   const { getRouteGroupCount } = useAppNotifications()
   const personalLeaveNotificationCount = Number(getRouteGroupCount('/my/leaves') || 0)
+  const personalSalaryNotificationCount = Number(getRouteGroupCount('/my/salary') || 0)
+  const personalNotificationCount = personalLeaveNotificationCount + personalSalaryNotificationCount
 
   const [modalVisible, setModalVisible] = useState(false)
   const [signOutModalVisible, setSignOutModalVisible] = useState(false)
@@ -190,6 +213,7 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
         variant="nav-item"
         alignment="end"
         popper={false}
+        className="app-bottom-nav-entry"
         onShow={() => setIsDropdownOpen(true)}
         onHide={() => setIsDropdownOpen(false)}
       >
@@ -202,9 +226,9 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
         >
           <CTooltip
             content={
-              personalLeaveNotificationCount > 0
-                ? `${personalLeaveNotificationCount} leave update${
-                    personalLeaveNotificationCount === 1 ? '' : 's'
+              personalNotificationCount > 0
+                ? `${personalNotificationCount} account update${
+                    personalNotificationCount === 1 ? '' : 's'
                   } available`
                 : 'Open Account Menu'
             }
@@ -212,12 +236,12 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
           >
             <span
               className={`app-bottom-nav-icon app-bottom-nav-icon--account${
-                personalLeaveNotificationCount > 0 ? ' app-bottom-nav-icon--with-badge' : ''
+                personalNotificationCount > 0 ? ' app-bottom-nav-icon--with-badge' : ''
               }`}
               aria-hidden="true"
             >
               <CIcon icon={cilUser} className="app-bottom-nav-account-icon" />
-              {personalLeaveNotificationCount > 0 && <span className="app-bottom-nav-unread-dot" />}
+              {personalNotificationCount > 0 && <span className="app-bottom-nav-unread-dot" />}
             </span>
           </CTooltip>
           <span className="app-bottom-nav-label">Account</span>
@@ -258,7 +282,7 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
                         {item.icon && (
                           <CIcon icon={item.icon} className="app-header-dropdown-item-icon" />
                         )}
-                        <span>{item.label}</span>
+                        <span className="app-header-dropdown-item-label">{item.label}</span>
                         {badge ? (
                           <CBadge
                             color={badge.color}
@@ -316,7 +340,16 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
         </CModalHeader>
         <CModalBody>Are you sure you want to sign out?</CModalBody>
         <CModalFooter>
-          <CButton color="primary" onClick={confirmSignOut} disabled={isSigningOut}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={toggleSignOutModal}
+            disabled={isSigningOut}
+          >
+            Cancel
+          </CButton>
+          <CButton color="primary" size="sm" onClick={confirmSignOut} disabled={isSigningOut}>
             {isSigningOut ? 'Signing Out...' : 'Sign Out'}
           </CButton>
         </CModalFooter>

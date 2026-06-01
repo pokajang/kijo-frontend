@@ -53,19 +53,19 @@ export const QuoteReviewActions = ({
   isEditMode = false,
   cancelLabel = 'Cancel',
   saveLabel,
-  className = 'mt-4 d-flex gap-2',
+  className = 'mt-4 d-flex justify-content-end gap-2 flex-wrap',
 }) => {
   if (typeof onCancel !== 'function' && typeof onSave !== 'function') return null
 
   return (
     <div className={className}>
       {typeof onCancel === 'function' && (
-        <CButton color="secondary" variant="outline" onClick={onCancel}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onCancel}>
           {cancelLabel}
         </CButton>
       )}
       {typeof onSave === 'function' && (
-        <CButton color="primary" onClick={onSave}>
+        <CButton color="primary" size="sm" onClick={onSave}>
           {saveLabel || defaultSaveLabel(isEditMode)}
         </CButton>
       )}

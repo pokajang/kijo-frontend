@@ -65,35 +65,38 @@ describe('module search index', () => {
     })
   })
 
-  it('finds vendor payment records for vendor payment intent', () => {
+  it('opens payment queue for vendor payment intent', () => {
     const results = searchModuleItems('vendor payment', ['Staff'])
 
     expect(results[0]).toMatchObject({
-      label: 'Payment Records',
-      group: 'Vendors',
       to: '/vendor/payment-records',
     })
   })
 
-  it('finds vendor payment records for supplier payment intent', () => {
+  it('opens payment queue for supplier payment intent', () => {
     const results = searchModuleItems('supplier payment', ['Staff'])
 
     expect(results[0]).toMatchObject({
-      label: 'Payment Records',
-      group: 'Vendors',
       to: '/vendor/payment-records',
     })
   })
 
-  it('finds vendor payment records and suggests a correction for vendor typo', () => {
+  it('opens payment queue and suggests a correction for vendor typo', () => {
     const result = getModuleSearchResults('venodr payment', ['Staff'])
 
     expect(result.results[0]).toMatchObject({
-      label: 'Payment Records',
-      group: 'Vendors',
       to: '/vendor/payment-records',
     })
     expect(result.suggestion?.correctedQuery).toBe('vendor payment')
+  })
+
+  it('opens vendor ledger for ledger intent', () => {
+    const results = searchModuleItems('vendor ledger', ['Staff'])
+
+    expect(results[0]).toMatchObject({
+      label: 'Vendor Ledger',
+      to: '/vendor/paid',
+    })
   })
 
   it('finds frozen vendors for inactive vendor intent', () => {
@@ -262,12 +265,22 @@ describe('module search index', () => {
     expect(labels).not.toContain('Create System Update')
   })
 
-  it('hides leave entitlement workflow actions from managers without backend permission', () => {
+  it('shows centralized leave workflow to workflow-capable roles', () => {
     const managerLabels = searchModuleItems('leave workflow', ['Manager']).map((item) => item.label)
     const hrLabels = searchModuleItems('leave workflow', ['HR']).map((item) => item.label)
 
-    expect(managerLabels).not.toContain('Leave Workflow')
+    expect(managerLabels).toContain('Leave Workflow')
     expect(hrLabels).toContain('Leave Workflow')
+  })
+
+  it('hides vendor workflow settings from regular users', () => {
+    const staffLabels = searchModuleItems('vendor workflow', ['Staff']).map((item) => item.label)
+    const managerLabels = searchModuleItems('vendor workflow', ['Manager']).map(
+      (item) => item.label,
+    )
+
+    expect(staffLabels).not.toContain('Workflow Settings')
+    expect(managerLabels).toContain('Workflow Settings')
   })
 
   it('records and returns recent accessible selections', () => {

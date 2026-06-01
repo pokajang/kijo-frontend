@@ -1,13 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { apiJson } from '../../api/apiClient'
 import {
   archiveKnowledgeArticle,
+  askKnowledgeAssistant,
+  clearKnowledgeAssistantThread,
+  createKnowledgeAssistantThread,
   getKnowledgeArticle,
   getKnowledgeArticles,
+  getKnowledgeAssistantThread,
   getMyKnowledgeArticles,
   publishKnowledgeArticle,
   saveKnowledgeArticle,
+  submitKnowledgeAssistantFeedback,
   unpublishKnowledgeArticle,
 } from './knowledgeApi'
+
+vi.mock('../../api/apiClient', () => ({
+  apiJson: vi.fn(),
+}))
 
 const mockJsonResponse = ({ ok = true, status = 200, body = { status: 'success' } } = {}) => ({
   ok,
@@ -19,6 +29,7 @@ const mockJsonResponse = ({ ok = true, status = 200, body = { status: 'success' 
 describe('knowledgeApi', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('loads the article list with session credentials', async () => {
@@ -50,7 +61,103 @@ describe('knowledgeApi', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('knowledge/articles/how-to-apply-leave'),
-      { credentials: 'include', signal: undefined },
+      { credentials: 'include', silentError: true, signal: undefined },
+    )
+  })
+
+  it('loads the assistant thread with session credentials', async () => {
+    apiJson.mockResolvedValue({ status: 'success', messages: [] })
+
+    await getKnowledgeAssistantThread()
+    await getKnowledgeAssistantThread({ threadId: 7 })
+
+    expect(apiJson).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('knowledge/assistant/thread'),
+      {
+        credentials: 'include',
+        signal: undefined,
+      },
+    )
+    expect(apiJson).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('knowledge/assistant/thread?thread_id=7'),
+      {
+        credentials: 'include',
+        signal: undefined,
+      },
+    )
+  })
+
+  it('creates, asks, and clears the Knowledge assistant thread', async () => {
+    apiJson.mockResolvedValue({ status: 'success', messages: [] })
+
+    await createKnowledgeAssistantThread()
+    await askKnowledgeAssistant({
+      question: 'How do I create quotation?',
+      currentRoute: '/crm',
+      threadId: 8,
+    })
+    await clearKnowledgeAssistantThread({ threadId: 8 })
+
+    expect(apiJson).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('knowledge/assistant/thread'),
+      {
+        method: 'POST',
+        credentials: 'include',
+        signal: undefined,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+    expect(apiJson).toHaveBeenNthCalledWith(2, expect.stringContaining('knowledge/assistant'), {
+      method: 'POST',
+      credentials: 'include',
+      signal: undefined,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: 'How do I create quotation?',
+        current_route: '/crm',
+        thread_id: 8,
+      }),
+    })
+    expect(apiJson).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('knowledge/assistant/thread/8'),
+      {
+        method: 'DELETE',
+        credentials: 'include',
+        signal: undefined,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+  })
+
+  it('submits structured assistant feedback', async () => {
+    apiJson.mockResolvedValue({ status: 'success' })
+
+    await submitKnowledgeAssistantFeedback({
+      messageId: 9,
+      rating: 'bad',
+      reasons: ['Wrong source'],
+      note: 'Not enough detail.',
+      currentRoute: '/crm/quotes',
+    })
+
+    expect(apiJson).toHaveBeenCalledWith(
+      expect.stringContaining('knowledge/assistant/messages/9/feedback'),
+      {
+        method: 'POST',
+        credentials: 'include',
+        signal: undefined,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: 'bad',
+          reasons: ['Wrong source'],
+          note: 'Not enough detail.',
+          current_route: '/crm/quotes',
+        }),
+      },
     )
   })
 

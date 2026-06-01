@@ -1,10 +1,12 @@
 // src/views/feedback/FeedbackTable.jsx
 import React, { useMemo, useState } from 'react'
-import { CCard, CCardBody, CCardHeader, CCol, CFormLabel, CFormSelect } from '@coreui/react'
+import { CCard, CCardBody, CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../components/datatable'
@@ -17,6 +19,7 @@ import {
   isDefaultPeriodRange,
 } from '../../components/filters'
 import { StatsStrip } from '../../components/stats'
+import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../utils/stats/formatStats'
 
 const normalize = (value) => (value ?? '').toString().trim().toLowerCase()
@@ -129,6 +132,8 @@ const FeedbackTable = ({
   const [reportedByFilter, setReportedByFilter] = useState('all')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('support.feedback')
 
   const isOwnerFeedback = (feedback) => {
     const ownerId = Number(feedback?.reported_by_id)
@@ -355,16 +360,21 @@ const FeedbackTable = ({
 
   return (
     <CCard className="mt-4">
-      <CCardHeader>
-        <strong>All Feedbacks</strong>
-      </CCardHeader>
-      <CCardBody>
-        <StatsStrip
-          loading={loading}
-          items={statsItems}
-          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+      <DataTableCardHeader
+        title="All Feedbacks"
+        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+      >
+        <DataTableStatsToggle
+          visible={statsVisible}
+          onToggle={toggleStatsVisible}
+          controlsVisible={controlsVisible}
+          onControlsToggle={toggleControlsVisible}
         />
+      </DataTableCardHeader>
+      <CCardBody>
+        {statsVisible && <StatsStrip loading={loading} items={statsItems} />}
         <DataTableRecordControls
+          visible={controlsVisible}
           searchValue={searchTerm}
           onSearchChange={setSearchTerm}
           searchPlaceholder="Search feedback, reporter, status, remarks..."

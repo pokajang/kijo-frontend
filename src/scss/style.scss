@@ -73,3 +73,17 @@ body {
   font-size: 0.8rem;
   text-transform: capitalize;
 }
+
+.create-task-project-tag-alert.alert-dismissible {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding-right: 3rem;
+
+  .btn-close {
+    top: 50%;
+    right: 0.875rem;
+    padding: 0;
+    transform: translateY(-50%);
+  }
+}

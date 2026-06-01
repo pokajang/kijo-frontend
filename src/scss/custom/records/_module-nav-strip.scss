@@ -1,0 +1,120 @@
+/* Records/module: mobile-friendly tab group + filter module */
+.records-service-strip,
+.module-nav-strip {
+  align-items: center;
+  display: flex;
+  min-height: 34px;
+  z-index: 10;
+}
+
+.records-service-strip__inner,
+.module-nav-strip__inner {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  min-height: 32px;
+  min-width: 0;
+  width: 100%;
+}
+
+.records-service-strip__tabs-viewport,
+.module-nav-strip__tabs-viewport {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.records-service-strip__tabs,
+.module-nav-strip__tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  width: 100%;
+}
+
+.records-service-strip__tabs::-webkit-scrollbar,
+.module-nav-strip__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.records-service-strip__tab,
+.module-nav-strip__tab {
+  align-items: center;
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  font-size: 0.875rem !important;
+  height: 32px;
+  justify-content: center;
+  line-height: 1.15 !important;
+  border-radius: 0;
+  padding-block: 0.25rem !important;
+  padding-inline: 0.9rem;
+  white-space: nowrap;
+}
+
+.records-service-strip__tab.is-active,
+.records-service-strip__tab:hover,
+.records-service-strip__tab:focus,
+.records-service-strip__tab:active,
+.module-nav-strip__tab.is-active,
+.module-nav-strip__tab:hover,
+.module-nav-strip__tab:focus,
+.module-nav-strip__tab:active {
+  color: var(--cui-primary) !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.records-service-strip__controls,
+.module-nav-strip__controls {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.records-service-strip__controls .btn,
+.records-service-strip__controls .dropdown-toggle,
+.module-nav-strip__controls .btn,
+.module-nav-strip__controls .dropdown-toggle {
+  border-radius: 8px !important;
+  height: 30px !important;
+  line-height: 1.1 !important;
+  min-height: 30px !important;
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .records-service-strip,
+  .module-nav-strip {
+    border-radius: 12px !important;
+  }
+
+  .records-service-strip__inner,
+  .module-nav-strip__inner {
+    gap: 0.5rem !important;
+  }
+
+  .records-service-strip__tab,
+  .module-nav-strip__tab {
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .records-service-strip__inner,
+  .module-nav-strip__inner {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+

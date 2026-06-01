@@ -1,0 +1,229 @@
+.data-table-stats-toggle {
+  --cui-btn-bg: transparent;
+  --cui-btn-border-color: transparent;
+  --cui-btn-color: var(--app-btn-muted-text);
+  --cui-btn-hover-bg: var(--app-btn-muted-bg-hover);
+  --cui-btn-hover-border-color: transparent;
+  --cui-btn-hover-color: var(--app-btn-muted-text-hover);
+  --cui-btn-active-bg: var(--app-btn-muted-bg-active);
+  --cui-btn-active-border-color: transparent;
+
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: calc(1.8125rem + 2px);
+  justify-content: center;
+  margin-inline-end: 0.5rem;
+  min-width: calc(1.8125rem + 2px);
+  padding-inline: 0.45rem;
+}
+
+.data-table-display-modal .modal-dialog {
+  max-width: min(620px, calc(100vw - 2rem));
+}
+
+.data-table-display-modal .modal-content {
+  border-radius: 10px;
+}
+
+.data-table-display-modal .modal-header {
+  padding: 1.15rem 1.35rem 0.95rem;
+}
+
+.data-table-stats-toggle__setting-row {
+  align-items: center;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3.25rem;
+}
+
+.data-table-stats-toggle__body {
+  padding: 1.2rem 1.35rem 1.25rem;
+}
+
+.data-table-stats-toggle__settings {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.data-table-stats-toggle__setting-copy {
+  min-width: 0;
+}
+
+.data-table-stats-toggle__setting-label {
+  color: var(--cui-body-color);
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+  text-transform: none;
+}
+
+.data-table-stats-toggle__setting-help {
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  margin-top: 0.2rem;
+}
+
+.data-table-stats-toggle__state-control {
+  align-items: center;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: 3.75rem 2.6rem 3.75rem;
+  justify-items: center;
+  min-width: 11.9rem;
+}
+
+.data-table-stats-toggle__state-label {
+  color: var(--cui-secondary-color);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.data-table-stats-toggle__state-label--active {
+  color: var(--cui-body-color);
+  font-weight: 600;
+}
+
+.data-table-stats-toggle__scope {
+  align-items: center;
+  border: 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1.2rem 0 0;
+  padding: 1.05rem 0 0;
+  border-top: 1px solid var(--cui-border-color);
+}
+
+.data-table-stats-toggle__scope-label {
+  color: var(--cui-body-color);
+  float: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0;
+  padding: 0;
+  text-transform: none;
+  width: auto;
+}
+
+.data-table-stats-toggle__scope-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.data-table-stats-toggle__scope-options .btn {
+  min-width: 6.35rem;
+}
+
+.data-table-stats-toggle__switch {
+  align-items: center;
+  display: inline-flex;
+  margin: 0;
+  padding-left: 0;
+}
+
+.data-table-stats-toggle__switch .form-check-input {
+  cursor: pointer;
+  margin: 0;
+}
+
+.data-table-stats-toggle__footer {
+  gap: 0.75rem;
+  padding: 0.9rem 1.35rem 1rem;
+}
+
+.app-content-container:has(.records-table-shell) {
+  padding-bottom: 0.5rem !important;
+}
+
+.card.mb-4:has(.records-table-shell) {
+  margin-bottom: 0.25rem !important;
+}
+
+.card.leave-workspace:has(.records-table-shell) {
+  margin-bottom: 0.25rem !important;
+}
+
+.data-table-filter-search-col {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.data-table-filter-action-col {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.data-table-filter-action,
+.data-table-utility-controls {
+  flex-wrap: nowrap;
+}
+
+.records-filter-search-input {
+  min-height: var(--records-filter-control-height);
+}
+
+.records-filter-action .btn {
+  min-height: var(--records-filter-control-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.records-filter-toggle-btn {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding-inline: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.records-filter-icon-btn {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding-inline: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.period-range-selector__toggle {
+  max-width: 11rem;
+  min-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.period-range-selector__menu {
+  min-width: 18rem;
+}
+
+.period-range-selector__custom .form-control {
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+  .records-filter-toggle-btn {
+    width: auto;
+    min-width: 0;
+    padding-inline: 0.75rem;
+  }
+
+  .records-filter-export-btn {
+    margin-left: 0.35rem;
+  }
+}
+

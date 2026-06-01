@@ -1,0 +1,137 @@
+.salary-workspace {
+  --salary-table-radius: var(--app-radius-lg);
+  --salary-table-cell-padding-x: 0.85rem;
+  --salary-table-cell-edge-padding-x: 1rem;
+
+  margin-bottom: 1rem;
+}
+
+.salary-workspace:has(.records-table-shell) {
+  margin-bottom: 0.25rem;
+}
+
+.salary-table-shell.data-table-embedded-shell,
+.salary-table-mobile-list,
+.salary-records-table.records-table-shell {
+  --salary-table-radius: var(--app-radius-lg);
+  --salary-table-cell-padding-x: 0.85rem;
+  --salary-table-cell-edge-padding-x: 1rem;
+
+  border-radius: var(--salary-table-radius);
+  overflow: hidden;
+}
+
+.salary-table-shell .embedded-data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.salary-table-shell .embedded-data-table thead tr:first-child > *:first-child {
+  border-top-left-radius: var(--salary-table-radius);
+}
+
+.salary-table-shell .embedded-data-table thead tr:first-child > *:last-child {
+  border-top-right-radius: var(--salary-table-radius);
+}
+
+.salary-table-shell .embedded-data-table tbody:last-child tr:last-child > *:first-child,
+.salary-table-shell .embedded-data-table tfoot tr:last-child > *:first-child {
+  border-bottom-left-radius: var(--salary-table-radius);
+}
+
+.salary-table-shell .embedded-data-table tbody:last-child tr:last-child > *:last-child,
+.salary-table-shell .embedded-data-table tfoot tr:last-child > *:last-child {
+  border-bottom-right-radius: var(--salary-table-radius);
+}
+
+.salary-records-table .table-scroll-viewport {
+  border-top-left-radius: var(--salary-table-radius) !important;
+  border-top-right-radius: var(--salary-table-radius) !important;
+}
+
+.salary-records-table .records-table-footer {
+  border-bottom-left-radius: var(--salary-table-radius);
+  border-bottom-right-radius: var(--salary-table-radius);
+  padding-left: var(--salary-table-cell-edge-padding-x) !important;
+  padding-right: var(--salary-table-cell-edge-padding-x) !important;
+}
+
+.salary-records-table .data-table-mobile-list {
+  border-radius: var(--salary-table-radius);
+  overflow: hidden;
+}
+
+.salary-records-table .records-mobile-item-head {
+  align-items: flex-start;
+}
+
+.salary-records-table .records-mobile-item-main {
+  min-width: 0;
+}
+
+.salary-records-table .records-mobile-head-actions {
+  flex: 0 0 auto;
+}
+
+.salary-records-table .records-mobile-client {
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-weight: 700;
+}
+
+.salary-record-mobile-card-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.salary-record-mobile-card .records-mobile-v {
+  overflow-wrap: anywhere;
+}
+
+.salary-record-mobile-card .records-mobile-kv:first-child {
+  align-items: flex-start;
+}
+
+.salary-table-shell .data-table-compact > :not(caption) > * > *,
+.salary-records-table .records-table-compact > :not(caption) > * > * {
+  padding-left: var(--salary-table-cell-padding-x);
+  padding-right: var(--salary-table-cell-padding-x);
+}
+
+.salary-table-shell .data-table-compact > :not(caption) > * > *:first-child,
+.salary-records-table .records-table-compact > :not(caption) > * > *:first-child {
+  padding-left: var(--salary-table-cell-edge-padding-x);
+}
+
+.salary-table-shell .data-table-compact > :not(caption) > * > *:last-child,
+.salary-records-table .records-table-compact > :not(caption) > * > *:last-child {
+  padding-right: var(--salary-table-cell-edge-padding-x);
+}
+
+.salary-table-mobile-list .data-table-mobile-item,
+.salary-records-table .data-table-mobile-list .data-table-mobile-item {
+  padding-left: var(--salary-table-cell-padding-x);
+  padding-right: var(--salary-table-cell-padding-x);
+}
+
+.salary-workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.salary-workspace-title {
+  min-width: 0;
+}
+
+.salary-workspace-action-cluster {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+

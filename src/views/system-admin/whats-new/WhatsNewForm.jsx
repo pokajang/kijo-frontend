@@ -116,8 +116,14 @@ const WhatsNewForm = ({ mode }) => {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(`${API_BASE}whats-new/${noticeId}`, { credentials: 'include' })
+        const res = await fetch(`${API_BASE}whats-new/${noticeId}`, {
+          credentials: 'include',
+          silentError: true,
+        })
         const data = await res.json()
+        if (res.status === 404) {
+          throw new Error("What's New notice not found.")
+        }
         if (data?.status !== 'success') {
           throw new Error(data?.message || "Failed to load What's New notice.")
         }
@@ -475,17 +481,18 @@ const WhatsNewForm = ({ mode }) => {
                   onChange={(event) => updateField('is_published', event.target.checked)}
                 />
 
-                <div className="d-flex gap-2">
-                  <CButton color="primary" onClick={saveNotice} disabled={saving}>
-                    {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Notice'}
-                  </CButton>
+                <div className="d-flex justify-content-end gap-2">
                   <CButton
                     color="secondary"
                     variant="outline"
+                    size="sm"
                     onClick={() => navigate('/system-admin/whats-new')}
                     disabled={saving}
                   >
                     Cancel
+                  </CButton>
+                  <CButton color="primary" size="sm" onClick={saveNotice} disabled={saving}>
+                    {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Notice'}
                   </CButton>
                 </div>
               </>

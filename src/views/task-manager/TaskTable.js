@@ -4,7 +4,6 @@ import {
   CButton,
   CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CDropdown,
   CDropdownItem,
@@ -21,8 +20,10 @@ import {
 } from '@coreui/react'
 import {
   DataTableActionMenu,
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableStatsToggle,
   DataTableTextCell,
 } from '../../components/datatable'
 import {
@@ -34,10 +35,13 @@ import {
   isDefaultPeriodRange,
 } from '../../components/filters'
 import { StatsStrip } from '../../components/stats'
+import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { countByPredicate, formatCount, sumBy } from '../../utils/stats/formatStats'
 import { buildCsv, downloadCsv } from '../../utils/datatable/csv'
 import dialog from '../../components/dialog/dialogService'
 import { getDaysLapsedInfo, getStatusText } from './actionHandlers'
+import { compareTaskPriority } from './taskPrioritySort'
+import TaskTitleProjectCell from './TaskTitleProjectCell'
 
 const onTimeBadge = String.fromCodePoint(0x1f407)
 const lateBadge = String.fromCodePoint(0x1f40c)
@@ -46,28 +50,28 @@ const dataColumns = [
   {
     key: 'title',
     label: 'Task',
-    width: '240px',
+    width: '320px',
     sortable: true,
     sortType: 'string',
     textMode: 'expandable',
-    cellMaxWidth: '220px',
+    cellMaxWidth: '300px',
     previewCharThreshold: 34,
   },
   {
-    key: 'statusText',
-    label: 'Status',
-    width: '160px',
+    key: 'daysLapsed',
+    label: 'Days Lapsed',
+    width: '130px',
     sortable: true,
-    sortType: 'string',
+    sortType: 'number',
     align: 'center',
     shrinkToFit: true,
   },
   {
-    key: 'createdAt',
-    label: 'Created On',
-    width: '130px',
+    key: 'statusText',
+    label: 'Status',
+    width: '210px',
     sortable: true,
-    sortType: 'date',
+    sortType: 'string',
     align: 'center',
     shrinkToFit: true,
   },
@@ -81,15 +85,6 @@ const dataColumns = [
     shrinkToFit: true,
   },
   {
-    key: 'daysLapsed',
-    label: 'Days Lapsed',
-    width: '130px',
-    sortable: true,
-    sortType: 'number',
-    align: 'center',
-    shrinkToFit: true,
-  },
-  {
     key: 'commentSummary',
     label: 'Comment Logs',
     width: '220px',
@@ -99,12 +94,21 @@ const dataColumns = [
     cellMaxWidth: '220px',
     previewCharThreshold: 34,
   },
+  {
+    key: 'createdAt',
+    label: 'Created On',
+    width: '130px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    shrinkToFit: true,
+  },
 ]
 
 const defaultVisibleColumns = {
   title: true,
   statusText: true,
-  createdAt: true,
+  createdAt: false,
   dueDate: true,
   daysLapsed: true,
   commentSummary: true,
@@ -199,6 +203,7 @@ const mapTaskToExportRow = (task, todayStr) => {
     staffCode: task.staffCode || '-',
     staffName: task.staffName || '-',
     title: task.title || '-',
+    project: task.projectName || '-',
     statusText,
     daysLapsed: daysLapsed.value ?? '',
     daysLapsedBasis: daysLapsed.basis,
@@ -210,17 +215,19 @@ const mapTaskToExportRow = (task, todayStr) => {
 }
 
 const getStatusRank = (statusText) => {
-  if (statusText === 'Overdue') return 1
+  if (statusText.startsWith('Overdue')) return 1
   if (statusText === 'Ongoing') return 2
   if (statusText === 'Completed') return 3
   if (statusText === 'Completed (On time)') return 3
-  if (statusText.startsWith('Completed (Late')) return 4
+  if (statusText.startsWith('Completed but late')) return 4
   return 99
 }
 
 const TaskTable = ({
   tasks = [],
   todayStr,
+  periodRange,
+  onPeriodRangeChange,
   getStatusBadge,
   handleAddComment,
   handleMarkCompleted,
@@ -229,7 +236,9 @@ const TaskTable = ({
   onView,
 }) => {
   const currentWeek = useMemo(() => getCurrentWeekRange(todayStr), [todayStr])
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const selectedPeriodRange = periodRange || localPeriodRange
+  const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
   const [searchTerm, setSearchTerm] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [exportType, setExportType] = useState('csv')
@@ -238,12 +247,17 @@ const TaskTable = ({
   const [exportStartDate, setExportStartDate] = useState(currentWeek.start)
   const [exportEndDate, setExportEndDate] = useState(currentWeek.end)
   const [exporting, setExporting] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('task-manager.tasks')
 
   const filteredTasks = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
 
     return tasks.filter((task) => {
       const titleMatch = String(task.title || '')
+        .toLowerCase()
+        .includes(term)
+      const projectMatch = String(task.projectName || '')
         .toLowerCase()
         .includes(term)
       const commentMatch = (task.commentLogs || []).some((log) =>
@@ -253,13 +267,13 @@ const TaskTable = ({
       )
       const statusText = getStatusText(task, todayStr).toLowerCase()
       const statusMatch = statusText.includes(term)
-      const matchesSearch = term === '' || titleMatch || commentMatch || statusMatch
+      const matchesSearch = term === '' || titleMatch || projectMatch || commentMatch || statusMatch
 
-      const inPeriod = isDateInPeriodRange(getDateOnly(task.createdAt), periodRange)
+      const inPeriod = isDateInPeriodRange(getDateOnly(task.createdAt), selectedPeriodRange)
 
       return matchesSearch && inPeriod
     })
-  }, [tasks, searchTerm, periodRange, todayStr])
+  }, [tasks, searchTerm, selectedPeriodRange, todayStr])
 
   const normalizedTasks = useMemo(
     () =>
@@ -287,7 +301,7 @@ const TaskTable = ({
 
   const statsItems = useMemo(() => {
     const completedRows = normalizedTasks.filter((task) => task.statusText.startsWith('Completed'))
-    const overdueRows = normalizedTasks.filter((task) => task.statusText === 'Overdue')
+    const overdueRows = normalizedTasks.filter((task) => task.statusText.startsWith('Overdue'))
     const lapsedRows = normalizedTasks.filter((task) => task.daysLapsedHasValue)
     const averageDaysLapsed = lapsedRows.length
       ? Math.round(sumBy(lapsedRows, (task) => task.daysLapsed) / lapsedRows.length)
@@ -326,10 +340,10 @@ const TaskTable = ({
 
   const resetFilters = () => {
     setSearchTerm('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    handlePeriodRangeChange(getPeriodRangePreset('ytd'))
   }
 
-  const hasCustomPeriod = periodRange && !isDefaultPeriodRange(periodRange)
+  const hasCustomPeriod = selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
   const activeFilterCount = 0
 
   const activeChips = useMemo(
@@ -337,15 +351,15 @@ const TaskTable = ({
       [
         searchTerm.trim() ? { key: 'search', label: `Search: ${searchTerm.trim()}` } : null,
         hasCustomPeriod
-          ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+          ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
           : null,
       ].filter(Boolean),
-    [hasCustomPeriod, periodRange, searchTerm],
+    [hasCustomPeriod, selectedPeriodRange, searchTerm],
   )
 
   const clearChip = (key) => {
     if (key === 'search') setSearchTerm('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
   }
 
   const handleExportCsv = () => {
@@ -358,6 +372,7 @@ const TaskTable = ({
         { key: 'staffCode', label: 'Staff Code' },
         { key: 'staffName', label: 'Staff' },
         { key: 'title', label: 'Task' },
+        { key: 'project', label: 'Project' },
         { key: 'statusText', label: 'Status' },
         { key: 'daysLapsed', label: 'Days Lapsed' },
         { key: 'daysLapsedBasis', label: 'Lapsed Basis' },
@@ -378,10 +393,14 @@ const TaskTable = ({
 
     setExportType(type)
     setExportPeriod(
-      inferExportPeriod(periodRange?.startDate || '', periodRange?.endDate || '', todayStr),
+      inferExportPeriod(
+        selectedPeriodRange?.startDate || '',
+        selectedPeriodRange?.endDate || '',
+        todayStr,
+      ),
     )
-    setExportStartDate(periodRange?.startDate || '')
-    setExportEndDate(periodRange?.endDate || '')
+    setExportStartDate(selectedPeriodRange?.startDate || '')
+    setExportEndDate(selectedPeriodRange?.endDate || '')
     setShowExportModal(true)
   }
 
@@ -485,6 +504,9 @@ const TaskTable = ({
   }
 
   const renderCell = (task, column) => {
+    if (column.key === 'title') {
+      return <TaskTitleProjectCell task={task} maxWidth={column.cellMaxWidth} />
+    }
     if (column.key === 'statusText') return getStatusBadge(task, todayStr)
     if (column.key === 'daysLapsed') return task.daysLapsedDisplay
     if (column.key === 'commentSummary') {
@@ -503,19 +525,25 @@ const TaskTable = ({
 
   return (
     <CCard>
-      <CCardHeader className="d-flex justify-content-between align-items-center">
-        <strong>Task List</strong>
+      <DataTableCardHeader
+        title="Task List"
+        scopeLabel={selectedPeriodRange ? getPeriodRangeScopeLabel(selectedPeriodRange) : ''}
+      >
+        <DataTableStatsToggle
+          visible={statsVisible}
+          onToggle={toggleStatsVisible}
+          controlsVisible={controlsVisible}
+          onControlsToggle={toggleControlsVisible}
+        />
         <CButton color="primary" size="sm" onClick={onCreateTask}>
           Create Task
         </CButton>
-      </CCardHeader>
+      </DataTableCardHeader>
       <CCardBody>
-        <StatsStrip
-          items={statsItems}
-          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-        />
+        {statsVisible && <StatsStrip items={statsItems} />}
 
         <DataTableRecordControls
+          visible={controlsVisible}
           searchValue={searchTerm}
           onSearchChange={setSearchTerm}
           searchPlaceholder="Type to search..."
@@ -536,8 +564,8 @@ const TaskTable = ({
           dataColumns={dataColumns}
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
-          storageKey="task-manager.tasks.visible-columns.v4"
-          apiKey="task-manager-tasks-visible-columns-v4"
+          storageKey="task-manager.tasks.visible-columns.v7"
+          apiKey="task-manager-tasks-visible-columns-v7"
           idPrefix="task-manager-task"
           emptyMessage="No tasks data"
           exportFilename={`task-manager-tasks-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -550,8 +578,8 @@ const TaskTable = ({
           showMobileUtilityRow={false}
           renderQuickFilters={() => (
             <PeriodRangeSelector
-              value={periodRange}
-              onChange={setPeriodRange}
+              value={selectedPeriodRange}
+              onChange={handlePeriodRangeChange}
               className="d-none d-lg-block"
             />
           )}
@@ -562,17 +590,23 @@ const TaskTable = ({
           onRowOpen={onView}
           getMobileTitle={(task) => task.title}
           getMobileSubtitle={(task) => task.statusText}
-          getMobileMeta={(task) => `${task.createdAt || '-'} to ${task.dueDate || '-'}`}
+          getMobileMeta={(task) => `Due ${task.dueDate || '-'}`}
           mobileFieldKeys={{
             title: 'title',
             subtitle: 'statusText',
-            meta: ['createdAt', 'dueDate'],
+            meta: 'dueDate',
           }}
-          initialSortField="createdAt"
-          initialSortDir="desc"
-          initialSortDirByField={{ createdAt: 'desc', dueDate: 'desc', daysLapsed: 'desc' }}
+          initialSortField="statusText"
+          initialSortDir="asc"
+          initialSortDirByField={{
+            statusText: 'asc',
+            createdAt: 'desc',
+            dueDate: 'asc',
+            daysLapsed: 'desc',
+          }}
           getSortValue={(task, field) => (field === 'statusText' ? task.statusRank : task[field])}
-          resetDeps={[filteredTasks, searchTerm, periodRange]}
+          sortComparators={{ statusText: compareTaskPriority }}
+          resetDeps={[filteredTasks, searchTerm, selectedPeriodRange]}
         />
       </CCardBody>
       <CModal
@@ -625,12 +659,13 @@ const TaskTable = ({
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             disabled={exporting}
             onClick={() => setShowExportModal(false)}
           >
             Cancel
           </CButton>
-          <CButton color="primary" disabled={exporting} onClick={handleConfirmExport}>
+          <CButton color="primary" size="sm" disabled={exporting} onClick={handleConfirmExport}>
             {exporting ? 'Exporting...' : `Export ${exportType.toUpperCase()}`}
           </CButton>
         </CModalFooter>

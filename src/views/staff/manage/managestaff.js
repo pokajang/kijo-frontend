@@ -105,7 +105,13 @@ export default function ManageStaff() {
 
   const handleTerminateStaff = useCallback(
     async (staffId) => {
-      if (!(await dialog.confirm('Are you sure? This cannot be undone.'))) return
+      if (
+        !(await dialog.confirm('Are you sure? This cannot be undone.', {
+          confirmText: 'Terminate',
+          confirmColor: 'danger',
+        }))
+      )
+        return
       try {
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}/terminate`,

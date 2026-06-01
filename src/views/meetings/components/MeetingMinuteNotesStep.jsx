@@ -78,7 +78,6 @@ export default function MeetingMinuteNotesStep({
               type="button"
               size="sm"
               color="primary"
-              variant="outline"
               onClick={onAddActionItem}
               disabled={isFormLocked}
             >
@@ -137,6 +136,7 @@ export default function MeetingMinuteNotesStep({
                     type="button"
                     color="danger"
                     variant="outline"
+                    size="sm"
                     className="d-inline-flex align-items-center justify-content-center px-3"
                     onClick={() => onRemoveActionItem(idx)}
                     disabled={isFormLocked}

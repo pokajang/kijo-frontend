@@ -141,14 +141,19 @@ const FreeISO = () => {
 
               {/* Action Buttons */}
               <CRow className="mt-4">
-                <CCol className="d-flex gap-2">
-                  <CButton color="secondary" onClick={() => navigate(-1)}>
+                <CCol className="d-flex justify-content-end gap-2">
+                  <CButton
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                  >
                     Back
                   </CButton>
-                  <CButton color="danger" onClick={handleReset}>
+                  <CButton color="secondary" variant="outline" size="sm" onClick={handleReset}>
                     Reset
                   </CButton>
-                  <CButton color="primary" onClick={handleGenerateReport}>
+                  <CButton color="primary" size="sm" onClick={handleGenerateReport}>
                     Generate Report
                   </CButton>
                 </CCol>

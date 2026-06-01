@@ -1,159 +1,319 @@
-﻿import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
+  CAlert,
+  CButton,
   CCard,
-  CCardHeader,
   CCardBody,
-  CRow,
+  CCardHeader,
   CCol,
+  CFormCheck,
+  CFormInput,
   CFormLabel,
   CFormSelect,
-  CFormInput,
   CFormTextarea,
-  CButton,
-  CModal,
-  CModalTitle,
-  CModalBody,
-  CModalHeader,
-  CModalContent,
-  CModalFooter,
+  CRow,
 } from '@coreui/react'
 import Select from '../../../components/forms/ThemedSelect'
 
-import PaymentHistoryTable from './PaymentHistoryTable.jsx'
 import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { vendorModuleTabs } from '../../../components/navigation/moduleNavConfigs'
-import { fetchAllPagedRecords, fetchJson } from '../../../utils/detailPages'
+import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { listActiveProjectOptions, listAssignedVendors } from '../../project/manage/projectApi'
+import slugify from '../../../lib/slugify'
+import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
+import { apiFetch } from '../../../api/apiClient'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
+const PAYMENT_CONTEXT_OPTIONS = [
+  {
+    value: 'Project',
+    title: 'Project-Related',
+    description: 'Pay a vendor already assigned to one of your active projects.',
+  },
+  {
+    value: 'Office',
+    title: 'Office-Related',
+    description: 'Pay an active vendor for internal office work or purchases.',
+  },
+  {
+    value: 'Other',
+    title: 'Others',
+    description: 'Pay an active vendor for miscellaneous non-project items.',
+  },
+]
+
+const getProjectId = (project) => project?.project_id ?? project?.id
+const getProjectName = (project) => project?.project_name ?? project?.projectName ?? ''
+const getProjectType = (project) => project?.project_type ?? project?.projectType ?? ''
+const getVendorId = (vendor) => vendor?.vendor_id ?? vendor?.id
+const getVendorName = (vendor) => vendor?.vendor_name ?? vendor?.vendorName ?? ''
+
+const loadActiveVendors = ({ signal } = {}) =>
+  fetchAllPagedRecords({
+    url: `${API_BASE}vendors`,
+    params: { status: 'active' },
+    dataKeys: ['data', 'vendors'],
+    perPage: 100,
+    options: { signal },
+  })
+
 const PayVendor = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const handoffProjectId = location.state?.paymentProjectId
+  const handoffVendorId = location.state?.paymentVendorId
+
   const [allProjects, setAllProjects] = useState([])
   const [vendors, setVendors] = useState([])
   const [selectedProject, setSelectedProject] = useState(null)
   const [selectedVendor, setSelectedVendor] = useState(null)
-  const [paymentContext, setPaymentContext] = useState('')
-  const [outstanding, setOutstanding] = useState(0)
-  const [pastPayments, setPastPayments] = useState([])
-
-  // states for invoice viewing
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
-  const [selectedInvoiceUrl, setSelectedInvoiceUrl] = useState('')
+  const [paymentContext, setPaymentContext] = useState(
+    location.state?.paymentContext || (handoffProjectId ? 'Project' : ''),
+  )
+  const [loadingProjects, setLoadingProjects] = useState(false)
+  const [loadingVendors, setLoadingVendors] = useState(false)
+  const [selectionError, setSelectionError] = useState('')
 
   const [formData, setFormData] = useState({
     type: '',
     amount: '',
     method: '',
-    reference: '',
     remarks: '',
     receipt: null,
   })
 
+  const clearVendorSelection = useCallback(() => {
+    setSelectedVendor(null)
+  }, [])
+
+  const loadVendorsForProject = useCallback(
+    async (project, options = {}, preferredVendorId = null) => {
+      const projectId = getProjectId(project)
+      if (!projectId) return
+
+      setSelectedProject(project)
+      clearVendorSelection()
+      setSelectionError('')
+      setLoadingVendors(true)
+
+      try {
+        const assignedVendors = await listAssignedVendors(projectId, options)
+        setVendors(assignedVendors)
+
+        const vendorIdToSelect =
+          preferredVendorId ||
+          (String(projectId) === String(handoffProjectId) ? handoffVendorId : null)
+
+        if (vendorIdToSelect) {
+          const matchedVendor = assignedVendors.find(
+            (vendor) => String(getVendorId(vendor)) === String(vendorIdToSelect),
+          )
+          if (matchedVendor) {
+            setSelectedVendor(matchedVendor)
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return
+        console.error('Error fetching assigned vendors:', err)
+        setVendors([])
+        setSelectionError(err.message || 'Failed to load assigned vendors.')
+      } finally {
+        setLoadingVendors(false)
+      }
+    },
+    [clearVendorSelection, handoffProjectId, handoffVendorId],
+  )
+
   useEffect(() => {
+    const projectId = location.state?.paymentProjectId
+    if (projectId) {
+      setPaymentContext('Project')
+    }
+  }, [location.state?.paymentProjectId])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setSelectionError('')
+
     if (paymentContext === 'Project') {
-      fetch(`${API_BASE}vendor-projects`, { credentials: 'include' })
-        .then((res) => res.json())
-        .then((data) => {
-          const projects = Array.isArray(data?.data)
-            ? data.data
-            : Array.isArray(data?.projects)
-              ? data.projects
-              : []
-          if (data?.status === 'success' || data?.success === true || projects.length > 0) {
-            setAllProjects(projects) // each has project + vendors
-          } else {
-            setAllProjects([])
-          }
+      setLoadingProjects(true)
+      setVendors([])
+      listActiveProjectOptions({ signal: controller.signal })
+        .then(setAllProjects)
+        .catch((err) => {
+          if (err.name === 'AbortError') return
+          console.error('Error fetching linked projects:', err)
+          setAllProjects([])
+          setSelectionError(err.message || 'Failed to load linked projects.')
         })
-    } else if (paymentContext !== '') {
-      // for Office / others
-      fetch(`${API_BASE}vendors`, { credentials: 'include' })
-        .then((res) => res.json())
-        .then((data) => {
-          const vendorList = Array.isArray(data?.data)
-            ? data.data
-            : Array.isArray(data?.vendors)
-              ? data.vendors
-              : []
-          if (data?.status === 'success' || data?.success === true || vendorList.length > 0) {
-            setVendors(vendorList)
-          } else {
-            setVendors([])
-          }
+        .finally(() => setLoadingProjects(false))
+    } else if (paymentContext) {
+      setAllProjects([])
+      setLoadingVendors(true)
+      loadActiveVendors({ signal: controller.signal })
+        .then(setVendors)
+        .catch((err) => {
+          if (err.name === 'AbortError') return
+          console.error('Error fetching vendors:', err)
+          setVendors([])
+          setSelectionError(err.message || 'Failed to load vendors.')
         })
+        .finally(() => setLoadingVendors(false))
+    } else {
+      setAllProjects([])
+      setVendors([])
     }
 
-    // Reset on context switch
-    setSelectedProject(null)
-    setSelectedVendor(null)
-    setOutstanding(0)
-    setPastPayments([])
+    return () => {
+      controller.abort()
+    }
   }, [paymentContext])
 
-  const handleProjectSelect = (projectId) => {
-    const selected = allProjects.find((p) => String(p.project_id) === String(projectId))
-    if (!selected) {
-      setSelectedProject(null)
-      setVendors([])
+  useEffect(() => {
+    if (paymentContext !== 'Project' || !handoffProjectId || loadingProjects) return
+    if (selectedProject && String(getProjectId(selectedProject)) === String(handoffProjectId)) {
       return
     }
 
-    setSelectedProject(selected)
-    setVendors(selected.vendors || [])
-    setSelectedVendor(null)
-    setOutstanding(0)
-    setPastPayments([])
-  }
+    const matchedProject = allProjects.find(
+      (project) => String(getProjectId(project)) === String(handoffProjectId),
+    )
+    if (matchedProject) {
+      loadVendorsForProject(matchedProject, {}, handoffVendorId)
+    }
+  }, [
+    allProjects,
+    handoffProjectId,
+    handoffVendorId,
+    loadingProjects,
+    loadVendorsForProject,
+    paymentContext,
+    selectedProject,
+  ])
+
+  const projectOptions = useMemo(
+    () =>
+      allProjects.map((project) => ({
+        value: getProjectId(project),
+        label: `${getProjectName(project)} (${project.status || '-'})`,
+        data: project,
+      })),
+    [allProjects],
+  )
+
+  const vendorOptions = useMemo(
+    () =>
+      vendors.map((vendor) => ({
+        value: getVendorId(vendor),
+        label: getVendorName(vendor),
+        data: vendor,
+      })),
+    [vendors],
+  )
+
+  const selectedProjectOption = useMemo(() => {
+    if (!selectedProject) return null
+    const selectedId = getProjectId(selectedProject)
+    return (
+      projectOptions.find((option) => String(option.value) === String(selectedId)) || {
+        value: selectedId,
+        label: `${getProjectName(selectedProject)} (${selectedProject.status || '-'})`,
+        data: selectedProject,
+      }
+    )
+  }, [projectOptions, selectedProject])
+
+  const selectedVendorOption = useMemo(() => {
+    if (!selectedVendor) return null
+    const selectedId = getVendorId(selectedVendor)
+    return (
+      vendorOptions.find((option) => String(option.value) === String(selectedId)) || {
+        value: selectedId,
+        label: getVendorName(selectedVendor),
+        data: selectedVendor,
+      }
+    )
+  }, [selectedVendor, vendorOptions])
+
+  const hasNoAssignedVendors =
+    paymentContext === 'Project' && selectedProject && !loadingVendors && vendors.length === 0
 
   const handlePaymentContextChange = (value) => {
+    if (value === paymentContext) return
     setPaymentContext(value)
     setSelectedProject(null)
-    setSelectedVendor(null)
-    setOutstanding(0)
-    setPastPayments([])
+    setVendors([])
+    clearVendorSelection()
   }
 
-  const handleVendorSelect = (vendorId) => {
-    const vendor = vendors.find((v) => String(v.vendor_id) === String(vendorId))
-    if (!vendor) {
-      console.error('Vendor not found:', vendorId)
+  const handleProjectSelect = (option) => {
+    if (!option) {
+      setSelectedProject(null)
+      setVendors([])
+      clearVendorSelection()
+      return
+    }
+    loadVendorsForProject(option.data)
+  }
+
+  const handleVendorSelect = (option) => {
+    if (!option) {
+      clearVendorSelection()
       return
     }
 
-    setSelectedVendor(vendor)
+    setSelectedVendor(option.data)
+  }
 
-    // Load vendor payment history here via backend
-    const historyUrl = `${API_BASE}vendor-payments/by-vendor`
-    const historyParams = { vendor_id: vendorId, year: new Date().getFullYear() }
-    fetchJson(
-      `${historyUrl}?vendor_id=${encodeURIComponent(vendorId)}&year=${
-        historyParams.year
-      }&per_page=1`,
-    )
-      .then((data) => {
-        const outstandingValue = data?.outstanding ?? data?.data?.outstanding ?? 0
+  const handleAssignOne = () => {
+    const projectId = getProjectId(selectedProject)
+    if (!projectId) return
 
-        setOutstanding(Number(outstandingValue) || 0)
-        return fetchAllPagedRecords({
-          url: historyUrl,
-          params: historyParams,
-          dataKeys: ['history', 'data.history', 'data'],
-          perPage: 100,
-        })
-      })
-      .then((history) => {
-        setPastPayments(history)
-      })
-      .catch((err) => {
-        console.error('Error fetching payment history', err)
-        setOutstanding(0)
-        setPastPayments([])
-      })
+    const typeSlug = slugify(getProjectType(selectedProject)) || 'project'
+    const nameSlug = slugify(getProjectName(selectedProject)) || 'details'
+
+    navigate(`/project/manage/${projectId}/${typeSlug}/${nameSlug}`, {
+      state: {
+        openVendorAssignment: true,
+        returnTo: '/vendor/pay',
+        paymentProjectId: projectId,
+      },
+    })
   }
 
   const handleSubmitPayment = () => {
+    const vendorId = getVendorId(selectedVendor)
+    const vendorName = getVendorName(selectedVendor)
+    const amount = Number(formData.amount)
+
+    if (!vendorId) {
+      dialog.alert('Please select a vendor before submitting.')
+      return
+    }
+
+    if (paymentContext === 'Project' && !selectedProject) {
+      dialog.alert('Please select a project before submitting.')
+      return
+    }
+
+    if (!formData.type) {
+      dialog.alert('Please select a payment type.')
+      return
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      dialog.alert('Please enter a valid amount greater than 0.')
+      return
+    }
+
+    if (!formData.method) {
+      dialog.alert('Please select a payment method.')
+      return
+    }
+
     if (!formData.receipt) {
       dialog.alert('Please upload the invoice before submitting.')
       return
@@ -165,121 +325,163 @@ const PayVendor = () => {
     }
 
     const submitData = new FormData()
-    submitData.append('vendor_id', selectedVendor?.vendor_id) // transmit vendor_id in all transaction
-    submitData.append('vendor_name', selectedVendor?.vendor_name) // ✅ Correct field
-    submitData.append('project_id', selectedProject?.project_id || '')
+    submitData.append('vendor_id', vendorId)
+    submitData.append('vendor_name', vendorName)
+    submitData.append('project_id', getProjectId(selectedProject) || '')
     submitData.append('payment_context', paymentContext)
-    submitData.append('payment_type', formData.type) // ✅ match backend expected key
-    submitData.append('amount', Number(formData.amount || 0).toFixed(2))
+    submitData.append('payment_type', formData.type)
+    submitData.append('amount', amount.toFixed(2))
     submitData.append('method', formData.method)
-    submitData.append('reference', formData.reference)
     submitData.append('remarks', formData.remarks)
     submitData.append('receipt', formData.receipt)
 
-    fetch(`${API_BASE}vendor-payments`, {
+    apiFetch(`${API_BASE}vendor-payments`, {
       method: 'POST',
       body: submitData,
-      credentials: 'include',
     })
       .then((res) => res.json())
       .then((data) => {
         if (data?.status === 'success' || data?.success === true) {
-          dialog.alert('✅ Payment request submitted.')
+          dialog.alert('Payment request submitted.')
+          dispatchAppNotificationsChanged()
 
-          // Optional: reset form and selections
           setFormData({
             type: '',
             amount: '',
             method: '',
-            reference: '',
             remarks: '',
             receipt: null,
           })
-          setSelectedVendor(null)
-          setSelectedProject(null)
-          setOutstanding(0)
-          setPastPayments([])
+          clearVendorSelection()
+          if (paymentContext !== 'Project') {
+            setSelectedProject(null)
+          }
         } else {
-          dialog.alert('❌ Submission failed: ' + data.message)
+          dialog.alert('Submission failed: ' + data.message)
         }
       })
       .catch((err) => {
-        dialog.alert('❌ Submission failed: ' + err.message)
+        dialog.alert('Submission failed: ' + err.message)
       })
   }
 
   return (
     <>
-      <ModuleNavStrip
-        tabs={vendorModuleTabs}
-        activeTab="payment-records"
-        ariaLabel="Vendor sections"
-      />
+      <ModuleNavStrip tabs={vendorModuleTabs} activeTab="pay" ariaLabel="Vendor sections" />
+
       <CCard className="mb-4">
         <CCardHeader>
           <strong>Request Vendor Payment</strong>
         </CCardHeader>
         <CCardBody>
-          <CRow className="g-3">
-            {/* PAYMENT context SELECTION */}
-            <CCol md={4}>
-              <CFormLabel>Payment Context</CFormLabel>
-              <CFormSelect
-                value={paymentContext}
-                onChange={(e) => handlePaymentContextChange(e.target.value)}
-              >
-                <option value="">Select Payment Context</option>
-                <option value="Project">Project-Related</option>
-                <option value="Office">Office-Related</option>
-                <option value="Other">Others</option>
-              </CFormSelect>
-            </CCol>
-
-            {/* PROJECT SELECTOR */}
-            {paymentContext === 'Project' && (
-              <CCol md={4}>
-                <CFormLabel>Project</CFormLabel>
-                <CFormSelect onChange={(e) => handleProjectSelect(e.target.value)}>
-                  <option value="">Select Project</option>
-                  {allProjects.map((p) => (
-                    <option key={p.project_id} value={p.project_id}>
-                      {p.project_name} ({p.status})
-                    </option>
-                  ))}
-                </CFormSelect>
+          <section>
+            <CRow className="g-3">
+              <CCol xs={12}>
+                <CFormLabel>Payment Context</CFormLabel>
+                <CRow className="g-3">
+                  {PAYMENT_CONTEXT_OPTIONS.map((option) => {
+                    const isSelected = paymentContext === option.value
+                    return (
+                      <CCol md={4} key={option.value}>
+                        <label
+                          className={`border rounded p-3 d-flex align-items-start gap-2 app-selectable-card vendor-payment-context-card h-100 ${
+                            isSelected ? 'app-selectable-card--selected' : ''
+                          }`}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <CFormCheck
+                            type="radio"
+                            name="paymentContext"
+                            checked={isSelected}
+                            onChange={() => handlePaymentContextChange(option.value)}
+                          />
+                          <span>
+                            <strong>{option.title}</strong>
+                            <span className="d-block text-muted mt-1">{option.description}</span>
+                          </span>
+                        </label>
+                      </CCol>
+                    )
+                  })}
+                </CRow>
               </CCol>
-            )}
 
-            {/* VENDOR SELECTOR */}
-            <CCol md={paymentContext === 'Project' ? 4 : 8}>
-              <CFormLabel>Vendor</CFormLabel>
-              <Select
-                options={vendors.map((v) => ({
-                  value: v.vendor_id,
-                  label: v.vendor_name,
-                }))}
-                value={
-                  selectedVendor
-                    ? { value: selectedVendor.vendor_id, label: selectedVendor.vendor_name }
-                    : null
-                }
-                onChange={(selectedOption) => {
-                  if (selectedOption) {
-                    handleVendorSelect(selectedOption.value)
-                  } else {
-                    setSelectedVendor(null)
-                    setOutstanding(0)
-                    setPastPayments([])
-                  }
-                }}
-                isClearable
-                placeholder="Select vendor"
-              />
-            </CCol>
+              {paymentContext === 'Project' && (
+                <CCol xs={12}>
+                  <CFormLabel>Project</CFormLabel>
+                  <Select
+                    options={projectOptions}
+                    value={selectedProjectOption}
+                    onChange={handleProjectSelect}
+                    isClearable
+                    isLoading={loadingProjects}
+                    placeholder="Select project"
+                    loadingMessage={() => 'Loading linked projects...'}
+                    noOptionsMessage={() =>
+                      loadingProjects
+                        ? 'Loading linked projects...'
+                        : 'No active linked projects found.'
+                    }
+                  />
+                </CCol>
+              )}
 
-            {selectedVendor && (
-              <>
-                {/* PROJECT-ONLY FIELDS */}
+              {selectionError && (
+                <CCol xs={12}>
+                  <CAlert color="warning" className="mb-0">
+                    {selectionError}
+                  </CAlert>
+                </CCol>
+              )}
+            </CRow>
+          </section>
+
+          {paymentContext && (
+            <section className="mt-4">
+              <CRow className="g-3">
+                <CCol xs={12}>
+                  <CFormLabel>Vendor</CFormLabel>
+                  <Select
+                    options={vendorOptions}
+                    value={selectedVendorOption}
+                    onChange={handleVendorSelect}
+                    isClearable
+                    isDisabled={paymentContext === 'Project' && !selectedProject}
+                    isLoading={loadingVendors}
+                    placeholder={
+                      paymentContext === 'Project' && !selectedProject
+                        ? 'Select a project first'
+                        : 'Select vendor'
+                    }
+                    loadingMessage={() => 'Loading vendors...'}
+                    noOptionsMessage={() =>
+                      loadingVendors
+                        ? 'Loading vendors...'
+                        : paymentContext === 'Project'
+                          ? 'No vendors assigned to this project.'
+                          : 'No active vendors found.'
+                    }
+                  />
+                </CCol>
+
+                {hasNoAssignedVendors && (
+                  <CCol xs={12}>
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      <span className="text-muted">No vendor assigned to this project.</span>
+                      <CButton color="primary" size="sm" onClick={handleAssignOne}>
+                        Assign One
+                      </CButton>
+                    </div>
+                  </CCol>
+                )}
+              </CRow>
+            </section>
+          )}
+
+          {selectedVendor && (
+            <section className="border-top pt-4 mt-4">
+              <h2 className="h6 fw-semibold mb-3">Payment Details</h2>
+              <CRow className="g-3">
                 {paymentContext === 'Project' && (
                   <>
                     <CCol md={3}>
@@ -297,11 +499,14 @@ const PayVendor = () => {
                   </>
                 )}
 
-                {/* COMMON PAYMENT FIELDS */}
                 <CCol md={3}>
-                  <CFormLabel>Payment Type</CFormLabel>
-                  <CFormSelect onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
-                    <option>Select Payment Type</option>
+                  <CFormLabel htmlFor="vendorPaymentType">Payment Type</CFormLabel>
+                  <CFormSelect
+                    id="vendorPaymentType"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  >
+                    <option value="">Select Payment Type</option>
                     <option value="Deposit">Deposit</option>
                     <option value="Full Payment">Full Payment</option>
                     <option value="Partial">Partial</option>
@@ -309,27 +514,34 @@ const PayVendor = () => {
                 </CCol>
 
                 <CCol md={3}>
-                  <CFormLabel>Amount</CFormLabel>
+                  <CFormLabel htmlFor="vendorPaymentAmount">Amount</CFormLabel>
                   <CFormInput
+                    id="vendorPaymentAmount"
                     type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   />
                 </CCol>
 
                 <CCol md={3}>
-                  <CFormLabel>Payment Method</CFormLabel>
+                  <CFormLabel htmlFor="vendorPaymentMethod">Payment Method</CFormLabel>
                   <CFormSelect
+                    id="vendorPaymentMethod"
+                    value={formData.method}
                     onChange={(e) => setFormData({ ...formData, method: e.target.value })}
                   >
-                    <option>Select method</option>
+                    <option value="">Select method</option>
                     <option value="Online Transfer">Online Transfer</option>
                     <option value="Cheque">Cheque</option>
                   </CFormSelect>
                 </CCol>
 
                 <CCol md={3}>
-                  <CFormLabel>Upload Invoice (5MB Max)</CFormLabel>
+                  <CFormLabel htmlFor="vendorPaymentReceipt">Upload Invoice (5MB Max)</CFormLabel>
                   <CFormInput
+                    id="vendorPaymentReceipt"
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={(e) => setFormData({ ...formData, receipt: e.target.files[0] })}
@@ -352,68 +564,26 @@ const PayVendor = () => {
                 </CCol>
 
                 <CCol md={12}>
-                  <CFormLabel>Remarks</CFormLabel>
+                  <CFormLabel htmlFor="vendorPaymentRemarks">Remarks</CFormLabel>
                   <CFormTextarea
+                    id="vendorPaymentRemarks"
                     rows={1}
                     value={formData.remarks}
                     onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                    placeholder="e.g. Electricity payment, whatever, etc."
+                    placeholder="e.g. Electricity payment, invoice reference, or payment note"
                   />
                 </CCol>
 
-                <CCol md={12}>
-                  <CButton color="primary" onClick={handleSubmitPayment}>
+                <CCol md={12} className="d-flex justify-content-end">
+                  <CButton color="primary" size="sm" onClick={handleSubmitPayment}>
                     Submit Payment
                   </CButton>
                 </CCol>
-              </>
-            )}
-          </CRow>
+              </CRow>
+            </section>
+          )}
         </CCardBody>
       </CCard>
-
-      {/* PAST PAYMENT RECORDS */}
-      {selectedVendor && (
-        <CCard className="mb-4">
-          <CCardHeader>
-            <strong>Alltime Payment Records for {selectedVendor.vendor_name}</strong>
-          </CCardHeader>
-          <CCardBody>
-            <PaymentHistoryTable
-              payments={pastPayments}
-              setSelectedInvoiceUrl={setSelectedInvoiceUrl}
-              setShowInvoiceModal={setShowInvoiceModal}
-              onViewPayment={(payment) =>
-                navigate(`/vendor/pay/history/${payment.id}`, {
-                  state: { record: payment, returnTo: '/vendor/pay' },
-                })
-              }
-            />
-          </CCardBody>
-        </CCard>
-      )}
-
-      {/* view invoice modal */}
-      <CModal size="lg" visible={showInvoiceModal} onClose={() => setShowInvoiceModal(false)}>
-        <CModalHeader>
-          <CModalTitle>
-            {selectedVendor?.vendor_name
-              ? `Invoice Preview for ${selectedVendor.vendor_name}`
-              : 'Invoice Preview'}
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {selectedInvoiceUrl ? (
-            <iframe
-              src={selectedInvoiceUrl}
-              style={{ width: '100%', height: '600px', border: 'none' }}
-              title="Invoice Preview"
-            />
-          ) : (
-            <div className="text-center text-muted">No invoice selected.</div>
-          )}
-        </CModalBody>
-      </CModal>
     </>
   )
 }

@@ -40,7 +40,7 @@ const DataTableColumnMenu = ({
         )
       })}
       <div className="d-flex justify-content-end mt-2">
-        <CButton size="sm" color="secondary" variant="ghost" onClick={resetColumnVisibility}>
+        <CButton size="sm" color="secondary" variant="outline" onClick={resetColumnVisibility}>
           Reset
         </CButton>
       </div>

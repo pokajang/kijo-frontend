@@ -88,7 +88,6 @@ const ServiceTypeCard = ({
                     : 'No services found.'}{' '}
                   <CButton
                     size="sm"
-                    variant="outline"
                     color="primary"
                     className="p-1 m-0 align-baseline"
                     onClick={() => navigate('/templates/create')}

@@ -4,6 +4,22 @@ import { ensureDefaultClauseFields, normalizeDraftContent } from '../legalCompli
 export const getTemplateSections = (content) =>
   Array.isArray(content?.groups) ? content.groups : []
 
+export const getLegalGroupLetter = (index = 0) => {
+  let value = Number(index) + 1
+  let label = ''
+
+  while (value > 0) {
+    value -= 1
+    label = String.fromCharCode(65 + (value % 26)) + label
+    value = Math.floor(value / 26)
+  }
+
+  return label || 'A'
+}
+
+export const formatLegalGroupTitle = (group = {}, index = 0) =>
+  `${getLegalGroupLetter(index)}. ${group.title || 'Legislation name not set'}`
+
 export const getClauseFields = (clause) =>
   ensureDefaultClauseFields(
     Array.isArray(clause?.fields) && clause.fields.length > 0 ? clause.fields : defaultClauseFields,

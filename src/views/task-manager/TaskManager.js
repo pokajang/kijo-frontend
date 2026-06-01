@@ -1,5 +1,5 @@
 // src/components/tasks/TaskManager.js
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { CRow, CCol, CModal, CModalBody, CModalHeader, CModalTitle } from '@coreui/react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
@@ -7,8 +7,25 @@ import CreateTask from './CreateTask'
 import TaskTable from './TaskTable'
 import * as handlers from './actionHandlers'
 import dialog from '../../components/dialog/dialogService'
+import { stripExactProjectMention } from '../../utils/projectMentionText'
+import { listActiveProjectOptions } from '../project/manage/projectApi'
+import { getPeriodDateParams, getPeriodRangePreset } from '../../components/filters'
+import { appendQueryParams } from '../../utils/detailPages'
+import {
+  defaultTaskPreview,
+  normalizeTaskClassification,
+  previewTaskClassification,
+} from './taskApi'
+import { showApiToast } from '../../api/apiClient'
 
-const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v1'
+const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v3'
+const AI_CLASSIFICATION_POLL_INTERVAL_MS = 4000
+const AI_CLASSIFICATION_POLL_TIMEOUT_MS = 30000
+
+export const buildPersonalTasksUrl = (apiBase, periodRange) =>
+  appendQueryParams(`${apiBase}tasks/personal`, {
+    ...getPeriodDateParams(periodRange),
+  })
 
 const formatDateLocal = (date) => {
   const year = date.getFullYear()
@@ -17,21 +34,61 @@ const formatDateLocal = (date) => {
   return `${year}-${month}-${day}`
 }
 
+const isDateOnlyValue = (value) => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return false
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(year, month - 1, day)
+
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+}
+
+const getPendingAiClassificationIds = (tasks = []) =>
+  tasks
+    .filter((task) => task?.aiClassificationStatus === 'pending')
+    .map((task) => String(task.id || ''))
+    .filter(Boolean)
+
+const firstErrorMessage = (errors) => {
+  if (!errors || typeof errors !== 'object') return ''
+
+  for (const value of Object.values(errors)) {
+    if (Array.isArray(value) && value.length > 0) return String(value[0] || '')
+    if (typeof value === 'string' && value.trim()) return value
+  }
+
+  return ''
+}
+
 const TaskManager = () => {
   const todayStr = formatDateLocal(new Date())
   const createTaskDraft = () => ({
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title: '',
     dueDate: todayStr,
+    projectId: '',
+    projectLabel: '',
+    ...defaultTaskPreview(),
   })
   const normalizeTaskDrafts = (drafts) => {
     if (!Array.isArray(drafts)) return [createTaskDraft()]
     const normalized = drafts
-      .map((task) => ({
-        id: String(task?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`),
-        title: String(task?.title || ''),
-        dueDate: String(task?.dueDate || todayStr),
-      }))
+      .map((task) => {
+        const title = String(task?.title || '')
+        return {
+          id: String(task?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`),
+          title,
+          dueDate: isDateOnlyValue(task?.dueDate ?? task?.due_date)
+            ? String(task?.dueDate ?? task?.due_date)
+            : todayStr,
+          projectId: String(task?.projectId || task?.project_id || ''),
+          projectLabel: String(task?.projectLabel || task?.project_label || ''),
+          ...defaultTaskPreview(title.trim() ? 'pending' : 'idle'),
+        }
+      })
       .filter((task) => task.title.trim() || task.dueDate)
 
     return normalized.length ? normalized : [createTaskDraft()]
@@ -55,8 +112,11 @@ const TaskManager = () => {
   }
   const [taskDrafts, setTaskDrafts] = useState(readStoredTaskDrafts)
   const [taskList, setTaskList] = useState([])
+  const [projectOptions, setProjectOptions] = useState([])
+  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [savingTasks, setSavingTasks] = useState(false)
+  const aiClassificationPollRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -86,9 +146,103 @@ const TaskManager = () => {
     clearCreateActionParam()
   }
 
+  const savedDraftTitle = useCallback(
+    (task) => {
+      const selectedProject = projectOptions.find(
+        (project) => String(project.value) === String(task.projectId || ''),
+      )
+
+      return stripExactProjectMention(task.title, selectedProject?.label || task.projectLabel)
+    },
+    [projectOptions],
+  )
+
+  const draftClassificationStatus = (task) => {
+    const savedTitle = savedDraftTitle(task)
+
+    return savedTitle.trim() ? defaultTaskPreview('pending') : defaultTaskPreview()
+  }
+
+  useEffect(() => {
+    const controllers = []
+    const timers = []
+
+    taskDrafts.forEach((task) => {
+      if (task.classificationStatus !== 'pending') return
+
+      const savedTitle = savedDraftTitle(task).trim()
+      if (!savedTitle) {
+        setTaskDrafts((prev) =>
+          prev.map((current) =>
+            current.id === task.id ? { ...current, ...defaultTaskPreview() } : current,
+          ),
+        )
+        return
+      }
+
+      const controller = new AbortController()
+      controllers.push(controller)
+      const timer = window.setTimeout(() => {
+        previewTaskClassification(savedTitle, { signal: controller.signal })
+          .then((classification) => {
+            setTaskDrafts((prev) =>
+              prev.map((current) => {
+                if (current.id !== task.id) return current
+                if (savedDraftTitle(current).trim() !== savedTitle) return current
+
+                return {
+                  ...current,
+                  ...normalizeTaskClassification(classification, 'resolved'),
+                }
+              }),
+            )
+          })
+          .catch((error) => {
+            if (controller.signal.aborted || error?.name === 'AbortError') return
+            setTaskDrafts((prev) =>
+              prev.map((current) => {
+                if (current.id !== task.id) return current
+                if (savedDraftTitle(current).trim() !== savedTitle) return current
+
+                return {
+                  ...current,
+                  ...defaultTaskPreview('error'),
+                }
+              }),
+            )
+          })
+      }, 600)
+
+      timers.push(timer)
+    })
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer))
+      controllers.forEach((controller) => controller.abort())
+    }
+  }, [savedDraftTitle, taskDrafts])
+
   const onDraftChange = (id, field, value) => {
     setTaskDrafts((prev) =>
-      prev.map((task) => (task.id === id ? { ...task, [field]: value } : task)),
+      prev.map((task) => {
+        if (task.id !== id) return task
+
+        const nextTask = { ...task, [field]: value }
+        if (field === 'projectId') {
+          const selectedProject = projectOptions.find(
+            (project) => String(project.value) === String(value || ''),
+          )
+          nextTask.projectLabel = value ? selectedProject?.label || nextTask.projectLabel || '' : ''
+        }
+        if (field === 'title' || field === 'projectId') {
+          return {
+            ...nextTask,
+            ...draftClassificationStatus(nextTask),
+          }
+        }
+
+        return nextTask
+      }),
     )
   }
 
@@ -103,27 +257,95 @@ const TaskManager = () => {
   // — fetch & load all tasks for this staff —
   const loadTasks = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_BASE}tasks/personal?year=${String(todayStr).slice(0, 4)}`,
-        {
-          credentials: 'include',
-        },
-      )
+      const res = await fetch(buildPersonalTasksUrl(import.meta.env.VITE_API_BASE, periodRange), {
+        credentials: 'include',
+      })
       const json = await res.json()
       if (json.status === 'success') {
-        setTaskList(json.tasks)
+        const tasks = Array.isArray(json.tasks) ? json.tasks : []
+        setTaskList(tasks)
+        return tasks
       } else {
         console.error('Failed to load tasks:', json.message)
       }
     } catch (err) {
       console.error('Network error loading tasks', err)
     }
-  }, [todayStr])
+    return null
+  }, [periodRange])
+
+  const clearAiClassificationPolling = useCallback(() => {
+    if (aiClassificationPollRef.current) {
+      clearTimeout(aiClassificationPollRef.current)
+      aiClassificationPollRef.current = null
+    }
+  }, [])
+
+  const startAiClassificationPolling = useCallback(
+    (taskIds = []) => {
+      const pendingIds = new Set(taskIds.map((id) => String(id || '')).filter(Boolean))
+      if (!pendingIds.size) return
+
+      clearAiClassificationPolling()
+      const expiresAt = Date.now() + AI_CLASSIFICATION_POLL_TIMEOUT_MS
+
+      const poll = async () => {
+        const tasks = await loadTasks()
+        if (Array.isArray(tasks)) {
+          tasks.forEach((task) => {
+            const id = String(task?.id || '')
+            if (pendingIds.has(id) && task?.aiClassificationStatus !== 'pending') {
+              pendingIds.delete(id)
+            }
+          })
+        }
+
+        if (!pendingIds.size || Date.now() >= expiresAt) {
+          aiClassificationPollRef.current = null
+          return
+        }
+
+        aiClassificationPollRef.current = setTimeout(poll, AI_CLASSIFICATION_POLL_INTERVAL_MS)
+      }
+
+      aiClassificationPollRef.current = setTimeout(poll, AI_CLASSIFICATION_POLL_INTERVAL_MS)
+    },
+    [clearAiClassificationPolling, loadTasks],
+  )
 
   // load on mount
   useEffect(() => {
     loadTasks()
   }, [loadTasks])
+
+  useEffect(() => clearAiClassificationPolling, [clearAiClassificationPolling])
+
+  useEffect(() => {
+    let active = true
+
+    listActiveProjectOptions()
+      .then((projects) => {
+        if (!active) return
+        setProjectOptions(
+          projects
+            .map((project) => ({
+              value: String(project.id),
+              label: String(project.projectName || project.project_name || '').trim(),
+            }))
+            .filter((project) => project.value && project.label)
+            .sort((a, b) => a.label.localeCompare(b.label)),
+        )
+      })
+      .catch((err) => {
+        if (!active) return
+        console.error('Failed to load project options:', err)
+        setProjectOptions([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -152,15 +374,27 @@ const TaskManager = () => {
   // — create —
   const onSaveTasks = async () => {
     const tasksToSave = taskDrafts
-      .map((task) => ({
-        title: task.title.trim(),
-        due_date: task.dueDate,
-      }))
+      .map((task) => {
+        const selectedProject = projectOptions.find(
+          (project) => String(project.value) === String(task.projectId || ''),
+        )
+
+        const savedTitle = stripExactProjectMention(
+          task.title,
+          selectedProject?.label || task.projectLabel,
+        )
+
+        return {
+          title: savedTitle,
+          due_date: task.dueDate,
+          project_id: task.projectId ? Number(task.projectId) : null,
+        }
+      })
       .filter((task) => task.title)
 
     if (tasksToSave.length === 0) return
-    if (tasksToSave.some((task) => !task.due_date)) {
-      dialog.alert('Please choose a due date for each task.')
+    if (tasksToSave.some((task) => !isDateOnlyValue(task.due_date))) {
+      dialog.alert('Please choose a valid due date for each task.')
       return
     }
 
@@ -174,13 +408,20 @@ const TaskManager = () => {
       })
       const json = await resp.json()
       if (json.status === 'success') {
+        const createdTasks = Array.isArray(json.tasks) ? json.tasks : []
+        const pendingAiTaskIds = getPendingAiClassificationIds(createdTasks)
+
         // reload the full list so filters & sorting reapply
         await loadTasks()
+        if (pendingAiTaskIds.length > 0) {
+          showApiToast('Task saved. AI classification is updating in the background.', 'info')
+          startAiClassificationPolling(pendingAiTaskIds)
+        }
         resetCreateTaskForm()
         setShowCreateTaskModal(false)
         clearCreateActionParam()
       } else {
-        dialog.alert(json.message || 'Failed to create task')
+        dialog.alert(firstErrorMessage(json.errors) || json.message || 'Failed to create task')
       }
     } catch (err) {
       console.error(err)
@@ -261,7 +502,12 @@ const TaskManager = () => {
   // — delete (with confirmation) —
   // Replace your existing onDeleteTask with this:
   const onDeleteTask = async (id) => {
-    if (!(await dialog.confirm('Are you sure you want to delete this task?'))) {
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this task?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    ) {
       return
     }
     try {
@@ -295,6 +541,8 @@ const TaskManager = () => {
           <TaskTable
             tasks={sortedTasks}
             todayStr={todayStr}
+            periodRange={periodRange}
+            onPeriodRangeChange={setPeriodRange}
             getStatusBadge={handlers.getStatusBadge}
             handleAddComment={onAddComment}
             handleMarkCompleted={onMarkCompleted}
@@ -322,6 +570,7 @@ const TaskManager = () => {
           <CreateTask
             embedded
             taskDrafts={taskDrafts}
+            projectOptions={projectOptions}
             onDraftChange={onDraftChange}
             onAddDraft={onAddDraft}
             onRemoveDraft={onRemoveDraft}

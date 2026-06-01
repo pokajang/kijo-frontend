@@ -11,6 +11,7 @@ const datedPresetKeys = [
 
 export const buildClientRoiDetailSearch = (periodRange) => {
   const params = new URLSearchParams()
+  if (periodRange?.preset === 'all') params.set('period', 'all')
   if (periodRange?.startDate) params.set('start', periodRange.startDate)
   if (periodRange?.endDate) params.set('end', periodRange.endDate)
   const query = params.toString()
@@ -25,6 +26,10 @@ export const getPeriodRangeFromSearchParams = (
   fallbackPreset = 'all',
   today = new Date(),
 ) => {
+  if (searchParams.get('period') === 'all') {
+    return getPeriodRangePreset('all', today)
+  }
+
   const startDate = searchParams.get('start') || ''
   const endDate = searchParams.get('end') || ''
 

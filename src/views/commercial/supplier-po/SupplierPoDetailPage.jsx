@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CCol } from '@coreui/react'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
 import { DetailField, DetailSection, ItemsTable } from '../shared/CommercialDetailFields'
+import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import MarkSupplierPaid from './SupplierModal/MarkSupplierPaid '
 import dialog from '../../../components/dialog/dialogService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
@@ -13,6 +14,7 @@ const SupplierPoDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const returnContext = getCommercialReturnContext(location, '/commercial/supplier-po')
   const [record, setRecord] = useState(location.state?.record || null)
   const recordRef = useRef(record)
   const [loading, setLoading] = useState(!location.state?.record)
@@ -63,6 +65,10 @@ const SupplierPoDetailPage = () => {
   const handleDelete = async () => {
     const confirmed = await dialog.confirm(
       `Are you sure you want to delete PO ${record.po_ref_no}?`,
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) return
 
@@ -118,12 +124,20 @@ const SupplierPoDetailPage = () => {
     <>
       <DataTableDetailShell
         title="Supplier PO Details"
-        backLabel="Back"
-        onBack={() => navigate('/commercial/supplier-po')}
+        backLabel={returnContext.backLabel}
+        onBack={() => navigate(returnContext.backPath)}
         loading={loading}
         error={error}
         record={record}
         actions={[
+          returnContext.isProjectOrigin
+            ? {
+                key: 'view-list',
+                label: 'View Supplier PO List',
+                buttonColor: 'secondary',
+                onClick: () => navigate(returnContext.listPath),
+              }
+            : null,
           { key: 'pdf', label: 'Export PDF', onClick: handleGeneratePdf },
           { key: 'mark-paid', label: 'Mark Paid', onClick: () => setMarkPaidVisible(true) },
           {
@@ -143,7 +157,7 @@ const SupplierPoDetailPage = () => {
         </DetailSection>
 
         <DetailSection title="PO">
-          <DetailField label="PO Number" value={record?.po_ref_no} />
+          <DetailField label="Reference Number" value={record?.po_ref_no} />
           <DetailField label="Issued" value={record?.created_at} />
           <DetailField
             label="Status"

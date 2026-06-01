@@ -6,22 +6,31 @@ import { CAlert, CButton, CCard, CCardBody, CCardHeader } from '@coreui/react'
 import { DataTableActionButtonGroup, DataTableLoadingState } from '../../../components/datatable'
 import { handleDeleteProject } from './actionHandlers'
 import { getProjectDetails, getProjectFinanceData } from './projectApi'
-import slugify from '../../../lib/slugify'
 import CloseProjectModal from './CloseProjectModal'
 import ClientDetailsCard from './ManageProjectModal/ClientDetailsCard'
 import CommercialTrailsCard from './ManageProjectModal/CommercialTrailsCard'
 import CRMDetailsCard from './ManageProjectModal/CRMDetailsCard'
 import ProjectDetailsCard from './ManageProjectModal/ProjectDetailsCard'
+import ProjectSummaryStrip from './ManageProjectModal/ProjectSummaryStrip'
 import ProgressTrackerCard from './ManageProjectModal/ProgressTrackerCard'
 import VendorDetailsCard from './ManageProjectModal/VendorDetailsCard'
 import PaymentRequestsCard from './ManageProjectModal/PaymentRequestsCard'
 import ProfitLossCard from './ManageProjectModal/profit-loss/ProfitLossCard'
 import CollaboratorsCard from './ManageProjectModal/CollaboratorsCard'
+import { PROJECT_CLOSE_TYPES } from './projectStatus'
+import { buildProjectActions } from './projectActions'
+import {
+  getCommercialCreatePath,
+  getProjectManagePath,
+  isProjectManagePathCanonical,
+} from './projectRoutes'
 
-const getNormalizedProjectStatus = (project = {}) =>
-  String(project?.status || '')
-    .trim()
-    .toLowerCase()
+const projectActionGroups = [
+  ['jd14', 'invoice', 'delivery-order', 'vendor-loa', 'supplier-po'],
+  ['complete', 'terminate'],
+  ['delete'],
+]
+const groupedProjectActionKeys = new Set(projectActionGroups.flat())
 
 class ManageProjectErrorBoundary extends React.Component {
   constructor(props) {
@@ -64,15 +73,24 @@ const ManageProjectPage = () => {
   const [financeError, setFinanceError] = useState('')
 
   const [progressRefreshKey, setProgressRefreshKey] = useState(0)
-  const [commercialRefreshKey] = useState(0)
+  const [commercialRefreshKey, setCommercialRefreshKey] = useState(0)
+  const [vendorRefreshKey, setVendorRefreshKey] = useState(0)
   const [deletingProjectId, setDeletingProjectId] = useState(null)
-  const [selectedCloseType, setSelectedCloseType] = useState('Completed')
+  const [selectedCloseType, setSelectedCloseType] = useState(PROJECT_CLOSE_TYPES.COMPLETED)
   const [modals, setModals] = useState({
     close: false,
   })
 
   const triggerProgressRefresh = () => {
     setProgressRefreshKey((prev) => prev + 1)
+  }
+
+  const triggerCommercialRefresh = () => {
+    setCommercialRefreshKey((prev) => prev + 1)
+  }
+
+  const triggerVendorRefresh = () => {
+    setVendorRefreshKey((prev) => prev + 1)
   }
 
   const refreshProject = useCallback(async () => {
@@ -106,7 +124,7 @@ const ManageProjectPage = () => {
 
   const openActionModal = useCallback((name, options = {}) => {
     if (name === 'close') {
-      setSelectedCloseType(options.closeType || 'Completed')
+      setSelectedCloseType(options.closeType || PROJECT_CLOSE_TYPES.COMPLETED)
     }
     setModals((current) => ({ ...current, [name]: true }))
   }, [])
@@ -118,7 +136,7 @@ const ManageProjectPage = () => {
   const openCommercialCreatePage = useCallback(
     (documentType) => {
       if (!project?.id) return
-      navigate(`/commercial/${documentType}/create/${project.id}`, { state: { project } })
+      navigate(getCommercialCreatePath(documentType, project.id), { state: { project } })
     },
     [navigate, project],
   )
@@ -136,109 +154,99 @@ const ManageProjectPage = () => {
   }, [deletingProjectId, navigate, project])
 
   const projectActions = useMemo(() => {
-    if (!project) return []
-
-    const status = getNormalizedProjectStatus(project)
-    const isClosedProject = status === 'completed' || status === 'terminated' || status === 'closed'
-
-    return [
-      project.project_type === 'Training'
-        ? {
-            key: 'jd14',
-            label: 'Generate JD14',
-            onClick: () => openCommercialCreatePage('jd14'),
-          }
-        : null,
-      {
-        key: 'invoice',
-        label: 'Generate Invoice',
-        onClick: () => openCommercialCreatePage('invoice'),
-      },
-      {
-        key: 'delivery-order',
-        label: 'Generate DO',
-        onClick: () => openCommercialCreatePage('delivery-order'),
-      },
-      {
-        key: 'complete',
-        label: 'Complete Project',
-        disabled: isClosedProject,
-        tooltip: isClosedProject ? 'Project is already closed.' : undefined,
-        onClick: () => openActionModal('close', { closeType: 'Completed' }),
-      },
-      {
-        key: 'terminate',
-        label: 'Terminate Project',
-        disabled: isClosedProject,
-        tooltip: isClosedProject ? 'Project is already closed.' : undefined,
-        danger: true,
-        onClick: () => openActionModal('close', { closeType: 'Terminated' }),
-      },
-      {
-        key: 'delete',
-        label: 'Delete Project',
-        buttonLabel: deletingProjectId != null ? 'Deleting...' : 'Delete Project',
-        danger: true,
-        disabled: deletingProjectId != null,
-        onClick: handleDelete,
-      },
-    ].filter(Boolean)
+    return buildProjectActions({
+      project,
+      deleting: deletingProjectId != null,
+      onGenerateCommercialDocument: openCommercialCreatePage,
+      onCompleteProject: () =>
+        openActionModal('close', { closeType: PROJECT_CLOSE_TYPES.COMPLETED }),
+      onTerminateProject: () =>
+        openActionModal('close', { closeType: PROJECT_CLOSE_TYPES.TERMINATED }),
+      onDeleteProject: handleDelete,
+    })
   }, [deletingProjectId, handleDelete, openActionModal, openCommercialCreatePage, project])
+
+  const groupedProjectActions = useMemo(() => {
+    const configuredGroups = projectActionGroups
+      .map((groupKeys) => projectActions.filter((action) => groupKeys.includes(action.key)))
+      .filter((actions) => actions.length > 0)
+
+    const ungroupedActions = projectActions.filter(
+      (action) => !groupedProjectActionKeys.has(action.key),
+    )
+
+    return ungroupedActions.length > 0 ? [...configuredGroups, ungroupedActions] : configuredGroups
+  }, [projectActions])
 
   useEffect(() => {
     let active = true
     const controller = new AbortController()
 
     if (!id) return () => {}
-    if (project && String(project.id) === String(id)) return () => {}
+    const hasMatchingRouteStateProject =
+      location.state?.project && String(location.state.project.id) === String(id)
 
-    setLoading(true)
-    setLoadError('')
-    setProject(null)
+    if (!hasMatchingRouteStateProject) {
+      setLoading(true)
+      setLoadError('')
+      setProject(null)
+    }
 
     getProjectDetails(id, { signal: controller.signal })
       .then((found) => {
         if (!active) return
         if (!found) {
-          setProject(null)
-          setLoadError('Project not found.')
+          if (!hasMatchingRouteStateProject) {
+            setProject(null)
+            setLoadError('Project not found.')
+          }
           return
         }
 
         setProject(found)
+        setLoadError('')
       })
       .catch((err) => {
         if (!active) return
         if (err.name === 'AbortError') return
         console.error('Failed to load project:', err)
-        setLoadError(err.message || 'Failed to load project.')
+        if (!hasMatchingRouteStateProject) {
+          setLoadError(err.message || 'Failed to load project.')
+        }
       })
       .finally(() => {
         if (!active) return
-        setLoading(false)
+        if (!hasMatchingRouteStateProject) {
+          setLoading(false)
+        }
       })
 
     return () => {
       active = false
       controller.abort()
     }
-  }, [id, project])
+  }, [id, location.state])
 
   useEffect(() => {
     if (!project?.id) return
 
-    const typeSlug = slugify(project.project_type) || 'project'
-    const nameSlug = slugify(project.project_name) || 'details'
+    if (isProjectManagePathCanonical(project, { id, type, name })) return
 
-    if (type === typeSlug && name === nameSlug) return
-
-    if (!type && !name) {
-      navigate(`/project/manage/${project.id}/${typeSlug}/${nameSlug}`, {
-        replace: true,
-        state: { project },
-      })
-    }
-  }, [project?.id, project?.project_type, project?.project_name, type, name, navigate, project])
+    navigate(getProjectManagePath(project), {
+      replace: true,
+      state: { ...location.state, project },
+    })
+  }, [
+    id,
+    project?.id,
+    project?.project_type,
+    project?.project_name,
+    type,
+    name,
+    navigate,
+    project,
+    location.state,
+  ])
 
   useEffect(() => {
     if (!project?.id) {
@@ -286,11 +294,19 @@ const ManageProjectPage = () => {
               </CAlert>
             ) : (
               <>
+                <ProjectSummaryStrip project={project} />
+
                 <ClientDetailsCard project={project} />
 
                 <CRMDetailsCard project={project} />
 
-                <CommercialTrailsCard projectId={project.id} refreshKey={commercialRefreshKey} />
+                <CommercialTrailsCard
+                  projectId={project.id}
+                  refreshKey={commercialRefreshKey}
+                  onCommercialRecordsChanged={triggerCommercialRefresh}
+                  onProgressUpdate={triggerProgressRefresh}
+                  onVendorAssignmentsChanged={triggerVendorRefresh}
+                />
 
                 <ProjectDetailsCard
                   project={project}
@@ -302,9 +318,17 @@ const ManageProjectPage = () => {
                   }
                 />
 
-                <ProgressTrackerCard projectId={project.id} refreshKey={progressRefreshKey} />
+                <ProgressTrackerCard
+                  projectId={project.id}
+                  projectName={project.project_name || ''}
+                  refreshKey={progressRefreshKey}
+                />
 
-                <VendorDetailsCard project={project} onProgressUpdate={triggerProgressRefresh} />
+                <VendorDetailsCard
+                  project={project}
+                  refreshKey={vendorRefreshKey}
+                  onProgressUpdate={triggerProgressRefresh}
+                />
 
                 <PaymentRequestsCard payments={projectPayments} loading={loadingPayments} />
 
@@ -325,21 +349,25 @@ const ManageProjectPage = () => {
                   projectId={project.id}
                   onProgressUpdate={triggerProgressRefresh}
                 />
+
+                <CCardHeader>
+                  <strong>Actions</strong>
+                </CCardHeader>
+                <CCardBody>
+                  <div className="d-flex flex-wrap align-items-start gap-3">
+                    {groupedProjectActions.map((actions) => (
+                      <DataTableActionButtonGroup
+                        key={actions.map((action) => action.key).join('-')}
+                        record={project}
+                        actions={actions}
+                      />
+                    ))}
+                  </div>
+                </CCardBody>
               </>
             )}
           </ManageProjectErrorBoundary>
         </CCardBody>
-
-        {!loading && !loadError && project && (
-          <>
-            <CCardHeader>
-              <strong>Actions</strong>
-            </CCardHeader>
-            <CCardBody>
-              <DataTableActionButtonGroup record={project} actions={projectActions} />
-            </CCardBody>
-          </>
-        )}
       </CCard>
 
       {modals.close && project && (
@@ -367,5 +395,4 @@ const ManageProjectPage = () => {
     </>
   )
 }
-
 export default ManageProjectPage

@@ -120,7 +120,7 @@ const DataTableTextCell = ({
           </p>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={closeModal}>
+          <CButton color="secondary" variant="outline" size="sm" onClick={closeModal}>
             Close
           </CButton>
         </CModalFooter>

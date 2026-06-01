@@ -73,7 +73,12 @@ const RemarksCell = ({ entries, value, compact = false, title = 'Remarks' }) => 
           </ul>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowModal(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowModal(false)}
+          >
             Close
           </CButton>
         </CModalFooter>

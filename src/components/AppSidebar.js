@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   CCloseButton,
@@ -31,7 +31,7 @@ const filterNav = (items, roles) =>
       return acc
     }
     // Destructure to remove allowedRoles, keep everything else
-    const { allowedRoles, ...cleanItem } = item
+    const { allowedRoles, notificationRouteGroups, ...cleanItem } = item
 
     // Recurse into children if present
     if (Array.isArray(cleanItem.items)) {
@@ -47,6 +47,7 @@ const filterNav = (items, roles) =>
   }, [])
 
 const AppSidebar = () => {
+  const sidebarRef = useRef(null)
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
@@ -58,9 +59,44 @@ const AppSidebar = () => {
   const navigationWithBadges = applySidebarBadges(navigation, { getRouteGroupCount })
   const filteredNav = filterNav(navigationWithBadges, roles)
 
+  useEffect(() => {
+    const sidebarElement = sidebarRef.current
+    if (!sidebarElement) return
+
+    const handleSidebarWheel = (event) => {
+      if (event.defaultPrevented || event.ctrlKey || event.deltaY === 0) return
+
+      const scrollElement =
+        sidebarElement.querySelector('.sidebar-nav .simplebar-content-wrapper') ||
+        sidebarElement.querySelector('.sidebar-nav')
+
+      if (!scrollElement) return
+
+      if (event.cancelable) {
+        event.preventDefault()
+      }
+
+      let deltaY = event.deltaY
+      if (event.deltaMode === 1) {
+        deltaY *= 16
+      } else if (event.deltaMode === 2) {
+        deltaY *= scrollElement.clientHeight
+      }
+
+      scrollElement.scrollTop += deltaY
+    }
+
+    sidebarElement.addEventListener('wheel', handleSidebarWheel, { passive: false })
+
+    return () => {
+      sidebarElement.removeEventListener('wheel', handleSidebarWheel)
+    }
+  }, [])
+
   return (
     <CSidebar
-      className="border-end"
+      ref={sidebarRef}
+      className="border-end app-sidebar"
       position="fixed"
       unfoldable={unfoldable}
       visible={sidebarShow}

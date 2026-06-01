@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   CButton,
   CTable,
@@ -53,7 +53,10 @@ const ServiceRecordsTableBase = ({
   activeFilterCount,
   activeChips = [],
   statsItems = [],
+  statsVisible = true,
+  controlsVisible = true,
   statsScopeLabel = '',
+  onStatsScopeLabelChange,
   clearChip,
   handleExportCsv,
   sortedRecordsLength,
@@ -117,6 +120,11 @@ const ServiceRecordsTableBase = ({
     totalRows,
   ])
 
+  useEffect(() => {
+    onStatsScopeLabelChange?.(statsScopeLabel)
+    return () => onStatsScopeLabelChange?.('')
+  }, [onStatsScopeLabelChange, statsScopeLabel])
+
   const renderSortIcon = (field) => (
     <CIcon
       icon={
@@ -137,8 +145,9 @@ const ServiceRecordsTableBase = ({
 
   return (
     <>
-      <StatsStrip items={statsItems} scopeLabel={statsScopeLabel} />
+      {statsVisible && <StatsStrip items={statsItems} />}
       <ServiceRecordsFilterPanel
+        visible={controlsVisible}
         searchInput={searchInput}
         setSearchInput={setSearchInput}
         statusFilter={statusFilter}
@@ -211,7 +220,7 @@ const ServiceRecordsTableBase = ({
           className={`table-scroll-viewport d-none d-${desktopBreakpoint}-block`}
           ref={tableViewportRef}
           style={{
-            maxHeight: tableViewportHeight ? `${tableViewportHeight}px` : 'none',
+            height: tableViewportHeight ? `${tableViewportHeight}px` : undefined,
             overflowX: 'auto',
             overflowY: 'auto',
             borderTopLeftRadius: '0.5rem',

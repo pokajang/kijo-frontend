@@ -317,7 +317,13 @@ export default function SportTime() {
 
   const handleDelete = async (eventId) => {
     if (!eventId) return
-    if (!(await dialog.confirm('Delete this sport event? This action cannot be undone.'))) return
+    if (
+      !(await dialog.confirm('Delete this sport event? This action cannot be undone.', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     try {
       const res = await fetch(`${API_BASE}sport-events/${eventId}`, {
@@ -457,7 +463,7 @@ export default function SportTime() {
                 </div>
               </CCol>
               <CCol md="auto" className="ms-md-auto d-none d-md-block">
-                <CButton color="primary" onClick={openCreateModal}>
+                <CButton color="primary" size="sm" onClick={openCreateModal}>
                   Add Event
                 </CButton>
               </CCol>
@@ -719,11 +725,19 @@ export default function SportTime() {
           </form>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={resetForm} disabled={submitting}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={resetForm}
+            disabled={submitting}
+          >
             Reset
           </CButton>
           <CButton
             color="secondary"
+            variant="outline"
+            size="sm"
             onClick={() => {
               setShowFormModal(false)
               resetForm()
@@ -732,7 +746,13 @@ export default function SportTime() {
           >
             Cancel
           </CButton>
-          <CButton color="primary" type="submit" form="sport-event-form" disabled={submitting}>
+          <CButton
+            color="primary"
+            size="sm"
+            type="submit"
+            form="sport-event-form"
+            disabled={submitting}
+          >
             {submitting ? (
               <>
                 <CSpinner size="sm" className="me-2" />

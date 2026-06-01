@@ -7,7 +7,6 @@ import {
   CButton,
   CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CFormInput,
   CFormLabel,
@@ -21,9 +20,11 @@ import {
 } from '@coreui/react'
 import { useAuth } from '../../../auth/AuthProvider'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../components/datatable'
@@ -36,131 +37,29 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { projectRecordTabs } from '../../../components/navigation/moduleNavConfigs'
-import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
-import { getBadgeColor } from './actionHandlers'
 import {
   applyProjectFilters,
-  getDateOnly,
-  getLatestProgressUpdate,
   getOwnerOptions,
-  getProjectLeaderCode,
   getProjectTypeOptions,
   isProjectOwnedByUser,
 } from './projectFilters'
+import { PROJECT_CLOSE_TYPES, getProjectStatusTone } from './projectStatus'
+import { buildProjectActions } from './projectActions'
+import {
+  actionColumnWidth,
+  columnStorageKey,
+  dataColumns,
+  defaultVisibleColumns,
+  requiredColumns,
+} from './projectTableColumns'
+import { emptyProjectTableValue, normalizeProjectTableRows } from './projectTableRows'
+import { buildProjectTableStats } from './projectTableStats'
 
-const emptyValue = '-'
-const columnStorageKey = 'project.manage.visible-columns.v5'
-const actionColumnWidth = '56px'
+const emptyValue = emptyProjectTableValue
 const maxUpdatePreviewChars = 34
-const excludedValueStatuses = new Set(['terminated'])
-
-const defaultVisibleColumns = {
-  client: true,
-  projectType: true,
-  project: true,
-  value: true,
-  update: true,
-  owner: true,
-  vendor: false,
-  vendorContactName: false,
-  vendorMobile: false,
-  vendorEmail: false,
-  award: true,
-  status: true,
-}
-
-const requiredColumns = new Set(['client', 'project', 'status'])
-
-const dataColumns = [
-  { key: 'client', label: 'Client', width: '220px', sortable: true, sortType: 'string' },
-  { key: 'projectType', label: 'Project Type', width: '160px', sortable: true, sortType: 'string' },
-  {
-    key: 'project',
-    label: 'Project',
-    width: '240px',
-    sortable: true,
-    sortType: 'string',
-    textMode: 'expandable',
-    cellMaxWidth: '220px',
-    previewCharThreshold: 34,
-  },
-  {
-    key: 'value',
-    label: 'Value',
-    width: '130px',
-    sortable: true,
-    sortType: 'number',
-    align: 'center',
-    shrinkToFit: true,
-    getExportValue: (project) => project.valueDisplay,
-  },
-  {
-    key: 'update',
-    label: 'Latest Update',
-    width: '220px',
-    sortable: true,
-    sortType: 'date',
-    textMode: 'expandable',
-    cellMaxWidth: '220px',
-    previewCharThreshold: 34,
-    getExportValue: (project) => project.updateFullText,
-  },
-  {
-    key: 'owner',
-    label: 'Project Leader',
-    width: '150px',
-    sortable: true,
-    sortType: 'string',
-    shrinkToFit: true,
-  },
-  { key: 'vendor', label: 'Vendor', width: '220px', sortable: true, sortType: 'string' },
-  {
-    key: 'vendorContactName',
-    label: 'Vendor Contact',
-    width: '170px',
-    sortable: true,
-    sortType: 'string',
-  },
-  {
-    key: 'vendorMobile',
-    label: 'Vendor Mobile',
-    width: '150px',
-    sortable: true,
-    sortType: 'string',
-  },
-  { key: 'vendorEmail', label: 'Vendor Email', width: '220px', sortable: true, sortType: 'string' },
-  {
-    key: 'award',
-    label: 'Award',
-    width: '120px',
-    sortable: true,
-    sortType: 'date',
-    align: 'center',
-    shrinkToFit: true,
-    getExportValue: (project) => project.awardDisplay,
-  },
-  {
-    key: 'status',
-    label: 'Status',
-    width: '120px',
-    sortable: true,
-    sortType: 'string',
-    align: 'center',
-    shrinkToFit: true,
-  },
-  {
-    key: 'closed',
-    label: 'Closed',
-    width: '120px',
-    sortable: true,
-    sortType: 'date',
-    align: 'center',
-    shrinkToFit: true,
-    getExportValue: (project) => project.closedDisplay,
-  },
-]
 
 const truncateUpdateText = (text = '', maxChars = maxUpdatePreviewChars) => {
   const raw = String(text || '').trim()
@@ -210,7 +109,12 @@ const ProjectUpdateCell = ({ text }) => {
           <span>{fullText}</span>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowModal(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowModal(false)}
+          >
             Close
           </CButton>
         </CModalFooter>
@@ -219,29 +123,19 @@ const ProjectUpdateCell = ({ text }) => {
   )
 }
 
-const getNormalizedProjectStatus = (project = {}) =>
-  String(project?.status || '')
-    .trim()
-    .toLowerCase()
-
-const isProjectActive = (project = {}) => {
-  const status = getNormalizedProjectStatus(project)
-  return status === 'active' && !project?.closed
-}
-
-const shouldIncludeProjectValue = (project = {}) => {
-  const status = getNormalizedProjectStatus(project)
-  return !excludedValueStatuses.has(status)
-}
-
 export default function ProjectTable({
   projects = [],
   loading,
+  deletingProjectId,
+  periodRange,
+  onPeriodRangeChange,
   onManage,
   onClose,
   onGenerateJD14,
   onGenerateInvoice,
   onGenerateDO,
+  onGenerateVendorLoa,
+  onGenerateSupplierPo,
   onDelete,
   onCreateProject,
 }) {
@@ -252,12 +146,16 @@ export default function ProjectTable({
   const [statusFilter, setStatusFilter] = useState('all')
   const [projectTypeFilter, setProjectTypeFilter] = useState('all')
   const [ownerFilter, setOwnerFilter] = useState('all')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const selectedPeriodRange = periodRange || localPeriodRange
+  const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
   const [hasUpdateFilter, setHasUpdateFilter] = useState('all')
   const [hasVendorFilter, setHasVendorFilter] = useState('all')
   const [minAmount, setMinAmount] = useState('')
   const [maxAmount, setMaxAmount] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('project.manage')
 
   const statusOptions = useMemo(() => {
     const statuses = new Set()
@@ -276,7 +174,7 @@ export default function ProjectTable({
     setStatusFilter('all')
     setProjectTypeFilter('all')
     setOwnerFilter('all')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    handlePeriodRangeChange(getPeriodRangePreset('ytd'))
     setHasUpdateFilter('all')
     setHasVendorFilter('all')
     setMinAmount('')
@@ -285,7 +183,7 @@ export default function ProjectTable({
 
   const clearChip = (key) => {
     if (key === 'search') setSearchTerm('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
     if (key === 'type') setProjectTypeFilter('all')
     if (key === 'owner') setOwnerFilter('all')
     if (key === 'status') setStatusFilter('all')
@@ -297,8 +195,8 @@ export default function ProjectTable({
 
   const activeChips = [
     searchTerm.trim() ? { key: 'search', label: `Search: ${searchTerm.trim()}` } : null,
-    periodRange && !isDefaultPeriodRange(periodRange)
-      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+    selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
+      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
       : null,
     projectTypeFilter !== 'all'
       ? { key: 'type', label: `Project Type: ${projectTypeFilter}` }
@@ -333,7 +231,9 @@ export default function ProjectTable({
       },
     })
 
-    const scoped = base.filter((project) => isDateInPeriodRange(project?.award_date, periodRange))
+    const scoped = base.filter((project) =>
+      isDateInPeriodRange(project?.award_date, selectedPeriodRange),
+    )
 
     if (activeTab === 'my-tab') {
       return scoped.filter((project) => isProjectOwnedByUser(project, user))
@@ -346,7 +246,7 @@ export default function ProjectTable({
     statusFilter,
     projectTypeFilter,
     ownerFilter,
-    periodRange,
+    selectedPeriodRange,
     hasUpdateFilter,
     hasVendorFilter,
     minAmount,
@@ -355,179 +255,32 @@ export default function ProjectTable({
     user,
   ])
 
-  const normalizedProjects = useMemo(
-    () =>
-      filtered.map((project) => {
-        const latest = getLatestProgressUpdate(project)
-        const ownerCode = getProjectLeaderCode(project)
-        const valueNumber =
-          project?.quote_value != null && String(project.quote_value).trim() !== ''
-            ? Number(project.quote_value)
-            : null
-        const valueDisplay =
-          valueNumber !== null && Number.isFinite(valueNumber)
-            ? valueNumber.toLocaleString('en-MY', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
-            : emptyValue
-        const vendors = Array.isArray(project.vendors) ? project.vendors : []
-        const vendorNames =
-          vendors
-            .map((vendor) => String(vendor?.vendor_name || '').trim())
-            .filter(Boolean)
-            .join(', ') || emptyValue
-        const vendorContactNames =
-          vendors
-            .map((vendor) => String(vendor?.contact_person_name || '').trim())
-            .filter(Boolean)
-            .join(', ') || emptyValue
-        const vendorMobiles =
-          vendors
-            .map((vendor) => String(vendor?.mobile_number || '').trim())
-            .filter(Boolean)
-            .join(', ') || emptyValue
-        const vendorEmails =
-          vendors
-            .map((vendor) => String(vendor?.email || '').trim())
-            .filter(Boolean)
-            .join(', ') || emptyValue
-        const updateDisplay = getDateOnly(latest?.progress_date || latest?.updated_on) || emptyValue
-        const updateText = String(latest?.progress_text || '').trim()
-        const updateFullText =
-          [updateDisplay !== emptyValue ? updateDisplay : '', updateText]
-            .filter(Boolean)
-            .join(' ') || emptyValue
+  const normalizedProjects = useMemo(() => normalizeProjectTableRows(filtered), [filtered])
 
-        return {
-          ...project,
-          client: project.client_name || emptyValue,
-          project: project.project_name || emptyValue,
-          projectType: project.project_type || emptyValue,
-          value: valueNumber,
-          valueDisplay,
-          update: latest?.progress_date || latest?.updated_on || '',
-          updateDisplay,
-          updateText: updateText || emptyValue,
-          updateFullText,
-          owner: ownerCode || emptyValue,
-          vendor: vendorNames,
-          vendorContactName: vendorContactNames,
-          vendorMobile: vendorMobiles,
-          vendorEmail: vendorEmails,
-          award: project.award_date || '',
-          awardDisplay: getDateOnly(project.award_date) || emptyValue,
-          status: project.status || emptyValue,
-          closed: project.closing_details?.close_date || '',
-          closedDisplay: getDateOnly(project.closing_details?.close_date) || emptyValue,
-        }
-      }),
-    [filtered],
-  )
-
-  const statsItems = useMemo(() => {
-    const nowTime = Date.now()
-    const activeRows = normalizedProjects.filter(isProjectActive)
-    const valueRows = normalizedProjects.filter(shouldIncludeProjectValue)
-    const terminatedValue = sumBy(
-      normalizedProjects.filter((project) => getNormalizedProjectStatus(project) === 'terminated'),
-      (project) => project.value,
-    )
-    const needsUpdateRows = activeRows.filter((project) => {
-      if (!project.update) return true
-      const updateDate = new Date(project.update)
-      if (Number.isNaN(updateDate.getTime())) return true
-      return nowTime - updateDate.getTime() > 14 * 86400000
-    })
-    const missingUpdateRows = activeRows.filter((project) => !project.update)
-    const topLeader = getTopGroupBySum(
-      valueRows,
-      (project) => project.owner,
-      (project) => project.value,
-    )
-
-    return [
-      {
-        key: 'total-value',
-        label: 'Total Value',
-        value: formatMoney(sumBy(valueRows, (project) => project.value)),
-        sublabel: terminatedValue > 0 ? `Excludes terminated: ${formatMoney(terminatedValue)}` : '',
-        tone: 'primary',
-      },
-      {
-        key: 'active',
-        label: 'Active',
-        value: formatCount(activeRows.length),
-        tone: 'info',
-      },
-      {
-        key: 'needs-update',
-        label: 'Needs Update',
-        value: formatCount(needsUpdateRows.length),
-        sublabel: `${formatCount(missingUpdateRows.length)} missing update`,
-        tone: needsUpdateRows.length ? 'warning' : 'success',
-      },
-      {
-        key: 'top-leader',
-        label: 'Top Leader',
-        value: topLeader.value,
-        sublabel: `${formatMoney(topLeader.total)} across ${formatCount(topLeader.count)} projects`,
-        tone: 'secondary',
-      },
-    ]
-  }, [normalizedProjects])
-
-  const getStatusTone = (status) => {
-    const color = getBadgeColor(status)
-    if (['success', 'danger', 'dark', 'info'].includes(color)) return color
-    return 'info'
-  }
+  const statsItems = useMemo(() => buildProjectTableStats(normalizedProjects), [normalizedProjects])
 
   const getActions = (project) => {
-    const status = getNormalizedProjectStatus(project)
-    const isClosedProject = status === 'completed' || status === 'terminated' || status === 'closed'
+    const generateHandlers = {
+      jd14: onGenerateJD14,
+      invoice: onGenerateInvoice,
+      'delivery-order': onGenerateDO,
+      'vendor-loa': onGenerateVendorLoa,
+      'supplier-po': onGenerateSupplierPo,
+    }
 
-    return [
-      project.project_type === 'Training'
-        ? {
-            key: 'jd14',
-            label: 'Generate JD14',
-            onClick: () => onGenerateJD14(project),
-          }
-        : null,
-      {
-        key: 'invoice',
-        label: 'Generate Invoice',
-        onClick: () => onGenerateInvoice(project),
+    return buildProjectActions({
+      project,
+      deleting: deletingProjectId != null,
+      tableMode: true,
+      onGenerateCommercialDocument: (documentType, selectedProject) => {
+        generateHandlers[documentType]?.(selectedProject)
       },
-      {
-        key: 'delivery-order',
-        label: 'Generate DO',
-        onClick: () => onGenerateDO(project),
-      },
-      {
-        key: 'complete',
-        label: 'Complete Project',
-        disabled: isClosedProject,
-        tooltip: isClosedProject ? 'Project is already closed.' : undefined,
-        onClick: () => onClose(project, 'Completed'),
-      },
-      {
-        key: 'terminate',
-        label: 'Terminate Project',
-        disabled: isClosedProject,
-        tooltip: isClosedProject ? 'Project is already closed.' : undefined,
-        danger: true,
-        onClick: () => onClose(project, 'Terminated'),
-      },
-      {
-        key: 'delete',
-        label: 'Delete Project',
-        danger: true,
-        dividerBefore: true,
-        onClick: () => onDelete(project),
-      },
-    ].filter(Boolean)
+      onCompleteProject: (selectedProject) =>
+        onClose(selectedProject, PROJECT_CLOSE_TYPES.COMPLETED),
+      onTerminateProject: (selectedProject) =>
+        onClose(selectedProject, PROJECT_CLOSE_TYPES.TERMINATED),
+      onDeleteProject: onDelete,
+    })
   }
 
   const renderTextCell = (value) => (
@@ -568,7 +321,7 @@ export default function ProjectTable({
     if (column.key === 'award') return project.awardDisplay
     if (column.key === 'status') {
       return (
-        <DataTableStatusBadge tone={getStatusTone(project.status)}>
+        <DataTableStatusBadge tone={getProjectStatusTone(project.status)}>
           {project.status}
         </DataTableStatusBadge>
       )
@@ -587,20 +340,25 @@ export default function ProjectTable({
           ariaLabel="Project record groups"
         />
         <CCard className="mb-4">
-          <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <strong>Project Overview</strong>
+          <DataTableCardHeader
+            title="Project Overview"
+            scopeLabel={selectedPeriodRange ? getPeriodRangeScopeLabel(selectedPeriodRange) : ''}
+          >
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
             <CButton size="sm" color="primary" onClick={onCreateProject}>
               <CIcon icon={cilPlus} className="me-1" />
               Create Project
             </CButton>
-          </CCardHeader>
+          </DataTableCardHeader>
           <CCardBody>
-            <StatsStrip
-              loading={loading}
-              items={statsItems}
-              scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-            />
+            {statsVisible && <StatsStrip loading={loading} items={statsItems} />}
             <DataTableRecordControls
+              visible={controlsVisible}
               searchValue={searchTerm}
               onSearchChange={setSearchTerm}
               searchPlaceholder="Search client, project, vendor, update"
@@ -729,8 +487,8 @@ export default function ProjectTable({
               showMobileUtilityRow={false}
               renderQuickFilters={() => (
                 <PeriodRangeSelector
-                  value={periodRange}
-                  onChange={setPeriodRange}
+                  value={selectedPeriodRange}
+                  onChange={handlePeriodRangeChange}
                   className="d-none d-lg-block"
                 />
               )}
@@ -745,7 +503,7 @@ export default function ProjectTable({
                 `${project.projectType} | ${project.awardDisplay} | RM ${project.valueDisplay}`
               }
               getMobileStatus={(project) => project.status}
-              getMobileStatusTone={(project) => getStatusTone(project.status)}
+              getMobileStatusTone={(project) => getProjectStatusTone(project.status)}
               mobileFieldKeys={{
                 title: 'project',
                 subtitle: 'client',
@@ -761,7 +519,7 @@ export default function ProjectTable({
                   {
                     key: 'status',
                     label: project.status,
-                    tone: getStatusTone(project.status),
+                    tone: getProjectStatusTone(project.status),
                   },
                 ],
                 kv: (project) => [
@@ -785,7 +543,7 @@ export default function ProjectTable({
                 statusFilter,
                 projectTypeFilter,
                 ownerFilter,
-                periodRange,
+                selectedPeriodRange,
                 hasUpdateFilter,
                 hasVendorFilter,
                 minAmount,

@@ -3,15 +3,19 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 
 import { DataTableLoadingState } from '../../../components/datatable'
-import InvoiceProjectModal from '../../project/manage/InvoiceProjectModal'
 import { getProjectDetails } from '../../project/manage/projectApi'
+import InvoiceCreateFlow from './create/InvoiceCreateFlow'
 
 const InvoiceCreatePage = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const origin = searchParams.get('from') === 'invoice-list' ? 'invoice-list' : 'project'
   const stateProject =
-    String(location.state?.project?.id || '') === String(projectId) ? location.state.project : null
+    origin !== 'invoice-list' && String(location.state?.project?.id || '') === String(projectId)
+      ? location.state.project
+      : null
 
   const [project, setProject] = useState(stateProject)
   const [loading, setLoading] = useState(!stateProject)
@@ -57,7 +61,10 @@ const InvoiceCreatePage = () => {
     }
   }, [projectId, stateProject])
 
-  const backToProject = () => navigate(`/project/manage/${projectId}`)
+  const handleBack = () =>
+    origin === 'invoice-list'
+      ? navigate('/commercial/invoice')
+      : navigate(`/project/manage/${projectId}`)
 
   if (loading) {
     return (
@@ -80,8 +87,8 @@ const InvoiceCreatePage = () => {
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
               <strong>Generate Invoice</strong>
-              <CButton color="secondary" size="sm" variant="outline" onClick={backToProject}>
-                Back to Project
+              <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
+                {origin === 'invoice-list' ? 'Back to Invoice List' : 'Back to Project'}
               </CButton>
             </CCardHeader>
             <CCardBody>
@@ -98,7 +105,7 @@ const InvoiceCreatePage = () => {
   return (
     <CRow>
       <CCol xs={12}>
-        <InvoiceProjectModal asPage project={project} onClose={backToProject} />
+        <InvoiceCreateFlow project={project} onBack={handleBack} origin={origin} />
       </CCol>
     </CRow>
   )

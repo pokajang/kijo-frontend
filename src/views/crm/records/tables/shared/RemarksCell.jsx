@@ -117,7 +117,12 @@ const RemarksCell = ({ record, fmtDate, compact = false }) => {
           </ul>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowModal(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowModal(false)}
+          >
             Close
           </CButton>
         </CModalFooter>

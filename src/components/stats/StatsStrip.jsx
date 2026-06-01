@@ -1,5 +1,6 @@
 import React from 'react'
 import StatCard from './StatCard'
+import { formatStatsScopeLabel } from './formatStatsScopeLabel'
 
 const placeholderItems = Array.from({ length: 4 }, (_, index) => ({
   key: `stats-placeholder-${index}`,
@@ -8,24 +9,6 @@ const placeholderItems = Array.from({ length: 4 }, (_, index) => ({
   sublabel: 'Calculating',
   tone: 'secondary',
 }))
-
-const formatDayMonth = (date) =>
-  date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-  })
-
-const formatScopeLabel = (scopeLabel) => {
-  const match = String(scopeLabel || '').match(/^YTD\s+(\d{4})$/i)
-  if (!match) return scopeLabel
-
-  const year = Number(match[1])
-  const today = new Date()
-  const endLabel =
-    today.getFullYear() === year ? `${formatDayMonth(today)} ${year}` : `31 Dec ${year}`
-
-  return `1 Jan - ${endLabel}`
-}
 
 const getDisplayText = (value) =>
   typeof value === 'string' || typeof value === 'number' ? String(value).trim() : ''
@@ -64,7 +47,7 @@ const StatsStrip = ({
   if (!displayItems.length) return null
 
   const showScopeLabel = !loading && Boolean(scopeLabel)
-  const displayScopeLabel = formatScopeLabel(scopeLabel)
+  const displayScopeLabel = formatStatsScopeLabel(scopeLabel)
 
   return (
     <div
@@ -72,7 +55,9 @@ const StatsStrip = ({
       aria-busy={loading ? 'true' : undefined}
     >
       {showScopeLabel ? <div className="stats-strip-scope">{displayScopeLabel}</div> : null}
-      <div className={`stats-strip stats-strip--${layout}`}>
+      <div
+        className={`stats-strip stats-strip--${layout} stats-strip--count-${displayItems.length}`}
+      >
         {displayItems.map((item, index) => (
           <StatCard
             key={item.key || item.label}

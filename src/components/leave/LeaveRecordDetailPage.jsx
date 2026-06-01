@@ -92,7 +92,13 @@ const LeaveRecordDetailPage = () => {
   }, [consumeEntity, leaveId])
 
   const cancelLeave = useCallback(async () => {
-    if (!(await dialog.confirm('Are you sure you want to cancel this leave application?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to cancel this leave application?', {
+        confirmText: 'Cancel Application',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const data = await fetchJson(`${API_BASE}hr/leaves/${encodeURIComponent(leaveId)}/cancel`, {
         method: 'POST',

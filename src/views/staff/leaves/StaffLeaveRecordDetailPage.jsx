@@ -77,6 +77,12 @@ const getPastActionLabel = (action) => {
   }
 }
 
+const getWorkflowActionColor = (action) => {
+  if (action === 'approve') return 'success'
+  if (action === 'reject') return 'danger'
+  return 'info'
+}
+
 const StaffLeaveRecordDetailPage = () => {
   const { leaveId } = useParams()
   const navigate = useNavigate()
@@ -143,12 +149,14 @@ const StaffLeaveRecordDetailPage = () => {
       {
         key: 'recommend',
         label: 'Recommend',
+        buttonColor: 'info',
         disabled: !isPending || hasReviewed,
         onClick: () => openActionModal('recommend'),
       },
       {
         key: 'approve',
         label: 'Approve',
+        buttonColor: 'success',
         disabled: !isPending || !hasReviewed,
         onClick: () => openActionModal('approve'),
       },
@@ -245,12 +253,18 @@ const StaffLeaveRecordDetailPage = () => {
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             onClick={closeActionModal}
             disabled={submitting}
           >
             Cancel
           </CButton>
-          <CButton color="primary" onClick={submitAction} disabled={submitting}>
+          <CButton
+            color={getWorkflowActionColor(actionModal.action)}
+            size="sm"
+            onClick={submitAction}
+            disabled={submitting}
+          >
             {submitting ? 'Submitting...' : actionModal.label || 'Confirm'}
           </CButton>
         </CModalFooter>

@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { CButton, CTooltip } from '@coreui/react'
 import { serviceRecordTableConfigs } from '../../config/serviceRecordTableConfigs'
 import ServiceConfiguredRecordsTable from './ServiceConfiguredRecordsTable'
@@ -31,6 +31,9 @@ const ManpowerRecordsTable = ({
   onEmail,
   onSharePdf,
   onNegotiate,
+  onStatsScopeLabelChange,
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   const tableConfig = serviceRecordTableConfigs.manpower
   const getAmountSecondaryText = tableConfig.getAmountSecondaryText
@@ -126,6 +129,9 @@ const ManpowerRecordsTable = ({
         onEmail={onEmail}
         onSharePdf={onSharePdf}
         onNegotiate={onNegotiate}
+        onStatsScopeLabelChange={onStatsScopeLabelChange}
+        statsVisible={statsVisible}
+        controlsVisible={controlsVisible}
       />
       <ManpowerServiceDetailsModal
         visible={showServiceDetailsModal}

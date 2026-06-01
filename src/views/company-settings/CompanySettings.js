@@ -188,17 +188,26 @@ const CompanySettings = () => {
                     disabled={!editStates['business']}
                   />
                 </CCol>
-                <CCol xs={12} className="d-flex gap-2">
+                <CCol xs={12} className="d-flex justify-content-end gap-2">
                   {!editStates['business'] ? (
-                    <CButton color="primary" onClick={() => toggleEditMode('business')}>
+                    <CButton color="primary" size="sm" onClick={() => toggleEditMode('business')}>
                       Edit
                     </CButton>
                   ) : (
                     <>
-                      <CButton color="secondary" onClick={() => handleCancelClick('business')}>
+                      <CButton
+                        color="secondary"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancelClick('business')}
+                      >
                         Cancel
                       </CButton>
-                      <CButton color="primary" onClick={() => handleSaveClick('business')}>
+                      <CButton
+                        color="primary"
+                        size="sm"
+                        onClick={() => handleSaveClick('business')}
+                      >
                         Save
                       </CButton>
                     </>
@@ -263,17 +272,22 @@ const CompanySettings = () => {
                     disabled={!editStates['banking']}
                   />
                 </CCol>
-                <CCol xs={12} className="d-flex gap-2">
+                <CCol xs={12} className="d-flex justify-content-end gap-2">
                   {!editStates['banking'] ? (
-                    <CButton color="primary" onClick={() => toggleEditMode('banking')}>
+                    <CButton color="primary" size="sm" onClick={() => toggleEditMode('banking')}>
                       Edit
                     </CButton>
                   ) : (
                     <>
-                      <CButton color="secondary" onClick={() => handleCancelClick('banking')}>
+                      <CButton
+                        color="secondary"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCancelClick('banking')}
+                      >
                         Cancel
                       </CButton>
-                      <CButton color="primary" onClick={() => handleSaveClick('banking')}>
+                      <CButton color="primary" size="sm" onClick={() => handleSaveClick('banking')}>
                         Save
                       </CButton>
                     </>
@@ -311,17 +325,22 @@ const CompanySettings = () => {
                   onEditorChange={(content) => setSalesTerms(content)}
                 />
               )}
-              <CCol xs={12} className="d-flex gap-2 mt-3">
+              <CCol xs={12} className="d-flex justify-content-end gap-2 mt-3">
                 {!editStates['sales'] ? (
-                  <CButton color="primary" onClick={() => toggleEditMode('sales')}>
+                  <CButton color="primary" size="sm" onClick={() => toggleEditMode('sales')}>
                     Edit
                   </CButton>
                 ) : (
                   <>
-                    <CButton color="secondary" onClick={() => handleCancelClick('sales')}>
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelClick('sales')}
+                    >
                       Cancel
                     </CButton>
-                    <CButton color="primary" onClick={() => handleSaveClick('sales')}>
+                    <CButton color="primary" size="sm" onClick={() => handleSaveClick('sales')}>
                       Save
                     </CButton>
                   </>
@@ -362,17 +381,22 @@ const CompanySettings = () => {
                   onEditorChange={(content) => setTrainingTerms(content)}
                 />
               )}
-              <CCol xs={12} className="d-flex gap-2 mt-3">
+              <CCol xs={12} className="d-flex justify-content-end gap-2 mt-3">
                 {!editStates['training'] ? (
-                  <CButton color="primary" onClick={() => toggleEditMode('training')}>
+                  <CButton color="primary" size="sm" onClick={() => toggleEditMode('training')}>
                     Edit
                   </CButton>
                 ) : (
                   <>
-                    <CButton color="secondary" onClick={() => handleCancelClick('training')}>
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelClick('training')}
+                    >
                       Cancel
                     </CButton>
-                    <CButton color="primary" onClick={() => handleSaveClick('training')}>
+                    <CButton color="primary" size="sm" onClick={() => handleSaveClick('training')}>
                       Save
                     </CButton>
                   </>
@@ -409,17 +433,22 @@ const CompanySettings = () => {
                   onEditorChange={(content) => setManpowerTerms(content)}
                 />
               )}
-              <CCol xs={12} className="d-flex gap-2 mt-3">
+              <CCol xs={12} className="d-flex justify-content-end gap-2 mt-3">
                 {!editStates['manpower'] ? (
-                  <CButton color="primary" onClick={() => toggleEditMode('manpower')}>
+                  <CButton color="primary" size="sm" onClick={() => toggleEditMode('manpower')}>
                     Edit
                   </CButton>
                 ) : (
                   <>
-                    <CButton color="secondary" onClick={() => handleCancelClick('manpower')}>
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelClick('manpower')}
+                    >
                       Cancel
                     </CButton>
-                    <CButton color="primary" onClick={() => handleSaveClick('manpower')}>
+                    <CButton color="primary" size="sm" onClick={() => handleSaveClick('manpower')}>
                       Save
                     </CButton>
                   </>
@@ -455,17 +484,22 @@ const CompanySettings = () => {
                   onEditorChange={(content) => setHygieneTerms(content)}
                 />
               )}
-              <CCol xs={12} className="d-flex gap-2 mt-3">
+              <CCol xs={12} className="d-flex justify-content-end gap-2 mt-3">
                 {!editStates['hygiene'] ? (
-                  <CButton color="primary" onClick={() => toggleEditMode('hygiene')}>
+                  <CButton color="primary" size="sm" onClick={() => toggleEditMode('hygiene')}>
                     Edit
                   </CButton>
                 ) : (
                   <>
-                    <CButton color="secondary" onClick={() => handleCancelClick('hygiene')}>
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelClick('hygiene')}
+                    >
                       Cancel
                     </CButton>
-                    <CButton color="primary" onClick={() => handleSaveClick('hygiene')}>
+                    <CButton color="primary" size="sm" onClick={() => handleSaveClick('hygiene')}>
                       Save
                     </CButton>
                   </>
@@ -501,17 +535,30 @@ const CompanySettings = () => {
                   onEditorChange={(content) => setIsoConsultationTerms(content)}
                 />
               )}
-              <CCol xs={12} className="d-flex gap-2 mt-3">
+              <CCol xs={12} className="d-flex justify-content-end gap-2 mt-3">
                 {!editStates['isoConsultation'] ? (
-                  <CButton color="primary" onClick={() => toggleEditMode('isoConsultation')}>
+                  <CButton
+                    color="primary"
+                    size="sm"
+                    onClick={() => toggleEditMode('isoConsultation')}
+                  >
                     Edit
                   </CButton>
                 ) : (
                   <>
-                    <CButton color="secondary" onClick={() => handleCancelClick('isoConsultation')}>
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelClick('isoConsultation')}
+                    >
                       Cancel
                     </CButton>
-                    <CButton color="primary" onClick={() => handleSaveClick('isoConsultation')}>
+                    <CButton
+                      color="primary"
+                      size="sm"
+                      onClick={() => handleSaveClick('isoConsultation')}
+                    >
                       Save
                     </CButton>
                   </>

@@ -90,4 +90,40 @@ describe('AppNotificationProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent('1'))
   })
+
+  it('keeps the last-known counts when a refresh fails', async () => {
+    const fetchMock = vi.spyOn(global, 'fetch')
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({
+          status: 'success',
+          data: {
+            total: 2,
+            by_module: { 'staff.leaves': 2 },
+            by_route_group: { '/staff/leaves': 2 },
+            by_tab: { 'staff.leaves': 2 },
+          },
+        }),
+      })
+      .mockRejectedValueOnce(new Error('network down'))
+
+    render(
+      <AppNotificationProvider>
+        <Consumer />
+      </AppNotificationProvider>,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent('2'))
+
+    dispatchAppNotificationsChanged()
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+
+    // Transient failure must not blank the badges — last-known values persist.
+    expect(screen.getByTestId('route')).toHaveTextContent('2')
+    expect(screen.getByTestId('tab')).toHaveTextContent('2')
+    expect(screen.getByTestId('module')).toHaveTextContent('2')
+  })
 })

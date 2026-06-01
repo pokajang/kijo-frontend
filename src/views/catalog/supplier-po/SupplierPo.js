@@ -6,6 +6,7 @@ import {
   CAlert,
   CCardHeader,
   CCardBody,
+  CCardFooter,
   CFormLabel,
   CFormInput,
   CRow,
@@ -22,9 +23,18 @@ import { components } from 'react-select'
 import Select from '../../../components/forms/ThemedSelect'
 import { useSupplierPoServices } from './services'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
-import { catalogModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import {
+  catalogModuleTabs,
+  commercialModuleTabs,
+} from '../../../components/navigation/moduleNavConfigs'
 
-export default function SupplierPo() {
+export default function SupplierPo({
+  module = 'catalog',
+  initialProjectId,
+  initialProject,
+  lockProject = false,
+  onCreated,
+} = {}) {
   const {
     supplierList,
     selectedSupplier,
@@ -50,19 +60,23 @@ export default function SupplierPo() {
     handleProjectChange,
     handleReset,
     handleSave,
-  } = useSupplierPoServices()
+  } = useSupplierPoServices({
+    initialProjectId,
+    initialProject,
+    lockProject,
+    onCreated,
+  })
 
   const navigate = useNavigate()
   const location = useLocation()
   const returnTo = `${location.pathname}${location.search}${location.hash}`
 
-  // Custom “no options” for supplier select
+  // Custom no-options action for the supplier select.
   const NoOptionsMessageSupplier = (props) => (
     <components.NoOptionsMessage {...props}>
       No options.{' '}
       <CButton
         size="sm"
-        variant="outline"
         color="primary"
         onClick={() => navigate('/vendor/create', { state: { returnTo } })}
       >
@@ -71,13 +85,12 @@ export default function SupplierPo() {
     </components.NoOptionsMessage>
   )
 
-  // Custom “no options” for catalog select
+  // Custom no-options action for the catalog item select.
   const NoOptionsMessageItems = (props) => (
     <components.NoOptionsMessage {...props}>
       No options.{' '}
       <CButton
         size="sm"
-        variant="outline"
         color="primary"
         onClick={() => navigate('/catalog/create', { state: { returnTo } })}
       >
@@ -88,11 +101,16 @@ export default function SupplierPo() {
 
   return (
     <>
-      <ModuleNavStrip tabs={catalogModuleTabs} ariaLabel="Catalog sections" />
+      <ModuleNavStrip
+        tabs={module === 'commercial' ? commercialModuleTabs : catalogModuleTabs}
+        ariaLabel={module === 'commercial' ? 'Commercial sections' : 'Catalog sections'}
+      />
       <CCard className="mb-4">
         {/* Supplier & Project */}
         <CCardHeader>
-          <strong>Select Supplier and Project</strong>
+          <strong>
+            {module === 'commercial' ? 'Create Supplier PO' : 'Select Supplier and Project'}
+          </strong>
         </CCardHeader>
         <CCardBody>
           <CRow>
@@ -109,7 +127,7 @@ export default function SupplierPo() {
                 options={supplierList}
                 value={selectedSupplier}
                 onChange={handleSupplierChange}
-                placeholder="Select supplier…"
+                placeholder="Select supplier..."
                 components={{ NoOptionsMessage: NoOptionsMessageSupplier }}
               />
               {selectedSupplier && (
@@ -136,16 +154,21 @@ export default function SupplierPo() {
               <CFormLabel htmlFor="project-select">Select Project / Purpose</CFormLabel>
               <Select
                 inputId="project-select"
-                options={[
-                  {
-                    label: 'Not for project',
-                    value: { project_id: null, project_name: 'Not project' },
-                  },
-                  ...projectList,
-                ]}
+                options={
+                  lockProject
+                    ? projectList
+                    : [
+                        {
+                          label: 'Not for project',
+                          value: { project_id: null, project_name: 'Not project' },
+                        },
+                        ...projectList,
+                      ]
+                }
                 value={selectedProject}
                 onChange={handleProjectChange}
-                placeholder="Select project…"
+                isDisabled={lockProject}
+                placeholder="Select project..."
               />
               {selectedProject && (
                 <CRow className="mt-3">
@@ -169,7 +192,7 @@ export default function SupplierPo() {
             options={catalogItems}
             value={selectedItems}
             onChange={handleItemsChange}
-            placeholder="Select equipment…"
+            placeholder="Select equipment..."
             isMulti
             closeMenuOnSelect={false}
             hideSelectedOptions
@@ -208,7 +231,7 @@ export default function SupplierPo() {
                           <br />
                           <small>
                             {item.description.length > 50
-                              ? `${item.description.slice(0, 50)}…`
+                              ? `${item.description.slice(0, 50)}...`
                               : item.description}
                           </small>
                         </CTableDataCell>
@@ -300,22 +323,21 @@ export default function SupplierPo() {
                   </CTableRow>
                 </CTableBody>
               </CTable>
-
-              <CRow className="mt-4 justify-content-start">
-                <CCol xs="auto">
-                  <CButton color="secondary" className="me-2" onClick={handleReset}>
-                    Reset
-                  </CButton>
-                  <CButton color="primary" onClick={handleSave}>
-                    Create PO
-                  </CButton>
-                </CCol>
-              </CRow>
             </>
           ) : (
             <p>No items selected.</p>
           )}
         </CCardBody>
+        {selectedItems && selectedItems.length > 0 && (
+          <CCardFooter className="d-flex justify-content-end gap-2">
+            <CButton color="secondary" variant="outline" size="sm" onClick={handleReset}>
+              Reset
+            </CButton>
+            <CButton color="primary" size="sm" onClick={handleSave}>
+              Create PO
+            </CButton>
+          </CCardFooter>
+        )}
       </CCard>
     </>
   )

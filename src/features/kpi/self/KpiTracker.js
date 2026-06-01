@@ -257,7 +257,8 @@ const KpiTracker = ({ closeModal, onSaved }) => {
               <CButton
                 type="button"
                 color="secondary"
-                variant="ghost"
+                variant="outline"
+                size="sm"
                 onClick={closeModal}
                 disabled={isSaving}
               >
@@ -394,7 +395,7 @@ const KpiTracker = ({ closeModal, onSaved }) => {
                         <CButton
                           type="button"
                           color="secondary"
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => cancelRowEdit(row.kpiId)}
                           disabled={isSaving}

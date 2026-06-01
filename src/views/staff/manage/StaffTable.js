@@ -46,7 +46,7 @@ const dataColumns = [
   },
 ]
 
-const StaffTable = ({ staffList = [], onView, onEdit, onTerminate }) => {
+const StaffTable = ({ staffList = [], onView, onEdit, onTerminate, statsVisible = true }) => {
   const rows = useMemo(
     () =>
       staffList.map((staff) => ({
@@ -139,7 +139,7 @@ const StaffTable = ({ staffList = [], onView, onEdit, onTerminate }) => {
 
   return (
     <CCardBody>
-      <StatsStrip items={statsItems} />
+      {statsVisible && <StatsStrip items={statsItems} />}
       <DataTableRecordList
         rows={rows}
         dataColumns={dataColumns}

@@ -92,10 +92,16 @@ export default function RequestFormFields({
 
         <CRow>
           <CCol className="d-flex justify-content-end gap-2">
-            <CButton type="button" color="secondary" variant="outline" onClick={handleCancel}>
+            <CButton
+              type="button"
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+            >
               Cancel
             </CButton>
-            <CButton color="primary" type="submit">
+            <CButton color="primary" size="sm" type="submit">
               Submit Request
             </CButton>
           </CCol>

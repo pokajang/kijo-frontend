@@ -1,0 +1,55 @@
+.workload-score-trigger-low,
+.workload-score-final-value-low,
+.workload-score-matrix-range-low {
+  color: var(--cui-success);
+}
+.workload-score-trigger-moderate,
+.workload-score-final-value-moderate,
+.workload-score-matrix-range-moderate {
+  color: var(--cui-warning);
+}
+.workload-score-trigger-high,
+.workload-score-final-value-high,
+.workload-score-matrix-range-high {
+  color: var(--cui-danger);
+}
+.workload-score-trigger-extreme,
+.workload-score-final-value-extreme,
+.workload-score-matrix-range-extreme {
+  color: #8b0000;
+}
+.workload-score-level-low {
+  color: var(--cui-success);
+}
+.workload-score-level-moderate {
+  color: var(--cui-warning);
+}
+.workload-score-level-high {
+  color: var(--cui-danger);
+}
+.workload-score-level-extreme {
+  color: #8b0000;
+}
+.workload-score-matrix-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.workload-score-matrix-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+}
+.workload-score-matrix-swatch-low {
+  background: var(--cui-success);
+}
+.workload-score-matrix-swatch-moderate {
+  background: var(--cui-warning);
+}
+.workload-score-matrix-swatch-high {
+  background: var(--cui-danger);
+}
+.workload-score-matrix-swatch-extreme {
+  background: #8b0000;
+}

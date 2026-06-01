@@ -145,8 +145,8 @@ const AppraisalFeedback = ({ onBack }) => {
                   placeholder={`Enter details for ${formData.section}`}
                 />
               </CCol>
-              <CCol xs={12}>
-                <CButton type="submit" color="primary" disabled={submitting}>
+              <CCol xs={12} className="d-flex justify-content-end">
+                <CButton type="submit" color="primary" size="sm" disabled={submitting}>
                   {submitting ? 'Submitting...' : 'Submit Feedback'}
                 </CButton>
               </CCol>

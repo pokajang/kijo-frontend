@@ -15,6 +15,7 @@ import {
 import { useAuth } from '../../../auth/AuthProvider'
 import { DataTableLoadingState } from '../../../components/datatable'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
+import { fetchDetailJson } from '../../../utils/detailPages'
 import { API_BASE } from './constants'
 import NoticeAttachmentStrip from './NoticeAttachmentStrip'
 import { formatDateTime, normalizeRichContent } from './whatsNewFormUtils'
@@ -42,8 +43,14 @@ const WhatsNewDetail = () => {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API_BASE}whats-new/${noticeId}`, { credentials: 'include' })
-      const data = await res.json()
+      const detailResult = await fetchDetailJson(`${API_BASE}whats-new/${noticeId}`, {
+        notFoundMessage: "What's New notice not found.",
+      })
+      if (detailResult.notFound) {
+        setNotice(null)
+        return
+      }
+      const data = detailResult.data
       if (data?.status !== 'success') {
         throw new Error(data?.message || "Failed to load What's New notice.")
       }

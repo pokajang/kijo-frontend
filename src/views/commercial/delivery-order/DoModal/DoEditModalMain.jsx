@@ -240,10 +240,10 @@ const DoEditModalMain = ({ visible, onClose, data, onSave }) => {
       </CModalBody>
 
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={() => onSave(formData)}>
+        <CButton color="primary" size="sm" onClick={() => onSave(formData)}>
           Save Changes
         </CButton>
       </CModalFooter>

@@ -1,21 +1,31 @@
-import React, { useMemo } from 'react'
-import {
-  CAlert,
-  CBadge,
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CFormInput,
-  CSpinner,
-} from '@coreui/react'
-import CIcon from '@coreui/icons-react'
-import { cilSearch, cilX } from '@coreui/icons'
+import React, { useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { CAlert, CFormSwitch } from '@coreui/react'
+import RightSideDrawer from '../../components/right-drawer/RightSideDrawer'
+import { useAuth } from '../../auth/AuthProvider'
+import { extractRolesFromSession } from '../../utils/roles'
+import { recordModuleSearchSelection } from '../../components/search/moduleSearchIndex'
 import { useKnowledgePanel } from './KnowledgePanelContext'
 import { searchKnowledgeArticles } from './knowledgeSearch'
-import { formatDateTime, sanitizeKnowledgeHtml } from './knowledgeUtils'
+import AssistantTooltip from './side-panel/AssistantTooltip'
+import KnowledgeAssistantHeaderActions from './side-panel/KnowledgeAssistantHeaderActions'
+import KnowledgeAssistantPanel from './side-panel/KnowledgeAssistantPanel'
+import KnowledgePanelArticle from './side-panel/KnowledgePanelArticle'
+import KnowledgePanelLoading from './side-panel/KnowledgePanelLoading'
+import KnowledgePanelOverview from './side-panel/KnowledgePanelOverview'
+import KnowledgePanelSearchResults from './side-panel/KnowledgePanelSearchResults'
+import KnowledgePanelSearchSlot from './side-panel/KnowledgePanelSearchSlot'
+import { getCurrentPageName } from './side-panel/assistantRouteUtils'
+import { assistantSourceType } from './side-panel/assistantSourceUtils'
+import useKnowledgeAssistantChat from './side-panel/useKnowledgeAssistantChat'
+
+const BASE_ASSISTANT_PROMPTS = ['How do I create a quotation?', 'How do I apply leave?']
 
 const KnowledgeSidePanel = () => {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const roles = useMemo(() => extractRolesFromSession({ user }), [user])
   const {
     isOpen,
     article,
@@ -28,6 +38,14 @@ const KnowledgeSidePanel = () => {
     setKnowledgeSearch,
     loadKnowledgeArticle,
   } = useKnowledgePanel()
+  const [mode, setMode] = useState('search')
+  const currentAssistantRoute = `${location.pathname || ''}${location.search || ''}`
+
+  const assistant = useKnowledgeAssistantChat({
+    currentRoute: currentAssistantRoute,
+    isAskMode: mode === 'ask',
+    isOpen,
+  })
 
   const filteredArticles = useMemo(
     () => searchKnowledgeArticles(articles, search, { limit: 20 }),
@@ -44,163 +62,151 @@ const KnowledgeSidePanel = () => {
   }, [articles])
 
   const hasSearch = search.trim().length > 0
+  const currentPageName = getCurrentPageName(location.pathname)
+  const assistantPrompts = [...BASE_ASSISTANT_PROMPTS, `Explain ${currentPageName} page`]
 
   const openArticleFromSearch = (slugOrId) => {
     setKnowledgeSearch('')
     loadKnowledgeArticle(slugOrId)
   }
 
+  const openSource = (source) => {
+    const sourceType = assistantSourceType(source)
+    if (sourceType === 'knowledge' && source?.slug) {
+      setMode('search')
+      setKnowledgeSearch('')
+      loadKnowledgeArticle(source.slug)
+      return
+    }
+
+    if (source?.related_route) {
+      navigate(source.related_route)
+    }
+  }
+
+  const runSuggestedSearch = (query) => {
+    setMode('search')
+    setKnowledgeSearch(query)
+  }
+
+  const openRelatedPage = (item) => {
+    if (!item?.to) return
+    recordModuleSearchSelection(item.id)
+    navigate(item.to)
+  }
+
+  const openInlineRouteRef = (routeRef) => {
+    if (!routeRef?.route) return
+
+    if (routeRef.moduleItem?.id) {
+      recordModuleSearchSelection(routeRef.moduleItem.id)
+    }
+    navigate(routeRef.route)
+  }
+
+  const changeAssistantMode = (nextMode) => {
+    setMode(nextMode)
+    if (nextMode === 'ask') assistant.setAssistantView('history')
+  }
+
+  const aiModeLabelClass = `knowledge-side-panel-mode-toggle-label ${
+    mode === 'ask' ? 'is-active' : ''
+  }`
+
+  const modeSwitch = (
+    <AssistantTooltip
+      content={mode === 'ask' ? 'Switch to Search Mode' : 'Switch to AI Mode'}
+      placement="bottom"
+    >
+      <div className="knowledge-side-panel-mode-toggle" role="group" aria-label="AI mode toggle">
+        <CFormSwitch
+          id="knowledge-side-panel-mode-toggle"
+          aria-label={mode === 'ask' ? 'AI Mode On' : 'AI Mode Off'}
+          className="knowledge-side-panel-mode-switch"
+          checked={mode === 'ask'}
+          onChange={(event) => changeAssistantMode(event.target.checked ? 'ask' : 'search')}
+        />
+        <span className={aiModeLabelClass}>{mode === 'ask' ? 'AI ON' : 'AI OFF'}</span>
+      </div>
+    </AssistantTooltip>
+  )
+
   return (
-    <aside className={`knowledge-side-panel${isOpen ? ' is-open' : ''}`} aria-hidden={!isOpen}>
-      <CCard className="knowledge-side-panel-card">
-        <CCardHeader className="knowledge-side-panel-header">
-          <div className="knowledge-side-panel-title">
-            Learn <strong>kijo</strong>
-          </div>
-          <CButton
-            color="secondary"
-            variant="ghost"
-            size="sm"
-            className="knowledge-side-panel-close"
-            onClick={closeKnowledgePanel}
-            aria-label="Close Knowledge panel"
-          >
-            <CIcon icon={cilX} />
-          </CButton>
-        </CCardHeader>
-
-        <div className="knowledge-side-panel-search">
-          <div className="position-relative">
-            <CIcon icon={cilSearch} className="knowledge-side-panel-search-icon" />
-            <CFormInput
-              size="sm"
-              value={search}
-              placeholder="Search Knowledge"
-              className="knowledge-side-panel-search-input"
-              onChange={(event) => setKnowledgeSearch(event.target.value)}
+    <RightSideDrawer
+      open={isOpen}
+      title={
+        <span className="knowledge-side-panel-title">
+          Learn <strong>kijo</strong>
+        </span>
+      }
+      onClose={closeKnowledgePanel}
+      width={440}
+      className="knowledge-side-panel"
+      headerActions={
+        <>
+          {mode === 'ask' ? (
+            <KnowledgeAssistantHeaderActions
+              assistantClearing={assistant.assistantClearing}
+              assistantLoading={assistant.assistantLoading}
+              assistantSending={assistant.assistantSending}
+              assistantView={assistant.assistantView}
+              onSetAssistantView={assistant.setAssistantView}
+              onStartNewChat={assistant.startNewAssistantChat}
             />
-          </div>
-        </div>
+          ) : null}
+          {modeSwitch}
+        </>
+      }
+      bodyClassName={`knowledge-side-panel-body ${
+        mode === 'ask' ? 'knowledge-side-panel-body--ask' : ''
+      }`}
+      beforeBody={
+        mode === 'search' ? (
+          <KnowledgePanelSearchSlot search={search} onSearchChange={setKnowledgeSearch} />
+        ) : null
+      }
+      closeLabel="Close Knowledge panel"
+    >
+      {error && <CAlert color="danger">{error}</CAlert>}
 
-        <CCardBody className="knowledge-side-panel-body">
-          {error && <CAlert color="danger">{error}</CAlert>}
+      {mode === 'ask' ? (
+        <KnowledgeAssistantPanel
+          articles={articles}
+          assistant={assistant}
+          assistantPrompts={assistantPrompts}
+          currentPageName={currentPageName}
+          onOpenInlineRouteRef={openInlineRouteRef}
+          onOpenRelatedPage={openRelatedPage}
+          onOpenSource={openSource}
+          onRunSuggestedSearch={runSuggestedSearch}
+          roles={roles}
+        />
+      ) : null}
 
-          {hasSearch && (
-            <div className="knowledge-side-panel-results">
-              {loadingArticles && (
-                <div className="small text-body-secondary d-flex align-items-center gap-2">
-                  <CSpinner size="sm" /> Loading articles...
-                </div>
-              )}
-              {!loadingArticles && filteredArticles.length === 0 && (
-                <div className="knowledge-side-panel-empty">
-                  No matching guides found. Try a module name, action, or keyword.
-                </div>
-              )}
-              {!loadingArticles &&
-                filteredArticles.map((item) => (
-                  <button
-                    type="button"
-                    className="knowledge-side-panel-result"
-                    key={item.id || item.slug}
-                    onClick={() => openArticleFromSearch(item.slug || item.id)}
-                  >
-                    <span className="fw-semibold">{item.title}</span>
-                    <span className="small text-body-secondary">
-                      {[item.category, item.summary].filter(Boolean).join(' | ')}
-                    </span>
-                  </button>
-                ))}
-            </div>
-          )}
+      {mode === 'search' && hasSearch && (
+        <KnowledgePanelSearchResults
+          articles={filteredArticles}
+          loadingArticles={loadingArticles}
+          onOpenArticle={openArticleFromSearch}
+        />
+      )}
 
-          {!hasSearch && loadingArticle && (
-            <div className="knowledge-side-panel-loading">
-              <CSpinner size="sm" />
-              <span>Loading article...</span>
-            </div>
-          )}
+      {mode === 'search' && !hasSearch && loadingArticle && (
+        <KnowledgePanelLoading>Loading article...</KnowledgePanelLoading>
+      )}
 
-          {!hasSearch && !loadingArticle && !article && (
-            <>
-              {loadingArticles && (
-                <div className="knowledge-side-panel-loading">
-                  <CSpinner size="sm" />
-                  <span>Loading guides...</span>
-                </div>
-              )}
-              {!loadingArticles && overviewArticles.length > 0 && (
-                <div className="knowledge-side-panel-overview">
-                  {overviewArticles.map((item) => (
-                    <button
-                      type="button"
-                      className="knowledge-side-panel-overview-card"
-                      key={item.id || item.slug}
-                      onClick={() => loadKnowledgeArticle(item.slug || item.id)}
-                    >
-                      <span className="knowledge-side-panel-overview-title">{item.title}</span>
-                      <span className="knowledge-side-panel-overview-summary">{item.summary}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {!loadingArticles && overviewArticles.length === 0 && (
-                <div className="knowledge-side-panel-empty">
-                  Search guides, or open help from a module with a Knowledge article.
-                </div>
-              )}
-            </>
-          )}
+      {mode === 'search' && !hasSearch && !loadingArticle && !article && (
+        <KnowledgePanelOverview
+          loadingArticles={loadingArticles}
+          overviewArticles={overviewArticles}
+          onOpenArticle={loadKnowledgeArticle}
+        />
+      )}
 
-          {!hasSearch && !loadingArticle && article && (
-            <article className="knowledge-side-panel-article">
-              <h2>{article.title}</h2>
-
-              {article.images?.length > 0 && (
-                <div className="knowledge-side-panel-images">
-                  {article.images.map((image) => (
-                    <figure key={image.id}>
-                      <img src={image.url} alt={image.description} />
-                      <figcaption>{image.description}</figcaption>
-                    </figure>
-                  ))}
-                </div>
-              )}
-
-              <div
-                className="knowledge-article-body"
-                dangerouslySetInnerHTML={{ __html: sanitizeKnowledgeHtml(article.body_html) }}
-              />
-
-              <div className="knowledge-side-panel-meta">
-                {article.related_route && (
-                  <div className="knowledge-side-panel-route">
-                    Module page: <strong>{article.related_route}</strong>
-                  </div>
-                )}
-                <div>
-                  <CBadge color="secondary" className="me-2">
-                    {article.category}
-                  </CBadge>
-                  {article.published_at && (
-                    <span>Published {formatDateTime(article.published_at)}</span>
-                  )}
-                </div>
-                {article.latest_edit_log && (
-                  <div>
-                    Latest contribution by {article.latest_edit_log.name_code || 'Unknown'}
-                    {article.latest_edit_log.created_at
-                      ? ` on ${formatDateTime(article.latest_edit_log.created_at)}`
-                      : ''}
-                    {article.latest_edit_log.remarks ? `: ${article.latest_edit_log.remarks}` : ''}
-                  </div>
-                )}
-              </div>
-            </article>
-          )}
-        </CCardBody>
-      </CCard>
-    </aside>
+      {mode === 'search' && !hasSearch && !loadingArticle && article && (
+        <KnowledgePanelArticle article={article} />
+      )}
+    </RightSideDrawer>
   )
 }
 

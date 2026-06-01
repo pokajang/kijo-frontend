@@ -402,10 +402,10 @@ const EditVendorModal = ({ visible, vendor, setVendor, onClose, onSave }) => {
       </CModalBody>
 
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={() => onSave(vendor)}>
+        <CButton color="primary" size="sm" onClick={() => onSave(vendor)}>
           Save Changes
         </CButton>
       </CModalFooter>

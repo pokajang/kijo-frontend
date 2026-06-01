@@ -326,7 +326,12 @@ const KpiParametersManager = () => {
       return
     }
 
-    if (!(await dialog.confirm(`Delete KPI "${row.parameter_name}"? This cannot be undone.`))) {
+    if (
+      !(await dialog.confirm(`Delete KPI "${row.parameter_name}"? This cannot be undone.`, {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    ) {
       return
     }
 
@@ -652,7 +657,7 @@ const KpiParametersManager = () => {
                       <CButton
                         type="button"
                         color="secondary"
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => cancelRow(row)}
                         disabled={isBusy}

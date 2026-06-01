@@ -8,6 +8,7 @@ import {
 } from '../../../components/datatable'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
+import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -17,6 +18,7 @@ const getStatusTone = (status) => {
     case 'Paid':
       return 'success'
     case 'Pending':
+    case 'Returned':
       return 'warning'
     case 'Rejected':
       return 'danger'
@@ -39,10 +41,20 @@ const normalizePayment = (payment) => {
     approvedDisplay: payment.date_approved
       ? payment.date_approved.split(' ')[0]
       : payment.approvedDisplay || 'In progress',
+    checkedDisplay: payment.checked_at ? payment.checked_at.split(' ')[0] : '-',
+    paidDisplay: payment.paid_date || '-',
+    checkedBy: payment.checked_by || payment.checked_by_name_code || '-',
+    approvedBy: payment.approved_by_name_code || payment.approved_by || '-',
+    paidBy: payment.paid_by_name_code || payment.paid_by || '-',
     paymentFor: payment.project_id
       ? payment.project_name || payment.paymentFor || 'Unnamed Project'
       : payment.payment_context || payment.paymentFor || '-',
     remarks: payment.remarks || 'Not provided',
+    checkerRemarks: payment.checker_remarks || '-',
+    approvalRemarks: payment.approval_remarks || '-',
+    returnedRemarks: payment.returned_remarks || '-',
+    rejectedRemarks: payment.rejected_remarks || '-',
+    paidRemarks: payment.paid_remarks || '-',
     type: payment.payment_type || payment.type || 'Not specified',
     method: payment.method || '-',
     status: payment.status || '-',
@@ -56,12 +68,17 @@ const PaymentHistoryDetailPage = () => {
   const { paymentId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/vendor/pay'
+  const returnTo =
+    location.state?.returnTo ||
+    (location.pathname.startsWith('/vendor/payment-records')
+      ? '/vendor/payment-records'
+      : '/vendor/pay')
   const [payment, setPayment] = useState(() => normalizePayment(location.state?.record))
   const paymentRef = useRef(payment)
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
   const [invoiceVisible, setInvoiceVisible] = useState(false)
+  const { consumeEntity } = useAppNotifications()
 
   useEffect(() => {
     paymentRef.current = payment
@@ -95,6 +112,15 @@ const PaymentHistoryDetailPage = () => {
     loadPayment()
   }, [loadPayment])
 
+  useEffect(() => {
+    consumeEntity({
+      moduleKey: 'vendor.payments',
+      entityType: 'vendor_payment',
+      entityId: paymentId,
+      routePrefix: '/vendor/payment-records',
+    }).catch(() => {})
+  }, [consumeEntity, paymentId])
+
   const receiptUrl = resolveAssetUrl(payment?.invoice)
   const actions = useMemo(
     () => [
@@ -123,8 +149,12 @@ const PaymentHistoryDetailPage = () => {
           fields={[
             { key: 'requested', label: 'Date Requested', value: payment?.requestedDisplay },
             { key: 'requestedBy', label: 'Requested By', value: payment?.requestedBy },
+            { key: 'checked', label: 'Date Checked', value: payment?.checkedDisplay },
+            { key: 'checkedBy', label: 'Checked By', value: payment?.checkedBy },
             { key: 'approved', label: 'Date Approved', value: payment?.approvedDisplay },
-            { key: 'approvedBy', label: 'Approved By', value: payment?.approved_by || '-' },
+            { key: 'approvedBy', label: 'Approved By', value: payment?.approvedBy },
+            { key: 'paid', label: 'Paid Date', value: payment?.paidDisplay },
+            { key: 'paidBy', label: 'Paid By', value: payment?.paidBy },
             { key: 'vendor', label: 'Vendor', value: payment?.vendor_name || '-' },
             { key: 'paymentFor', label: 'For', value: payment?.paymentFor },
             { key: 'type', label: 'Type', value: payment?.type },
@@ -140,6 +170,31 @@ const PaymentHistoryDetailPage = () => {
             },
             { key: 'amount', label: 'Amount', value: payment?.amountDisplay },
             { key: 'remarks', label: 'Remarks', value: payment?.remarks, xs: 12 },
+            {
+              key: 'checkerRemarks',
+              label: 'Checker Remarks',
+              value: payment?.checkerRemarks,
+              xs: 12,
+            },
+            {
+              key: 'approvalRemarks',
+              label: 'Approval Remarks',
+              value: payment?.approvalRemarks,
+              xs: 12,
+            },
+            {
+              key: 'returnedRemarks',
+              label: 'Returned Remarks',
+              value: payment?.returnedRemarks,
+              xs: 12,
+            },
+            {
+              key: 'rejectedRemarks',
+              label: 'Rejected Remarks',
+              value: payment?.rejectedRemarks,
+              xs: 12,
+            },
+            { key: 'paidRemarks', label: 'Paid Remarks', value: payment?.paidRemarks, xs: 12 },
           ]}
         />
       </DataTableDetailShell>

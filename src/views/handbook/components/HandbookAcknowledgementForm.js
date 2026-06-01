@@ -123,6 +123,7 @@ const HandbookAcknowledgementForm = ({
               {!effectiveCanSign && <p className="text-warning mb-2">{effectiveDisabledMessage}</p>}
               <CButton
                 color="primary"
+                size="sm"
                 onClick={() => setModalVisible(true)}
                 disabled={!effectiveCanSign}
               >
@@ -176,11 +177,18 @@ const HandbookAcknowledgementForm = ({
           </CForm>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setModalVisible(false)} disabled={loading}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setModalVisible(false)}
+            disabled={loading}
+          >
             Cancel
           </CButton>
           <CButton
             color="primary"
+            size="sm"
             type="submit"
             form="handbook-acknowledgement-form"
             disabled={loading}

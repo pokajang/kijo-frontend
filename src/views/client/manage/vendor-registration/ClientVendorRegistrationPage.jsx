@@ -1,27 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CFormLabel,
-  CFormSelect,
-  CRow,
-} from '@coreui/react'
+import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
 
 import dialog from '../../../../components/dialog/dialogService'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableStatsToggle,
   DataTableStatusBadge,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../../components/datatable'
 import { StatsStrip } from '../../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { dispatchClientVendorRegistrationChanged } from '../../../../hooks/useClientVendorRegistrationAttentionCount'
 import { formatCount } from '../../../../utils/stats/formatStats'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
@@ -186,6 +180,8 @@ const parseApiResponse = async (response) => {
 
 const ClientVendorRegistrationPage = () => {
   const navigate = useNavigate()
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('client.vendor-registration')
   const [rows, setRows] = useState([])
   const [staffOptions, setStaffOptions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -363,7 +359,10 @@ const ClientVendorRegistrationPage = () => {
   }
 
   const deleteRow = async (row) => {
-    const ok = await dialog.confirm(`Delete vendor registration for ${row.client}?`)
+    const ok = await dialog.confirm(`Delete vendor registration for ${row.client}?`, {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!ok) return
 
     try {
@@ -427,24 +426,30 @@ const ClientVendorRegistrationPage = () => {
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4">
-            <CCardHeader>
-              <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                <strong>Vendor Registration</strong>
-                <CButton size="sm" color="primary" onClick={openCreatePage}>
-                  <CIcon icon={cilPlus} className="me-1" />
-                  Add Registration
-                </CButton>
-              </div>
-            </CCardHeader>
-            <CCardBody>
-              <StatsStrip
-                items={statsItems}
-                loading={loading}
-                layout="balanced"
-                className="client-vendor-registration-stats"
+            <DataTableCardHeader title="Vendor Registration">
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
               />
+              <CButton size="sm" color="primary" onClick={openCreatePage}>
+                <CIcon icon={cilPlus} className="me-1" />
+                Add Registration
+              </CButton>
+            </DataTableCardHeader>
+            <CCardBody>
+              {statsVisible && (
+                <StatsStrip
+                  items={statsItems}
+                  loading={loading}
+                  layout="balanced"
+                  className="client-vendor-registration-stats"
+                />
+              )}
 
               <DataTableRecordControls
+                visible={controlsVisible}
                 searchValue={searchTerm}
                 onSearchChange={setSearchTerm}
                 searchPlaceholder="Search client, recipient, certificate, portal, remarks"

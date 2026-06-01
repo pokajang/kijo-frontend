@@ -12,22 +12,86 @@ export const getArrayFromPayload = (payload, keys = []) => {
   return []
 }
 
-export const fetchJson = async (url, options = {}) => {
-  const res = await fetch(url, {
-    credentials: 'include',
-    ...options,
-    headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(options.headers || {}),
-    },
-  })
+const readJsonPayload = (res) => res.json().catch(() => null)
 
-  const data = await res.json().catch(() => null)
+export class DetailFetchError extends Error {
+  constructor(message, { status = 0, data = null, notFound = false } = {}) {
+    super(message)
+    this.name = 'DetailFetchError'
+    this.status = status
+    this.data = data
+    this.notFound = notFound
+  }
+}
+
+export const fetchJson = async (url, options = {}) => {
+  let res
+  try {
+    res = await fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
+      },
+    })
+  } catch (err) {
+    if (options?.signal?.aborted) {
+      const abortError = new DOMException('The operation was aborted.', 'AbortError')
+      abortError.cause = err
+      throw abortError
+    }
+    throw err
+  }
+
+  const data = await readJsonPayload(res)
   if (!res.ok) {
-    throw new Error(data?.message || `Request failed with HTTP ${res.status}`)
+    throw new DetailFetchError(data?.message || `Request failed with HTTP ${res.status}`, {
+      status: res.status,
+      data,
+      notFound: res.status === 404,
+    })
   }
 
   return data
+}
+
+export const fetchDetailJson = async (url, options = {}) => {
+  const { notFoundMessage = 'Record not found.', ...fetchOptions } = options
+  const data = await fetchJson(url, {
+    ...fetchOptions,
+    silentError: true,
+  }).catch((err) => {
+    if (err?.notFound || err?.status === 404) {
+      return {
+        __detailFetchResult: true,
+        ok: false,
+        notFound: true,
+        status: 404,
+        data: err.data || null,
+        message: err.data?.message || notFoundMessage,
+      }
+    }
+    throw err
+  })
+
+  if (data?.__detailFetchResult) {
+    const { __detailFetchResult, ...result } = data
+    return result
+  }
+
+  if (data?.status === 'error') {
+    throw new DetailFetchError(data?.message || 'Request failed.', {
+      status: 200,
+      data,
+    })
+  }
+
+  return {
+    ok: true,
+    data,
+    status: 200,
+  }
 }
 
 export const appendQueryParams = (url, params = {}) => {

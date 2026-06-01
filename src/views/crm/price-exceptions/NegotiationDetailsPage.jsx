@@ -89,10 +89,10 @@ const renderField = (label, value, options = {}) => {
   const { mobileInline = false, valueClassName = '' } = options
   if (!mobileInline) {
     return (
-      <>
+      <div className="records-detail-field">
         <div className="small text-muted">{label}</div>
         <div className={valueClassName}>{value || '-'}</div>
-      </>
+      </div>
     )
   }
 

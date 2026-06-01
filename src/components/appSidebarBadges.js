@@ -1,9 +1,23 @@
 import { getRouteNotificationBadge } from '../notifications/notificationRegistry'
 
+const routeKeysForItem = (item = {}) =>
+  Array.from(
+    new Set(
+      [
+        item.to,
+        ...(Array.isArray(item.notificationRouteGroups) ? item.notificationRouteGroups : []),
+      ].filter(Boolean),
+    ),
+  )
+
 export const applySidebarBadges = (items, { getRouteGroupCount = () => 0 } = {}) =>
   items.map((item) => {
-    const count = Number(getRouteGroupCount(item.to) || 0)
-    const badgeConfig = getRouteNotificationBadge(item.to)
+    const routeKeys = routeKeysForItem(item)
+    const count = routeKeys.reduce(
+      (total, routeKey) => total + Number(getRouteGroupCount(routeKey) || 0),
+      0,
+    )
+    const badgeConfig = routeKeys.map(getRouteNotificationBadge).find(Boolean)
 
     if (count <= 0 || !badgeConfig) {
       return item

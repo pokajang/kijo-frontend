@@ -140,10 +140,15 @@ const RequestDetailPage = () => {
           />
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={() => setModalVisible(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setModalVisible(false)}
+          >
             Cancel
           </CButton>
-          <CButton color="primary" onClick={saveAchievement}>
+          <CButton color="primary" size="sm" onClick={saveAchievement}>
             Save
           </CButton>
         </CModalFooter>

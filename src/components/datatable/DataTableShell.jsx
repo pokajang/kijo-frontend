@@ -16,7 +16,7 @@ const DataTableViewport = ({
     className={`table-scroll-viewport d-none d-${desktopBreakpoint}-block ${className}`.trim()}
     ref={tableViewportRef}
     style={{
-      maxHeight: tableViewportHeight ? `${tableViewportHeight}px` : 'none',
+      height: tableViewportHeight ? `${tableViewportHeight}px` : undefined,
       overflowX: 'auto',
       overflowY: 'auto',
       borderTopLeftRadius: 'var(--app-radius-lg)',

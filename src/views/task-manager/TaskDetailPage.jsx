@@ -96,7 +96,13 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
   }, [loadTask, taskId])
 
   const deleteTask = useCallback(async () => {
-    if (!(await dialog.confirm('Are you sure you want to delete this task?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this task?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const data = await fetchJson(`${API_BASE}tasks/${encodeURIComponent(taskId)}`, {
         method: 'DELETE',
@@ -139,6 +145,7 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
         fields={[
           { key: 'title', label: 'Task', value: task?.title, xs: 12 },
           { key: 'staff', label: 'Staff', value: task?.staffName, hidden: !isStaffScope },
+          { key: 'project', label: 'Project', value: task?.projectName || '-' },
           { key: 'status', label: 'Status', value: task?.statusText },
           { key: 'created', label: 'Created On', value: task?.createdAt },
           { key: 'due', label: 'Due Date', value: task?.dueDate },

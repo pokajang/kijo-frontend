@@ -71,7 +71,7 @@ const AppraisalModal = ({
           <CAlert color="info" className="mb-3">
             {infoContent}
             <div className="d-flex justify-content-end mt-3">
-              <CButton color="link" className="p-0" onClick={() => setShowInfo(false)}>
+              <CButton color="link" size="sm" className="p-0" onClick={() => setShowInfo(false)}>
                 Close
               </CButton>
             </div>
@@ -104,10 +104,10 @@ const AppraisalModal = ({
         />
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={onSubmit}>
+        <CButton color="primary" size="sm" onClick={onSubmit}>
           {submitLabel}
         </CButton>
       </CModalFooter>

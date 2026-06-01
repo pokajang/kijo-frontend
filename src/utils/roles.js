@@ -43,6 +43,8 @@ export const extractRolesFromSession = (data) => {
 
 export const hasAnyAllowedRole = (userRoles = [], allowedRoles = []) => {
   const userSet = new Set((Array.isArray(userRoles) ? userRoles : []).map(normalizeRole))
+  if (userSet.has('system admin')) return true
+
   return (Array.isArray(allowedRoles) ? allowedRoles : []).some((role) =>
     userSet.has(normalizeRole(role)),
   )

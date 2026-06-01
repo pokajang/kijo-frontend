@@ -4,7 +4,6 @@ import {
   CButton,
   CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CFormCheck,
   CFormInput,
@@ -26,11 +25,14 @@ import {
   DataTableActionMenu,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableCardHeader,
+  DataTableStatsToggle,
   DataTableStatusBadge,
   DataTableTextCell,
 } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { useAuth } from '../../../auth/AuthProvider'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
 import { quoteApiUrl } from '../quotes/quoteApi'
 import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
@@ -128,11 +130,14 @@ const dataColumns = [
     shrinkToFit: true,
   },
   {
-    key: 'trace',
-    label: 'Trace',
-    width: '180px',
+    key: 'workflow',
+    label: 'Workflow',
+    width: '260px',
     sortable: true,
     sortType: 'string',
+    textMode: 'expandable',
+    cellMaxWidth: '260px',
+    previewCharThreshold: 42,
   },
 ]
 
@@ -144,10 +149,10 @@ const defaultVisibleColumns = {
   currentTotal: true,
   requestedDiscount: true,
   status: true,
-  trace: true,
+  workflow: true,
 }
 
-const requiredColumns = new Set(['request', 'status'])
+const requiredColumns = new Set(['request', 'status', 'workflow'])
 
 const money = (value) =>
   Number(value || 0).toLocaleString('en-MY', {
@@ -169,10 +174,32 @@ const getOptionLabel = (options, value) =>
 const formatStatus = (status) => getOptionLabel(statusOptions, status)
 const formatService = (service) => getOptionLabel(serviceOptions, service)
 
+const buildWorkflowText = (row = {}) => {
+  if (row.status === 'pending') return 'Pending approval'
+  if (row.status === 'used') {
+    return `Applied to quote #${row.used_revision_quote_id || row.quote_id || '-'}`
+  }
+
+  const statusLabel =
+    row.status === 'approved' ? 'Approved' : row.status === 'rejected' ? 'Rejected' : ''
+  if (!statusLabel) return row.status ? formatStatus(row.status) : '-'
+
+  return [
+    `Approval: ${statusLabel}`,
+    row.approved_by_name ? `by ${row.approved_by_name}` : '',
+    row.approved_at ? `at ${row.approved_at}` : '',
+    row.approval_remarks ? `Remarks: ${row.approval_remarks}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
 const Negotiation = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('crm.price-exceptions')
   const roles = extractRolesFromSession({ user })
   const isApprover = hasAnyAllowedRole(roles, ['Manager', 'System Admin'])
   const [rows, setRows] = useState([])
@@ -221,10 +248,7 @@ const Negotiation = () => {
   const normalizedRows = useMemo(
     () =>
       rows.map((row) => {
-        const trace =
-          row.status === 'used'
-            ? `Applied to quote #${row.used_revision_quote_id || row.quote_id || '-'}`
-            : row.approved_by_name || '-'
+        const workflow = buildWorkflowText(row)
 
         return {
           ...row,
@@ -239,7 +263,7 @@ const Negotiation = () => {
           requestedDiscountDisplay: `RM ${money(row.requested_discount_amount)}`,
           statusLabel: formatStatus(row.status),
           statusTone: statusTone(row.status),
-          trace,
+          workflow,
         }
       }),
     [rows],
@@ -281,7 +305,7 @@ const Negotiation = () => {
         row.requested_by_name,
         row.requester,
         row.requester_remarks,
-        row.trace,
+        row.workflow,
       ]
         .join(' ')
         .toLowerCase()
@@ -466,6 +490,26 @@ const Negotiation = () => {
     })
   }
 
+  const canDecideRow = (row) => Boolean(row?.can_decide ?? isApprover)
+
+  const getWorkflowActions = (row) =>
+    canDecideRow(row) && canDecideNegotiation(row)
+      ? [
+          {
+            key: 'approve',
+            label: 'Approve',
+            color: 'success',
+            onClick: () => openDecision(row, 'approve'),
+          },
+          {
+            key: 'reject',
+            label: 'Reject',
+            color: 'danger',
+            onClick: () => openDecision(row, 'reject'),
+          },
+        ]
+      : []
+
   const getActions = (row) =>
     [
       Number(row.quote_id || 0) > 0
@@ -473,22 +517,6 @@ const Negotiation = () => {
             key: 'open-quotation',
             label: 'Open Quotation',
             onClick: () => openQuotation(row),
-          }
-        : null,
-      isApprover && canDecideNegotiation(row)
-        ? {
-            key: 'approve',
-            label: 'Approve',
-            onClick: () => openDecision(row, 'approve'),
-          }
-        : null,
-      isApprover && canDecideNegotiation(row)
-        ? {
-            key: 'reject',
-            label: 'Reject',
-            danger: true,
-            dividerBefore: true,
-            onClick: () => openDecision(row, 'reject'),
           }
         : null,
       canApplyNegotiation(row, user)
@@ -505,6 +533,57 @@ const Negotiation = () => {
     if (!actions.length) return <span className="text-muted">-</span>
 
     return <DataTableActionMenu record={row} actions={actions} actionKey={actionKey} />
+  }
+
+  const renderWorkflowCell = (row) => {
+    const workflowActions = getWorkflowActions(row)
+
+    if (!workflowActions.length) {
+      return (
+        <DataTableTextCell
+          value={row.workflow}
+          maxWidth="260px"
+          title="Workflow"
+          mode="expandable"
+          previewCharThreshold={62}
+          className="small text-muted"
+        />
+      )
+    }
+
+    return (
+      <div className="small text-muted" style={{ maxWidth: '260px' }}>
+        <div className="mb-1">
+          <DataTableTextCell
+            value={row.workflow}
+            maxWidth="260px"
+            title="Workflow"
+            mode="expandable"
+            previewCharThreshold={44}
+            className="small text-muted"
+          />
+        </div>
+        <div className="d-flex align-items-center flex-wrap gap-1">
+          {workflowActions.map((action) => (
+            <CButton
+              key={action.key}
+              color={action.color}
+              size="sm"
+              variant="outline"
+              className="py-0 px-2"
+              data-no-row-open="true"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                action.onClick()
+              }}
+            >
+              {action.label}
+            </CButton>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   const renderCell = (row, column) => {
@@ -530,17 +609,7 @@ const Negotiation = () => {
     if (column.key === 'status') {
       return <DataTableStatusBadge tone={row.statusTone}>{row.statusLabel}</DataTableStatusBadge>
     }
-    if (column.key === 'trace') {
-      return (
-        <DataTableTextCell
-          value={row.trace}
-          maxWidth="180px"
-          title="Trace"
-          mode="tooltip"
-          previewCharThreshold={28}
-        />
-      )
-    }
+    if (column.key === 'workflow') return renderWorkflowCell(row)
 
     return row[column.key] || '-'
   }
@@ -549,7 +618,7 @@ const Negotiation = () => {
     title: (row) => row.request,
     subtitle: (row) => row.reason || row.requester,
     meta: (row) =>
-      [row.serviceLabel, row.requestedDiscountDisplay, row.trace].filter(Boolean).join(' | '),
+      [row.serviceLabel, row.requestedDiscountDisplay, row.workflow].filter(Boolean).join(' | '),
     badges: (row) => [
       {
         key: 'status',
@@ -560,6 +629,7 @@ const Negotiation = () => {
     kv: (row) => [
       { key: 'current', label: 'Current', value: row.currentTotalDisplay },
       { key: 'discount', label: 'Discount', value: row.requestedDiscountDisplay },
+      { key: 'workflow', label: 'Workflow', value: row.workflow },
     ],
   }
 
@@ -587,8 +657,13 @@ const Negotiation = () => {
     <CRow>
       <CCol xs={12}>
         <CCard className="mb-4 records-page-card">
-          <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap records-page-card-header">
-            <strong>Negotiations</strong>
+          <DataTableCardHeader title="Negotiations">
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
             <CButton
               color="primary"
               size="sm"
@@ -599,14 +674,17 @@ const Negotiation = () => {
               <CIcon icon={cilReload} />
               Refresh
             </CButton>
-          </CCardHeader>
+          </DataTableCardHeader>
           <CCardBody className="records-page-card-body">
             <div>
-              <StatsStrip items={statsItems} loading={loading && rows.length === 0} />
+              {statsVisible && (
+                <StatsStrip items={statsItems} loading={loading && rows.length === 0} />
+              )}
               <DataTableRecordControls
+                visible={controlsVisible}
                 searchValue={search}
                 onSearchChange={setSearch}
-                searchPlaceholder="Search request, quote, requester, reason, or trace"
+                searchPlaceholder="Search request, quote, requester, reason, or workflow"
                 searchAriaLabel="Search negotiations"
                 showAdvancedFilters={showAdvancedFilters}
                 setShowAdvancedFilters={setShowAdvancedFilters}
@@ -667,7 +745,7 @@ const Negotiation = () => {
                 dataColumns={dataColumns}
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
-                storageKey="crm.negotiations.visible-columns.v1"
+                storageKey="crm.negotiations.visible-columns.v2"
                 idPrefix="crm-negotiation"
                 loading={loading}
                 loadingMessage="Loading negotiations..."
@@ -694,7 +772,7 @@ const Negotiation = () => {
                 getMobileTitle={(row) => row.request}
                 getMobileSubtitle={(row) => row.reason || row.requester}
                 getMobileMeta={(row) =>
-                  [row.serviceLabel, row.requestedDiscountDisplay, row.trace]
+                  [row.serviceLabel, row.requestedDiscountDisplay, row.workflow]
                     .filter(Boolean)
                     .join(' | ')
                 }
@@ -703,7 +781,7 @@ const Negotiation = () => {
                 mobileFieldKeys={{
                   title: 'request',
                   subtitle: 'requester',
-                  meta: ['service', 'requestedDiscount', 'trace'],
+                  meta: ['service', 'requestedDiscount', 'workflow'],
                   status: 'status',
                 }}
                 tableViewportDeps={[showAdvancedFilters, search, status, service, requester]}
@@ -811,11 +889,18 @@ const Negotiation = () => {
           />
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setDecision(null)} disabled={submitting}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setDecision(null)}
+            disabled={submitting}
+          >
             Cancel
           </CButton>
           <CButton
             color={decision?.type === 'approve' ? 'success' : 'danger'}
+            size="sm"
             onClick={submitDecision}
             disabled={submitting || !decisionForm.acknowledged || approvedDiscountInvalid}
           >

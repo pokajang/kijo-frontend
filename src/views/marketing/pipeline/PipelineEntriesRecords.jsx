@@ -2,20 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
+import { CAlert, CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import {
-  CAlert,
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CFormLabel,
-  CFormSelect,
-} from '@coreui/react'
-import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../components/datatable'
@@ -27,6 +20,7 @@ import {
   getPeriodRangeScopeLabel,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
 import PipelineEntryProofModal from './components/PipelineEntryProofModal'
 import PipelineEntryEditModal from './PipelineEntryEditModal'
@@ -71,6 +65,8 @@ const PipelineEntriesRecords = () => {
   const baselineFilters = useMemo(() => getDefaultPipelineRecordFilters(), [])
   const [filters, setFilters] = useState(() => baselineFilters)
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('marketing.pipeline-entries')
 
   useEffect(() => {
     if (location.state?.pipelineMessage) {
@@ -341,7 +337,6 @@ const PipelineEntriesRecords = () => {
     return entry[column.key] || '-'
   }
 
-  const totalRows = entries.length
   const activeChips = useMemo(
     () => buildPipelineRecordActiveChips({ filters, periodRange, searchInput, staffOptions }),
     [filters, periodRange, searchInput, staffOptions],
@@ -364,29 +359,25 @@ const PipelineEntriesRecords = () => {
       )}
 
       <CCard>
-        <CCardHeader>
-          <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <div>
-              <strong>Pipeline Records</strong>
-              <span className="text-muted ms-2">{totalRows} records</span>
-            </div>
-            <CButton
-              size="sm"
-              color="primary"
-              onClick={() => navigate('/pipeline/entries/bulk-add')}
-            >
-              <CIcon icon={cilPlus} className="me-1" />
-              Add Entries
-            </CButton>
-          </div>
-        </CCardHeader>
-        <CCardBody>
-          <StatsStrip
-            loading={loading}
-            items={statsItems}
-            scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        <DataTableCardHeader
+          title="Pipeline Records"
+          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        >
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
           />
+          <CButton size="sm" color="primary" onClick={() => navigate('/pipeline/entries/bulk-add')}>
+            <CIcon icon={cilPlus} className="me-1" />
+            Add Entries
+          </CButton>
+        </DataTableCardHeader>
+        <CCardBody>
+          {statsVisible && <StatsStrip loading={loading} items={statsItems} />}
           <DataTableRecordControls
+            visible={controlsVisible}
             searchValue={searchInput}
             onSearchChange={setSearchInput}
             searchPlaceholder="Search prospect, notes, or owner"

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailShell } from '../../../components/datatable'
 import { DetailField, DetailSection } from '../shared/CommercialDetailFields'
+import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import EditJd14Modal from './EditJd14Modal'
 import dialog from '../../../components/dialog/dialogService'
 
@@ -11,6 +12,7 @@ const JD14DetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const returnContext = getCommercialReturnContext(location, '/commercial/jd14')
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -59,6 +61,10 @@ const JD14DetailPage = () => {
   const handleDelete = async () => {
     const confirmed = await dialog.confirm(
       `Are you sure you want to delete JD14 record: ${record.approval_no}?`,
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) return
 
@@ -88,8 +94,8 @@ const JD14DetailPage = () => {
     <>
       <DataTableDetailShell
         title="JD14 Details"
-        backLabel="Back"
-        onBack={() => navigate('/commercial/jd14')}
+        backLabel={returnContext.backLabel}
+        onBack={() => navigate(returnContext.backPath)}
         loading={loading}
         error={error}
         record={record}
@@ -100,6 +106,15 @@ const JD14DetailPage = () => {
                 label: 'Back to Project',
                 buttonColor: 'secondary',
                 onClick: () => navigate(`/project/manage/${projectId}`),
+                hidden: returnContext.isProjectOrigin,
+              }
+            : null,
+          returnContext.isProjectOrigin
+            ? {
+                key: 'view-list',
+                label: 'View JD14 List',
+                buttonColor: 'secondary',
+                onClick: () => navigate(returnContext.listPath),
               }
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
@@ -114,7 +129,7 @@ const JD14DetailPage = () => {
         ]}
       >
         <DetailSection title="Details">
-          <DetailField label="Approval No" value={record?.approval_no} />
+          <DetailField label="Reference Number" value={record?.approval_no} />
           <DetailField label="Employer" value={record?.employer_name} />
           <DetailField label="Course" value={record?.course_title || record?.course_name} />
           <DetailField label="Commenced" value={record?.commenced_date} />

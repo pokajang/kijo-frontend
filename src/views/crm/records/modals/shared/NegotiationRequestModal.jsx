@@ -114,10 +114,21 @@ const NegotiationRequestModal = ({
         </div>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onCancel} disabled={isSubmitting}>
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </CButton>
-        <CButton color="primary" onClick={onConfirm} disabled={!canSubmit || isSubmitting}>
+        <CButton
+          color="primary"
+          size="sm"
+          onClick={onConfirm}
+          disabled={!canSubmit || isSubmitting}
+        >
           {isSubmitting ? 'Submitting...' : 'Submit Request'}
         </CButton>
       </CModalFooter>

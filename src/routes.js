@@ -72,9 +72,17 @@ const StaffLeaveRecordDetailPage = React.lazy(
   () => import('./views/staff/leaves/StaffLeaveRecordDetailPage'),
 )
 const ManageKpi = React.lazy(() => import('./features/kpi/staff/ManageKpi'))
+const AccountWorkspace = React.lazy(() => import('./features/account/self/AccountWorkspace'))
 const KpiWorkspace = React.lazy(() => import('./features/kpi/self/KpiWorkspace'))
 const LeaveWorkspace = React.lazy(() => import('./features/leave/self/LeaveWorkspace'))
+const SalaryWorkspace = React.lazy(() => import('./features/salary/self/SalaryWorkspace'))
 const LeaveRecordDetailPage = React.lazy(() => import('./components/leave/LeaveRecordDetailPage'))
+const SalaryRecordDetailPage = React.lazy(
+  () => import('./components/salary/SalaryRecordDetailPage'),
+)
+const OtherClaimRecordDetailPage = React.lazy(
+  () => import('./components/salary/OtherClaimRecordDetailPage'),
+)
 const ViewTasks = React.lazy(() => import('./views/staff/tasks/ViewTasks'))
 const TaskDetailPage = React.lazy(() => import('./views/task-manager/TaskDetailPage'))
 
@@ -90,6 +98,8 @@ const PaymentHistoryDetailPage = React.lazy(
   () => import('./views/vendor/pay/PaymentHistoryDetailPage'),
 )
 const PaymentRecords = React.lazy(() => import('./views/vendor/payment-records/PaymentRecords'))
+const PaidByVendorPage = React.lazy(() => import('./views/vendor/paid/PaidByVendorPage'))
+const PaidVendorDetailPage = React.lazy(() => import('./views/vendor/paid/PaidVendorDetailPage'))
 
 // Project Pages
 const ManageProject = React.lazy(() => import('./views/project/manage/ManageProject'))
@@ -111,10 +121,16 @@ const JD14 = React.lazy(() => import('./views/commercial/jd14/JD14'))
 const JD14CreatePage = React.lazy(() => import('./views/commercial/jd14/JD14CreatePage'))
 const JD14DetailPage = React.lazy(() => import('./views/commercial/jd14/JD14DetailPage'))
 const VendorLoa = React.lazy(() => import('./views/commercial/vendor-loa/VendorLoa'))
+const VendorLoaCreatePage = React.lazy(
+  () => import('./views/commercial/vendor-loa/VendorLoaCreatePage'),
+)
 const VendorLoaDetailPage = React.lazy(
   () => import('./views/commercial/vendor-loa/VendorLoaDetailPage'),
 )
 const PoList = React.lazy(() => import('./views/commercial/supplier-po/PoList'))
+const SupplierPoCreatePage = React.lazy(
+  () => import('./views/commercial/supplier-po/SupplierPoCreatePage'),
+)
 const SupplierPoDetailPage = React.lazy(
   () => import('./views/commercial/supplier-po/SupplierPoDetailPage'),
 )
@@ -159,6 +175,18 @@ const TaskManager = React.lazy(() => import('./views/task-manager/TaskManager'))
 const RequestDetailPage = React.lazy(() => import('./views/request-tool/RequestDetailPage'))
 const RequestTool = React.lazy(() => import('./views/request-tool/RequestTool'))
 const About = React.lazy(() => import('./views/about/About'))
+const FinancialSalaryRecordsPage = React.lazy(
+  () => import('./views/internal-operations/financial/FinancialSalaryRecordsPage'),
+)
+const FinancialOtherClaimRecordsPage = React.lazy(
+  () => import('./views/internal-operations/financial/FinancialOtherClaimRecordsPage'),
+)
+const FinancialBalanceSheetPage = React.lazy(
+  () => import('./views/internal-operations/financial/FinancialBalanceSheetPage'),
+)
+const WorkflowsPage = React.lazy(
+  () => import('./views/internal-operations/workflows/WorkflowsPage'),
+)
 
 const SystemAdminDashboard = React.lazy(() => import('./views/system-admin/SystemAdminDashboard'))
 const WhatsNewAdmin = React.lazy(() => import('./views/system-admin/WhatsNewAdmin'))
@@ -201,7 +229,7 @@ const Login = React.lazy(() => import('./views/pages/login/Login'))
 const staffAllowedRoles = ['Manager', 'System Admin', 'HR']
 const leaveAdminAllowedRoles = ['System Admin', 'HR']
 const systemAdminAllowedRoles = ['System Admin']
-
+const financialAllowedRoles = ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank']
 const LegacyRouteRedirect = ({ to, paramName }) => {
   const location = useLocation()
   const params = useParams()
@@ -621,11 +649,7 @@ const routes = [
   },
   {
     path: '/staff/leaves/workflow',
-    element: (
-      <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
-        <ManageLeaves routeSection="workflow" />
-      </ProtectedRoute>
-    ),
+    element: <LegacyRouteRedirect to="/workflows/leave-application" />,
   },
   {
     path: '/staff/leaves/entitlements/:entitlementId/edit',
@@ -648,6 +672,38 @@ const routes = [
     element: (
       <ProtectedRoute allowedRoles={staffAllowedRoles}>
         <ManageKpi />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/account',
+    name: 'My Account',
+    element: <Navigate to="/my/profile" replace />,
+  },
+  {
+    path: '/my/profile',
+    name: 'My Profile',
+    element: (
+      <ProtectedRoute>
+        <AccountWorkspace routeSection="profile" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/signature',
+    name: 'My Signature',
+    element: (
+      <ProtectedRoute>
+        <AccountWorkspace routeSection="signature" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/password',
+    name: 'My Password',
+    element: (
+      <ProtectedRoute>
+        <AccountWorkspace routeSection="password" />
       </ProtectedRoute>
     ),
   },
@@ -697,6 +753,74 @@ const routes = [
     ),
   },
   {
+    path: '/my/salary/records/:salaryRecordId',
+    name: 'My Salary Details',
+    element: (
+      <ProtectedRoute>
+        <SalaryRecordDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/salary/other-claims/records/:otherClaimRecordId',
+    name: 'My Other Claim Details',
+    element: (
+      <ProtectedRoute>
+        <OtherClaimRecordDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/salary',
+    name: 'My Salary Records',
+    element: <Navigate to="/my/salary/records" replace />,
+  },
+  {
+    path: '/my/salary/records',
+    name: 'My Salary Records',
+    element: (
+      <ProtectedRoute>
+        <SalaryWorkspace routeSection="records" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/salary/apply',
+    name: 'Apply Salary',
+    element: (
+      <ProtectedRoute>
+        <SalaryWorkspace routeSection="apply" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/salary/settings',
+    name: 'My Salary Settings',
+    element: (
+      <ProtectedRoute>
+        <SalaryWorkspace routeSection="settings" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/salary/other-claims/apply',
+    name: 'Apply Other Claim',
+    element: (
+      <ProtectedRoute>
+        <SalaryWorkspace routeSection="other-claim-apply" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/my/salary/other-claims/records',
+    name: 'My Other Claim Records',
+    element: (
+      <ProtectedRoute>
+        <SalaryWorkspace routeSection="other-claim-records" />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/my/leaves/records/:leaveId',
     name: 'My Leave Details',
     element: (
@@ -730,6 +854,47 @@ const routes = [
       </ProtectedRoute>
     ),
   },
+  {
+    path: '/financial/salary-records',
+    name: 'Salary Records',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <FinancialSalaryRecordsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/financial/other-claim-records',
+    name: 'Other Claim Records',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <FinancialOtherClaimRecordsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/financial/balance-sheet',
+    name: 'Balance Sheet',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <FinancialBalanceSheetPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/workflows',
+    name: 'Workflows',
+    element: <LegacyRouteRedirect to="/workflows/salary-application" />,
+  },
+  {
+    path: '/workflows/:templateKey',
+    name: 'Workflow Settings',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <WorkflowsPage />
+      </ProtectedRoute>
+    ),
+  },
 
   // Vendor paths
   { path: '/vendor/create', name: 'Create Vendor', element: CreateVendor },
@@ -750,8 +915,20 @@ const routes = [
     name: 'Payment History Details',
     element: PaymentHistoryDetailPage,
   },
+  {
+    path: '/vendor/payment-records/:paymentId',
+    name: 'Payment Details',
+    element: PaymentHistoryDetailPage,
+  },
   { path: '/vendor/pay', name: 'Pay Vendor', element: PayVendor },
-  { path: '/vendor/payment-records', name: 'Payment Records', element: PaymentRecords },
+  { path: '/vendor/paid/:vendorId', name: 'Paid Vendor Payments', element: PaidVendorDetailPage },
+  { path: '/vendor/paid', name: 'Vendor Ledger', element: PaidByVendorPage },
+  {
+    path: '/vendor/workflow',
+    name: 'Vendor Payment Workflow',
+    element: <LegacyRouteRedirect to="/workflows/vendor-payment" />,
+  },
+  { path: '/vendor/payment-records', name: 'Payment Queue', element: PaymentRecords },
 
   // Project paths
   {
@@ -785,8 +962,18 @@ const routes = [
   { path: '/commercial/jd14/create/:projectId', name: 'Create JD 14', element: JD14CreatePage },
   { path: '/commercial/jd14/:id', name: 'JD 14 Details', element: JD14DetailPage },
   { path: '/commercial/jd14', name: 'JD 14', element: JD14 },
+  {
+    path: '/commercial/vendor-loa/create/:projectId',
+    name: 'Create Vendor LOA',
+    element: VendorLoaCreatePage,
+  },
   { path: '/commercial/vendor-loa/:id', name: 'Vendor LOA Details', element: VendorLoaDetailPage },
   { path: '/commercial/vendor-loa', name: 'Vendor LOA', element: VendorLoa },
+  {
+    path: '/commercial/supplier-po/create/:projectId',
+    name: 'Create Supplier PO',
+    element: SupplierPoCreatePage,
+  },
   {
     path: '/commercial/supplier-po/:id',
     name: 'Supplier PO Details',

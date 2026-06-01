@@ -1,0 +1,214 @@
+.salary-claim-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.salary-claim-list-content {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
+.salary-claim-list-title {
+  color: var(--cui-body-color);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.salary-claim-list-meta {
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+  line-height: 1.2;
+}
+
+.salary-claim-list-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.salary-summary-claim-actions {
+  display: inline-grid;
+  grid-template-columns: minmax(5.75rem, max-content) max-content;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  padding-right: 2rem;
+}
+
+.salary-summary-claim-actions > span:first-child {
+  min-width: 5.75rem;
+  text-align: right;
+}
+
+.salary-summary-claim-row-controls {
+  display: inline-flex;
+  width: auto;
+  gap: 0.25rem;
+  justify-content: flex-start;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.salary-summary-mobile-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 767.98px) {
+  .salary-summary-claim-actions {
+    display: inline-flex;
+    padding-right: 0;
+  }
+
+  .salary-summary-claim-actions > span:first-child {
+    min-width: 0;
+  }
+}
+
+.salary-claim-row-controls {
+  display: inline-flex;
+  gap: 0.25rem;
+  position: relative;
+  z-index: 1;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.15s ease;
+}
+
+.salary-claim-list-row:hover .salary-claim-row-controls,
+.salary-claim-list-row:focus-within .salary-claim-row-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.salary-summary-claim-actions .salary-summary-claim-row-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.salary-claim-icon-button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--cui-secondary-color);
+  box-shadow: none !important;
+}
+
+.salary-claim-icon-button:hover,
+.salary-claim-icon-button:focus {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--cui-primary);
+}
+
+.salary-claim-icon-button--danger,
+.salary-claim-icon-button--danger:hover,
+.salary-claim-icon-button--danger:focus {
+  color: var(--cui-danger);
+}
+
+.salary-settings-empty {
+  padding: 0.75rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.375rem;
+  background: var(--cui-tertiary-bg, rgba(0, 0, 0, 0.03));
+}
+
+.salary-breakdown {
+  height: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.375rem;
+  background: var(--app-surface-page);
+  overflow-x: auto;
+}
+
+.salary-breakdown-title {
+  margin-bottom: 0.5rem;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-weight: 700;
+}
+
+.salary-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0;
+  border-top: 1px solid var(--cui-border-color);
+}
+
+.salary-breakdown-row span {
+  color: var(--cui-secondary-color);
+}
+
+.salary-breakdown-row strong {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.salary-statutory-grid {
+  display: grid;
+  grid-template-columns: minmax(4rem, 1fr) repeat(3, minmax(5.5rem, auto));
+  align-items: center;
+  gap: 0;
+}
+
+.salary-statutory-grid > * {
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--cui-border-color);
+}
+
+.salary-statutory-grid strong,
+.salary-statutory-header:not(:first-child) {
+  text-align: right;
+}
+
+.salary-statutory-header {
+  color: var(--cui-secondary-color);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.salary-statutory-total-label,
+.salary-statutory-total-value {
+  margin-top: 0.125rem;
+  border-top-width: 2px;
+  font-weight: 800;
+}
+
+.salary-submit-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.salary-draft-save-state {
+  color: var(--cui-secondary-color);
+  font-size: 0.875rem;
+}
+
+.salary-record-mobile-item {
+  position: relative;
+}
+
+.salary-record-mobile-heading {
+  margin-bottom: 0.625rem;
+}
+

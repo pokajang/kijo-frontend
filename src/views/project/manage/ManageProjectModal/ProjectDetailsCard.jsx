@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import {
-  CCardHeader,
-  CCardBody,
-  CRow,
-  CCol,
-  CFormLabel,
-  CFormInput,
-  CButton,
-  CBadge,
-} from '@coreui/react'
+import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CFormInput, CButton } from '@coreui/react'
+import { DataTableStatusBadge } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
 import { reloadProjectPoNumber, updateProjectDetails } from '../projectApi'
+import { formatProjectDate } from '../projectDetailFormatters'
+import { getProjectStatusTone } from '../projectStatus'
 
 const ProjectDetailsCard = ({ project, onSave }) => {
   const [draft, setDraft] = useState({ ...project })
@@ -93,13 +87,13 @@ const ProjectDetailsCard = ({ project, onSave }) => {
       <CCardHeader className="rounded-0 d-flex align-items-center justify-content-between">
         <strong>Project Details</strong>
         {!isEditing && (
-          <CButton color="primary" variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+          <CButton color="secondary" variant="outline" size="sm" onClick={() => setIsEditing(true)}>
             Edit
           </CButton>
         )}
       </CCardHeader>
-      <CCardBody>
-        <CRow className="g-3">
+      <CCardBody className={!isEditing ? 'project-detail-compact-body' : undefined}>
+        <CRow className={!isEditing ? 'project-detail-compact-grid' : 'g-3'}>
           <CCol md={4} className={!isEditing ? 'project-detail-kv' : undefined}>
             <CFormLabel htmlFor="projectName">Project Name</CFormLabel>
             {isEditing ? (
@@ -169,7 +163,7 @@ const ProjectDetailsCard = ({ project, onSave }) => {
                 onChange={handleChange}
               />
             ) : (
-              <p className="form-control-plaintext">{project.award_date || '-'}</p>
+              <p className="form-control-plaintext">{formatProjectDate(project.award_date)}</p>
             )}
           </CCol>
 
@@ -184,7 +178,9 @@ const ProjectDetailsCard = ({ project, onSave }) => {
                 onChange={handleChange}
               />
             ) : (
-              <p className="form-control-plaintext">{project.service_start_date || '-'}</p>
+              <p className="form-control-plaintext">
+                {formatProjectDate(project.service_start_date)}
+              </p>
             )}
           </CCol>
 
@@ -199,13 +195,19 @@ const ProjectDetailsCard = ({ project, onSave }) => {
                 onChange={handleChange}
               />
             ) : (
-              <p className="form-control-plaintext">{project.service_end_date || '-'}</p>
+              <p className="form-control-plaintext">
+                {formatProjectDate(project.service_end_date)}
+              </p>
             )}
           </CCol>
 
           <CCol md={4} className="project-detail-kv">
             <CFormLabel htmlFor="status">Project Status</CFormLabel>
-            <p className="form-control-plaintext">{project.status || '-'}</p>
+            <p className="form-control-plaintext">
+              <DataTableStatusBadge tone={getProjectStatusTone(project)}>
+                {project.status || '-'}
+              </DataTableStatusBadge>
+            </p>
           </CCol>
 
           <CCol md={8}>
@@ -226,18 +228,7 @@ const ProjectDetailsCard = ({ project, onSave }) => {
 
         <CRow className="mt-2">
           {isEditing && (
-            <CCol xs={12} className="g-3">
-              <CButton
-                color="primary"
-                size="sm"
-                variant="outline"
-                className="me-3"
-                onClick={handleSave}
-                disabled={!isDirty || isSaving}
-              >
-                {isSaving ? 'Saving...' : 'Save'}
-              </CButton>
-
+            <CCol xs={12} className="d-flex justify-content-end gap-2 flex-wrap">
               <CButton
                 color="secondary"
                 size="sm"
@@ -246,6 +237,14 @@ const ProjectDetailsCard = ({ project, onSave }) => {
                 disabled={isSaving}
               >
                 Cancel
+              </CButton>
+              <CButton
+                color="primary"
+                size="sm"
+                onClick={handleSave}
+                disabled={!isDirty || isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save'}
               </CButton>
             </CCol>
           )}

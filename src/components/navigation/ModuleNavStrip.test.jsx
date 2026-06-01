@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 
 import ModuleNavStrip, { isModuleTabNestedRoute } from './ModuleNavStrip'
 import AppNotificationProvider from '../../notifications/AppNotificationProvider'
+import { AuthContext } from '../../auth/AuthProvider'
 
 afterEach(() => {
   cleanup()
@@ -127,6 +128,53 @@ describe('ModuleNavStrip', () => {
     )
 
     expect(screen.getByRole('tab', { name: /^all$/i })).toBeInTheDocument()
+  })
+
+  it('shows role-protected tabs for allowed roles', () => {
+    render(
+      <MemoryRouter initialEntries={['/vendor/payment-records']}>
+        <AuthContext.Provider value={{ user: { roles: ['Manager'] } }}>
+          <ModuleNavStrip
+            ariaLabel="Vendor sections"
+            tabs={[
+              { key: 'queue', label: 'Payment Queue', to: '/vendor/payment-records' },
+              {
+                key: 'workflow',
+                label: 'Workflow Settings',
+                to: '/workflows/vendor-payment',
+                allowedRoles: ['Manager', 'System Admin'],
+              },
+            ]}
+          />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('tab', { name: /workflow settings/i })).toBeInTheDocument()
+  })
+
+  it('hides role-protected tabs for other roles', () => {
+    render(
+      <MemoryRouter initialEntries={['/vendor/payment-records']}>
+        <AuthContext.Provider value={{ user: { roles: ['Staff'] } }}>
+          <ModuleNavStrip
+            ariaLabel="Vendor sections"
+            tabs={[
+              { key: 'queue', label: 'Payment Queue', to: '/vendor/payment-records' },
+              {
+                key: 'workflow',
+                label: 'Workflow Settings',
+                to: '/workflows/vendor-payment',
+                allowedRoles: ['Manager', 'System Admin'],
+              },
+            ]}
+          />
+        </AuthContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('tab', { name: /payment queue/i })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /workflow settings/i })).not.toBeInTheDocument()
   })
 
   it('detects nested tab routes without treating exact routes as nested', () => {

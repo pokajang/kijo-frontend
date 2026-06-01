@@ -3,15 +3,19 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 
 import { DataTableLoadingState } from '../../../components/datatable'
-import Jd14Modal from '../../project/manage/Jd14Modal'
 import { getProjectDetails } from '../../project/manage/projectApi'
+import JD14CreateFlow from './create/JD14CreateFlow'
 
 const JD14CreatePage = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const origin = searchParams.get('from') === 'jd14-list' ? 'jd14-list' : 'project'
   const stateProject =
-    String(location.state?.project?.id || '') === String(projectId) ? location.state.project : null
+    origin !== 'jd14-list' && String(location.state?.project?.id || '') === String(projectId)
+      ? location.state.project
+      : null
 
   const [project, setProject] = useState(stateProject)
   const [loading, setLoading] = useState(!stateProject)
@@ -57,7 +61,8 @@ const JD14CreatePage = () => {
     }
   }, [projectId, stateProject])
 
-  const backToProject = () => navigate(`/project/manage/${projectId}`)
+  const handleBack = () =>
+    origin === 'jd14-list' ? navigate('/commercial/jd14') : navigate(`/project/manage/${projectId}`)
 
   if (loading) {
     return (
@@ -80,8 +85,8 @@ const JD14CreatePage = () => {
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
               <strong>Generate JD14</strong>
-              <CButton color="secondary" size="sm" variant="outline" onClick={backToProject}>
-                Back to Project
+              <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
+                {origin === 'jd14-list' ? 'Back to JD14 List' : 'Back to Project'}
               </CButton>
             </CCardHeader>
             <CCardBody>
@@ -102,8 +107,8 @@ const JD14CreatePage = () => {
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
               <strong>Generate JD14</strong>
-              <CButton color="secondary" size="sm" variant="outline" onClick={backToProject}>
-                Back to Project
+              <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
+                {origin === 'jd14-list' ? 'Back to JD14 List' : 'Back to Project'}
               </CButton>
             </CCardHeader>
             <CCardBody>
@@ -120,7 +125,7 @@ const JD14CreatePage = () => {
   return (
     <CRow>
       <CCol xs={12}>
-        <Jd14Modal asPage project={project} onClose={backToProject} />
+        <JD14CreateFlow project={project} origin={origin} onBack={handleBack} />
       </CCol>
     </CRow>
   )

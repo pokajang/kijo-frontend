@@ -1,0 +1,197 @@
+.knowledge-assistant-low-confidence-notice {
+  margin-bottom: 0.35rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.knowledge-assistant-inline-route {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cui-primary);
+  font: inherit;
+  text-align: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+.knowledge-assistant-inline-route:hover,
+.knowledge-assistant-inline-route:focus {
+  color: var(--cui-link-hover-color);
+  text-decoration-thickness: 0.08em;
+}
+
+.knowledge-assistant-message--user {
+  justify-items: end;
+}
+
+.knowledge-assistant-message--user .knowledge-assistant-message-content {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cui-secondary-color);
+  font-size: 0.82rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.knowledge-assistant-message--assistant {
+  justify-items: start;
+}
+
+.knowledge-assistant-scroll-latest {
+  position: sticky;
+  bottom: 0.35rem;
+  z-index: 2;
+  justify-self: center;
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 50%;
+  background: var(--cui-body-bg);
+  box-shadow: 0 0.25rem 0.75rem rgba(33, 37, 41, 0.12);
+  color: var(--cui-secondary-color);
+}
+
+.knowledge-assistant-scroll-latest:hover,
+.knowledge-assistant-scroll-latest:focus {
+  border-color: var(--cui-primary);
+  color: var(--cui-primary);
+}
+
+.knowledge-assistant-scroll-latest svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.knowledge-assistant-source-group,
+.knowledge-assistant-related-pages,
+.knowledge-assistant-suggested-searches {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.knowledge-assistant-source-group--compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 0.35rem;
+  row-gap: 0.25rem;
+}
+
+.knowledge-assistant-source-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.knowledge-assistant-source-label svg {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+.knowledge-assistant-source-group--compact .knowledge-assistant-source-label {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.knowledge-assistant-source-group--compact .knowledge-assistant-sources {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.knowledge-assistant-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.knowledge-assistant-source {
+  display: inline-grid;
+  gap: 0.05rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cui-primary);
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.knowledge-assistant-source-group--compact .knowledge-assistant-source {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 0.3rem;
+  padding: 0.12rem 0.4rem;
+  line-height: 1.2;
+}
+
+.knowledge-assistant-source:hover,
+.knowledge-assistant-source:focus {
+  border-color: var(--cui-primary);
+}
+
+.knowledge-assistant-source-title {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-assistant-source span + span,
+.knowledge-assistant-route span + span {
+  color: var(--cui-secondary-color);
+  font-size: 0.7rem;
+  text-transform: capitalize;
+}
+
+.knowledge-assistant-source-type {
+  flex: 0 0 auto;
+}
+
+.knowledge-assistant-source-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.knowledge-assistant-source-badge {
+  width: fit-content;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: var(--cui-tertiary-bg);
+  color: var(--cui-secondary-color);
+  font-size: 0.66rem;
+  line-height: 1.2;
+  text-transform: capitalize;
+}
+
+.knowledge-assistant-clarification-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.knowledge-assistant-clarification-chip {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cui-primary);
+  font-size: 0.78rem;
+}
+
+.knowledge-assistant-clarification-chip:hover,
+.knowledge-assistant-clarification-chip:focus {
+  border-color: var(--cui-primary);
+}

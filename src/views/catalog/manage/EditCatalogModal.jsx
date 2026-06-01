@@ -3,6 +3,7 @@ import {
   CModal,
   CModalHeader,
   CModalBody,
+  CModalFooter,
   CCard,
   CCardHeader,
   CCardBody,
@@ -217,7 +218,7 @@ const EditCatalogModal = ({ visible, onClose, item, onUpdate }) => {
             ) : (
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <span>{formData.brochure_filename}</span>
-                <CButton color="danger" size="sm" onClick={handleRemoveBrochure}>
+                <CButton color="danger" variant="outline" size="sm" onClick={handleRemoveBrochure}>
                   Remove
                 </CButton>
               </div>
@@ -232,16 +233,15 @@ const EditCatalogModal = ({ visible, onClose, item, onUpdate }) => {
             />
           </CCardBody>
         </CCard>
-
-        <div className="text-end mt-3 d-flex gap-2 justify-content-end">
-          <CButton color="secondary" onClick={onClose}>
-            Cancel
-          </CButton>
-          <CButton color="primary" onClick={handleUpdate}>
-            Save Changes
-          </CButton>
-        </div>
       </CModalBody>
+      <CModalFooter>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
+          Cancel
+        </CButton>
+        <CButton color="primary" size="sm" onClick={handleUpdate}>
+          Save Changes
+        </CButton>
+      </CModalFooter>
     </CModal>
   )
 }

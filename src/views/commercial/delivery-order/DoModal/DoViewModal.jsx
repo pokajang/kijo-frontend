@@ -163,7 +163,7 @@ const DoViewModal = ({ visible, onClose, data }) => {
         </CCard>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Close
         </CButton>
       </CModalFooter>

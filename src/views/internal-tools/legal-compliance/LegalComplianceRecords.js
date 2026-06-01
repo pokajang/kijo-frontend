@@ -120,6 +120,7 @@ const LegalComplianceRecords = () => {
       {
         title: 'Delete Assessment Record',
         confirmText: 'Delete',
+        confirmColor: 'danger',
         cancelText: 'Cancel',
         intent: 'danger',
       },

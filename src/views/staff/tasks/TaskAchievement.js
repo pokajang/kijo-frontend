@@ -1,8 +1,10 @@
 // src/components/tasks/TaskAchievement.js
 
 import React, { useState, useMemo } from 'react'
-import { CCardHeader, CCardBody, CButtonGroup, CButton } from '@coreui/react'
+import { CCardBody, CButtonGroup, CButton } from '@coreui/react'
+import { DataTableCardHeader, DataTableStatsToggle } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount } from '../../../utils/stats/formatStats'
 import { getStatusText } from './actionHandlers'
 
@@ -23,7 +25,7 @@ export const getTaskAchievementCounts = (tasks = [], todayStr, mode = 'year') =>
 
     if (status.startsWith('Completed (On time)')) {
       onTime++
-    } else if (status.startsWith('Completed (Late')) {
+    } else if (status.startsWith('Completed but late')) {
       late++
     }
   })
@@ -34,6 +36,8 @@ export const getTaskAchievementCounts = (tasks = [], todayStr, mode = 'year') =>
 const TaskAchievement = ({ tasks, todayStr }) => {
   const [mode, setMode] = useState('year')
   const currentYear = Number(String(todayStr).slice(0, 4))
+  const { statsVisible, toggleStatsVisible } =
+    useDataTableStatsVisibility('staff.tasks.achievement')
 
   const { onTimeCount, lateCount } = useMemo(
     () => getTaskAchievementCounts(tasks, todayStr, mode),
@@ -60,8 +64,11 @@ const TaskAchievement = ({ tasks, todayStr }) => {
 
   return (
     <>
-      <CCardHeader className="d-flex justify-content-between align-items-center">
-        <strong>Achievement</strong>
+      <DataTableCardHeader
+        title="Achievement"
+        scopeLabel={mode === 'year' ? `YTD ${currentYear}` : 'All Time'}
+      >
+        <DataTableStatsToggle visible={statsVisible} onToggle={toggleStatsVisible} />
         <CButtonGroup>
           <CButton
             color={mode === 'year' ? 'primary' : 'secondary'}
@@ -78,13 +85,9 @@ const TaskAchievement = ({ tasks, todayStr }) => {
             All Time
           </CButton>
         </CButtonGroup>
-      </CCardHeader>
+      </DataTableCardHeader>
       <CCardBody>
-        <StatsStrip
-          items={achievementItems}
-          className="mb-0"
-          scopeLabel={mode === 'year' ? `YTD ${currentYear}` : 'All Time'}
-        />
+        {statsVisible && <StatsStrip items={achievementItems} className="mb-0" />}
       </CCardBody>
     </>
   )

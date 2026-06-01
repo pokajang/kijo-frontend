@@ -1,0 +1,106 @@
+@media (min-width: 768px) {
+  .app-bottom-nav-menu {
+    margin-inline-start: 0;
+  }
+
+  .app-main-header > .container-fluid {
+    align-items: center;
+    min-height: 44px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .sidebar-header {
+    min-height: 44px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 0.8rem;
+    padding-right: 0.8rem;
+    align-items: center;
+  }
+
+  .sidebar-header .sidebar-brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .sidebar-header .sidebar-brand-full,
+  .sidebar-header .sidebar-brand-narrow {
+    height: 21px !important;
+    margin-left: 0;
+  }
+
+  .app-main-footer.footer,
+  .sidebar-footer {
+    min-height: calc(1.25rem + 14px);
+    padding-top: 6px;
+    padding-bottom: 6px;
+    align-items: center;
+  }
+
+  .sidebar-footer {
+    justify-content: flex-end;
+  }
+
+  .app-bottom-nav-actions {
+    align-items: center !important;
+    column-gap: calc(0.55rem + 8px);
+  }
+
+  .app-bottom-nav-entry {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0 !important;
+  }
+
+  .app-main-header .app-bottom-nav-link,
+  .app-main-header .app-bottom-nav-link--button,
+  .app-main-header .app-bottom-nav-item,
+  .app-main-header .app-bottom-nav-dropdown-toggle {
+    position: relative;
+    z-index: 0;
+    display: inline-flex;
+    align-items: center;
+    min-height: 0;
+    padding: 0 0.25rem;
+    border-radius: var(--app-radius-xl);
+    line-height: 1;
+    transition: transform 0.18s ease;
+  }
+
+  .app-main-header .app-bottom-nav-icon {
+    width: 1rem;
+    height: 1rem;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .app-main-header .app-bottom-nav-icon svg,
+  .app-main-header .app-bottom-nav-item svg,
+  .app-main-header .app-bottom-nav-dropdown-toggle svg {
+    display: block;
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .app-main-header .app-bottom-nav-link.active,
+  .app-main-header .app-bottom-nav-link--button.active,
+  .app-main-header .app-bottom-nav-dropdown-toggle.show,
+  .app-main-header .app-bottom-nav-dropdown-toggle.active {
+    color: var(--cui-primary);
+    transform: scale(1.02);
+  }
+
+  .app-bottom-nav--ticket-active.app-main-header
+    .app-bottom-nav-link.active:not(.app-bottom-nav-dropdown-toggle),
+  .app-bottom-nav--account-active.app-main-header
+    .app-bottom-nav-link.active:not(.app-bottom-nav-dropdown-toggle) {
+    color: var(--cui-secondary-color);
+    transform: none;
+  }
+}
+

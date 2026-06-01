@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAllTaskStatsItems } from './AllTasks'
+import { buildAllTaskStatsItems, buildAllTasksUrl } from './AllTasks'
 
 describe('buildAllTaskStatsItems', () => {
   it('builds exactly four task summary cards without the total tasks card', () => {
@@ -10,7 +10,7 @@ describe('buildAllTaskStatsItems', () => {
       { statusText: 'Overdue', staffCode: 'NBD' },
       { statusText: 'Completed (On time)', staffCode: 'NBD' },
       { statusText: 'Completed (On time)', staffCode: 'NBD' },
-      { statusText: 'Completed (Late by 1 day)', staffCode: 'AZA' },
+      { statusText: 'Completed but late by 1 day', staffCode: 'AZA' },
     ])
 
     expect(items).toHaveLength(4)
@@ -57,5 +57,27 @@ describe('buildAllTaskStatsItems', () => {
       sublabel: '0 on time',
       tone: 'secondary',
     })
+  })
+})
+
+describe('buildAllTasksUrl', () => {
+  it('omits date params for all-time staff task loading', () => {
+    expect(
+      buildAllTasksUrl('https://example.test/', {
+        preset: 'all',
+        startDate: '',
+        endDate: '',
+      }),
+    ).toBe('https://example.test/tasks')
+  })
+
+  it('uses start and end params for bounded staff task loading', () => {
+    expect(
+      buildAllTasksUrl('https://example.test/', {
+        preset: 'custom',
+        startDate: '2025-12-01',
+        endDate: '2026-01-31',
+      }),
+    ).toBe('https://example.test/tasks?start=2025-12-01&end=2026-01-31')
   })
 })

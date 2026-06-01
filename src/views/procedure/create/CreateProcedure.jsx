@@ -239,8 +239,8 @@ const CreateProcedure = () => {
 
               {/* ─── Buttons ───────────────────────────── */}
               <CRow>
-                <CCol>
-                  <CButton type="submit" color="primary" disabled={submitting} className="me-2">
+                <CCol className="d-flex justify-content-end gap-2 flex-wrap flex-row-reverse">
+                  <CButton type="submit" color="primary" size="sm" disabled={submitting}>
                     {submitting ? (
                       <>
                         <CSpinner size="sm" className="me-2" /> Saving…
@@ -253,6 +253,7 @@ const CreateProcedure = () => {
                     type="button"
                     color="secondary"
                     variant="outline"
+                    size="sm"
                     onClick={handleReset}
                     disabled={submitting}
                   >
@@ -262,7 +263,7 @@ const CreateProcedure = () => {
                     type="button"
                     color="secondary"
                     variant="outline"
-                    className="ms-2"
+                    size="sm"
                     onClick={() => navigate(-1)}
                     disabled={submitting}
                   >

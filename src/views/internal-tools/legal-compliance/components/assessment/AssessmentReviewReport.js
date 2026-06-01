@@ -37,7 +37,7 @@ const AssessmentReviewReport = ({
 
     if (field.key === 'finding') {
       return (
-        <div className="mb-2 d-flex align-items-baseline gap-2 flex-wrap" key={field.key}>
+        <div className="mb-2 records-detail-field" key={field.key}>
           <CFormLabel className="mb-0">Finding</CFormLabel>
           <div>{displayValue(value)}</div>
         </div>
@@ -68,34 +68,34 @@ const AssessmentReviewReport = ({
       </CCardHeader>
       <CCardBody>
         <CRow className="g-3">
-          <CCol md={6} lg={4}>
+          <CCol md={6} lg={4} className="records-detail-field">
             <CFormLabel>Company</CFormLabel>
             <div>{displayValue(assessmentDetails.companyName)}</div>
           </CCol>
-          <CCol md={6} lg={4}>
+          <CCol md={6} lg={4} className="records-detail-field">
             <CFormLabel>Address</CFormLabel>
             <div>{displayValue(assessmentDetails.siteLocation)}</div>
           </CCol>
-          <CCol md={6} lg={4}>
+          <CCol md={6} lg={4} className="records-detail-field">
             <CFormLabel>Assessment Date</CFormLabel>
             <div>{displayValue(assessmentDetails.assessmentDate)}</div>
           </CCol>
-          <CCol md={6} lg={4}>
+          <CCol md={6} lg={4} className="records-detail-field">
             <CFormLabel>Client PIC Name</CFormLabel>
             <div>{displayValue(assessmentDetails.clientPicName)}</div>
           </CCol>
-          <CCol md={6} lg={4}>
+          <CCol md={6} lg={4} className="records-detail-field">
             <CFormLabel>Client PIC Email</CFormLabel>
             <div>{displayValue(assessmentDetails.clientPicEmail)}</div>
           </CCol>
-          <CCol md={6} lg={4}>
+          <CCol md={6} lg={4} className="records-detail-field">
             <CFormLabel>Nature of Company</CFormLabel>
             <div style={{ whiteSpace: 'pre-line' }}>
               {displayValue(assessmentDetails.scopeRemarks)}
             </div>
           </CCol>
           {assessmentDetails.projectName && (
-            <CCol md={6} lg={4}>
+            <CCol md={6} lg={4} className="records-detail-field">
               <CFormLabel>Project</CFormLabel>
               <div>{displayValue(assessmentDetails.projectName)}</div>
             </CCol>

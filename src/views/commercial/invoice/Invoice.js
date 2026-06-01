@@ -1,9 +1,11 @@
-// src/views/invoice/Invoice.js
-
 import React, { useEffect, useMemo, useState } from 'react'
-import { CRow, CCol, CCard, CCardHeader, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
+import { CButton, CRow, CCol, CCard, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
-import { DataTableRecordControls } from '../../../components/datatable'
+import {
+  DataTableCardHeader,
+  DataTableRecordControls,
+  DataTableStatsToggle,
+} from '../../../components/datatable'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
@@ -17,8 +19,10 @@ import ViewInvoiceModal from './InvoiceModal/ViewInvoiceModal'
 import EditInvoiceModal from './InvoiceModal/edit/EditInvoiceModal'
 import MarkPaidModal from './InvoiceModal/MarkPaidModal'
 import UpdateHrdClaimRefModal from './InvoiceModal/UpdateHrdClaimRefModal'
+import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 
 // import everything from our actionHandlers
 import {
@@ -52,6 +56,7 @@ const Invoice = () => {
   const [hrdClaimInvoice, setHrdClaimInvoice] = useState(null)
   const [viewModalVisible, setViewModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
+  const [projectPickerVisible, setProjectPickerVisible] = useState(false)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
@@ -60,6 +65,8 @@ const Invoice = () => {
   const [trainingPaymentFilter, setTrainingPaymentFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('commercial.invoice')
 
   const personInChargeOptions = useMemo(() => {
     const pics = new Set()
@@ -143,6 +150,16 @@ const Invoice = () => {
     setShowAdvancedFilters(true)
   }
 
+  const openInvoiceCreateForProject = (project) => {
+    const projectId = project?.id ?? project?.project_id
+    if (!projectId) return
+
+    setProjectPickerVisible(false)
+    navigate(`/commercial/invoice/create/${projectId}?from=invoice-list`, {
+      state: { project },
+    })
+  }
+
   useEffect(() => {
     fetchAllInvoices(setInvoices, setLoading)
   }, [])
@@ -205,16 +222,25 @@ const Invoice = () => {
       </CCol>
       <CCol xs={12}>
         <CCard className="mb-4">
-          <CCardHeader>
-            <strong>Invoices</strong>
-          </CCardHeader>
+          <DataTableCardHeader title="Invoices" scopeLabel={statsScopeLabel}>
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
+            <CButton color="primary" size="sm" onClick={() => setProjectPickerVisible(true)}>
+              Create Invoice
+            </CButton>
+          </DataTableCardHeader>
           <CCardBody>
             <InvoiceTable
               invoices={filteredInvoices}
               loading={loading}
-              scopeLabel={statsScopeLabel}
+              statsVisible={statsVisible}
               beforeList={
                 <DataTableRecordControls
+                  visible={controlsVisible}
                   searchValue={searchTerm}
                   onSearchChange={setSearchTerm}
                   searchPlaceholder="Type to search..."
@@ -368,6 +394,15 @@ const Invoice = () => {
             setShowHrdClaimRefModal,
           )
         }
+      />
+
+      <CommercialProjectPickerModal
+        visible={projectPickerVisible}
+        onClose={() => setProjectPickerVisible(false)}
+        onContinue={openInvoiceCreateForProject}
+        title="Create Invoice"
+        searchInputId="invoiceProjectSearch"
+        creationLabel="invoice"
       />
     </CRow>
   )

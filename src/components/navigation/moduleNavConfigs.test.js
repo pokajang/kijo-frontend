@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { clientModuleTabs, systemAdminModuleTabs, vendorModuleTabs } from './moduleNavConfigs'
+import {
+  clientModuleTabs,
+  financialModuleTabs,
+  salarySelfModuleTabs,
+  systemAdminModuleTabs,
+  vendorModuleTabs,
+} from './moduleNavConfigs'
 
 describe('clientModuleTabs', () => {
   it('includes the ROI per Client tab', () => {
@@ -41,6 +47,66 @@ describe('systemAdminModuleTabs', () => {
 })
 
 describe('vendorModuleTabs', () => {
+  it('puts Payment Queue first', () => {
+    expect(vendorModuleTabs[0]).toMatchObject({
+      key: 'payment-records',
+      label: 'Payment Queue',
+      to: '/vendor/payment-records',
+      notificationTabKey: 'vendor.payment-records',
+    })
+  })
+
+  it('includes the Vendor Ledger tab', () => {
+    expect(vendorModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'paid',
+          label: 'Vendor Ledger',
+          to: '/vendor/paid',
+        }),
+      ]),
+    )
+  })
+
+  it('includes the Workflow Settings tab', () => {
+    expect(vendorModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'workflow',
+          label: 'Workflow Settings',
+          to: '/workflows/vendor-payment',
+          allowedRoles: ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank'],
+        }),
+      ]),
+    )
+  })
+
+  it('does not surface Pay Vendor or Create Vendor', () => {
+    expect(vendorModuleTabs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          to: '/vendor/pay',
+        }),
+      ]),
+    )
+
+    expect(vendorModuleTabs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          to: '/vendor/create',
+        }),
+      ]),
+    )
+  })
+
+  it('keeps Manage Vendors after Vendor Ledger', () => {
+    expect(vendorModuleTabs[2]).toMatchObject({
+      key: 'manage',
+      label: 'Manage Vendors',
+      to: '/vendor/manage',
+    })
+  })
+
   it('includes the Frozen Vendors tab', () => {
     expect(vendorModuleTabs).toEqual(
       expect.arrayContaining([
@@ -53,14 +119,70 @@ describe('vendorModuleTabs', () => {
     )
   })
 
-  it('does not include Pay Vendors as a top-level tab', () => {
-    expect(vendorModuleTabs).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          key: 'pay',
-          to: '/vendor/pay',
-        }),
-      ]),
-    )
+  it('puts Workflow Settings at the end', () => {
+    expect(vendorModuleTabs.at(-1)).toMatchObject({
+      key: 'workflow',
+      label: 'Workflow Settings',
+      to: '/workflows/vendor-payment',
+      allowedRoles: ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank'],
+    })
+  })
+})
+
+describe('financialModuleTabs', () => {
+  it('shows Salary Records, Other Claim Records, and Balance Sheet tabs', () => {
+    expect(financialModuleTabs).toEqual([
+      {
+        key: 'salary-records',
+        label: 'Salary Records',
+        to: '/financial/salary-records',
+        notificationTabKey: 'financial.salary-records',
+      },
+      {
+        key: 'other-claim-records',
+        label: 'Other Claim Records',
+        to: '/financial/other-claim-records',
+        notificationTabKey: 'financial.other-claim-records',
+      },
+      {
+        key: 'balance-sheet',
+        label: 'Balance Sheet',
+        to: '/financial/balance-sheet',
+      },
+    ])
+  })
+})
+
+describe('salarySelfModuleTabs', () => {
+  it('shows salary application, records, other claim, and settings tabs', () => {
+    expect(salarySelfModuleTabs).toEqual([
+      {
+        key: 'apply',
+        label: 'Apply Salary',
+        to: '/my/salary/apply',
+      },
+      {
+        key: 'records',
+        label: 'Salary Records',
+        to: '/my/salary/records',
+        notificationTabKey: 'my.salary.records',
+      },
+      {
+        key: 'other-claim-apply',
+        label: 'Apply Other Claim',
+        to: '/my/salary/other-claims/apply',
+      },
+      {
+        key: 'other-claim-records',
+        label: 'Other Claim Records',
+        to: '/my/salary/other-claims/records',
+        notificationTabKey: 'my.salary.other-claim-records',
+      },
+      {
+        key: 'settings',
+        label: 'Settings',
+        to: '/my/salary/settings',
+      },
+    ])
   })
 })

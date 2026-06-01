@@ -43,12 +43,12 @@ const FeedbackForm = ({ feedback, setFeedback, onSubmit, onCancel }) => {
           </CCol>
         </CRow>
         <CRow className="mt-3">
-          <CCol className="d-flex gap-2">
-            <CButton onClick={onSubmit} color="primary">
-              Submit
-            </CButton>
-            <CButton onClick={onCancel} color="secondary">
+          <CCol className="d-flex justify-content-end gap-2">
+            <CButton onClick={onCancel} color="secondary" variant="outline" size="sm">
               Cancel
+            </CButton>
+            <CButton onClick={onSubmit} color="primary" size="sm">
+              Submit
             </CButton>
           </CCol>
         </CRow>

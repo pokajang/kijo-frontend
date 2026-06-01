@@ -1,19 +1,8 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import {
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CDropdown,
-  CDropdownItem,
-  CDropdownMenu,
-  CDropdownToggle,
-  CRow,
-} from '@coreui/react'
+import { CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilOptions } from '@coreui/icons'
+import { cilExternalLink } from '@coreui/icons'
 
 const toolSections = [
   {
@@ -22,9 +11,10 @@ const toolSections = [
       {
         title: 'Legal Compliance Assessment',
         description: 'Complete a starter OSH legal compliance form and review the report draft.',
+        variant: 'primary',
         tools: [
           {
-            label: 'Start',
+            label: 'Start Assessment',
             color: 'primary',
             to: '/internal-tools/legal-compliance/select-template',
           },
@@ -39,7 +29,6 @@ const toolSections = [
             color: 'secondary',
             variant: 'outline',
             to: '/internal-tools/legal-compliance/templates',
-            overflow: true,
           },
         ],
       },
@@ -52,11 +41,10 @@ const toolSections = [
         title: 'PDF Tools',
         description: 'Edit, delete, rearrange pages, or convert PDF files.',
         tools: [
-          { label: 'ILovePDF', color: 'danger', href: 'https://www.ilovepdf.com' },
-          { label: 'Sejda', color: 'success', href: 'https://www.sejda.com/' },
+          { label: 'ILovePDF', href: 'https://www.ilovepdf.com' },
+          { label: 'Sejda', href: 'https://www.sejda.com/' },
           {
-            label: 'Adobe',
-            color: 'warning',
+            label: 'Adobe PDF',
             href: 'https://www.adobe.com/acrobat/online/pdf-editor.html',
           },
         ],
@@ -66,32 +54,32 @@ const toolSections = [
         description: 'Remove image backgrounds for quick document and presentation edits.',
         tools: [
           {
-            label: 'Adobe',
-            color: 'warning',
+            label: 'Adobe Express',
             href: 'https://www.adobe.com/express/feature/image/remove-background',
           },
           {
             label: 'Photoroom',
-            color: 'dark',
             href: 'https://www.photoroom.com/tools/background-remover',
           },
-          { label: 'remove.bg', color: 'light', href: 'https://www.remove.bg/' },
+          { label: 'remove.bg', href: 'https://www.remove.bg/' },
         ],
       },
       {
         title: 'File Converters',
         description: 'Convert files between common document, image, and media formats.',
         tools: [
-          { label: 'FreeConvert', color: 'primary', href: 'https://www.freeconvert.com/' },
-          { label: 'Convertio', color: 'warning', href: 'https://convertio.co/' },
-          { label: 'CloudConvert', color: 'dark', href: 'https://cloudconvert.com/' },
+          { label: 'FreeConvert', href: 'https://www.freeconvert.com/' },
+          { label: 'Convertio', href: 'https://convertio.co/' },
+          { label: 'CloudConvert', href: 'https://cloudconvert.com/' },
         ],
       },
     ],
   },
 ]
 
-const getSectionColumnProps = (groupCount) => {
+const getSectionColumnProps = (section, group) => {
+  if (group.variant === 'primary') return { lg: 6, md: 8 }
+  const groupCount = section.groups.length
   if (groupCount === 1) return { lg: 4, md: 6 }
   if (groupCount === 3) return { lg: 4, md: 6 }
   if (groupCount === 2) return { lg: 6, md: 6 }
@@ -99,90 +87,68 @@ const getSectionColumnProps = (groupCount) => {
 }
 
 const InternalTools = () => {
-  const renderToolAction = (tool) => (
-    <CButton
-      key={tool.href || tool.to || tool.label}
-      size="sm"
-      color={tool.color}
-      variant={tool.variant}
-      {...(tool.to
-        ? { as: NavLink, to: tool.to }
-        : {
-            href: tool.href,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-          })}
-    >
-      {tool.label}
-    </CButton>
-  )
+  const renderToolAction = (tool) => {
+    const isExternal = Boolean(tool.href)
 
-  const renderOverflowAction = (tool) => (
-    <CDropdownItem
-      key={tool.href || tool.to}
-      {...(tool.to
-        ? { as: NavLink, to: tool.to }
-        : {
-            href: tool.href,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-          })}
-    >
-      {tool.label}
-    </CDropdownItem>
-  )
+    return (
+      <CButton
+        key={tool.href || tool.to || tool.label}
+        size="sm"
+        color={tool.color || 'secondary'}
+        variant={tool.variant || (isExternal ? 'outline' : undefined)}
+        className={`internal-tools-action${isExternal ? ' internal-tools-action--external' : ''}`}
+        {...(tool.to
+          ? { as: NavLink, to: tool.to }
+          : {
+              href: tool.href,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+            })}
+      >
+        <span>{tool.label}</span>
+        {isExternal && (
+          <CIcon icon={cilExternalLink} size="sm" className="internal-tools-action-external-icon" />
+        )}
+      </CButton>
+    )
+  }
 
   return (
-    <>
+    <div className="internal-tools-page">
+      <div className="internal-tools-page-header">
+        <h4 className="mb-1">Internal Tools</h4>
+        <div className="text-body-secondary">
+          Quick access to internal workflows and external utility shortcuts.
+        </div>
+      </div>
+
       {toolSections.map((section) => (
-        <div className="mb-4" key={section.title}>
-          <div className="small text-body-secondary mb-2">{section.title}</div>
+        <section className="internal-tools-section" key={section.title}>
+          <div className="internal-tools-section-label">{section.title}</div>
           <CRow className="g-4">
             {section.groups.map((group) => (
-              <CCol {...getSectionColumnProps(section.groups.length)} key={group.title}>
-                <CCard className="h-100">
+              <CCol {...getSectionColumnProps(section, group)} key={group.title}>
+                <CCard
+                  className={`internal-tools-card h-100${
+                    group.variant === 'primary' ? ' internal-tools-card--primary' : ''
+                  }`}
+                >
                   <CCardHeader>
                     <strong>{group.title}</strong>
                   </CCardHeader>
-                  <CCardBody>
-                    <p>{group.description}</p>
+                  <CCardBody className="d-flex flex-column">
+                    <p className="text-body-secondary mb-3">{group.description}</p>
                     <div className="internal-tools-card-actions d-flex align-items-center gap-2 flex-wrap">
-                      {(() => {
-                        const visibleTools = group.tools
-                        const primaryTools = visibleTools.filter((tool) => !tool.overflow)
-                        const overflowTools = visibleTools.filter((tool) => tool.overflow)
-
-                        return (
-                          <>
-                            {primaryTools.map(renderToolAction)}
-                            {overflowTools.length > 0 && (
-                              <CDropdown className="ms-auto">
-                                <CDropdownToggle
-                                  color="transparent"
-                                  size="sm"
-                                  caret={false}
-                                  className="internal-tools-card-kebab"
-                                  aria-label={`${group.title} actions`}
-                                >
-                                  <CIcon icon={cilOptions} />
-                                </CDropdownToggle>
-                                <CDropdownMenu alignment="end">
-                                  {overflowTools.map(renderOverflowAction)}
-                                </CDropdownMenu>
-                              </CDropdown>
-                            )}
-                          </>
-                        )
-                      })()}
+                      {group.tools.map(renderToolAction)}
                     </div>
                   </CCardBody>
                 </CCard>
               </CCol>
             ))}
           </CRow>
-        </div>
+        </section>
       ))}
-    </>
+    </div>
   )
 }
 

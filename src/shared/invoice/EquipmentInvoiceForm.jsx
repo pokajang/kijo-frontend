@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/EquipmentInvoiceForm.jsx
+// src/shared/invoice/EquipmentInvoiceForm.jsx
 import React, { useEffect, useState } from 'react'
 import {
   CCardHeader,
@@ -474,7 +474,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
 
         <div className="mb-3 d-flex justify-content-start">
           <CButton
-            color="primary"
+            color={showAddItemRow ? 'secondary' : 'primary'}
             size="sm"
             variant={showAddItemRow ? 'outline' : undefined}
             onClick={() => setShowAddItemRow((prev) => !prev)}
@@ -534,6 +534,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
             <CCol md={1} className="d-flex align-items-end">
               <CButton
                 color="primary"
+                size="sm"
                 className="w-100"
                 onClick={handleAddItem}
                 disabled={!canAddItem}

@@ -16,10 +16,10 @@ const DeleteCompanyModal = ({ visible, onClose, onConfirm, companyName, loading 
         </small>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose} disabled={loading}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose} disabled={loading}>
           Cancel
         </CButton>
-        <CButton color="danger" onClick={onConfirm} disabled={loading}>
+        <CButton color="danger" size="sm" onClick={onConfirm} disabled={loading}>
           {loading ? 'Deleting...' : 'Delete'}
         </CButton>
       </CModalFooter>

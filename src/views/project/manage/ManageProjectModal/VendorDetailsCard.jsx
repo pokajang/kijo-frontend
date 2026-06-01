@@ -23,24 +23,20 @@ import {
   CTableHeaderCell,
   CTableBody,
   CTableDataCell,
-  CDropdown,
-  CDropdownToggle,
-  CDropdownMenu,
-  CDropdownItem,
 } from '@coreui/react'
 
-import CIcon from '@coreui/icons-react'
-import { cilOptions } from '@coreui/icons'
 import Select from '../../../../components/forms/ThemedSelect'
-import { DataTableLoadingState } from '../../../../components/datatable'
+import { DataTableActionMenu, DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
 import {
+  getProjectLoaUrl,
   listAllVendors,
   listAssignedVendors,
   removeProjectVendor,
   saveProjectVendor,
   toFiniteNumber,
 } from '../projectApi'
+import { formatProjectMoney } from '../projectDetailFormatters'
 const PAYMENT_TERM_OPTIONS = [
   { value: '14 days', label: '14 days' },
   { value: '30 days', label: '30 days' },
@@ -48,9 +44,13 @@ const PAYMENT_TERM_OPTIONS = [
   { value: '60 days', label: '60 days' },
 ]
 
-const VendorDetailsCard = ({ project, onProgressUpdate }) => {
+const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const shouldOpenVendorAssignment = Boolean(location.state?.openVendorAssignment)
+  const assignmentReturnTo = location.state?.returnTo
+  const createdVendorId = location.state?.createdVendorId
+  const createdVendorName = location.state?.createdVendorName
   const [vendorList, setVendorList] = useState([])
   const [assigned, setAssigned] = useState([])
 
@@ -70,8 +70,14 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
   const [isAwardSubmitting, setIsAwardSubmitting] = useState(false)
   const [removingAssignmentId, setRemovingAssignmentId] = useState(null)
   const [isLoadingAssigned, setIsLoadingAssigned] = useState(false)
+  const [hasAutoOpenedAssignment, setHasAutoOpenedAssignment] = useState(false)
 
   const isEditing = useMemo(() => editingAssignmentId != null, [editingAssignmentId])
+  const assignedCount = assigned.length
+  const totalAwarded = useMemo(
+    () => assigned.reduce((sum, vendor) => sum + toFiniteNumber(vendor.award_value), 0),
+    [assigned],
+  )
   const hasCustomPaymentTerm = useMemo(
     () =>
       Boolean(
@@ -81,7 +87,7 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
     [paymentTerms],
   )
 
-  const resetAwardForm = ({ clearVendor = true, clearEditing = true } = {}) => {
+  const resetAwardForm = useCallback(({ clearVendor = true, clearEditing = true } = {}) => {
     if (clearVendor) setSelectedVendor(null)
     if (clearEditing) setEditingAssignmentId(null)
 
@@ -92,7 +98,7 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
     setVenueDetails('')
     setFeeBreakdown('')
     setPaymentTerms('')
-  }
+  }, [])
 
   const fetchAssignedVendors = useCallback(
     async (options = {}) => {
@@ -138,7 +144,27 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
     return () => {
       controller.abort()
     }
-  }, [project?.id, fetchAssignedVendors])
+  }, [project?.id, refreshKey, fetchAssignedVendors, resetAwardForm])
+
+  useEffect(() => {
+    if (!project?.id || !shouldOpenVendorAssignment || hasAutoOpenedAssignment) return
+
+    resetAwardForm()
+    setShowAwardModal(true)
+    setHasAutoOpenedAssignment(true)
+  }, [hasAutoOpenedAssignment, project?.id, resetAwardForm, shouldOpenVendorAssignment])
+
+  useEffect(() => {
+    if (!showAwardModal || !createdVendorId || selectedVendor) return
+
+    const fullVendor = vendorList.find((v) => String(v.vendor_id) === String(createdVendorId))
+    setSelectedVendor(
+      fullVendor || {
+        vendor_id: createdVendorId,
+        vendor_name: createdVendorName || 'New vendor',
+      },
+    )
+  }, [createdVendorId, createdVendorName, selectedVendor, showAwardModal, vendorList])
 
   const handleConfirmAward = async () => {
     if (isAwardSubmitting) return
@@ -195,9 +221,21 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
       if (result.status === 'success') {
         await fetchAssignedVendors()
         resetAwardForm()
+        setShowAwardModal(false)
 
         if (typeof onProgressUpdate === 'function') {
           onProgressUpdate()
+        }
+
+        if (shouldOpenVendorAssignment && assignmentReturnTo) {
+          navigate(assignmentReturnTo, {
+            state: {
+              paymentContext: 'Project',
+              paymentProjectId: project.id,
+              paymentVendorId: selectedVendor.vendor_id,
+              paymentVendorName: selectedVendor.vendor_name,
+            },
+          })
         }
       } else {
         dialog.alert(
@@ -221,6 +259,10 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
 
     const confirmed = await dialog.confirm(
       'Are you sure you want to remove this vendor from the project?',
+      {
+        confirmText: 'Remove',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) return
 
@@ -286,17 +328,7 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
   const handleGenerateLOA = (assignment) => {
     if (!project?.id || !assignment?.vendor_id) return
 
-    const params = new URLSearchParams({
-      project_id: String(project.id),
-      vendor_id: String(assignment.vendor_id),
-    })
-
-    if (assignment.assignment_id) {
-      params.set('assignment_id', String(assignment.assignment_id))
-    }
-
-    const url = `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(project.id)}/loa?${params.toString()}`
-    window.open(url, '_blank')
+    window.open(getProjectLoaUrl(project.id, assignment), '_blank')
   }
 
   const handleCancelAward = () => {
@@ -308,10 +340,14 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
   return (
     <>
       <CCardHeader className="rounded-0 d-flex align-items-center justify-content-between">
-        <strong>Vendor Details</strong>
+        <div className="d-flex align-items-baseline gap-2">
+          <strong>Vendor Details</strong>
+          <small className="text-muted">
+            ({assignedCount}) | Total Awarded {formatProjectMoney(totalAwarded)}
+          </small>
+        </div>
         <CButton
           color="primary"
-          variant="outline"
           size="sm"
           onClick={() => {
             resetAwardForm()
@@ -374,9 +410,7 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
 
                       <CTableDataCell>{v.position || '-'}</CTableDataCell>
 
-                      <CTableDataCell>
-                        {v.award_value ? `RM ${toFiniteNumber(v.award_value).toFixed(2)}` : '-'}
-                      </CTableDataCell>
+                      <CTableDataCell>{formatProjectMoney(v.award_value)}</CTableDataCell>
 
                       <CTableDataCell>
                         {v.fee_breakdown
@@ -387,33 +421,32 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
                       </CTableDataCell>
 
                       <CTableDataCell className="text-end">
-                        <CDropdown portal>
-                          <CDropdownToggle color="transparent" size="sm">
-                            <CIcon icon={cilOptions} />
-                          </CDropdownToggle>
-                          <CDropdownMenu>
-                            <CDropdownItem
-                              disabled={isAwardSubmitting || removingAssignmentId != null}
-                              onClick={() => handleEditLOA(v)}
-                            >
-                              Edit LOA
-                            </CDropdownItem>
-                            <CDropdownItem
-                              disabled={isAwardSubmitting || removingAssignmentId != null}
-                              onClick={() => handleGenerateLOA(v)}
-                            >
-                              Generate LOA
-                            </CDropdownItem>
-
-                            <CDropdownItem
-                              className="text-danger"
-                              disabled={isAwardSubmitting || removingAssignmentId != null}
-                              onClick={() => handleRemoveVendor(v)}
-                            >
-                              {rowRemoving ? 'Removing...' : 'Remove Vendor'}
-                            </CDropdownItem>
-                          </CDropdownMenu>
-                        </CDropdown>
+                        <DataTableActionMenu
+                          record={v}
+                          actions={[
+                            {
+                              key: 'edit-loa',
+                              label: 'Edit LOA',
+                              disabled: isAwardSubmitting || removingAssignmentId != null,
+                              onClick: () => handleEditLOA(v),
+                            },
+                            {
+                              key: 'generate-loa',
+                              label: 'Generate LOA',
+                              disabled: isAwardSubmitting || removingAssignmentId != null,
+                              onClick: () => handleGenerateLOA(v),
+                            },
+                            {
+                              key: 'remove-vendor',
+                              label: rowRemoving ? 'Removing...' : 'Remove Vendor',
+                              danger: true,
+                              dividerBefore: true,
+                              disabled: isAwardSubmitting || removingAssignmentId != null,
+                              onClick: () => handleRemoveVendor(v),
+                            },
+                          ]}
+                          ariaLabel="Vendor actions"
+                        />
                       </CTableDataCell>
                     </CTableRow>
                   )
@@ -471,12 +504,17 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
                     <CButton
                       color="primary"
                       size="sm"
-                      variant="outline"
                       className="p-1 m-0 align-baseline"
                       onClick={() =>
                         navigate('/vendor/create', {
                           state: {
                             returnTo: `${location.pathname}${location.search}${location.hash}`,
+                            returnState: {
+                              ...location.state,
+                              openVendorAssignment: true,
+                              returnTo: assignmentReturnTo,
+                              paymentProjectId: project?.id,
+                            },
                           },
                         })
                       }
@@ -591,7 +629,6 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
           <CButton
             color="primary"
             size="sm"
-            variant="outline"
             onClick={handleConfirmAward}
             disabled={
               !selectedVendor ||
@@ -611,6 +648,7 @@ const VendorDetailsCard = ({ project, onProgressUpdate }) => {
 
 VendorDetailsCard.propTypes = {
   project: PropTypes.object,
+  refreshKey: PropTypes.number,
   onProgressUpdate: PropTypes.func,
 }
 

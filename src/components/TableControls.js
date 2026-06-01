@@ -45,7 +45,7 @@ const TableControls = ({
                 }
               }}
             />
-            <CButton type="button" color="primary" onClick={handleSearch}>
+            <CButton type="button" color="primary" size="sm" onClick={handleSearch}>
               Search
             </CButton>
           </CInputGroup>

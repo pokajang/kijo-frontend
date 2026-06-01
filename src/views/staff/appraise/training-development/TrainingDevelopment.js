@@ -153,12 +153,14 @@ const TrainingDevelopment = () => {
               </div>
             </CCol>
           </CRow>
-          <CButton color="secondary" className="me-2" onClick={() => navigate(-1)}>
-            Back
-          </CButton>
-          <CButton type="submit" color="primary" onClick={handleSubmit}>
-            Submit Request
-          </CButton>
+          <div className="d-flex justify-content-end gap-2">
+            <CButton color="secondary" variant="outline" size="sm" onClick={() => navigate(-1)}>
+              Back
+            </CButton>
+            <CButton type="submit" color="primary" size="sm" onClick={handleSubmit}>
+              Submit Request
+            </CButton>
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

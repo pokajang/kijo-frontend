@@ -84,7 +84,9 @@ const Register = () => {
                     </CCol>
                   </CRow>
                   <div className="d-grid">
-                    <CButton color="primary">Create Account</CButton>
+                    <CButton color="primary" size="sm">
+                      Create Account
+                    </CButton>
                   </div>
                 </CForm>
               </CCardBody>

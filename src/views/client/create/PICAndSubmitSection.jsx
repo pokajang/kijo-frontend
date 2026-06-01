@@ -51,6 +51,7 @@ const PICAndSubmitSection = ({
               <CButton
                 size="sm"
                 color="danger"
+                variant="outline"
                 className="align-self-end"
                 onClick={() => handleRemove(index)}
               >
@@ -108,17 +109,23 @@ const PICAndSubmitSection = ({
         </CCol>
 
         <CCol md={1} className="d-flex align-items-end">
-          <CButton color="primary" variant="outline" size="sm" onClick={addPicToList}>
+          <CButton color="primary" size="sm" onClick={addPicToList}>
             Add PIC
           </CButton>
         </CCol>
 
-        <CCol xs={12}>
-          <CButton type="button" color="primary" onClick={handleSubmit} className="me-2">
-            Create Client
-          </CButton>
-          <CButton type="button" color="secondary" onClick={handleReset}>
+        <CCol xs={12} className="d-flex justify-content-end gap-2 flex-wrap">
+          <CButton
+            type="button"
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+          >
             Reset
+          </CButton>
+          <CButton type="button" color="primary" size="sm" onClick={handleSubmit}>
+            Create Client
           </CButton>
         </CCol>
       </CForm>

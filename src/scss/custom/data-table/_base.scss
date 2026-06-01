@@ -1,0 +1,43 @@
+/* Global datatable aliases */
+.data-table-compact > :not(caption) > * > * {
+  padding: 0.4rem 0.6rem;
+  vertical-align: middle;
+}
+
+.data-table-compact tbody td {
+  font-family: var(--cui-body-font-family);
+  font-size: var(--cui-body-font-size);
+  font-weight: var(--cui-body-font-weight);
+  line-height: 1.22;
+}
+
+.data-table-compact tbody td small {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.data-table-compact > :not(caption) > * > .text-center,
+.data-table-compact > :not(caption) > * > .text-end {
+  white-space: nowrap;
+}
+
+.embedded-data-table {
+  margin-bottom: 0;
+  --cui-table-bg: var(--app-surface-page);
+  --cui-table-color: var(--cui-body-color);
+  --cui-table-border-color: var(--app-border);
+}
+
+.data-table-embedded-shell {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+  overflow: auto;
+}
+
+.data-table-sheet-shell {
+  background: var(--app-surface-raised);
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+  overflow: auto;
+}
+

@@ -166,18 +166,20 @@ const SectionAssignLeaves = ({
             </CCol>
           </CRow>
 
-          <CButton type="submit" color="primary" size="sm" variant="outline" className="me-2">
-            {isEdit ? 'Update Leave' : 'Assign Leave'}
-          </CButton>
-          <CButton
-            type="button"
-            color="secondary"
-            size="sm"
-            variant="outline"
-            onClick={onCancelEdit}
-          >
-            Cancel
-          </CButton>
+          <div className="d-flex justify-content-end gap-2 flex-wrap">
+            <CButton
+              type="button"
+              color="secondary"
+              size="sm"
+              variant="outline"
+              onClick={onCancelEdit}
+            >
+              Cancel
+            </CButton>
+            <CButton type="submit" color="primary" size="sm">
+              {isEdit ? 'Update Leave' : 'Assign Leave'}
+            </CButton>
+          </div>
         </CForm>
       </CCardBody>
     </CCard>

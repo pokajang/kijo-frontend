@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   CCol,
+  CFormLabel,
   CRow,
   CTable,
   CTableBody,
@@ -15,7 +16,7 @@ export const emptyValue = '-'
 export const DetailField = ({ label, value }) => (
   <CCol xs={12} md={6} lg={4}>
     <div className="records-detail-field records-detail-field--inline">
-      <div className="records-detail-label">{label}</div>
+      <CFormLabel className="records-detail-label">{label}</CFormLabel>
       <div className="records-detail-value">{value || emptyValue}</div>
     </div>
   </CCol>

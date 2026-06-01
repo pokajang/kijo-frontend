@@ -203,6 +203,7 @@ const clearStoredManualForm = (startDate, endDate, staffCode) => {
 }
 
 const MonitoringPipelineTools = ({
+  period,
   startDate,
   endDate,
   selectedStaffCode,
@@ -236,6 +237,7 @@ const MonitoringPipelineTools = ({
           {
             start_date: startDate,
             end_date: endDate,
+            period,
             staff_code: selectedStaffCode,
           },
           controller.signal,
@@ -263,7 +265,7 @@ const MonitoringPipelineTools = ({
     loadMonitoringPipelineTools()
 
     return () => controller.abort()
-  }, [startDate, endDate, selectedStaffCode, reloadKey])
+  }, [endDate, period, reloadKey, selectedStaffCode, startDate])
 
   useEffect(() => {
     if (!manualModalVisible) return
@@ -616,9 +618,9 @@ const MonitoringPipelineTools = ({
   const pendingManualEntryCount =
     manualForm.batch.length +
     (manualForm.editingBatchIndex === null && manualForm.draft.prospect_name.trim() ? 1 : 0)
-  const segmentDataTitle = data?.monthLabel
-    ? `${String(data.monthLabel).toLowerCase()} Aggregated Segment Data`
-    : 'Selected Month Aggregated Segment Data'
+  const segmentDataTitle = data?.rangeLabel
+    ? `${data.rangeLabel} Aggregated Segment Data`
+    : 'Selected Period Aggregated Segment Data'
   const maxManualEntryDate = getDefaultManualEntryDate(startDate, endDate)
 
   return (
@@ -632,7 +634,7 @@ const MonitoringPipelineTools = ({
           <DataTableLoadingState message="Loading data..." />
         ) : error ? (
           <div className="text-center text-danger py-4">{error}</div>
-        ) : !Array.isArray(data?.rows) || !Array.isArray(data?.weeks) ? (
+        ) : !Array.isArray(data?.rows) || !Array.isArray(data?.periodColumns || data?.weeks) ? (
           <div className="text-center text-muted py-4">No monitoring data available.</div>
         ) : (
           <MonitoringPipelineToolsContent data={data} segmentDataTitle={segmentDataTitle} />

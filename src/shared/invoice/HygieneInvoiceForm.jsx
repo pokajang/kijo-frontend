@@ -546,7 +546,7 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
 
         <div className="mb-3 d-flex justify-content-start">
           <CButton
-            color="primary"
+            color={showAddItemRow ? 'secondary' : 'primary'}
             size="sm"
             variant={showAddItemRow ? 'outline' : undefined}
             onClick={() => setShowAddItemRow((prev) => !prev)}

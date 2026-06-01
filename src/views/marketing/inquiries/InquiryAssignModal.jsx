@@ -82,10 +82,10 @@ const InquiryAssignModal = ({ visible, inquiry, onClose, onSaved }) => {
         )}
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" variant="outline" disabled={saving} onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" disabled={saving} onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" disabled={saving || loading} onClick={saveAssignment}>
+        <CButton color="primary" size="sm" disabled={saving || loading} onClick={saveAssignment}>
           {saving ? 'Saving...' : 'Save Assignment'}
         </CButton>
       </CModalFooter>

@@ -5,6 +5,23 @@ import MonitoringSheetCard from './MonitoringSheetCard'
 import MonitoringCellDetailsPopover from './MonitoringCellDetailsPopover'
 
 const renderMetric = (value) => Number(value || 0).toLocaleString()
+const formatPeriodScope = (rangeLabel) =>
+  rangeLabel ? `Reporting period: ${rangeLabel}` : 'Reporting period: selected period'
+const getColumnValue = (row, columnKey) => row?.periodic?.[columnKey] ?? row?.weekly?.[columnKey]
+const getColumnDetails = (row, columnKey) =>
+  row?.details?.periodic?.[columnKey] ?? row?.details?.weekly?.[columnKey]
+const groupPeriodColumns = (periodColumns) =>
+  periodColumns.reduce((groups, column) => {
+    const lastGroup = groups[groups.length - 1]
+    const groupLabel = column.groupLabel || (column.type === 'month' ? 'Monthly' : 'Period')
+    if (lastGroup?.label === groupLabel) {
+      lastGroup.columns.push(column)
+      return groups
+    }
+
+    groups.push({ label: groupLabel, columns: [column] })
+    return groups
+  }, [])
 const manualOnlyLabel = (
   <span
     className="small text-muted"
@@ -54,7 +71,7 @@ const formatPipelineStatusLabel = (label) => {
   return mappedLabels[label] || label
 }
 
-const WeeklyStatusMobileList = ({ rows, weeks, totals }) => (
+const PeriodStatusMobileList = ({ rows, periodColumns, totals }) => (
   <div className="d-md-none d-grid gap-2">
     {rows.map((row, index) => (
       <div key={`${row.label}-mobile`} className="dashboard-table-mobile-card">
@@ -68,21 +85,21 @@ const WeeklyStatusMobileList = ({ rows, weeks, totals }) => (
           </div>
         </div>
         <div className="row g-2">
-          {weeks.map((week) => (
+          {periodColumns.map((column) => (
             <div
               className="col-12 d-flex align-items-center justify-content-between gap-2 small"
-              key={`${row.label}-${week.key}-mobile`}
+              key={`${row.label}-${column.key}-mobile`}
             >
-              <span className="text-muted">{week.label}</span>
+              <span className="text-muted">{column.label}</span>
               <span className="text-end">
                 QTY{' '}
                 {renderDetailMetric(
-                  row.weekly?.[week.key]?.qty,
-                  row.details?.weekly?.[week.key]?.qty,
-                  `${formatPipelineStatusLabel(row.label)} - ${week.label} QTY`,
+                  getColumnValue(row, column.key)?.qty,
+                  getColumnDetails(row, column.key)?.qty,
+                  `${formatPipelineStatusLabel(row.label)} - ${column.label} QTY`,
                   'quantity',
                 )}{' '}
-                | RM {renderMetric(row.weekly?.[week.key]?.rm)}
+                | RM {renderMetric(getColumnValue(row, column.key)?.rm)}
               </span>
             </div>
           ))}
@@ -98,21 +115,21 @@ const WeeklyStatusMobileList = ({ rows, weeks, totals }) => (
         </div>
       </div>
       <div className="row g-2">
-        {weeks.map((week) => (
+        {periodColumns.map((column) => (
           <div
             className="col-12 d-flex align-items-center justify-content-between gap-2 small"
-            key={`status-total-${week.key}`}
+            key={`status-total-${column.key}`}
           >
-            <span className="text-muted">{week.label}</span>
+            <span className="text-muted">{column.label}</span>
             <span className="text-end">
               QTY{' '}
               {renderDetailMetric(
-                totals?.weekly?.[week.key]?.qty,
-                totals?.details?.weekly?.[week.key]?.qty,
-                `Total - ${week.label} QTY`,
+                getColumnValue(totals, column.key)?.qty,
+                getColumnDetails(totals, column.key)?.qty,
+                `Total - ${column.label} QTY`,
                 'quantity',
               )}{' '}
-              | RM {renderMetric(totals?.weekly?.[week.key]?.rm)}
+              | RM {renderMetric(getColumnValue(totals, column.key)?.rm)}
             </span>
           </div>
         ))}
@@ -154,139 +171,160 @@ const StatusSegmentMobileList = ({ rows }) => (
   </div>
 )
 
-const WeeklyStatusTable = ({ rows, weeks, totals }) => (
-  <DataTableSheet
-    desktopBreakpoint="md"
-    shellClassName="monitoring-table-frame"
-    tableClassName="monitoring-sheet-table"
-    headerRows={[
-      {
-        key: 'group',
+const PeriodStatusTable = ({ rows, periodColumns, totals }) => {
+  const columnGroups = groupPeriodColumns(periodColumns)
+  const firstColumnKey = periodColumns[0]?.key
+
+  return (
+    <DataTableSheet
+      desktopBreakpoint="md"
+      shellClassName="monitoring-table-frame"
+      tableClassName="monitoring-sheet-table"
+      headerRows={[
+        {
+          key: 'group',
+          cells: [
+            {
+              key: 'index',
+              content: '#',
+              rowSpan: 2,
+              className: 'border-0 text-center monitoring-row-index-col',
+            },
+            {
+              key: 'service',
+              content: 'Service',
+              rowSpan: 2,
+              className: 'border-0 monitoring-row-heading-col',
+            },
+            ...columnGroups.map((group, groupIndex) => ({
+              key: group.label,
+              content: group.label,
+              colSpan: group.columns.length * 2,
+              className: `border-0 text-center text-nowrap monitoring-data-band monitoring-week-heading ${groupIndex === 0 ? 'monitoring-data-start-col' : ''}`,
+            })),
+            {
+              key: 'total',
+              content: 'Total',
+              colSpan: 2,
+              className: 'border-0 text-center monitoring-total-col monitoring-week-heading',
+            },
+          ],
+        },
+        {
+          key: 'metrics',
+          cells: [
+            ...periodColumns.flatMap((column) => [
+              {
+                key: `${column.key}-qty`,
+                content: (
+                  <>
+                    <div>{column.label} QTY</div>
+                    <div className="small text-muted fw-normal">{column.rangeLabel}</div>
+                  </>
+                ),
+                className: `border-0 text-center text-nowrap monitoring-period-col ${column.key === firstColumnKey ? 'monitoring-data-start-col' : ''}`,
+              },
+              {
+                key: `${column.key}-rm`,
+                content: 'RM',
+                className: 'border-0 text-center text-nowrap',
+              },
+            ]),
+            {
+              key: 'total-qty',
+              content: 'QTY',
+              className: 'border-0 text-center text-nowrap monitoring-total-col',
+            },
+            { key: 'total-rm', content: 'RM', className: 'border-0 text-center text-nowrap' },
+          ],
+        },
+      ]}
+      rows={rows.map((row, index) => ({
+        key: row.label,
         cells: [
           {
             key: 'index',
-            content: '#',
-            rowSpan: 2,
-            className: 'border-0 text-center',
-            style: { width: '56px' },
+            content: index + 1,
+            className: 'border-0 text-center fw-semibold monitoring-row-index-col',
           },
-          { key: 'service', content: 'Service', rowSpan: 2, className: 'border-0' },
-          ...weeks.map((week) => ({
-            key: week.key,
-            content: (
-              <>
-                <div>{week.label}</div>
-                <div className="small text-muted fw-normal">{week.rangeLabel}</div>
-              </>
-            ),
-            colSpan: 2,
-            className: `border-0 text-center text-nowrap monitoring-data-band monitoring-week-heading ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
-          })),
           {
-            key: 'total',
-            content: 'Total',
-            colSpan: 2,
-            className: 'border-0 text-center monitoring-total-col monitoring-week-heading',
+            key: 'service',
+            content: formatPipelineStatusLabel(row.label),
+            className: 'border-0 fw-semibold monitoring-row-heading-col',
           },
-        ],
-      },
-      {
-        key: 'metrics',
-        cells: [
-          ...weeks.flatMap((week) => [
+          ...periodColumns.flatMap((column) => [
             {
-              key: `${week.key}-qty`,
-              content: 'QTY',
-              className: `border-0 text-center text-nowrap ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
-            },
-            { key: `${week.key}-rm`, content: 'RM', className: 'border-0 text-center text-nowrap' },
-          ]),
-          {
-            key: 'total-qty',
-            content: 'QTY',
-            className: 'border-0 text-center text-nowrap monitoring-total-col',
-          },
-          { key: 'total-rm', content: 'RM', className: 'border-0 text-center text-nowrap' },
-        ],
-      },
-    ]}
-    rows={rows.map((row, index) => ({
-      key: row.label,
-      cells: [
-        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
-        {
-          key: 'service',
-          content: formatPipelineStatusLabel(row.label),
-          className: 'border-0 fw-semibold',
-        },
-        ...weeks.flatMap((week) => [
-          {
-            key: `${week.key}-qty`,
-            content: renderDetailMetric(
-              row.weekly?.[week.key]?.qty,
-              row.details?.weekly?.[week.key]?.qty,
-              `${formatPipelineStatusLabel(row.label)} - ${week.label} QTY`,
-              'quantity',
-            ),
-            className: `border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
-          },
-          {
-            key: `${week.key}-rm`,
-            content: renderMetric(row.weekly?.[week.key]?.rm),
-            className: 'border-0 text-center',
-          },
-        ]),
-        {
-          key: 'total-qty',
-          content: renderMetric(row.totalQty),
-          className: 'border-0 text-center fw-semibold monitoring-total-col',
-        },
-        {
-          key: 'total-rm',
-          content: renderMetric(row.totalRm),
-          className: 'border-0 text-center fw-semibold',
-        },
-      ],
-    }))}
-    footerRows={[
-      {
-        key: 'total',
-        className: 'fw-semibold text-muted',
-        cells: [
-          { key: 'index', content: ' ', className: 'border-0 text-center' },
-          { key: 'service', content: 'Total', className: 'border-0' },
-          ...weeks.flatMap((week) => [
-            {
-              key: `${week.key}-qty`,
+              key: `${column.key}-qty`,
               content: renderDetailMetric(
-                totals?.weekly?.[week.key]?.qty,
-                totals?.details?.weekly?.[week.key]?.qty,
-                `Total - ${week.label} QTY`,
+                getColumnValue(row, column.key)?.qty,
+                getColumnDetails(row, column.key)?.qty,
+                `${formatPipelineStatusLabel(row.label)} - ${column.label} QTY`,
                 'quantity',
               ),
-              className: `border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
+              className: `border-0 text-center monitoring-period-col ${column.key === firstColumnKey ? 'monitoring-data-start-col' : ''}`,
             },
             {
-              key: `${week.key}-rm`,
-              content: renderMetric(totals?.weekly?.[week.key]?.rm),
+              key: `${column.key}-rm`,
+              content: renderMetric(getColumnValue(row, column.key)?.rm),
               className: 'border-0 text-center',
             },
           ]),
           {
             key: 'total-qty',
-            content: renderMetric(totals?.totalQty),
-            className: 'border-0 text-center monitoring-total-col',
+            content: renderMetric(row.totalQty),
+            className: 'border-0 text-center fw-semibold monitoring-total-col',
           },
           {
             key: 'total-rm',
-            content: renderMetric(totals?.totalRm),
-            className: 'border-0 text-center',
+            content: renderMetric(row.totalRm),
+            className: 'border-0 text-center fw-semibold',
           },
         ],
-      },
-    ]}
-  />
-)
+      }))}
+      footerRows={[
+        {
+          key: 'total',
+          className: 'fw-semibold text-muted',
+          cells: [
+            {
+              key: 'index',
+              content: ' ',
+              className: 'border-0 text-center monitoring-row-index-col',
+            },
+            { key: 'service', content: 'Total', className: 'border-0 monitoring-row-heading-col' },
+            ...periodColumns.flatMap((column) => [
+              {
+                key: `${column.key}-qty`,
+                content: renderDetailMetric(
+                  getColumnValue(totals, column.key)?.qty,
+                  getColumnDetails(totals, column.key)?.qty,
+                  `Total - ${column.label} QTY`,
+                  'quantity',
+                ),
+                className: `border-0 text-center monitoring-period-col ${column.key === firstColumnKey ? 'monitoring-data-start-col' : ''}`,
+              },
+              {
+                key: `${column.key}-rm`,
+                content: renderMetric(getColumnValue(totals, column.key)?.rm),
+                className: 'border-0 text-center',
+              },
+            ]),
+            {
+              key: 'total-qty',
+              content: renderMetric(totals?.totalQty),
+              className: 'border-0 text-center monitoring-total-col',
+            },
+            {
+              key: 'total-rm',
+              content: renderMetric(totals?.totalRm),
+              className: 'border-0 text-center',
+            },
+          ],
+        },
+      ]}
+    />
+  )
+}
 
 const StatusSegmentTable = ({ rows }) => (
   <DataTableSheet
@@ -301,10 +339,14 @@ const StatusSegmentTable = ({ rows }) => (
             key: 'index',
             content: '#',
             rowSpan: 2,
-            className: 'border-0 text-center',
-            style: { width: '56px' },
+            className: 'border-0 text-center monitoring-row-index-col',
           },
-          { key: 'service', content: 'Service', rowSpan: 2, className: 'border-0' },
+          {
+            key: 'service',
+            content: 'Service',
+            rowSpan: 2,
+            className: 'border-0 monitoring-row-heading-col',
+          },
           ...segmentColumns.map((segment) => ({
             key: segment.key,
             content: segment.label,
@@ -332,11 +374,15 @@ const StatusSegmentTable = ({ rows }) => (
     rows={rows.map((row, index) => ({
       key: `${row.label}-segment`,
       cells: [
-        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
+        {
+          key: 'index',
+          content: index + 1,
+          className: 'border-0 text-center fw-semibold monitoring-row-index-col',
+        },
         {
           key: 'service',
           content: formatPipelineStatusLabel(row.label),
-          className: 'border-0 fw-semibold',
+          className: 'border-0 fw-semibold monitoring-row-heading-col',
         },
         ...segmentColumns.flatMap((segment) => [
           {
@@ -362,6 +408,7 @@ const StatusSegmentTable = ({ rows }) => (
 )
 
 const MonitoringPipelineStatus = ({
+  period,
   startDate,
   endDate,
   selectedStaffCode,
@@ -379,8 +426,10 @@ const MonitoringPipelineStatus = ({
   const displayLoading = hasExternalStatusData ? Boolean(statusLoading) : loading
   const displayError = hasExternalStatusData ? statusError || '' : error
   const segmentDataTitle = displayData?.monthLabel
-    ? `${String(displayData.monthLabel).toLowerCase()} Aggregated Segment Data`
-    : 'Selected Month Aggregated Segment Data'
+    ? `${displayData.rangeLabel || String(displayData.monthLabel).toLowerCase()} Aggregated Segment Data`
+    : 'Selected Period Aggregated Segment Data'
+  const periodScopeLabel = formatPeriodScope(displayData?.rangeLabel)
+  const periodColumns = displayData?.periodColumns || displayData?.weeks || []
 
   useEffect(() => {
     if (hasExternalStatusData) return undefined
@@ -397,6 +446,7 @@ const MonitoringPipelineStatus = ({
           {
             start_date: startDate,
             end_date: endDate,
+            period,
             staff_code: selectedStaffCode,
           },
           controller.signal,
@@ -424,7 +474,7 @@ const MonitoringPipelineStatus = ({
     loadMonitoringPipelineStatus()
 
     return () => controller.abort()
-  }, [startDate, endDate, selectedStaffCode, hasExternalStatusData])
+  }, [endDate, hasExternalStatusData, period, selectedStaffCode, startDate])
 
   return (
     <MonitoringSheetCard
@@ -436,29 +486,37 @@ const MonitoringPipelineStatus = ({
         <DataTableLoadingState message="Loading data..." />
       ) : displayError ? (
         <div className="text-center text-danger py-4">{displayError}</div>
-      ) : !Array.isArray(displayData?.rows) || !Array.isArray(displayData?.weeks) ? (
+      ) : !Array.isArray(displayData?.rows) || !Array.isArray(periodColumns) ? (
         <div className="text-center text-muted py-4">No monitoring data available.</div>
       ) : (
         <div className="d-flex flex-column gap-3">
           <div>
-            <div className="fw-semibold mb-1" data-tour="monitoring-weekly-status-value">
-              Weekly Quantity and Revenue
+            <div
+              className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1"
+              data-tour="monitoring-weekly-status-value"
+            >
+              <div className="fw-semibold">Quantity and Revenue by Period</div>
+              <div className="small text-muted text-nowrap">{periodScopeLabel}</div>
             </div>
-            <WeeklyStatusMobileList
+            <PeriodStatusMobileList
               rows={displayData.rows}
-              weeks={displayData.weeks}
+              periodColumns={periodColumns}
               totals={displayData.totals}
             />
-            <WeeklyStatusTable
+            <PeriodStatusTable
               rows={displayData.rows}
-              weeks={displayData.weeks}
+              periodColumns={periodColumns}
               totals={displayData.totals}
             />
           </div>
 
           <div>
-            <div className="mb-2" data-tour="monitoring-service-segment-data">
+            <div
+              className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2"
+              data-tour="monitoring-service-segment-data"
+            >
               <div className="fw-semibold text-capitalize">{segmentDataTitle}</div>
+              <div className="small text-muted text-nowrap">{periodScopeLabel}</div>
             </div>
             <StatusSegmentMobileList rows={displayData.rows} />
             <StatusSegmentTable rows={displayData.rows} />

@@ -27,9 +27,12 @@ const ClientDetailsCard = ({ project }) => {
             {clientPics.length > 0 ? (
               clientPics.map((pic, idx) => (
                 <div key={idx} className="mb-2">
-                  {pic.full_name} <small className="text-muted">({pic.position})</small>
+                  <strong>{pic.full_name || '-'}</strong>
+                  {pic.position ? <small className="text-muted"> ({pic.position})</small> : null}
                   <br />
-                  {pic.email} | {pic.mobile_number}
+                  <span>{pic.email || '-'}</span>
+                  <br />
+                  <span>{pic.mobile_number || '-'}</span>
                 </div>
               ))
             ) : (

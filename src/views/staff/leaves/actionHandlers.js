@@ -1,27 +1,59 @@
 // src/actionHandlers.js
 
 import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
+import { getYearScopedParamSets, mergeUniqueRecordsById } from '../../../components/filters'
+import { appendQueryParams } from '../../../utils/detailPages'
 
 const API_BASE = `${import.meta.env.VITE_API_BASE}`.replace(/\/+$/, '')
 
 // VIEW ALL LEAVES SECTION - 1ST SECTION
-// fetch leaves data
-export async function getAllLeaves() {
-  const res = await fetch(`${API_BASE}/hr/leaves?year=${new Date().getFullYear()}`, {
-    credentials: 'include',
-  })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return Array.isArray(result.leaves)
-      ? result.leaves
-      : Array.isArray(result.data)
-        ? result.data
-        : []
+const normalizeLeavePayload = (result) => {
+  const leaves = Array.isArray(result.leaves)
+    ? result.leaves
+    : Array.isArray(result.data)
+      ? result.data
+      : []
+
+  const permissions = result.action_permissions || null
+
+  return {
+    leaves,
+    actionPermissions: permissions
+      ? {
+          canRecommend: Boolean(permissions.can_recommend),
+          canApprove: Boolean(permissions.can_approve),
+        }
+      : null,
   }
-  throw new Error(result.message || 'Failed to fetch leave records')
 }
 
-// hr to recommend or approve
+// fetch leaves data
+export async function getAllLeavesPayload(periodRange) {
+  const paramSets = getYearScopedParamSets(periodRange)
+  const payloads = await Promise.all(
+    paramSets.map(async (params) => {
+      const res = await fetch(appendQueryParams(`${API_BASE}/hr/leaves`, params), {
+        credentials: 'include',
+      })
+      const result = await res.json()
+      if (result.status === 'success') return normalizeLeavePayload(result)
+      throw new Error(result.message || 'Failed to fetch leave records')
+    }),
+  )
+
+  return {
+    leaves: mergeUniqueRecordsById(payloads.flatMap((payload) => payload.leaves)),
+    actionPermissions:
+      payloads.find((payload) => payload.actionPermissions)?.actionPermissions || null,
+  }
+}
+
+export async function getAllLeaves(periodRange) {
+  const { leaves } = await getAllLeavesPayload(periodRange)
+  return leaves
+}
+
+// workflow action: recommend, approve, reject, or revoke
 export async function leaveAction(id, action, remarks) {
   const res = await fetch(`${API_BASE}/hr/leaves/${encodeURIComponent(id)}/action`, {
     method: 'POST',
@@ -123,30 +155,4 @@ export async function updateEntitlement(payload) {
     return result
   }
   throw new Error(result.message || 'Failed to update entitlement')
-}
-
-export async function getLeaveWorkflowRecipients() {
-  const res = await fetch(`${API_BASE}/hr/leaves/workflow-recipients`, {
-    credentials: 'include',
-  })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return Array.isArray(result.stages) ? result.stages : []
-  }
-  throw new Error(result.message || 'Failed to fetch leave workflow recipients')
-}
-
-export async function updateLeaveWorkflowRecipients(stages) {
-  const res = await fetch(`${API_BASE}/hr/leaves/workflow-recipients`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ stages }),
-  })
-  const result = await res.json()
-  if (result.status === 'success') {
-    dispatchAppNotificationsChanged()
-    return result
-  }
-  throw new Error(result.message || 'Failed to update leave workflow recipients')
 }

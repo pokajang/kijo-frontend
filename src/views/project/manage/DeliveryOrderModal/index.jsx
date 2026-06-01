@@ -286,7 +286,7 @@ export default function DeliveryOrderModal({
 
   const footerContent = (
     <>
-      <CButton color="secondary" size="sm" onClick={onClose}>
+      <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
         Cancel
       </CButton>
       <CButton

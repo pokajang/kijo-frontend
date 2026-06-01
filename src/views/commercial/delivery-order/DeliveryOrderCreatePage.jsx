@@ -3,15 +3,21 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 
 import { DataTableLoadingState } from '../../../components/datatable'
-import DeliveryOrderModal from '../../project/manage/DeliveryOrderModal'
 import { getProjectDetails } from '../../project/manage/projectApi'
+import DeliveryOrderCreateFlow from './create/DeliveryOrderCreateFlow'
 
 const DeliveryOrderCreatePage = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const origin =
+    searchParams.get('from') === 'delivery-order-list' ? 'delivery-order-list' : 'project'
   const stateProject =
-    String(location.state?.project?.id || '') === String(projectId) ? location.state.project : null
+    origin !== 'delivery-order-list' &&
+    String(location.state?.project?.id || '') === String(projectId)
+      ? location.state.project
+      : null
 
   const [project, setProject] = useState(stateProject)
   const [loading, setLoading] = useState(!stateProject)
@@ -57,7 +63,10 @@ const DeliveryOrderCreatePage = () => {
     }
   }, [projectId, stateProject])
 
-  const backToProject = () => navigate(`/project/manage/${projectId}`)
+  const handleBack = () =>
+    origin === 'delivery-order-list'
+      ? navigate('/commercial/delivery-order')
+      : navigate(`/project/manage/${projectId}`)
 
   if (loading) {
     return (
@@ -80,8 +89,10 @@ const DeliveryOrderCreatePage = () => {
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
               <strong>Generate Delivery Order</strong>
-              <CButton color="secondary" size="sm" variant="outline" onClick={backToProject}>
-                Back to Project
+              <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
+                {origin === 'delivery-order-list'
+                  ? 'Back to Delivery Order List'
+                  : 'Back to Project'}
               </CButton>
             </CCardHeader>
             <CCardBody>
@@ -98,7 +109,7 @@ const DeliveryOrderCreatePage = () => {
   return (
     <CRow>
       <CCol xs={12}>
-        <DeliveryOrderModal asPage project={project} onClose={backToProject} />
+        <DeliveryOrderCreateFlow project={project} origin={origin} onBack={handleBack} />
       </CCol>
     </CRow>
   )

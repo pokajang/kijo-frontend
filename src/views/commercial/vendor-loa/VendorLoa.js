@@ -1,10 +1,16 @@
 // src/views/commercial/vendor/VendorLoa.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { CRow, CCol, CCard, CCardHeader, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
-import { DataTableRecordControls } from '../../../components/datatable'
+import { useNavigate } from 'react-router-dom'
+import { CButton, CRow, CCol, CCard, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
+import {
+  DataTableCardHeader,
+  DataTableRecordControls,
+  DataTableStatsToggle,
+} from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
@@ -15,6 +21,7 @@ import {
 } from '../../../components/filters'
 import { fetchAllPagedRecords, fetchJson } from '../../../utils/detailPages'
 import VendorLoaTable from './VendorLoaTable'
+import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const parseLocalDate = (value) => {
   if (!value) return null
@@ -42,15 +49,19 @@ const parseLocalDate = (value) => {
 }
 
 const VendorLoa = () => {
+  const navigate = useNavigate()
   const [records, setRecords] = useState([])
   const [staffRoles, setStaffRoles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [projectPickerVisible, setProjectPickerVisible] = useState(false)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [picFilter, setPicFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('commercial.vendor-loa')
 
   const statusOptions = useMemo(() => {
     const statuses = new Set()
@@ -88,6 +99,16 @@ const VendorLoa = () => {
   const applyStatFilter = (_key, value) => {
     setPicFilter(value)
     setShowAdvancedFilters(true)
+  }
+
+  const openVendorLoaCreateForProject = (project) => {
+    const projectId = project?.id ?? project?.project_id
+    if (!projectId) return
+
+    setProjectPickerVisible(false)
+    navigate(`/commercial/vendor-loa/create/${projectId}?from=vendor-loa-list`, {
+      state: { project },
+    })
   }
 
   const picOptions = useMemo(() => {
@@ -186,18 +207,27 @@ const VendorLoa = () => {
       </CCol>
       <CCol xs={12}>
         <CCard className="mb-4">
-          <CCardHeader>
-            <strong>Vendor LOA Records</strong>
-          </CCardHeader>
+          <DataTableCardHeader title="Vendor LOA Records" scopeLabel={statsScopeLabel}>
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
+            <CButton color="primary" size="sm" onClick={() => setProjectPickerVisible(true)}>
+              Create Vendor LOA
+            </CButton>
+          </DataTableCardHeader>
           <CCardBody>
             <VendorLoaTable
               records={filteredRecords}
               loading={loading}
+              statsVisible={statsVisible}
               staffRoles={staffRoles}
               onRefresh={fetchVendorLoaRecords}
-              scopeLabel={statsScopeLabel}
               beforeList={
                 <DataTableRecordControls
+                  visible={controlsVisible}
                   searchValue={searchTerm}
                   onSearchChange={setSearchTerm}
                   searchPlaceholder="Type to search..."
@@ -252,6 +282,14 @@ const VendorLoa = () => {
           </CCardBody>
         </CCard>
       </CCol>
+      <CommercialProjectPickerModal
+        visible={projectPickerVisible}
+        onClose={() => setProjectPickerVisible(false)}
+        onContinue={openVendorLoaCreateForProject}
+        title="Create Vendor LOA"
+        searchInputId="vendorLoaProjectSearch"
+        creationLabel="vendor LOA"
+      />
     </CRow>
   )
 }

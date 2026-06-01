@@ -460,7 +460,12 @@ const ClientEditPage = () => {
         </CCardHeader>
         <CCardBody>
           <CAlert color="danger">{error || 'Client company not found.'}</CAlert>
-          <CButton color="secondary" variant="outline" onClick={() => navigate('/client/manage')}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/client/manage')}
+          >
             Back
           </CButton>
         </CCardBody>
@@ -498,10 +503,16 @@ const ClientEditPage = () => {
         onBack={handleCancel}
         footerActions={
           <CCardFooter className="d-flex justify-content-end gap-2">
-            <CButton color="secondary" variant="outline" onClick={handleCancel} disabled={saving}>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={handleCancel}
+              disabled={saving}
+            >
               Cancel
             </CButton>
-            <CButton color="primary" onClick={handleSave} disabled={saving}>
+            <CButton color="primary" size="sm" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
             </CButton>
           </CCardFooter>
@@ -633,7 +644,7 @@ const ClientEditPage = () => {
                 />
               </CCol>
               <CCol md={1} className="d-flex align-items-end">
-                <CButton color="secondary" onClick={handleAddNewPIC}>
+                <CButton color="primary" size="sm" onClick={handleAddNewPIC}>
                   Add
                 </CButton>
               </CCol>

@@ -30,7 +30,10 @@ const PastPicsPage = () => {
   }, [])
 
   const handleDeleteUnassignedPic = async (pic) => {
-    const confirmDelete = await dialog.confirm(`Delete ${pic.full_name}?`)
+    const confirmDelete = await dialog.confirm(`Delete ${pic.full_name}?`, {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!confirmDelete) return
 
     try {

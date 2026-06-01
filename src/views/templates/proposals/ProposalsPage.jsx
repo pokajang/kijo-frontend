@@ -1,9 +1,11 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
+import { CAlert, CButton, CCard, CCardBody, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
+import { DataTableCardHeader, DataTableStatsToggle } from '../../../components/datatable'
 import RecordsServiceStrip from '../../../components/records/RecordsServiceStrip'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import TemplateLanguageDropdown from '../shared/TemplateLanguageDropdown'
 import TemplateProposalTable from '../shared/TemplateProposalTable'
 import TrainingTemplateTable from '../list-training/TemplateTable'
@@ -26,6 +28,8 @@ const ProposalsPage = () => {
     loading,
     proposalTabOptions,
   } = useProposalsController()
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('templates.proposals')
 
   const returnTo = `${location.pathname}${location.search}`
 
@@ -37,7 +41,8 @@ const ProposalsPage = () => {
           onDelete={handleDelete}
           onCreateBmCopy={handleCreateBmCopy}
           loading={loading}
-          language={language}
+          statsVisible={statsVisible}
+          controlsVisible={controlsVisible}
         />
       )
     }
@@ -49,6 +54,8 @@ const ProposalsPage = () => {
           onDelete={(id) => handleDelete('training', id)}
           onCreateBmCopy={(id, row) => handleCreateBmCopy('training', id, row)}
           loading={loading}
+          statsVisible={statsVisible}
+          controlsVisible={controlsVisible}
         />
       )
     }
@@ -60,6 +67,8 @@ const ProposalsPage = () => {
         onDelete={(id) => handleDelete(activeType, id)}
         onCreateBmCopy={(id, row) => handleCreateBmCopy(activeType, id, row)}
         loading={loading}
+        statsVisible={statsVisible}
+        controlsVisible={controlsVisible}
       />
     )
   }
@@ -77,8 +86,13 @@ const ProposalsPage = () => {
           }
         />
         <CCard className="mb-4 records-page-card">
-          <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap records-page-card-header">
-            <strong>Proposals</strong>
+          <DataTableCardHeader title="Proposals" scopeLabel={language === 'ms-MY' ? 'BM' : 'ENG'}>
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
             <CButton
               color="primary"
               size="sm"
@@ -88,7 +102,7 @@ const ProposalsPage = () => {
               <CIcon icon={cilPlus} />
               Create Proposal
             </CButton>
-          </CCardHeader>
+          </DataTableCardHeader>
           <CCardBody className="records-page-card-body">
             {error && (
               <CAlert color="danger" className="mb-3">

@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './scss/style.scss'
+import './scss/workload.scss'
 import './scss/custom.scss'
 
 import { CSpinner, useColorModes } from '@coreui/react'
@@ -13,6 +14,7 @@ import VersionNotifier from './components/VersionNotifier'
 import AppDialogProvider from './components/dialog/AppDialogProvider'
 import AppApiProvider from './api/AppApiProvider'
 import AppNotificationProvider from './notifications/AppNotificationProvider'
+import { RightDrawerProvider } from './components/right-drawer/RightDrawerContext'
 
 // Set global defaults for all charts
 Chart.defaults.font.family = 'var(--cui-font-sans-serif)'
@@ -23,6 +25,10 @@ const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
 
 // Pages
 const Login = React.lazy(() => import('./views/pages/login/Login'))
+const PasswordReset = React.lazy(() => import('./views/pages/login/PasswordReset'))
+const SharedWorkloadDashboard = React.lazy(
+  () => import('./views/dashboard/workload/SharedWorkloadDashboard'),
+)
 
 const App = () => {
   const { colorMode } = useColorModes('coreui-free-react-admin-template-theme')
@@ -47,6 +53,20 @@ const App = () => {
             >
               <Routes>
                 <Route path="/login" name="Login Page" element={<Login />} />
+                <Route
+                  path="/reset-password/:token"
+                  name="Password Reset"
+                  element={<PasswordReset />}
+                />
+                <Route
+                  path="/share/workload/:token"
+                  name="Shared Workload Dashboard"
+                  element={
+                    <RightDrawerProvider>
+                      <SharedWorkloadDashboard />
+                    </RightDrawerProvider>
+                  }
+                />
                 {/* Wildcard route for everything else */}
                 <Route
                   path="*"

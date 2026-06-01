@@ -15,6 +15,7 @@ import {
 } from '@coreui/react'
 import { DataTableLoadingState, DataTableStatusBadge } from '../../../../components/datatable'
 import { toFiniteNumber } from '../projectApi'
+import { formatProjectMoney } from '../projectDetailFormatters'
 
 const PaymentRequestsCard = ({ payments = [], loading = false }) => {
   const navigate = useNavigate()
@@ -39,12 +40,7 @@ const PaymentRequestsCard = ({ payments = [], loading = false }) => {
     <>
       <CCardHeader className="rounded-0 d-flex align-items-center justify-content-between">
         <strong>Vendor Payments</strong>
-        <CButton
-          color="primary"
-          size="sm"
-          variant="outline"
-          onClick={() => navigate('/vendor/pay')}
-        >
+        <CButton color="primary" size="sm" onClick={() => navigate('/vendor/pay')}>
           Pay Vendor
         </CButton>
       </CCardHeader>
@@ -74,7 +70,7 @@ const PaymentRequestsCard = ({ payments = [], loading = false }) => {
                 {payments.length === 0 ? (
                   <CTableRow>
                     <CTableDataCell colSpan={9} className="text-center text-muted">
-                      No payment records found.
+                      No vendor payments yet.
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
@@ -104,7 +100,7 @@ const PaymentRequestsCard = ({ payments = [], loading = false }) => {
                           </DataTableStatusBadge>
                         </CTableDataCell>
                         <CTableDataCell className="text-end">
-                          RM {toFiniteNumber(payment.amount).toFixed(2)}
+                          {formatProjectMoney(payment.amount)}
                         </CTableDataCell>
                       </CTableRow>
                     ))}
@@ -113,7 +109,7 @@ const PaymentRequestsCard = ({ payments = [], loading = false }) => {
                         Grand Total
                       </CTableDataCell>
                       <CTableDataCell className="text-end">
-                        RM {grandTotal(payments).toFixed(2)}
+                        {formatProjectMoney(grandTotal(payments))}
                       </CTableDataCell>
                     </CTableRow>
                   </>

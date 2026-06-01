@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/InvoiceFormLoader.jsx
+// src/shared/invoice/InvoiceFormLoader.jsx
 import React from 'react'
 import { CAlert } from '@coreui/react'
 import TrainingInvoiceForm from './TrainingInvoiceForm'

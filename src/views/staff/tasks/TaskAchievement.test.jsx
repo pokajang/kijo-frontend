@@ -7,7 +7,7 @@ describe('getTaskAchievementCounts', () => {
       {
         status: 'Completed',
         dueDate: '2026-05-20',
-        completedAt: '2026-05-21',
+        completedAt: '2026-05-20',
       },
       {
         status: 'Completed',
@@ -17,7 +17,7 @@ describe('getTaskAchievementCounts', () => {
       {
         status: 'Completed',
         dueDate: '2025-12-30',
-        completedAt: '2025-12-31',
+        completedAt: '2025-12-30',
       },
       {
         status: 'Ongoing',

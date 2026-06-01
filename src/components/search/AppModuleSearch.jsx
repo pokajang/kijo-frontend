@@ -194,7 +194,6 @@ const AppModuleSearch = () => {
       <CModal
         visible={mobileSearchVisible}
         onClose={closeMobileSearch}
-        alignment="top"
         className="app-module-search-modal"
       >
         <CModalHeader closeButton>

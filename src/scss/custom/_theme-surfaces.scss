@@ -16,6 +16,12 @@
   color: var(--cui-body-color) !important;
 }
 
+.vendor-payment-context-card.app-selectable-card--selected {
+  background: rgba(var(--cui-primary-rgb), 0.12) !important;
+  border-color: rgba(var(--cui-primary-rgb), 0.32) !important;
+  color: var(--cui-body-color) !important;
+}
+
 .app-proof-card {
   background: var(--cui-body-bg) !important;
   border-color: var(--cui-border-color, var(--app-border-card)) !important;

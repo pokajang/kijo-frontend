@@ -64,6 +64,7 @@ const toNavigationStateValue = (value, seen = new WeakSet()) => {
 export const useRecordsController = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const currentUser = user
   const currentUserName = user?.full_name || user?.name || ''
   const currentUserEmail = user?.email || ''
   const { activeTab, handleTabChange } = useRecordsTabRouting()
@@ -92,7 +93,6 @@ export const useRecordsController = () => {
   const {
     modalState,
     dispatchModal,
-    ViewModal,
     FailModal,
     SuccessModal,
     FollowUpModalComponent,
@@ -104,8 +104,6 @@ export const useRecordsController = () => {
     setIsFollowUpModalSubmitting,
     isSyncingClientDetails,
     setIsSyncingClientDetails,
-    openViewModal,
-    closeViewModal,
     openFailModal,
     closeFailModal,
     setFailReason,
@@ -179,9 +177,10 @@ export const useRecordsController = () => {
 
     setIsFollowUpModalSubmitting(true)
     try {
-      const result = await postJsonCompat(urls.followUp, {
-        quote_id: modalState.followUp.quote.id,
-        id: modalState.followUp.quote.id,
+      const quoteId = modalState.followUp.quote.id
+      const result = await postJsonCompat(urls.followUp(quoteId), {
+        quote_id: quoteId,
+        id: quoteId,
         remarks: modalState.followUp.remarks,
         follow_up_date: modalState.followUp.date,
       })
@@ -210,16 +209,12 @@ export const useRecordsController = () => {
         setSuccessDescription,
         setSuccessLoa,
         openSuccessModal,
-        closeViewModal,
-        openViewModal,
       }),
     [
       closeFailModal,
       closeSuccessModal,
-      closeViewModal,
       openFailModal,
       openSuccessModal,
-      openViewModal,
       setFailReason,
       setSuccessDate,
       setSuccessDescription,
@@ -240,8 +235,6 @@ export const useRecordsController = () => {
         setSuccessDescription,
         setSuccessLoa,
         openSuccessModal,
-        closeViewModal,
-        openViewModal,
         getFailServiceKey: () => modalState.fail.serviceKey,
         getSuccessServiceKey: () => modalState.success.serviceKey,
         getSuccessActionType: () => modalState.success.actionType,
@@ -249,13 +242,11 @@ export const useRecordsController = () => {
     [
       closeFailModal,
       closeSuccessModal,
-      closeViewModal,
       modalState.fail.serviceKey,
       modalState.success.actionType,
       modalState.success.serviceKey,
       openFailModal,
       openSuccessModal,
-      openViewModal,
       setFailReason,
       setSuccessDate,
       setSuccessDescription,
@@ -283,6 +274,26 @@ export const useRecordsController = () => {
   const handlers = useMemo(() => {
     return buildHandlers(activeTab)
   }, [activeTab, buildHandlers])
+
+  const successRecord = useMemo(() => {
+    const recordId = modalState.success.recordId
+    if (!recordId) return null
+
+    const serviceKey = modalState.success.serviceKey || (!isAggregateTab ? activeTab : null)
+    return (
+      quotes.find(
+        (quote) =>
+          String(quote?.id) === String(recordId) &&
+          (!serviceKey || !quote?.serviceTab || quote.serviceTab === serviceKey),
+      ) || null
+    )
+  }, [
+    activeTab,
+    isAggregateTab,
+    modalState.success.recordId,
+    modalState.success.serviceKey,
+    quotes,
+  ])
 
   const {
     handleDelete,
@@ -342,7 +353,7 @@ export const useRecordsController = () => {
     }
   }
 
-  const handleSuccessConfirm = async () => {
+  const handleSuccessConfirm = async (projectCollaborators = []) => {
     const serviceKey = modalState.success.serviceKey || (!isAggregateTab ? activeTab : null)
     if (!serviceKey || !endpointsByService[serviceKey]) {
       dialog.alert('Award endpoint not configured for this service.')
@@ -362,6 +373,7 @@ export const useRecordsController = () => {
         awardDate: modalState.success.awardDate,
         clientLoaRefNo: modalState.success.clientLoaRefNo,
         selectedRecordIdForSuccess: modalState.success.recordId,
+        projectCollaborators,
       }
 
       const ok =
@@ -528,12 +540,12 @@ export const useRecordsController = () => {
   return {
     currentUserName,
     currentUserEmail,
+    currentUser,
     activeTab,
     handleTabChange,
     recordTabOptions,
     ActiveTableComponent,
     tableProps,
-    ViewModal,
     FailModal,
     SuccessModal,
     FollowUpModalComponent,
@@ -548,6 +560,7 @@ export const useRecordsController = () => {
     handleNegotiationSubmit,
     isNegotiationSubmitting,
     modalState,
+    successRecord,
     dispatchModal,
     handleFailConfirm,
     handleSuccessConfirm,

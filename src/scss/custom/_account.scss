@@ -1,0 +1,210 @@
+.account-card {
+  margin-bottom: 1rem;
+}
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.account-card-subtitle {
+  margin-top: 0.2rem;
+  color: var(--app-text-muted, var(--cui-secondary-color));
+  font-size: var(--app-font-size-sm, 0.8rem);
+  font-weight: 400;
+}
+
+.account-profile-card-body {
+  padding-top: 0;
+}
+
+.account-profile-card-body > .alert:first-child {
+  margin-top: 1rem;
+}
+
+.account-form-section {
+  padding: 0 0 1rem;
+}
+
+.account-form-section:first-of-type {
+  border-top: 0;
+}
+
+.account-section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  margin: 0 -1rem 1rem;
+  padding: 0.625rem 1rem;
+  background: var(--cui-card-cap-bg, var(--app-surface-raised));
+}
+
+.account-section-header-row strong {
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: var(--app-font-size-base, 0.875rem);
+  font-weight: 700;
+}
+
+.account-profile-form--read .account-profile-field-col {
+  flex: 0 0 auto;
+  width: 33.333333%;
+}
+
+.account-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  color: var(--app-text-label, var(--cui-secondary-color));
+  font-size: var(--app-font-size-sm, 0.8rem);
+  font-weight: 400;
+}
+
+.account-profile-form--read .account-field-label {
+  min-height: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.account-value-display {
+  min-height: calc(1.5em + 0.75rem + 2px);
+  padding: 0.375rem 0;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: var(--app-font-size-base, 0.875rem);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.account-value-display.is-empty {
+  color: var(--app-text-muted, var(--cui-secondary-color));
+}
+
+.account-required-marker {
+  color: var(--cui-danger);
+  font-size: var(--app-font-size-xs, 0.72rem);
+  font-weight: 600;
+}
+
+.account-contact-group {
+  padding: 0;
+}
+
+.account-contact-group + .account-contact-group {
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.account-contact-title {
+  margin-bottom: 0.75rem;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: var(--app-font-size-sm, 0.8rem);
+  font-weight: 700;
+}
+
+.account-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 1rem;
+}
+
+.account-form-actions--flush {
+  margin-top: 1rem;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.account-loading-state,
+.account-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 8rem;
+  color: var(--app-text-muted, var(--cui-secondary-color));
+}
+
+.account-empty-state {
+  flex-direction: column;
+  padding: 1rem;
+  text-align: center;
+}
+
+.account-empty-state strong {
+  color: var(--app-text-strong, var(--cui-body-color));
+}
+
+.account-signature-preview-panel,
+.account-upload-panel {
+  height: 100%;
+  padding: 0.875rem;
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+  background: var(--cui-card-bg, var(--app-surface-page));
+}
+
+.account-signature-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.account-signature-preview-heading strong {
+  color: var(--app-text-strong, var(--cui-body-color));
+}
+
+.account-signature-preview-heading span {
+  color: var(--app-text-muted, var(--cui-secondary-color));
+  font-size: var(--app-font-size-sm, 0.8rem);
+}
+
+.account-signature-preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 12rem;
+  border: 1px dashed var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+  background: var(--cui-tertiary-bg, var(--app-surface-raised));
+}
+
+.account-signature-preview-box img {
+  display: block;
+  max-width: 100%;
+  max-height: 10rem;
+  object-fit: contain;
+}
+
+.account-password-tools {
+  margin-top: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .account-profile-form--read .account-profile-field-col {
+    display: grid;
+    align-items: start;
+    grid-template-columns: minmax(6.5rem, 38%) minmax(0, 1fr);
+    column-gap: 0.75rem;
+    width: 100%;
+  }
+
+  .account-profile-form--read .account-field-label {
+    margin-bottom: 0;
+  }
+
+  .account-profile-form--read .account-value-display {
+    min-height: 0;
+    padding-top: 0;
+  }
+
+  .account-signature-preview-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}

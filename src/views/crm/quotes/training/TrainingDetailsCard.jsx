@@ -192,7 +192,6 @@ const TrainingDetailsCard = ({
                     {proposalLanguage === 'ms-MY' ? text.noBmTopics : text.noTopics}{' '}
                     <CButton
                       color="primary"
-                      variant="outline"
                       size="sm"
                       onClick={() => navigate('/templates/create')}
                     >

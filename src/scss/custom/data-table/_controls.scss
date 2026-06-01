@@ -1,0 +1,165 @@
+.data-table-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  font: inherit;
+  color: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.data-table-sort-icon {
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.records-table-sort-btn.w-100,
+.data-table-sort-btn.w-100 {
+  justify-content: center;
+}
+
+.data-table-status-badge {
+  font-weight: 400;
+  background-color: var(--app-surface-subtle);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-secondary);
+}
+
+.data-table-status-badge--pill {
+  border-radius: var(--app-radius-pill);
+}
+
+.data-table-clickable-row {
+  cursor: pointer;
+}
+
+.data-table-clickable-row:focus-visible {
+  outline: 2px solid rgba(var(--cui-primary-rgb), 0.35);
+  outline-offset: -2px;
+}
+
+.data-table-status-badge--info {
+  background-color: rgba(var(--cui-info-rgb), 0.1);
+  border-color: rgba(var(--cui-info-rgb), 0.35);
+  color: color-mix(in srgb, var(--cui-info) 82%, var(--app-text-base) 18%);
+}
+
+.data-table-status-badge--success {
+  background-color: rgba(var(--cui-success-rgb), 0.1);
+  border-color: rgba(var(--cui-success-rgb), 0.35);
+  color: color-mix(in srgb, var(--cui-success) 82%, var(--app-text-base) 18%);
+}
+
+.data-table-status-badge--warning {
+  background-color: rgba(var(--cui-warning-rgb), 0.14);
+  border-color: rgba(var(--cui-warning-rgb), 0.45);
+  color: color-mix(in srgb, var(--cui-warning) 72%, var(--app-text-base) 28%);
+}
+
+.data-table-status-badge--danger {
+  background-color: rgba(var(--cui-danger-rgb), 0.08);
+  border-color: rgba(var(--cui-danger-rgb), 0.32);
+  color: color-mix(in srgb, var(--cui-danger) 82%, var(--app-text-base) 18%);
+}
+
+.data-table-status-badge--dark {
+  background-color: rgba(var(--cui-dark-rgb), 0.08);
+  border-color: rgba(var(--cui-dark-rgb), 0.28);
+  color: color-mix(in srgb, var(--cui-dark) 82%, var(--app-text-base) 18%);
+}
+
+.data-table-scroll-tip-kbd {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 0.08rem 0.32rem;
+  font-size: var(--app-font-size-xs);
+  line-height: 1.2;
+}
+
+.data-table-scroll-tip-btn {
+  --cui-btn-color: var(--app-btn-muted-text);
+  --cui-btn-hover-color: var(--app-btn-muted-text-hover);
+  --cui-btn-hover-bg: var(--app-btn-muted-bg-hover);
+  --cui-btn-active-bg: var(--app-btn-muted-bg-active);
+  padding: 0.15rem 0.25rem;
+  min-width: auto;
+  line-height: 1;
+}
+
+.data-table-remarks-more {
+  --cui-btn-bg: var(--app-accent-bg);
+  --cui-btn-border-color: var(--app-accent-border);
+  --cui-btn-color: var(--app-accent-text);
+  --cui-btn-hover-bg: var(--app-accent-bg-hover);
+  --cui-btn-hover-border-color: var(--app-accent-border-hover);
+  --cui-btn-hover-color: var(--app-accent-text-hover);
+  --cui-btn-active-bg: var(--app-accent-bg-active);
+  --cui-btn-active-border-color: var(--app-accent-border-active);
+  --cui-btn-active-color: var(--app-accent-text-active);
+  --cui-btn-font-weight: 400;
+  --cui-btn-border-radius: var(--app-radius-pill);
+  --cui-btn-padding-y: 0.1rem;
+  --cui-btn-padding-x: 0.45rem;
+  --cui-btn-font-size: var(--app-font-size-xs);
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.data-table-shell {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-radius: var(--app-radius-lg);
+}
+
+.client-past-pics-table .table-scroll-viewport {
+  max-height: none !important;
+  overflow-y: hidden !important;
+}
+
+.procedure-title-cell {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.procedure-clickable-row {
+  cursor: pointer;
+}
+
+.procedure-clickable-row:focus-visible {
+  outline: 2px solid rgba(var(--cui-primary-rgb), 0.35);
+  outline-offset: -2px;
+}
+
+@media (max-width: 991.98px) {
+  .data-table-shell.records-table-shell {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .pipeline-entries-table.data-table-shell,
+  .pipeline-entries-table.records-table-shell {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .data-table-shell.procedure-records-table {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .procedure-records-table .records-mobile-list {
+    margin-top: 0;
+  }
+
+  .procedure-records-table > .d-lg-none.mb-2 .records-table-footer {
+    border-top: 0;
+    padding: 0 0.35rem;
+  }
+}
+

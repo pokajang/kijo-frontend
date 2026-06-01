@@ -1,0 +1,230 @@
+.salary-record-mobile-actions {
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.salary-record-action-header,
+.salary-record-action-cell {
+  width: 4.5rem;
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+.salary-record-action-cell .data-table-action-dropdown {
+  display: inline-flex;
+  justify-content: center;
+}
+
+.salary-record-action-cell .data-table-action-toggle {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 575.98px) {
+  .salary-workspace {
+    --salary-table-cell-padding-x: 0.7rem;
+    --salary-table-cell-edge-padding-x: 0.8rem;
+  }
+
+  .salary-workspace-header {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .salary-workspace-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .salary-workspace-action-cluster {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .salary-workspace-action-cluster .data-table-stats-toggle {
+    width: 1.875rem;
+    min-width: 1.875rem;
+    height: 1.875rem;
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .salary-workspace-action-cluster .btn-primary {
+    min-height: 1.875rem;
+    margin-left: 0.4rem;
+    padding-left: 0.55rem;
+    padding-right: 0.55rem;
+  }
+
+  .salary-section-header.card-header {
+    align-items: flex-start;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .salary-section-heading-group {
+    flex: 1 1 auto;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .salary-period-context {
+    gap: 0.35rem;
+    font-size: 0.75rem;
+  }
+
+  .salary-month-picker {
+    width: 100%;
+    align-items: flex-start;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+  }
+
+  .salary-month-picker-buttons {
+    width: 100%;
+    gap: 0.3rem;
+  }
+
+  .salary-month-picker-button.btn {
+    flex: 1 1 calc(33.333% - 0.3rem);
+    min-width: 0;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.3rem;
+    font-size: 0.6875rem;
+    white-space: normal;
+  }
+
+  .salary-month-guard-body.card-body {
+    padding: 0.5rem 0.75rem 0;
+  }
+
+  .salary-month-guard-content {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .salary-section-header.card-header > .btn {
+    flex: 0 0 auto;
+    max-width: 6rem;
+    min-height: 2rem;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.75rem;
+    line-height: 1.1;
+    white-space: normal;
+  }
+
+  .salary-section-body.card-body {
+    padding: 0.75rem;
+  }
+
+  .salary-claim-selector,
+  .salary-form-panel,
+  .salary-review-panel {
+    padding: 0.75rem;
+  }
+
+  .salary-adjustment-type-row {
+    gap: 0.4rem;
+  }
+
+  .salary-adjustment-type-card {
+    flex: 1 1 calc(50% - 0.4rem);
+    min-height: 2rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .salary-attachment-control {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .salary-claim-list-actions,
+  .salary-breakdown-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .salary-claim-list-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .salary-claim-list-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .salary-form-panel-header {
+    align-items: flex-start;
+  }
+
+  .salary-form-panel-header .btn {
+    flex: 0 0 auto;
+  }
+
+  .salary-settings-notice,
+  .salary-attachment-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .salary-detail-mobile-attachment .salary-attachment-actions {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .salary-claim-date-col,
+  .salary-claim-amount-col,
+  .salary-claim-km-col,
+  .salary-claim-attachment-col,
+  .salary-settings-month-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .salary-claim-draft-actions {
+    justify-content: flex-start;
+  }
+
+  .salary-submit-actions .btn {
+    order: 1;
+  }
+
+  .salary-draft-save-state {
+    flex: 1 0 100%;
+    order: 2;
+    text-align: right;
+  }
+
+  .salary-records-table .records-mobile-kv-grid {
+    gap: 0.35rem;
+  }
+
+  .salary-detail-mobile-metrics {
+    gap: 0.35rem;
+  }
+
+  .salary-detail-mobile-metric-value {
+    font-size: 0.8125rem;
+  }
+
+  .salary-statutory-grid {
+    grid-template-columns: minmax(3rem, 0.8fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .salary-statutory-grid > * {
+    font-size: 0.75rem;
+  }
+}

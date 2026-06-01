@@ -149,7 +149,8 @@ const AllProposalsTable = ({
   onDelete,
   onCreateBmCopy,
   loading = false,
-  language = 'en',
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -344,13 +345,10 @@ const AllProposalsTable = ({
 
   return (
     <>
-      <StatsStrip
-        items={statsItems}
-        loading={loading}
-        scopeLabel={language === 'ms-MY' ? 'BM' : 'ENG'}
-      />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
 
       <DataTableRecordControls
+        visible={controlsVisible}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search service, title, code, description, or creator"

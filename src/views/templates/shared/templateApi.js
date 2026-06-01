@@ -65,7 +65,11 @@ export const fetchTemplateJson = async (url, options = {}, signal) => {
   const payload = await parseResponsePayload(response)
 
   if (!response.ok) {
-    throw new Error(payload?.message || `Request failed with status ${response.status}`)
+    const error = new Error(payload?.message || `Request failed with status ${response.status}`)
+    error.status = response.status
+    error.notFound = response.status === 404
+    error.data = payload
+    throw error
   }
 
   return payload
@@ -171,7 +175,7 @@ export const getTemplate = (type, id, options = {}) => {
   })
   return fetchTemplateJson(
     `${getTemplateBaseUrl(type)}?${query.toString()}`,
-    options,
+    { ...options, silentError: true },
     options.signal,
   )
 }

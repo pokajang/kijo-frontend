@@ -28,6 +28,17 @@ describe('ClientRoiDetailPage helpers', () => {
     })
   })
 
+  it('keeps explicit all-time params even when the page default is year-to-date', () => {
+    const today = new Date(2026, 4, 19)
+    expect(getPeriodRangeFromSearchParams(new URLSearchParams('period=all'), 'ytd', today)).toEqual(
+      {
+        preset: 'all',
+        startDate: '',
+        endDate: '',
+      },
+    )
+  })
+
   it('recognizes generated year-to-date params as the default period', () => {
     const today = new Date(2026, 4, 19)
     const params = new URLSearchParams('start=2026-01-01&end=2026-05-19')
@@ -82,8 +93,14 @@ describe('ClientRoiDetailPage helpers', () => {
     expect(buildClientRoiDetailSearch({ startDate: '2026-01-01', endDate: '2026-05-19' })).toBe(
       '?start=2026-01-01&end=2026-05-19',
     )
+    expect(buildClientRoiDetailSearch({ preset: 'all', startDate: '', endDate: '' })).toBe(
+      '?period=all',
+    )
     expect(buildClientRoiListPath({ startDate: '2026-01-01', endDate: '2026-05-19' })).toBe(
       '/client/roi?start=2026-01-01&end=2026-05-19',
+    )
+    expect(buildClientRoiListPath({ preset: 'all', startDate: '', endDate: '' })).toBe(
+      '/client/roi?period=all',
     )
   })
 })

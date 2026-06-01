@@ -25,6 +25,31 @@ const money = (value) => {
   return Number.isFinite(parsed) && parsed > 0 ? `RM ${parsed.toFixed(2)}` : ''
 }
 
+const buildDocItem = ({
+  documentType,
+  recordId,
+  reference,
+  secondary = '',
+  href,
+  canEdit = false,
+  canDelete = false,
+  deleteKind,
+  ...rest
+}) => ({
+  documentType,
+  recordId,
+  reference: reference || '',
+  key: `${documentType}-${recordId || reference || 'record'}`,
+  label: reference || '',
+  secondary,
+  href,
+  canOpen: Boolean(href),
+  canEdit: Boolean(canEdit && href),
+  canDelete: Boolean(canDelete),
+  deleteKind,
+  ...rest,
+})
+
 export const buildProjectCommercialDocGroups = (docs = emptyDocs) => {
   const groups = []
 
@@ -36,69 +61,103 @@ export const buildProjectCommercialDocGroups = (docs = emptyDocs) => {
   push(
     'invoices',
     'Invoices',
-    safeArray(docs.invoices).map((invoice) => ({
-      key: `invoice-${invoice.id}`,
-      label: invoice.invoice_ref_no || `Invoice #${invoice.id}`,
-      secondary: [invoice.status, money(invoice.grand_total)].filter(Boolean).join(' | '),
-      href: `/commercial/invoice/${encodeURIComponent(invoice.id)}`,
-    })),
+    safeArray(docs.invoices).map((invoice) =>
+      buildDocItem({
+        documentType: 'invoice',
+        recordId: invoice.id,
+        reference: invoice.invoice_ref_no || `Invoice #${invoice.id}`,
+        secondary: [invoice.status, money(invoice.grand_total)].filter(Boolean).join(' | '),
+        href: `/commercial/invoice/${encodeURIComponent(invoice.id)}`,
+        canEdit: true,
+        canDelete: Boolean(invoice.invoice_ref_no),
+        deleteKind: 'invoice',
+        status: invoice.status || '',
+      }),
+    ),
   )
 
   push(
     'delivery-orders',
     'Delivery Orders',
-    safeArray(docs.delivery_orders).map((deliveryOrder) => ({
-      key: `do-${deliveryOrder.id}`,
-      label: deliveryOrder.do_number || `DO #${deliveryOrder.id}`,
-      href: `/commercial/delivery-order/${encodeURIComponent(deliveryOrder.id)}`,
-    })),
+    safeArray(docs.delivery_orders).map((deliveryOrder) =>
+      buildDocItem({
+        documentType: 'delivery-order',
+        recordId: deliveryOrder.id,
+        reference: deliveryOrder.do_number || `DO #${deliveryOrder.id}`,
+        href: `/commercial/delivery-order/${encodeURIComponent(deliveryOrder.id)}`,
+        canEdit: true,
+        canDelete: Boolean(deliveryOrder.id),
+        deleteKind: 'delivery-order',
+      }),
+    ),
   )
 
   push(
     'jd14',
     'JD14 Forms',
-    safeArray(docs.jd14).map((form) => ({
-      key: `jd14-${form.id}`,
-      label: form.approval_no || `JD14 #${form.id}`,
-      href: `/commercial/jd14/${encodeURIComponent(form.id)}`,
-    })),
+    safeArray(docs.jd14).map((form) =>
+      buildDocItem({
+        documentType: 'jd14',
+        recordId: form.id,
+        reference: form.approval_no || `JD14 #${form.id}`,
+        href: `/commercial/jd14/${encodeURIComponent(form.id)}`,
+        canEdit: true,
+        canDelete: Boolean(form.id),
+        deleteKind: 'jd14',
+      }),
+    ),
   )
 
   push(
     'vendor-loas',
     'Vendor LOAs',
-    safeArray(docs.vendor_loas).map((loa) => ({
-      key: `vendor-loa-${loa.id}`,
-      label: loa.loa_ref_no || `Vendor LOA #${loa.id}`,
-      secondary: loa.vendor_name || '',
-      href: `/commercial/vendor-loa/${encodeURIComponent(loa.id)}`,
-    })),
+    safeArray(docs.vendor_loas).map((loa) =>
+      buildDocItem({
+        documentType: 'vendor-loa',
+        recordId: loa.id,
+        reference: loa.loa_ref_no || `Vendor LOA #${loa.id}`,
+        secondary: loa.vendor_name || '',
+        href: `/commercial/vendor-loa/${encodeURIComponent(loa.id)}`,
+        canEdit: true,
+        canDelete: Boolean(loa.id),
+        deleteKind: 'vendor-loa-assignment',
+      }),
+    ),
   )
 
   push(
     'vendor-payments',
     'Vendor Payments',
-    safeArray(docs.vendor_payments).map((payment) => ({
-      key: `vendor-payment-${payment.id}`,
-      label: `Vendor payment #${payment.id}`,
-      secondary: [payment.vendor_name, payment.status, money(payment.amount)]
-        .filter(Boolean)
-        .join(' | '),
-      href: payment.vendor_loa_id
-        ? `/commercial/vendor-loa/${encodeURIComponent(payment.vendor_loa_id)}`
-        : undefined,
-    })),
+    safeArray(docs.vendor_payments).map((payment) =>
+      buildDocItem({
+        documentType: 'vendor-payment',
+        recordId: payment.id,
+        reference: `Vendor payment #${payment.id}`,
+        secondary: [payment.vendor_name, payment.status, money(payment.amount)]
+          .filter(Boolean)
+          .join(' | '),
+        href: payment.vendor_loa_id
+          ? `/commercial/vendor-loa/${encodeURIComponent(payment.vendor_loa_id)}`
+          : undefined,
+      }),
+    ),
   )
 
   push(
     'supplier-pos',
     'Supplier POs',
-    safeArray(docs.supplier_pos).map((po) => ({
-      key: `supplier-po-${po.po_id}`,
-      label: po.po_ref_no || `Supplier PO #${po.po_id}`,
-      secondary: [po.supplier_name, po.status].filter(Boolean).join(' | '),
-      href: `/commercial/supplier-po/${encodeURIComponent(po.po_id)}`,
-    })),
+    safeArray(docs.supplier_pos).map((po) =>
+      buildDocItem({
+        documentType: 'supplier-po',
+        recordId: po.po_id,
+        reference: po.po_ref_no || `Supplier PO #${po.po_id}`,
+        secondary: [po.supplier_name, po.status].filter(Boolean).join(' | '),
+        href: `/commercial/supplier-po/${encodeURIComponent(po.po_id)}`,
+        canDelete: Boolean(po.po_id),
+        deleteKind: 'supplier-po',
+        status: po.status || '',
+      }),
+    ),
   )
 
   return groups

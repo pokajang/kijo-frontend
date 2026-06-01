@@ -1,8 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CAlert, CButton, CCard, CCardBody, CCol, CRow } from '@coreui/react'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  CAlert,
+  CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
+  CCol,
+  CFormInput,
+  CFormLabel,
+  CModal,
+  CModalBody,
+  CModalFooter,
+  CModalHeader,
+  CModalTitle,
+  CRow,
+} from '@coreui/react'
 import { DataTableLoadingState } from '../../../components/datatable'
 import {
+  createLegalComplianceTemplate,
+  deleteLegalComplianceTemplate,
   getLegalComplianceTemplate,
   publishLegalComplianceTemplate,
   updateLegalComplianceTemplateDraft,
@@ -11,10 +28,12 @@ import TemplateContentView from './components/TemplateContentView'
 import TemplateDetailHeader from './components/template-detail/TemplateDetailHeader'
 import TemplateDetailModals from './components/template-detail/TemplateDetailModals'
 import TemplateGroupList from './components/template-detail/TemplateGroupList'
+import { insertItem, moveItem } from './utils/reorder'
 
 import {
   areTemplateContentsEqual,
   buildDraftPayload,
+  createTemplateSlug,
   defaultGroup,
   emptyContent,
   getDefaultDisclaimerText,
@@ -27,6 +46,7 @@ import {
 } from './legalComplianceTemplateUtils'
 
 const LegalComplianceTemplateDetail = () => {
+  const location = useLocation()
   const navigate = useNavigate()
   const { templateId: templateRouteKey } = useParams()
   const [searchParams] = useSearchParams()
@@ -50,9 +70,16 @@ const LegalComplianceTemplateDetail = () => {
   const [publishValidationErrors, setPublishValidationErrors] = useState([])
   const [publishModalError, setPublishModalError] = useState('')
   const [deleteGroupIndex, setDeleteGroupIndex] = useState(null)
+  const [isRenameModalVisible, setIsRenameModalVisible] = useState(false)
+  const [renameName, setRenameName] = useState('')
+  const [isDuplicateModalVisible, setIsDuplicateModalVisible] = useState(false)
+  const [duplicateName, setDuplicateName] = useState('')
+  const [isDeleteTemplateModalVisible, setIsDeleteTemplateModalVisible] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState(null)
   const [groupName, setGroupName] = useState('')
   const [editingGroupIndex, setEditingGroupIndex] = useState(null)
+  const [newGroupInsertIndex, setNewGroupInsertIndex] = useState(null)
+  const [isRearrangingGroups, setIsRearrangingGroups] = useState(false)
   const isOpeningGroupRef = useRef(false)
 
   const draftContent = useMemo(
@@ -69,8 +96,24 @@ const LegalComplianceTemplateDetail = () => {
   const hasUnpublishedDraftChanges = Boolean(
     template?.active_content && !areTemplateContentsEqual(draftContent, template.active_content),
   )
-  const shouldShowPublishNotice =
-    isEditMode && (isNeverPublished || hasUnpublishedDraftChanges || isDirty)
+  const shouldShowPublishNotice = isEditMode && isDirty
+
+  const getTemplateReadPath = (sourceTemplate = template, sourceName = template?.name) =>
+    `/internal-tools/legal-compliance/templates/${getTemplateRouteKey(sourceTemplate, sourceName)}`
+
+  const normalizeTemplateReturnPath = (returnTo) => {
+    if (typeof returnTo !== 'string' || !returnTo.startsWith(templatesPath)) return null
+
+    const returnUrl = new URL(returnTo, window.location.origin)
+    if (!returnUrl.pathname.startsWith(templatesPath)) return null
+    returnUrl.searchParams.delete('mode')
+
+    return `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`
+  }
+
+  const getTemplateReturnPath = () => {
+    return normalizeTemplateReturnPath(location.state?.returnTo) || getTemplateReadPath()
+  }
 
   const loadTemplate = useCallback(async () => {
     if (!templateRouteKey) return
@@ -91,6 +134,8 @@ const LegalComplianceTemplateDetail = () => {
       setPublishModalError('')
       setDeleteGroupIndex(null)
       setPendingNavigation(null)
+      setNewGroupInsertIndex(null)
+      setIsRearrangingGroups(false)
     } catch (loadError) {
       setError(loadError.message || 'Could not load template.')
     } finally {
@@ -194,6 +239,160 @@ const LegalComplianceTemplateDetail = () => {
     setEditDisclaimerText('')
   }
 
+  const openRenameModal = () => {
+    if (!template || isSaving) return
+    setRenameName(template.name || '')
+    setError('')
+    setMessage('')
+    setIsRenameModalVisible(true)
+  }
+
+  const closeRenameModal = () => {
+    if (isSaving) return
+    setIsRenameModalVisible(false)
+    setRenameName('')
+  }
+
+  const renameTemplate = async (event) => {
+    event.preventDefault()
+    if (!template || isSaving) return
+
+    const name = renameName.trim()
+    if (!name) {
+      setError('Template name is required.')
+      return
+    }
+
+    const nextTemplate = {
+      ...template,
+      name,
+    }
+    const nextDraftContent = {
+      ...draftContent,
+      title: name,
+      description: template.description || '',
+      assessment_tier: normalizeAssessmentTier(template.assessment_tier),
+      report_title: template.report_title || getDefaultReportTitle(name, template.assessment_tier),
+      disclaimer_text:
+        template.disclaimer_text || getDefaultDisclaimerText(template.assessment_tier),
+    }
+
+    setIsSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      const payload = await updateLegalComplianceTemplateDraft(
+        template.id,
+        buildDraftPayload(nextTemplate, nextDraftContent),
+      )
+      setTemplate((current) => ({
+        ...current,
+        name,
+        draft_content: nextDraftContent,
+        updated_at: payload?.data?.updated_at || current?.updated_at,
+      }))
+      setIsDirty(false)
+      setSaveState('draft_saved')
+      setIsRenameModalVisible(false)
+      setRenameName('')
+      setMessage(payload.message || 'Template renamed.')
+    } catch (renameError) {
+      setError(renameError.message || 'Could not rename template.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const openDuplicateModal = () => {
+    if (!template || isSaving) return
+    setDuplicateName(`${template.name} Copy`)
+    setError('')
+    setMessage('')
+    setIsDuplicateModalVisible(true)
+  }
+
+  const closeDuplicateModal = () => {
+    if (isSaving) return
+    setIsDuplicateModalVisible(false)
+    setDuplicateName('')
+  }
+
+  const duplicateTemplate = async (event) => {
+    event.preventDefault()
+    if (!template || isSaving) return
+
+    const name = duplicateName.trim()
+    if (!name) {
+      setError('Template name is required.')
+      return
+    }
+
+    const assessmentTier = normalizeAssessmentTier(template.assessment_tier)
+    const reportTitle = template.report_title || getDefaultReportTitle(name, assessmentTier)
+    const disclaimerText = template.disclaimer_text || getDefaultDisclaimerText(assessmentTier)
+
+    setIsSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      const payload = await createLegalComplianceTemplate({
+        name,
+        description: template.description || '',
+        assessment_tier: assessmentTier,
+        report_title: reportTitle,
+        disclaimer_text: disclaimerText,
+        is_default: false,
+        draft_content: {
+          ...draftContent,
+          title: name,
+          description: template.description || '',
+          assessment_tier: assessmentTier,
+          report_title: reportTitle,
+          disclaimer_text: disclaimerText,
+        },
+      })
+      setIsDuplicateModalVisible(false)
+      setDuplicateName('')
+      navigate(
+        `/internal-tools/legal-compliance/templates/${payload?.data?.slug || createTemplateSlug(name)}?mode=edit`,
+        { state: { returnTo: templatesPath } },
+      )
+    } catch (duplicateError) {
+      setError(duplicateError.message || 'Could not duplicate template.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const openDeleteTemplateModal = () => {
+    if (!template || isSaving || template.is_default) return
+    setError('')
+    setMessage('')
+    setIsDeleteTemplateModalVisible(true)
+  }
+
+  const closeDeleteTemplateModal = () => {
+    if (isSaving) return
+    setIsDeleteTemplateModalVisible(false)
+  }
+
+  const deleteTemplate = async () => {
+    if (!template || isSaving || template.is_default) return
+
+    setIsSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      await deleteLegalComplianceTemplate(template.id)
+      setIsDeleteTemplateModalVisible(false)
+      navigate('/internal-tools/legal-compliance/templates')
+    } catch (deleteError) {
+      setError(deleteError.message || 'Could not delete template.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const updateTemplateDetails = (event) => {
     event.preventDefault()
     updateTemplate({
@@ -208,14 +407,17 @@ const LegalComplianceTemplateDetail = () => {
     closeEditDetailsModal()
   }
 
-  const openAddGroupModal = () => {
+  const openAddGroupModal = (insertIndex = groups.length) => {
     setEditingGroupIndex(null)
+    setNewGroupInsertIndex(insertIndex)
+    setIsRearrangingGroups(false)
     setGroupName('')
     setIsGroupNameModalVisible(true)
   }
 
   const openEditGroupModal = (groupIndex) => {
     setEditingGroupIndex(groupIndex)
+    setNewGroupInsertIndex(null)
     setGroupName(groups[groupIndex]?.title || '')
     setIsGroupNameModalVisible(true)
   }
@@ -224,6 +426,7 @@ const LegalComplianceTemplateDetail = () => {
     setIsGroupNameModalVisible(false)
     setGroupName('')
     setEditingGroupIndex(null)
+    setNewGroupInsertIndex(null)
   }
 
   const saveGroupName = (event) => {
@@ -236,13 +439,14 @@ const LegalComplianceTemplateDetail = () => {
       if (editingGroupIndex === null) {
         return {
           ...content,
-          groups: [
-            ...currentGroups,
+          groups: insertItem(
+            currentGroups,
             {
               ...defaultGroup(),
               title: nextTitle,
             },
-          ],
+            newGroupInsertIndex ?? currentGroups.length,
+          ),
         }
       }
 
@@ -336,7 +540,7 @@ const LegalComplianceTemplateDetail = () => {
       setPublishChangeNote('')
       setPublishValidationErrors([])
       setPublishModalError('')
-      navigate('/internal-tools/legal-compliance/select-template')
+      navigate(getTemplateReturnPath(), { replace: true })
     } catch (publishError) {
       const nextError = publishError.message || 'Could not publish template.'
       setError(nextError)
@@ -352,6 +556,18 @@ const LegalComplianceTemplateDetail = () => {
       groups: (content.groups || []).filter((_, index) => index !== groupIndex),
     }))
     setDeleteGroupIndex(null)
+  }
+
+  const moveGroup = (fromIndex, toIndex) => {
+    updateContent((content) => {
+      const currentGroups = content.groups || []
+      const nextGroups = moveItem(currentGroups, fromIndex, toIndex)
+      if (nextGroups === currentGroups) return content
+      return {
+        ...content,
+        groups: nextGroups,
+      }
+    })
   }
 
   const openPublishModal = () => {
@@ -371,6 +587,7 @@ const LegalComplianceTemplateDetail = () => {
     if (navigation.type === 'edit') {
       navigate(
         `/internal-tools/legal-compliance/templates/${getTemplateRouteKey(template, template.name)}?mode=edit`,
+        { state: { returnTo: getTemplateReadPath() } },
       )
       return
     }
@@ -380,6 +597,7 @@ const LegalComplianceTemplateDetail = () => {
       const groupRouteKey = getGroupRouteKey(group, `legislation-${navigation.groupIndex + 1}`)
       navigate(
         `/internal-tools/legal-compliance/templates/${getTemplateRouteKey(template, template.name)}/groups/${encodeURIComponent(groupRouteKey)}`,
+        { state: { returnTo: getTemplateReturnPath() } },
       )
     }
   }
@@ -435,6 +653,7 @@ const LegalComplianceTemplateDetail = () => {
   }
 
   const handleGroupCardKeyDown = (event, groupIndex) => {
+    if (isRearrangingGroups) return
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
     openGroupEditor(groupIndex)
@@ -492,7 +711,73 @@ const LegalComplianceTemplateDetail = () => {
   }
 
   const renderReadMode = () => {
-    return <TemplateContentView groups={readGroups} />
+    return <TemplateContentView groups={readGroups} useCardHeaders />
+  }
+
+  const renderStatusMessages = () => (
+    <>
+      {error && <CAlert color="danger">{error}</CAlert>}
+      {message && <div className="small text-success mb-3">{message}</div>}
+      {shouldShowPublishNotice && <CAlert color="warning">{getPublishNoticeMessage()}</CAlert>}
+    </>
+  )
+
+  const renderTemplateActions = () => {
+    if (!template) return null
+
+    return (
+      <>
+        <CCardHeader>
+          <strong>Actions</strong>
+        </CCardHeader>
+        <CCardBody>
+          <div className="d-flex flex-wrap gap-2">
+            <CButton
+              color="primary"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                navigate(
+                  `/internal-tools/legal-compliance/templates/${getTemplateRouteKey(template, template.name)}?mode=edit`,
+                  { state: { returnTo: getTemplateReadPath() } },
+                )
+              }
+              disabled={isSaving}
+            >
+              Edit Template
+            </CButton>
+            <CButton
+              color="secondary"
+              size="sm"
+              variant="outline"
+              onClick={openRenameModal}
+              disabled={isSaving}
+            >
+              Rename
+            </CButton>
+            <CButton
+              color="secondary"
+              size="sm"
+              variant="outline"
+              onClick={openDuplicateModal}
+              disabled={isSaving}
+            >
+              Duplicate
+            </CButton>
+            <CButton
+              color="danger"
+              size="sm"
+              variant="outline"
+              onClick={openDeleteTemplateModal}
+              disabled={isSaving || Boolean(template.is_default)}
+              title={template.is_default ? 'Default template cannot be deleted.' : undefined}
+            >
+              Delete
+            </CButton>
+          </div>
+        </CCardBody>
+      </>
+    )
   }
 
   if (isLoading && !template) {
@@ -510,44 +795,53 @@ const LegalComplianceTemplateDetail = () => {
             isSaving={isSaving}
             statusText={getTemplateStatusText()}
             onEditDetails={openEditDetailsModal}
-            onEditTemplate={() =>
-              navigate(
-                `/internal-tools/legal-compliance/templates/${getTemplateRouteKey(template, template.name)}?mode=edit`,
-              )
-            }
             onBack={() => requestNavigation({ type: 'templates' })}
           />
-          <CCardBody>
-            {error && <CAlert color="danger">{error}</CAlert>}
-            {message && <div className="small text-success mb-3">{message}</div>}
-            {shouldShowPublishNotice && (
-              <CAlert color="warning">{getPublishNoticeMessage()}</CAlert>
-            )}
-            {template && (
-              <>
-                {!isEditMode ? (
-                  renderReadMode()
-                ) : groups.length === 0 ? (
-                  <div className="border rounded p-3">
-                    <div>
-                      <strong>No legislation added yet.</strong>
-                      <div className="text-body-secondary">
-                        Add legislation to start building this template.
+          {!isEditMode ? (
+            <>
+              {(error || message || shouldShowPublishNotice) && (
+                <CCardBody>{renderStatusMessages()}</CCardBody>
+              )}
+              {template && renderReadMode()}
+            </>
+          ) : (
+            <CCardBody>
+              {renderStatusMessages()}
+              {template && (
+                <>
+                  {groups.length === 0 ? (
+                    <div className="border rounded p-3">
+                      <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                        <div>
+                          <strong>No legislation added yet.</strong>
+                          <div className="text-body-secondary">
+                            Add legislation to start building this template.
+                          </div>
+                        </div>
+                        <CButton
+                          color="primary"
+                          size="sm"
+                          onClick={() => openAddGroupModal(0)}
+                          disabled={isSaving}
+                        >
+                          Add Legislation
+                        </CButton>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <TemplateGroupList
-                    groups={groups}
-                    isSaving={isSaving}
-                    onOpenGroup={openGroupEditor}
-                    onGroupKeyDown={handleGroupCardKeyDown}
-                    onEditGroup={openEditGroupModal}
-                    onDeleteGroup={setDeleteGroupIndex}
-                  />
-                )}
+                  ) : (
+                    <TemplateGroupList
+                      groups={groups}
+                      isSaving={isSaving}
+                      isRearranging={isRearrangingGroups}
+                      onOpenGroup={openGroupEditor}
+                      onGroupKeyDown={handleGroupCardKeyDown}
+                      onEditGroup={openEditGroupModal}
+                      onDeleteGroup={setDeleteGroupIndex}
+                      onInsertGroup={openAddGroupModal}
+                      onMoveGroup={moveGroup}
+                    />
+                  )}
 
-                {isEditMode && (
                   <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap mt-3">
                     <CButton
                       color="secondary"
@@ -558,18 +852,29 @@ const LegalComplianceTemplateDetail = () => {
                     >
                       Change History
                     </CButton>
-                    <CButton
-                      color="primary"
-                      size="sm"
-                      onClick={openAddGroupModal}
-                      disabled={isSaving}
-                    >
-                      Add Legislation
-                    </CButton>
+                    <div className="d-flex justify-content-end gap-2 flex-wrap">
+                      {groups.length > 1 && (
+                        <CButton
+                          color="secondary"
+                          variant={isRearrangingGroups ? undefined : 'outline'}
+                          size="sm"
+                          onClick={() => setIsRearrangingGroups((current) => !current)}
+                          disabled={isSaving}
+                        >
+                          {isRearrangingGroups ? 'Done' : 'Rearrange'}
+                        </CButton>
+                      )}
+                      <CButton
+                        color="primary"
+                        size="sm"
+                        onClick={() => openAddGroupModal(groups.length)}
+                        disabled={isSaving}
+                      >
+                        Add Legislation
+                      </CButton>
+                    </div>
                   </div>
-                )}
 
-                {isEditMode && (
                   <div className="mt-4">
                     <div className="d-flex justify-content-end gap-2 flex-wrap">
                       <CButton
@@ -591,10 +896,11 @@ const LegalComplianceTemplateDetail = () => {
                       </CButton>
                     </div>
                   </div>
-                )}
-              </>
-            )}
-          </CCardBody>
+                </>
+              )}
+            </CCardBody>
+          )}
+          {renderTemplateActions()}
         </CCard>
       </CCol>
 
@@ -643,6 +949,97 @@ const LegalComplianceTemplateDetail = () => {
         groups={groups}
         removeGroup={removeGroup}
       />
+
+      <CModal visible={isRenameModalVisible} onClose={closeRenameModal} alignment="center">
+        <form onSubmit={renameTemplate}>
+          <CModalHeader closeButton={!isSaving}>
+            <CModalTitle>Rename Template</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <CFormLabel>Template Name</CFormLabel>
+            <CFormInput
+              value={renameName}
+              onChange={(event) => setRenameName(event.target.value)}
+              placeholder="Enter template name"
+              disabled={isSaving}
+              autoFocus
+            />
+          </CModalBody>
+          <CModalFooter>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={closeRenameModal}
+              disabled={isSaving}
+            >
+              Cancel
+            </CButton>
+            <CButton color="primary" size="sm" type="submit" disabled={isSaving}>
+              {isSaving ? 'Renaming...' : 'Rename'}
+            </CButton>
+          </CModalFooter>
+        </form>
+      </CModal>
+
+      <CModal visible={isDuplicateModalVisible} onClose={closeDuplicateModal} alignment="center">
+        <form onSubmit={duplicateTemplate}>
+          <CModalHeader closeButton={!isSaving}>
+            <CModalTitle>Duplicate Template</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <CFormLabel>Template Name</CFormLabel>
+            <CFormInput
+              value={duplicateName}
+              onChange={(event) => setDuplicateName(event.target.value)}
+              placeholder="Enter duplicated template name"
+              disabled={isSaving}
+              autoFocus
+            />
+          </CModalBody>
+          <CModalFooter>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={closeDuplicateModal}
+              disabled={isSaving}
+            >
+              Cancel
+            </CButton>
+            <CButton color="primary" size="sm" type="submit" disabled={isSaving}>
+              {isSaving ? 'Duplicating...' : 'Duplicate'}
+            </CButton>
+          </CModalFooter>
+        </form>
+      </CModal>
+
+      <CModal
+        visible={isDeleteTemplateModalVisible}
+        onClose={closeDeleteTemplateModal}
+        alignment="center"
+      >
+        <CModalHeader closeButton={!isSaving}>
+          <CModalTitle>Delete Template</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          Delete <strong>{template?.name}</strong>?
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={closeDeleteTemplateModal}
+            disabled={isSaving}
+          >
+            Cancel
+          </CButton>
+          <CButton color="danger" size="sm" onClick={deleteTemplate} disabled={isSaving}>
+            {isSaving ? 'Deleting...' : 'Delete'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </CRow>
   )
 }

@@ -93,15 +93,25 @@ const RegisterModal = ({
       </CModalBody>
       <CModalFooter>
         {isRegistered ? (
-          <CButton color="secondary" variant="outline" onClick={() => setShowRegister(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRegister(false)}
+          >
             Close
           </CButton>
         ) : (
           <>
-            <CButton color="secondary" variant="outline" onClick={() => setShowRegister(false)}>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRegister(false)}
+            >
               Cancel
             </CButton>
-            <CButton color="success" onClick={onSave} disabled={saving}>
+            <CButton color="primary" size="sm" onClick={onSave} disabled={saving}>
               {saving ? (
                 <>
                   <CSpinner size="sm" className="me-2" />

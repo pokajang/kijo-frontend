@@ -1,5 +1,5 @@
 import React from 'react'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import {
@@ -19,6 +19,17 @@ import { normalizeVisibleColumns } from '../../../utils/datatable/columnVisibili
 
 const columns = [{ key: 'name', label: 'Name', sortable: true }]
 const rows = [{ id: 1, name: 'Alpha' }]
+
+const readDataTableScssSource = () => {
+  const scssDir = 'src/scss/custom'
+  const partialDir = `${scssDir}/data-table`
+  const partials = readdirSync(partialDir)
+    .filter((fileName) => fileName.endsWith('.scss'))
+    .sort()
+    .map((fileName) => readFileSync(`${partialDir}/${fileName}`, 'utf8'))
+
+  return [readFileSync(`${scssDir}/_data-table.scss`, 'utf8'), ...partials].join('\n')
+}
 
 afterEach(() => {
   cleanup()
@@ -701,6 +712,8 @@ describe('datatable shared components', () => {
     )
 
     expect(screen.getAllByLabelText('Rows per page').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText('Previous page').length).toBeGreaterThan(0)
+    expect(screen.getAllByLabelText('Next page').length).toBeGreaterThan(0)
   })
 
   it('renders embedded tables with shared width, nowrap, summary, and footer support', () => {
@@ -961,7 +974,7 @@ describe('datatable shared components', () => {
   })
 
   it('keeps shared sheet table shells rounded for Monitoring dashboard tables', () => {
-    const source = readFileSync('src/scss/custom/_data-table.scss', 'utf8')
+    const source = readDataTableScssSource()
 
     expect(source).toMatch(
       /\.data-table-sheet-shell\s*\{[^}]*border-radius: var\(--app-radius-lg\)/,
@@ -973,7 +986,7 @@ describe('datatable shared components', () => {
   })
 
   it('prevents double-thick bottom borders on Monitoring sheet tables', () => {
-    const source = readFileSync('src/scss/custom/_data-table.scss', 'utf8')
+    const source = readDataTableScssSource()
 
     expect(source).toMatch(
       /\.monitoring-table-frame \.monitoring-sheet-table tbody tr:last-child > \*,\s*\.monitoring-table-frame \.monitoring-sheet-table tfoot tr:last-child > \*\s*\{[^}]*border-bottom: 0 !important/,

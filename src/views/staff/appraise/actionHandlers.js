@@ -114,6 +114,7 @@ export const fetchFinalAppraisals = async (staffId = '', year = '', options = {}
 export const fetchFinalAppraisal = async (id) => {
   const json = await apiJson(`${API_BASE}hr/appraisals/final/${encodeURIComponent(id)}`, {
     credentials: 'include',
+    silentError: true,
   })
   if (json.status === 'success' && json.record) return json.record
   throw new Error(json.message || 'Failed to fetch final appraisal.')

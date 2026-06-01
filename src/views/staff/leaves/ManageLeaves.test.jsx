@@ -19,12 +19,20 @@ vi.mock('../../../components/navigation/ModuleNavStrip', () => ({
 }))
 
 vi.mock('./SectionAllLeaves', () => ({
-  default: ({ onManageEntitlements, onAssignLeave, onManageWorkflow }) => (
+  default: ({
+    onManageEntitlements,
+    onAssignLeave,
+    onManageWorkflow,
+    canRecommendActions,
+    canApproveActions,
+  }) => (
     <div>
       <span>All Leave Records</span>
+      <span data-testid="can-recommend">{String(canRecommendActions)}</span>
+      <span data-testid="can-approve">{String(canApproveActions)}</span>
       {onManageEntitlements && <button type="button">Entitlements</button>}
       {onAssignLeave && <button type="button">Assign Leave</button>}
-      {onManageWorkflow && <button type="button">Email Workflow</button>}
+      {onManageWorkflow && <button type="button">Workflows</button>}
     </div>
   ),
 }))
@@ -37,12 +45,9 @@ vi.mock('./SectionAssignLeaves', () => ({
   default: () => <div>Assign Leave Entitlement</div>,
 }))
 
-vi.mock('./SectionLeaveWorkflowSettings', () => ({
-  default: () => <div>Leave Workflow Settings</div>,
-}))
-
 vi.mock('./actionHandlers', () => ({
   getAllLeaves: vi.fn(async () => []),
+  getAllLeavesPayload: vi.fn(async () => ({ leaves: [], actionPermissions: null })),
   getStaffList: vi.fn(async () => []),
   getAllEntitlements: vi.fn(async () => []),
 }))
@@ -70,7 +75,7 @@ describe('ManageLeaves permissions', () => {
     expect(screen.getByText('All Leave Records')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Entitlements' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Assign Leave' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Email Workflow' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Workflows' })).not.toBeInTheDocument()
   })
 
   it('redirects managers away from leave admin sections', async () => {
@@ -109,6 +114,25 @@ describe('ManageLeaves permissions', () => {
 
     expect(screen.getByRole('button', { name: 'Entitlements' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Assign Leave' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Email Workflow' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Workflows' })).toBeInTheDocument()
+  })
+
+  it('uses backend workflow permissions for leave record actions', async () => {
+    authState.user = { roles: ['Employee'] }
+    AH.getAllLeavesPayload.mockResolvedValueOnce({
+      leaves: [],
+      actionPermissions: { canRecommend: false, canApprove: true },
+    })
+
+    render(
+      <MemoryRouter>
+        <ManageLeaves />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('can-recommend')).toHaveTextContent('false')
+      expect(screen.getByTestId('can-approve')).toHaveTextContent('true')
+    })
   })
 })

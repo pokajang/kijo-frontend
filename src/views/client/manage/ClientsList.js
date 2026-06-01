@@ -16,6 +16,7 @@ const ClientsList = () => {
   const [showDeleteCompanyModal, setShowDeleteCompanyModal] = useState(false)
   const [companyToDelete, setCompanyToDelete] = useState(null)
   const [deleteCompanyLoading, setDeleteCompanyLoading] = useState(false)
+  const [refreshStatusLoading, setRefreshStatusLoading] = useState(false)
 
   const fetchClients = async () => {
     setClientsLoading(true)
@@ -136,6 +137,40 @@ const ClientsList = () => {
     }
   }
 
+  const handleRefreshClientStatuses = async () => {
+    if (
+      !(await dialog.confirm(
+        'Refresh client statuses from invoice records? Clients with invoices will be marked as Old.',
+      ))
+    ) {
+      return
+    }
+
+    setRefreshStatusLoading(true)
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE}client-companies/refresh-status-from-invoices`,
+        {
+          method: 'POST',
+          credentials: 'include',
+        },
+      )
+      const result = await response.json()
+      if (response.ok && result.status === 'success') {
+        const updatedCount = Number(result.data?.updated_count || 0)
+        await dialog.alert(`${updatedCount} client${updatedCount === 1 ? '' : 's'} updated to Old.`)
+        await fetchClients()
+      } else {
+        dialog.alert(`Failed: ${result.message || 'Unable to refresh client statuses.'}`)
+      }
+    } catch (error) {
+      console.error('Refresh client status error:', error)
+      dialog.alert('Server error. Please try again later.')
+    } finally {
+      setRefreshStatusLoading(false)
+    }
+  }
+
   return (
     <>
       <ClientModuleNavStrip />
@@ -155,6 +190,8 @@ const ClientsList = () => {
         onSeeBranches={(client) => openCompanyRoute(client, '#branches')}
         onSeePics={(client) => openCompanyRoute(client, '#pics')}
         onCreateClient={() => navigate('/client/create')}
+        onRefreshClientStatuses={handleRefreshClientStatuses}
+        refreshStatusLoading={refreshStatusLoading}
       />
 
       <DeleteCompanyModal

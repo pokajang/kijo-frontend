@@ -26,7 +26,7 @@ const monitoringTourSteps = [
     target: '[data-tour="monitoring-performance-summary"]',
     title: 'Awarded Revenue Performance',
     content:
-      'This KPI strip tracks awarded or won quotation value against target, plus proposal value and win rate for the selected trend window.',
+      'This KPI strip tracks YTD realized revenue to the selected reporting period anchor month and win rate across the selected reporting period.',
     skipBeacon: true,
   },
   {
@@ -47,7 +47,7 @@ const monitoringTourSteps = [
     target: '[data-tour="monitoring-weekly-pipeline-quantity"]',
     title: 'Weekly Pipeline Quantity',
     content:
-      'This table shows how many pipeline activities happened in each week of the selected month. Totals are scoped by All staff or the selected staff member.',
+      'This table shows pipeline activities across the selected reporting period. Longer ranges compact earlier months and keep the anchor month weekly.',
     skipBeacon: true,
   },
   {
@@ -61,14 +61,14 @@ const monitoringTourSteps = [
     target: '[data-tour="monitoring-pipeline-status"]',
     title: 'Revenue Status',
     content:
-      'This card groups awarded or won revenue by service category, such as Training, Consultancy, Man Power, Equipment Supply, Engineering, and Infrastructure.',
+      'This card groups realized project revenue by service category, such as Training, Consultancy, Man Power, Equipment Supply, Engineering, and Infrastructure.',
     skipBeacon: true,
   },
   {
     target: '[data-tour="monitoring-weekly-status-value"]',
     title: 'Weekly Quantity and Revenue',
     content:
-      'This table shows awarded or won QTY and RM by service for each week. RM comes from awarded quotation value or manual closed estimated RM where available.',
+      'This table shows realized QTY and RM by service across the selected reporting period. RM comes from project quote value or valid manual closed estimated RM where available.',
     skipBeacon: true,
   },
   {
@@ -191,7 +191,7 @@ const MonitoringTourTooltip = ({
           <CButton
             type="button"
             color="secondary"
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="me-auto px-2"
             {...skipProps}
@@ -216,10 +216,12 @@ const MonitoringTourTooltip = ({
 }
 
 const MonitoringDashboard = ({
+  period,
   startDate,
   endDate,
   selectedStaffCode,
   selectedStaffLabel,
+  staffSelector,
   statusData,
   statusLoading,
   statusError,
@@ -319,13 +321,13 @@ const MonitoringDashboard = ({
           skip: 'Exit tour',
         }}
       />
-      <div className="d-flex align-items-center justify-content-end gap-2 mb-3">
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div className="d-flex align-items-center gap-2">{staffSelector}</div>
         <div className="d-flex align-items-center gap-2">
           <CButton
             type="button"
             size="sm"
             color="primary"
-            variant="outline"
             className="rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1"
             style={{ lineHeight: 1.1 }}
             data-tour="monitoring-add-manual-entry"
@@ -352,6 +354,8 @@ const MonitoringDashboard = ({
         </div>
       </div>
       <MonitoringTrends
+        period={period}
+        startDate={startDate}
         endDate={endDate}
         selectedStaffCode={selectedStaffCode}
         selectedStaffLabel={selectedStaffLabel}
@@ -361,12 +365,14 @@ const MonitoringDashboard = ({
         reloadKey={staffMatrixReloadKey}
       />
       <MonitoringStaffPipelineMatrix
+        period={period}
         startDate={startDate}
         endDate={endDate}
         enabled={!selectedStaffCode}
         reloadKey={staffMatrixReloadKey}
       />
       <MonitoringPipelineTools
+        period={period}
         startDate={startDate}
         endDate={endDate}
         selectedStaffCode={selectedStaffCode}
@@ -375,6 +381,7 @@ const MonitoringDashboard = ({
         onManualEntrySaved={handleManualEntrySaved}
       />
       <MonitoringPipelineStatus
+        period={period}
         startDate={startDate}
         endDate={endDate}
         selectedStaffCode={selectedStaffCode}

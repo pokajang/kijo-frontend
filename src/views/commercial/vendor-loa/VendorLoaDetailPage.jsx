@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
 import { DetailField, DetailSection } from '../shared/CommercialDetailFields'
+import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import MarkPaidModal from './MarkPaidModal'
 import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
@@ -25,6 +26,7 @@ const VendorLoaDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const returnContext = getCommercialReturnContext(location, '/commercial/vendor-loa')
   const [record, setRecord] = useState(location.state?.record || null)
   const recordRef = useRef(record)
   const [staffRoles, setStaffRoles] = useState([])
@@ -195,6 +197,10 @@ const VendorLoaDetailPage = () => {
 
     const confirmed = await dialog.confirm(
       `Are you sure you want to delete LOA ${record.loa_ref_no || ''}?`,
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) return
 
@@ -270,12 +276,20 @@ const VendorLoaDetailPage = () => {
     <>
       <DataTableDetailShell
         title="Vendor LOA Details"
-        backLabel="Back"
-        onBack={() => navigate('/commercial/vendor-loa')}
+        backLabel={returnContext.backLabel}
+        onBack={() => navigate(returnContext.backPath)}
         loading={loading}
         error={error}
         record={record}
         actions={[
+          returnContext.isProjectOrigin
+            ? {
+                key: 'view-list',
+                label: 'View Vendor LOA List',
+                buttonColor: 'secondary',
+                onClick: () => navigate(returnContext.listPath),
+              }
+            : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
           { key: 'generate-loa', label: 'Generate LOA', onClick: handleGenerateLoa },
           {
@@ -289,7 +303,7 @@ const VendorLoaDetailPage = () => {
         ]}
       >
         <DetailSection title="Details">
-          <DetailField label="LOA" value={record?.loa_ref_no} />
+          <DetailField label="Reference Number" value={record?.loa_ref_no} />
           <DetailField label="Vendor" value={record?.vendor_name} />
           <DetailField label="Project" value={record?.project_name} />
           <DetailField label="Service" value={record?.services_description} />

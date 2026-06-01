@@ -1,8 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { CCardHeader, CCardBody, CRow, CCol, CFormLabel } from '@coreui/react'
+import { CAlert, CCardHeader, CCardBody, CRow, CCol, CFormLabel } from '@coreui/react'
 
+import { DataTableLoadingState, DataTableStatusBadge } from '../../../../components/datatable'
 import { getProjectCrmDetails } from '../projectApi'
+import {
+  formatProjectDate,
+  formatProjectDateTime,
+  formatProjectDurationDays,
+} from '../projectDetailFormatters'
 
 const CRMDetailsCard = ({ project }) => {
   const [crmDetails, setCrmDetails] = useState(null)
@@ -56,26 +62,32 @@ const CRMDetailsCard = ({ project }) => {
         <strong>CRM Trails</strong>
       </CCardHeader>
 
-      <CCardBody>
+      <CCardBody className="project-detail-compact-body">
         {loading ? (
-          <p>Loading CRM details...</p>
+          <DataTableLoadingState message="Loading CRM details..." />
         ) : error ? (
-          <p className="text-danger">{error}</p>
+          <CAlert color="danger" className="mb-0 py-2">
+            {error}
+          </CAlert>
         ) : !crmDetails ? (
-          <p>No CRM details available.</p>
+          <p className="mb-0 text-medium-emphasis">No CRM details available.</p>
         ) : (
-          <CRow className="g-3">
+          <CRow className="project-detail-compact-grid">
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Quote Ref No</CFormLabel>
               <p>{crmDetails.quote_ref_no || '-'}</p>
             </CCol>
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Quote Created At</CFormLabel>
-              <p>{crmDetails.created_at || '-'}</p>
+              <p>{formatProjectDateTime(crmDetails.created_at)}</p>
             </CCol>
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Quotation Status</CFormLabel>
-              <p>{crmDetails.status || '-'}</p>
+              <p>
+                <DataTableStatusBadge tone={crmDetails.status === 'Awarded' ? 'success' : 'info'}>
+                  {crmDetails.status || '-'}
+                </DataTableStatusBadge>
+              </p>
             </CCol>
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Quotation Issuer</CFormLabel>
@@ -87,7 +99,7 @@ const CRMDetailsCard = ({ project }) => {
             </CCol>
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Award Date</CFormLabel>
-              <p>{crmDetails.award_date || '-'}</p>
+              <p>{formatProjectDate(crmDetails.award_date)}</p>
             </CCol>
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Status Remarks</CFormLabel>
@@ -95,14 +107,7 @@ const CRMDetailsCard = ({ project }) => {
             </CCol>
             <CCol md={4} className="project-detail-kv">
               <CFormLabel>Days to Award</CFormLabel>
-              <p>
-                {crmDetails.created_at && crmDetails.award_date
-                  ? Math.round(
-                      (new Date(crmDetails.award_date) - new Date(crmDetails.created_at)) /
-                        (1000 * 60 * 60 * 24),
-                    )
-                  : '-'}
-              </p>
+              <p>{formatProjectDurationDays(crmDetails.created_at, crmDetails.award_date)}</p>
             </CCol>
           </CRow>
         )}

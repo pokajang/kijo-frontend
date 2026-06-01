@@ -8,6 +8,7 @@ import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import FollowUpModal from '../modals/shared/FollowUpModal.jsx'
 import RecordDetailsActions from '../details/RecordDetailsActions'
 import RecordDetailsCard from '../details/RecordDetailsCard'
+import RecordProposalInlineDetails from '../details/RecordProposalInlineDetails'
 import { getStatusColor, useRecordDetailsData } from '../hooks/useRecordDetailsData'
 import { useRecordDetailsActions } from '../hooks/useRecordDetailsActions'
 
@@ -52,6 +53,7 @@ const RecordDetailsPage = () => {
     successActionType,
     currentUserName,
     currentUserEmail,
+    currentUser,
     isFailSubmitting,
     isSuccessSubmitting,
     isFollowUpSubmitting,
@@ -113,21 +115,24 @@ const RecordDetailsPage = () => {
             statusColor={getStatusColor}
           />
           {!loading && !error && record ? (
-            <RecordDetailsActions
-              handlers={handlers}
-              record={record}
-              isAwarded={isAwarded}
-              isSyncingClient={isSyncingClient}
-              onFollowUp={handleFollowUp}
-              onSharePdf={handleSharePdf}
-              onUnAward={handleUnAward}
-              onReAward={handleReAward}
-              onChangeToSuccess={handleChangeToSuccess}
-              onChangeToFail={handleChangeToFail}
-              onSyncClient={handleSyncClient}
-              onDelete={handleDelete}
-              onEmail={handleEmail}
-            />
+            <>
+              <RecordDetailsActions
+                handlers={handlers}
+                record={record}
+                isAwarded={isAwarded}
+                isSyncingClient={isSyncingClient}
+                onFollowUp={handleFollowUp}
+                onSharePdf={handleSharePdf}
+                onUnAward={handleUnAward}
+                onReAward={handleReAward}
+                onChangeToSuccess={handleChangeToSuccess}
+                onChangeToFail={handleChangeToFail}
+                onSyncClient={handleSyncClient}
+                onDelete={handleDelete}
+                onEmail={handleEmail}
+              />
+              <RecordProposalInlineDetails record={record} />
+            </>
           ) : null}
         </CCard>
       </CCol>
@@ -149,6 +154,8 @@ const RecordDetailsPage = () => {
           if (!isSuccessSubmitting) setShowSuccessModal(false)
         }}
         onConfirm={handleSuccessConfirm}
+        record={record}
+        currentUser={currentUser}
         value={successReason}
         onChange={setSuccessReason}
         awardDate={awardDate}

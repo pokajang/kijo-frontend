@@ -67,11 +67,18 @@ const MarkPaidModal = ({ visible, onClose, onConfirm, record, submitting = false
         </CForm>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose} disabled={submitting}>
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          disabled={submitting}
+        >
           Cancel
         </CButton>
         <CButton
           color="primary"
+          size="sm"
           onClick={handleSubmit}
           disabled={!record || !transactionDate || submitting}
         >

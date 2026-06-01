@@ -2,9 +2,13 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { installApiClient, setCsrfToken } from '../api/apiClient'
 
-const AuthContext = createContext(undefined)
+export const AuthContext = createContext(undefined)
 const API_BASE = import.meta.env.VITE_API_BASE || '/' // ensure trailing path segments resolve
 const SESSION_CHECK_INTERVAL_MS = 2 * 60 * 1000
+const PUBLIC_PATH_PREFIXES = ['/share/workload/', '/reset-password/']
+
+const isPublicPath = (path) =>
+  PUBLIC_PATH_PREFIXES.some((prefix) => String(path || '').startsWith(prefix))
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -74,7 +78,7 @@ const AuthProvider = ({ children }) => {
   }, [])
 
   const checkSession = useCallback(
-    async ({ signal, suppressAbortLog = false } = {}) => {
+    async ({ signal, suppressAbortLog = false, silentUnauthenticated = false } = {}) => {
       setStatus((prev) => (prev === 'authenticated' ? prev : 'loading'))
       try {
         const res = await fetch(`${API_BASE}auth/session`, {
@@ -83,6 +87,12 @@ const AuthProvider = ({ children }) => {
         })
 
         if (res.status === 401 || res.status === 403) {
+          if (silentUnauthenticated) {
+            setCsrfToken(null)
+            setUser(null)
+            setStatus('unauthenticated')
+            return false
+          }
           handleUnauthorized()
           return false
         }
@@ -93,6 +103,13 @@ const AuthProvider = ({ children }) => {
           setUser(data.user)
           setStatus('authenticated')
           return true
+        }
+
+        if (silentUnauthenticated) {
+          setCsrfToken(null)
+          setUser(null)
+          setStatus('unauthenticated')
+          return false
         }
 
         handleUnauthorized()
@@ -146,8 +163,48 @@ const AuthProvider = ({ children }) => {
     return { ok: false, message }
   }, [])
 
+  const requestPasswordReset = useCallback(async ({ email }) => {
+    const res = await fetch(`${API_BASE}auth/password/forgot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        message: data?.message || data?.error || 'Unable to request password reset.',
+      }
+    }
+
+    return { ok: true, data }
+  }, [])
+
+  const resetPassword = useCallback(async (payload) => {
+    const res = await fetch(`${API_BASE}auth/password/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      silentError: true,
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        message: data?.message || data?.error || 'Unable to reset password.',
+        errors: data?.errors,
+      }
+    }
+
+    return { ok: true, data }
+  }, [])
+
   useEffect(() => {
-    if (location.pathname === '/login') {
+    if (location.pathname === '/login' || isPublicPath(location.pathname)) {
       setStatus((prev) => (prev === 'authenticated' ? prev : 'unauthenticated'))
       return undefined
     }
@@ -174,18 +231,21 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     return installApiClient({
       onUnauthorized: async (response) => {
+        if (isPublicPath(location.pathname)) return
         if (logoutInFlightRef.current) return
         const shouldLogout = await shouldLogoutForResponse(response)
         if (shouldLogout) handleUnauthorized()
       },
     })
-  }, [handleUnauthorized, shouldLogoutForResponse])
+  }, [handleUnauthorized, location.pathname, shouldLogoutForResponse])
 
   const value = {
     user,
     status,
     isAuthenticated: status === 'authenticated',
     login,
+    requestPasswordReset,
+    resetPassword,
     logout,
     checkSession,
   }

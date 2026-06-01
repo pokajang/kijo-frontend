@@ -1,7 +1,7 @@
 const API_EVENT = 'kijo:api'
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 const SILENT_PATHS = ['auth/session', 'auth/logout']
-const AUTH_LOGIN_PATH = 'auth/login'
+const PUBLIC_UNSAFE_PATHS = ['auth/login', 'auth/password/forgot', 'auth/password/reset']
 
 let activeRequests = 0
 let unauthorizedHandler = null
@@ -19,6 +19,8 @@ const notify = (message, color = 'danger') => {
   if (!message) return
   emitApiEvent({ type: 'toast', message, color })
 }
+
+export const showApiToast = (message, color = 'success') => notify(message, color)
 
 const isAbortRequestError = (error, init = {}) => {
   const message = String(error?.message || '').toLowerCase()
@@ -182,7 +184,7 @@ export async function apiFetch(input, init = {}) {
       isUnsafeMethod(requestInit) &&
       !csrfToken &&
       apiPath &&
-      !apiPath.startsWith(AUTH_LOGIN_PATH)
+      !PUBLIC_UNSAFE_PATHS.some((publicPath) => apiPath.startsWith(publicPath))
     ) {
       await refreshCsrfToken(originalFetch)
     }
@@ -227,6 +229,8 @@ export async function apiJson(input, init = {}) {
       data?.message || data?.error || response.statusText || 'Request failed.',
     )
     error.response = response
+    error.status = response.status
+    error.notFound = response.status === 404
     error.data = data
     throw error
   }

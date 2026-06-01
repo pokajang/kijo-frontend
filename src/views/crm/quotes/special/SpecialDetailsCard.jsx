@@ -91,7 +91,6 @@ export default function SpecialDetailsCard({
                       <CButton
                         color="primary"
                         size="sm"
-                        variant="outline"
                         className="p-1 m-0 align-baseline"
                         onClick={() => navigate('/templates/create')}
                       >
@@ -141,7 +140,7 @@ export default function SpecialDetailsCard({
           {/* 5) Add blank */}
           <CRow className="mt-3">
             <CCol>
-              <CButton color="primary" variant="outline" size="sm" onClick={handleAddBlank}>
+              <CButton color="primary" size="sm" onClick={handleAddBlank}>
                 Add Line Item
               </CButton>
             </CCol>

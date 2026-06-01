@@ -188,10 +188,10 @@ const EditJd14Modal = ({ visible, formData, onClose }) => {
         </CForm>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={handleSubmit}>
+        <CButton color="primary" size="sm" onClick={handleSubmit}>
           Save Changes
         </CButton>
       </CModalFooter>

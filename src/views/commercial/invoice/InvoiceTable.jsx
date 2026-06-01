@@ -178,7 +178,6 @@ const parseMoney = (value) => {
 const InvoiceTable = ({
   invoices = [],
   loading = false,
-  scopeLabel = 'All years',
   beforeList,
   onAction,
   onDelete,
@@ -187,6 +186,7 @@ const InvoiceTable = ({
   desktopUtilityPortalId,
   mobileUtilityPortalId,
   onStatFilter,
+  statsVisible = true,
 }) => {
   const normalizedInvoices = useMemo(
     () =>
@@ -369,7 +369,7 @@ const InvoiceTable = ({
 
   return (
     <>
-      <StatsStrip items={statsItems} scopeLabel={scopeLabel} loading={loading} />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
       {beforeList}
       <DataTableRecordList
         rows={normalizedInvoices}

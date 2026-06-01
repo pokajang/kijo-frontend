@@ -1,5 +1,6 @@
 import dialog from '../../../components/dialog/dialogService'
 import { deleteProject, listProjects } from './projectApi'
+import { getProjectStatusTone } from './projectStatus'
 // src/views/project/actionHandlers.js
 
 // Fetch list of projects
@@ -11,6 +12,10 @@ export async function handleDeleteProject(project) {
     !(await dialog.confirm(
       `Are you sure you want to delete the project "${project.project_name}"?\n\n` +
         `This will permanently delete all associated data and mark the quotation as Failed.`,
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     ))
   ) {
     return false
@@ -33,17 +38,4 @@ export async function handleDeleteProject(project) {
 }
 
 // Determine badge color by status
-export function getBadgeColor(status) {
-  switch (status) {
-    case 'Active':
-      return 'info'
-    case 'Terminated':
-      return 'danger'
-    case 'Completed':
-      return 'success'
-    case 'Closed':
-      return 'danger'
-    default:
-      return 'info'
-  }
-}
+export const getBadgeColor = getProjectStatusTone

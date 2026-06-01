@@ -1,0 +1,56 @@
+.record-action-toggle {
+  color: var(--app-text-action) !important;
+}
+
+.record-action-dropdown {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.record-action-cell {
+  padding: 0 !important;
+}
+
+.record-action-cell .record-action-dropdown {
+  width: 100%;
+  height: 100%;
+}
+
+.record-action-cell .record-action-toggle {
+  width: 100%;
+  min-height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.35rem !important;
+  border-radius: 0;
+}
+
+.record-action-kebab {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.record-action-toggle:hover,
+.record-action-toggle:focus {
+  color: var(--app-text-action-hover) !important;
+}
+
+.record-action-menu {
+  --cui-dropdown-item-padding-y: 0.12rem;
+  --cui-dropdown-item-padding-x: 0.6rem;
+  min-width: 9.5rem;
+}
+
+.record-action-menu .dropdown-item {
+  line-height: 1.02;
+  min-height: unset;
+}
+
+.record-action-menu .dropdown-divider {
+  margin: 0.12rem 0;
+}
+

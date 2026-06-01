@@ -32,7 +32,11 @@ export const fetchJson = async (url, options = {}, signal) => {
     const payload = contentType.includes('application/json') ? await response.json() : null
 
     if (!response.ok) {
-      throw new Error(payload?.message || `Request failed with status ${response.status}`)
+      const error = new Error(payload?.message || `Request failed with status ${response.status}`)
+      error.status = response.status
+      error.notFound = response.status === 404
+      error.data = payload
+      throw error
     }
 
     return payload

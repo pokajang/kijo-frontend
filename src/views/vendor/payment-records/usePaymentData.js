@@ -2,10 +2,54 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { fetchAllPagedRecords, fetchJson } from '../../../utils/detailPages'
+import { getYearScopedParamSets, mergeUniqueRecordsById } from '../../../components/filters'
 
-const usePaymentData = () => {
+export const loadPaymentsForPeriod = async (apiBase, periodRange) => {
+  const paramSets = getYearScopedParamSets(periodRange)
+  const firstParams = paramSets[0] || {}
+  const data = await fetchJson(
+    `${apiBase}vendor-payments?${new URLSearchParams({
+      ...firstParams,
+      per_page: 1,
+    }).toString()}`,
+  )
+  const isSuccess =
+    data?.status === 'success' ||
+    data?.success === true ||
+    Array.isArray(data?.history) ||
+    Array.isArray(data?.data)
+
+  if (!isSuccess) {
+    return {
+      payments: [],
+      staffRoles: [],
+    }
+  }
+
+  const paymentLists = await Promise.all(
+    paramSets.map((params) =>
+      fetchAllPagedRecords({
+        url: `${apiBase}vendor-payments`,
+        params,
+        dataKeys: ['history', 'data'],
+        perPage: 100,
+      }),
+    ),
+  )
+  const roles = Array.isArray(data?.staff?.roles)
+    ? data.staff.roles
+    : Array.isArray(data?.roles)
+      ? data.roles
+      : []
+
+  return {
+    payments: mergeUniqueRecordsById(paymentLists.flat(), ['id', 'payment_id']),
+    staffRoles: roles,
+  }
+}
+
+const usePaymentData = (periodRange) => {
   const API_BASE = import.meta.env.VITE_API_BASE
-  const currentYear = new Date().getFullYear()
   const [staffRoles, setStaffRoles] = useState([])
   const [allPayments, setAllPayments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -13,33 +57,9 @@ const usePaymentData = () => {
   const fetchPayments = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await fetchJson(`${API_BASE}vendor-payments?year=${currentYear}&per_page=1`)
-      const isSuccess =
-        data?.status === 'success' ||
-        data?.success === true ||
-        Array.isArray(data?.history) ||
-        Array.isArray(data?.data)
-
-      if (isSuccess) {
-        const payments = await fetchAllPagedRecords({
-          url: `${API_BASE}vendor-payments`,
-          params: { year: currentYear },
-          dataKeys: ['history', 'data'],
-          perPage: 100,
-        })
-        setAllPayments(payments)
-
-        // grab the roles array (or empty array)
-        const roles = Array.isArray(data?.staff?.roles)
-          ? data.staff.roles
-          : Array.isArray(data?.roles)
-            ? data.roles
-            : []
-        setStaffRoles(roles)
-      } else {
-        setAllPayments([])
-        setStaffRoles([])
-      }
+      const { payments, staffRoles: roles } = await loadPaymentsForPeriod(API_BASE, periodRange)
+      setAllPayments(payments)
+      setStaffRoles(roles)
     } catch (err) {
       console.error('Failed to fetch payments', err)
       setAllPayments([])
@@ -47,7 +67,7 @@ const usePaymentData = () => {
     } finally {
       setLoading(false)
     }
-  }, [API_BASE, currentYear])
+  }, [API_BASE, periodRange])
 
   useEffect(() => {
     fetchPayments()

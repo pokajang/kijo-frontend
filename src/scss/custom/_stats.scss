@@ -1,5 +1,5 @@
 .stats-strip-shell {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .stats-strip-scope {
@@ -13,7 +13,7 @@
 .stats-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.75rem;
+  gap: 0.625rem;
 }
 
 .stats-strip--auto {
@@ -50,6 +50,17 @@
   flex-grow: 1.7;
 }
 
+@media (min-width: 992px) {
+  .stats-strip--auto.stats-strip--count-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .stats-strip--auto.stats-strip--count-4 .stats-strip-widget {
+    flex: initial;
+  }
+}
+
 .stats-strip--balanced .stats-strip-widget--sm {
   grid-column: span 2;
 }
@@ -68,7 +79,7 @@
 
 .stats-strip-widget {
   min-width: 0;
-  min-height: 78px;
+  min-height: 60px;
   height: 100%;
   margin-bottom: 0;
   overflow: hidden;
@@ -84,12 +95,12 @@
   align-items: center;
   align-self: stretch;
   display: flex;
-  flex: 0 0 52px;
+  flex: 0 0 44px;
   justify-content: center;
-  margin-right: 0.75rem !important;
-  width: 52px;
-  min-width: 52px;
-  padding: 0.25rem !important;
+  margin-right: 0.65rem !important;
+  width: 44px;
+  min-width: 44px;
+  padding: 0.2rem !important;
 }
 
 .stats-strip-widget .card-body > div:last-child {
@@ -100,8 +111,8 @@
 }
 
 .stats-strip-widget .card-body > div:first-child svg {
-  width: 1.65rem;
-  height: 1.65rem;
+  width: 1.35rem;
+  height: 1.35rem;
 }
 
 .stats-strip-widget .fs-6 {
@@ -137,9 +148,9 @@
 }
 
 .stats-strip-widget__value {
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: 700;
-  line-height: normal;
+  line-height: 1.1;
   overflow-wrap: anywhere;
 }
 
@@ -176,7 +187,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   display: -webkit-box;
-  margin-top: 0.3rem;
+  margin-top: 0.2rem;
   font-size: 0.75rem;
   font-weight: 600;
   line-height: 1.15;
@@ -237,13 +248,13 @@
   }
 
   .stats-strip-widget {
-    min-height: 74px;
+    min-height: 58px;
   }
 
   .stats-strip-widget .card-body > div:first-child {
-    flex-basis: 46px;
-    width: 46px;
-    min-width: 46px;
-    padding: 0.2rem !important;
+    flex-basis: 40px;
+    width: 40px;
+    min-width: 40px;
+    padding: 0.15rem !important;
   }
 }

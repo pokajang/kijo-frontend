@@ -322,10 +322,10 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
         </CCard>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={handleSave}>
+        <CButton color="primary" size="sm" onClick={handleSave}>
           Save
         </CButton>
       </CModalFooter>

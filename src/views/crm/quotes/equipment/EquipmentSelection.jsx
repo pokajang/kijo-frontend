@@ -58,7 +58,6 @@ export default function EquipmentSelection({
                   No equipment items found.{' '}
                   <CButton
                     color="primary"
-                    variant="outline"
                     size="sm"
                     className="p-1 m-0 align-baseline"
                     onClick={() => navigate('/catalog/create', { state: { returnTo } })}

@@ -17,6 +17,7 @@ const CreateVendor = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const returnTo = location.state?.returnTo || '/vendor/manage'
+  const returnState = location.state?.returnState || null
   const [vendorList, setVendorList] = useState([])
 
   const [formData, setFormData] = useState({
@@ -188,8 +189,21 @@ const CreateVendor = () => {
 
       if (result?.status === 'success' || result?.success === true) {
         const createdName = formData.vendorName
+        const createdVendorId = result.vendor_id || result.id
         handleReset()
         fetchAllVendors()
+
+        if (returnState) {
+          navigate(returnTo, {
+            state: {
+              ...returnState,
+              createdVendorId,
+              createdVendorName: createdName,
+            },
+          })
+          return
+        }
+
         const goToList = await dialog.confirm(
           `Vendor "${createdName}" successfully created. Go to vendor list?`,
           {

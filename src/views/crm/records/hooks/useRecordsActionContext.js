@@ -11,8 +11,6 @@ export const createWorkflowModalBindings = ({
   setSuccessDescription,
   setSuccessLoa,
   openSuccessModal,
-  closeViewModal,
-  openViewModal,
   getFailServiceKey = () => null,
   getSuccessServiceKey = () => null,
   getSuccessActionType = () => 'award',
@@ -36,10 +34,6 @@ export const createWorkflowModalBindings = ({
       serviceKey: getSuccessServiceKey(),
       actionType: getSuccessActionType(),
     }),
-  setShowViewModal: (show) => {
-    if (!show) closeViewModal()
-  },
-  setSelectedRecord: (record) => openViewModal(record),
 })
 
 export const createStateModalBindings = ({
@@ -52,8 +46,6 @@ export const createStateModalBindings = ({
   setDescription,
   setClientLoaRefNo,
   setSelectedRecordIdForSuccess,
-  setShowViewModal = () => {},
-  setSelectedRecord = () => {},
 }) => ({
   setShowFailModal,
   setFailureReason,
@@ -64,8 +56,6 @@ export const createStateModalBindings = ({
   setDescription,
   setClientLoaRefNo,
   setSelectedRecordIdForSuccess,
-  setShowViewModal,
-  setSelectedRecord,
 })
 
 export const useRecordsActionBuilder = ({

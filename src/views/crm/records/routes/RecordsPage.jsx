@@ -1,9 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
+import { CButton, CCard, CCardBody, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
+import { DataTableCardHeader, DataTableStatsToggle } from '../../../../components/datatable'
 import RecordsServiceStrip from '../../../../components/records/RecordsServiceStrip.jsx'
+import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { getQuoteServiceFromRecordTab } from '../config/recordTabs.js'
 import { useRecordsController } from '../hooks/useRecordsController'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
@@ -18,7 +20,6 @@ const RecordsPage = () => {
     recordTabOptions,
     ActiveTableComponent,
     tableProps,
-    ViewModal,
     FailModal,
     SuccessModal,
     FollowUpModalComponent,
@@ -29,6 +30,7 @@ const RecordsPage = () => {
     handleFollowUpSubmit,
     currentUserName,
     currentUserEmail,
+    currentUser,
     emailConfirmRecord,
     setEmailConfirmRecord,
     emailDraftSubject,
@@ -43,6 +45,7 @@ const RecordsPage = () => {
     isFailModalSubmitting,
     isSuccessModalSubmitting,
     isFollowUpModalSubmitting,
+    successRecord,
     negotiationRecord,
     negotiationForm,
     setNegotiationFormValue,
@@ -50,11 +53,19 @@ const RecordsPage = () => {
     handleNegotiationSubmit,
     isNegotiationSubmitting,
   } = useRecordsController()
+  const [headerScopeLabel, setHeaderScopeLabel] = useState('')
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('crm.records')
   const returnTo = `${location.pathname}${location.search}`
   const initialQuoteService = getQuoteServiceFromRecordTab(activeTab)
   const createQuotePath = initialQuoteService
     ? `/crm/quotes?service=${encodeURIComponent(initialQuoteService)}`
     : '/crm/quotes'
+
+  const handleRecordsTabChange = (...args) => {
+    setHeaderScopeLabel('')
+    handleTabChange(...args)
+  }
 
   return (
     <>
@@ -63,12 +74,17 @@ const RecordsPage = () => {
           <RecordsServiceStrip
             tabs={recordTabOptions}
             activeTab={activeTab}
-            onTabChange={handleTabChange}
+            onTabChange={handleRecordsTabChange}
             ariaLabel="Quotation record groups"
           />
           <CCard className="mb-4 records-page-card">
-            <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap records-page-card-header">
-              <strong>Quotes</strong>
+            <DataTableCardHeader title="Quotes" scopeLabel={headerScopeLabel}>
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
+              />
               <CButton
                 color="primary"
                 size="sm"
@@ -82,22 +98,19 @@ const RecordsPage = () => {
                 <CIcon icon={cilPlus} />
                 Create Quotation
               </CButton>
-            </CCardHeader>
+            </DataTableCardHeader>
             <CCardBody className="records-page-card-body">
               <div>
-                <ActiveTableComponent {...tableProps} />
+                <ActiveTableComponent
+                  {...tableProps}
+                  statsVisible={statsVisible}
+                  controlsVisible={controlsVisible}
+                  onStatsScopeLabelChange={setHeaderScopeLabel}
+                />
               </div>
             </CCardBody>
           </CCard>
         </CCol>
-
-        <ViewModal
-          visible={modalState.view.visible}
-          record={modalState.view.record}
-          onClose={() => {
-            dispatchModal({ type: 'CLOSE_VIEW' })
-          }}
-        />
 
         <FailModal
           visible={modalState.fail.visible}
@@ -120,6 +133,8 @@ const RecordsPage = () => {
             }
           }}
           onConfirm={handleSuccessConfirm}
+          record={successRecord}
+          currentUser={currentUser}
           value={modalState.success.reason}
           onChange={(reason) => dispatchModal({ type: 'SET_SUCCESS_REASON', payload: reason })}
           awardDate={modalState.success.awardDate}

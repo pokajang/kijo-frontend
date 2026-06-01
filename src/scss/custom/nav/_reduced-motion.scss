@@ -1,0 +1,15 @@
+@media (prefers-reduced-motion: reduce) {
+  .app-main-header .app-bottom-nav-link,
+  .app-main-header .app-bottom-nav-link--button,
+  .app-main-header .app-bottom-nav-dropdown-toggle,
+  .app-bottom-nav-item,
+  .app-bottom-nav-link,
+  .app-bottom-nav-link--button,
+  .app-bottom-nav-dropdown-toggle {
+    transition: none;
+  }
+
+  .app-header-dropdown-item {
+    transition: none;
+  }
+}

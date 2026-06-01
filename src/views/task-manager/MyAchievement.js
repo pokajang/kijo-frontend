@@ -24,8 +24,7 @@ const MyAchievement = ({ tasks, todayStr }) => {
 
       if (status.startsWith('Completed (On time)')) {
         onTime++
-      } else {
-        // anything else starting with 'Completed (' is late
+      } else if (status.startsWith('Completed but late')) {
         late++
       }
     })

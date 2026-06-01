@@ -37,6 +37,8 @@ const secondaryMobileStages = [
 
 const formatNumber = (value) => Number(value || 0).toLocaleString()
 const formatRm = (value) => Number(value || 0).toLocaleString()
+const formatPeriodScope = (rangeLabel) =>
+  rangeLabel ? `Reporting period: ${rangeLabel}` : 'Reporting period: selected period'
 
 const renderDetailMetric = (value, details, title, metricLabel, formatter = formatNumber) => (
   <MonitoringCellDetailsPopover
@@ -301,7 +303,7 @@ const StaffPipelineMatrixTable = ({ rows, totals }) => (
   />
 )
 
-const MonitoringStaffPipelineMatrix = ({ startDate, endDate, enabled, reloadKey = 0 }) => {
+const MonitoringStaffPipelineMatrix = ({ period, startDate, endDate, enabled, reloadKey = 0 }) => {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -321,6 +323,7 @@ const MonitoringStaffPipelineMatrix = ({ startDate, endDate, enabled, reloadKey 
           {
             start_date: startDate,
             end_date: endDate,
+            period,
           },
           controller.signal,
         )
@@ -347,18 +350,16 @@ const MonitoringStaffPipelineMatrix = ({ startDate, endDate, enabled, reloadKey 
     loadStaffMatrix()
 
     return () => controller.abort()
-  }, [enabled, endDate, reloadKey, startDate])
+  }, [enabled, endDate, period, reloadKey, startDate])
 
   if (!enabled) return null
 
   const rows = Array.isArray(data?.rows) ? data.rows : []
   const totals = data?.totals
-  const title = data?.monthLabel
-    ? `${data.monthLabel} All Staff Pipeline Snapshot`
-    : 'All Staff Pipeline Snapshot'
+  const periodScopeLabel = formatPeriodScope(data?.rangeLabel)
 
   return (
-    <MonitoringSheetCard title={title} scopeLabel="All staff">
+    <MonitoringSheetCard title="All Staff Pipeline Snapshot" scopeLabel="All staff">
       <style>{`
         .monitoring-staff-matrix-table th,
         .monitoring-staff-matrix-table td {
@@ -388,9 +389,12 @@ const MonitoringStaffPipelineMatrix = ({ startDate, endDate, enabled, reloadKey 
       ) : error ? (
         <div className="text-center text-danger py-4">{error}</div>
       ) : rows.length === 0 ? (
-        <div className="text-center text-muted py-4">No staff activity found for this month.</div>
+        <div className="text-center text-muted py-4">No staff activity found for this period.</div>
       ) : (
         <>
+          <div className="d-flex justify-content-end mb-2">
+            <div className="small text-muted text-nowrap">{periodScopeLabel}</div>
+          </div>
           <StaffMatrixMobileList rows={rows} />
           <StaffPipelineMatrixTable rows={rows} totals={totals} />
         </>

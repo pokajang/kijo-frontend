@@ -209,8 +209,17 @@ export default function SpecialTemplate({ isEdit, editId }) {
 
         {/* Actions */}
         <CRow className="mt-4">
-          <CCol>
-            <CButton color="primary" onClick={handleSave} disabled={saving}>
+          <CCol className="d-flex justify-content-end gap-2">
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={handleSecondaryAction}
+              disabled={saving}
+            >
+              {isEdit ? 'Cancel' : 'Reset'}
+            </CButton>
+            <CButton color="primary" size="sm" onClick={handleSave} disabled={saving}>
               {saving
                 ? finalizingBmTranslation
                   ? 'Saving BM Proposal...'
@@ -224,15 +233,6 @@ export default function SpecialTemplate({ isEdit, editId }) {
                   : isEdit
                     ? 'Update Changes'
                     : 'Create'}
-            </CButton>
-            <CButton
-              color="secondary"
-              variant="outline"
-              className="ms-2"
-              onClick={handleSecondaryAction}
-              disabled={saving}
-            >
-              {isEdit ? 'Cancel' : 'Reset'}
             </CButton>
           </CCol>
         </CRow>

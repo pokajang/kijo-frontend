@@ -501,7 +501,6 @@ const SelectClientCard = ({
                   No client found.{' '}
                   <CButton
                     color="primary"
-                    variant="outline"
                     size="sm"
                     data-api-busy-allow="true"
                     onClick={() => {
@@ -598,7 +597,7 @@ const SelectClientCard = ({
                 <div className="d-flex flex-column gap-2">
                   <div className="d-flex gap-2 mb-1">
                     <CButton
-                      color="primary"
+                      color="secondary"
                       variant="outline"
                       size="sm"
                       onClick={handleSelectAllContacts}

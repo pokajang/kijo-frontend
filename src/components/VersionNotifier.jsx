@@ -23,7 +23,7 @@ const VersionNotifier = () => {
           <div className="fw-semibold mb-2">This version is no longer supported.</div>
           <div>{bodyText}</div>
           <div className="mt-3 d-flex justify-content-end">
-            <CButton color="danger" onClick={reload} disabled={isReloading}>
+            <CButton color="primary" size="sm" onClick={reload} disabled={isReloading}>
               {isReloading ? 'Reloading...' : 'Reload now'}
             </CButton>
           </div>
@@ -43,7 +43,7 @@ const VersionNotifier = () => {
       >
         <div>{bodyText}</div>
         <div className="ms-3 d-flex gap-2">
-          <CButton color="info" variant="outline" onClick={reload} disabled={isReloading}>
+          <CButton color="primary" size="sm" onClick={reload} disabled={isReloading}>
             {isReloading ? 'Reloading...' : 'Reload now'}
           </CButton>
         </div>

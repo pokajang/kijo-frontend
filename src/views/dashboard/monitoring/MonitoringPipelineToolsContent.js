@@ -36,7 +36,7 @@ const PipelineQuantityInfo = () => (
       <li>Meeting / Pitching = manual meeting or pitching entries.</li>
       <li>Proposal = issued quotation/proposal count + manual proposal entries.</li>
       <li>Negotiation = manual negotiation entries.</li>
-      <li>Closed = awarded or won quotation data + manual closed entries.</li>
+      <li>Closed = realized project revenue + valid manual closed entries.</li>
     </ul>
     <div className="fw-semibold mb-1">System limitations</div>
     <ul className="mb-2 ps-3">
@@ -65,6 +65,25 @@ const PipelineQuantityInfo = () => (
 )
 
 const formatNumber = (value) => Number(value || 0).toLocaleString()
+const formatPeriodScope = (rangeLabel) =>
+  rangeLabel ? `Reporting period: ${rangeLabel}` : 'Reporting period: selected period'
+
+const getColumnValue = (row, columnKey) => row?.periodic?.[columnKey] ?? row?.weekly?.[columnKey]
+const getColumnDetails = (row, columnKey) =>
+  row?.details?.periodic?.[columnKey] ?? row?.details?.weekly?.[columnKey]
+
+const groupPeriodColumns = (periodColumns) =>
+  periodColumns.reduce((groups, column) => {
+    const lastGroup = groups[groups.length - 1]
+    const groupLabel = column.groupLabel || (column.type === 'month' ? 'Monthly' : 'Period')
+    if (lastGroup?.label === groupLabel) {
+      lastGroup.columns.push(column)
+      return groups
+    }
+
+    groups.push({ label: groupLabel, columns: [column] })
+    return groups
+  }, [])
 
 const renderDetailMetric = (value, details, title, metricLabel) => (
   <MonitoringCellDetailsPopover
@@ -83,7 +102,7 @@ const renderSegmentCell = (value, details, title, metricLabel) =>
 const renderSegmentPlainCell = (value) =>
   value === null || value === undefined ? notTrackedLabel : formatNumber(value)
 
-const WeeklyQuantityMobileList = ({ rows, weeks, totals }) => (
+const PeriodQuantityMobileList = ({ rows, periodColumns, totals }) => (
   <div className="d-md-none d-grid gap-2">
     {rows.map((row, index) => (
       <div key={`${row.label}-mobile`} className="dashboard-table-mobile-card">
@@ -94,17 +113,17 @@ const WeeklyQuantityMobileList = ({ rows, weeks, totals }) => (
           <div className="fw-semibold">Total: {formatNumber(row.total)}</div>
         </div>
         <div className="row g-2">
-          {weeks.map((week) => (
+          {periodColumns.map((column) => (
             <div
               className="col-6 d-flex align-items-center justify-content-between gap-2"
-              key={`${row.label}-${week.key}-mobile`}
+              key={`${row.label}-${column.key}-mobile`}
             >
-              <span className="small text-muted">{week.label}</span>
+              <span className="small text-muted">{column.label}</span>
               <span className="text-end">
                 {renderDetailMetric(
-                  row.weekly?.[week.key],
-                  row.details?.weekly?.[week.key],
-                  `${formatPipelineToolLabel(row.label)} - ${week.label}`,
+                  getColumnValue(row, column.key),
+                  getColumnDetails(row, column.key),
+                  `${formatPipelineToolLabel(row.label)} - ${column.label}`,
                   'quantity',
                 )}
               </span>
@@ -119,17 +138,17 @@ const WeeklyQuantityMobileList = ({ rows, weeks, totals }) => (
         <div>{formatNumber(totals?.total)}</div>
       </div>
       <div className="row g-2">
-        {weeks.map((week) => (
+        {periodColumns.map((column) => (
           <div
             className="col-6 d-flex align-items-center justify-content-between gap-2"
-            key={`mobile-total-${week.key}`}
+            key={`mobile-total-${column.key}`}
           >
-            <span className="small text-muted">{week.label}</span>
+            <span className="small text-muted">{column.label}</span>
             <span className="text-end">
               {renderDetailMetric(
-                totals?.weekly?.[week.key],
-                totals?.details?.weekly?.[week.key],
-                `Total - ${week.label}`,
+                getColumnValue(totals, column.key),
+                getColumnDetails(totals, column.key),
+                `Total - ${column.label}`,
                 'quantity',
               )}
             </span>
@@ -193,106 +212,121 @@ const SegmentBreakdownMobileList = ({ rows }) => (
   </div>
 )
 
-const WeeklyQuantityTable = ({ rows, weeks, totals }) => (
-  <DataTableSheet
-    desktopBreakpoint="md"
-    shellClassName="monitoring-table-frame"
-    tableClassName="monitoring-sheet-table"
-    headerRows={[
-      {
-        key: 'group',
+const PeriodQuantityTable = ({ rows, periodColumns, totals }) => {
+  const columnGroups = groupPeriodColumns(periodColumns)
+  const firstColumnKey = periodColumns[0]?.key
+
+  return (
+    <DataTableSheet
+      desktopBreakpoint="md"
+      shellClassName="monitoring-table-frame"
+      tableClassName="monitoring-sheet-table"
+      headerRows={[
+        {
+          key: 'group',
+          cells: [
+            {
+              key: 'index',
+              content: '#',
+              rowSpan: 2,
+              className: 'border-0 text-center monitoring-row-index-col',
+            },
+            {
+              key: 'label',
+              content: 'Pipeline Tools',
+              rowSpan: 2,
+              className: 'border-0 monitoring-row-heading-col',
+            },
+            ...columnGroups.map((group, groupIndex) => ({
+              key: group.label,
+              content: group.label,
+              colSpan: group.columns.length,
+              className: `border-0 text-center monitoring-data-band ${groupIndex === 0 ? 'monitoring-data-start-col' : ''}`,
+            })),
+            {
+              key: 'total',
+              content: 'Total',
+              rowSpan: 2,
+              className: 'border-0 text-center text-nowrap monitoring-total-col',
+            },
+          ],
+        },
+        {
+          key: 'period-columns',
+          cells: periodColumns.map((column) => ({
+            key: column.key,
+            content: (
+              <>
+                <div>{column.label}</div>
+                <div className="small text-muted fw-normal">{column.rangeLabel}</div>
+              </>
+            ),
+            className: `border-0 text-center text-nowrap monitoring-week-heading monitoring-period-col ${column.key === firstColumnKey ? 'monitoring-data-start-col' : ''}`,
+          })),
+        },
+      ]}
+      rows={rows.map((row, index) => ({
+        key: row.label,
         cells: [
           {
             key: 'index',
-            content: '#',
-            rowSpan: 2,
-            className: 'border-0 text-center',
-            style: { width: '56px' },
+            content: index + 1,
+            className: 'border-0 text-center fw-semibold monitoring-row-index-col',
           },
-          { key: 'label', content: 'Pipeline Tools', rowSpan: 2, className: 'border-0' },
           {
-            key: 'quantity',
-            content: 'Quantity',
-            colSpan: weeks.length + 1,
-            className: 'border-0 text-center monitoring-data-band monitoring-data-start-col',
+            key: 'label',
+            content: formatPipelineToolLabel(row.label),
+            className: 'border-0 fw-semibold monitoring-row-heading-col',
           },
-        ],
-      },
-      {
-        key: 'weeks',
-        cells: [
-          ...weeks.map((week) => ({
-            key: week.key,
-            content: (
-              <>
-                <div>{week.label}</div>
-                <div className="small text-muted fw-normal">{week.rangeLabel}</div>
-              </>
-            ),
-            className: `border-0 text-center text-nowrap monitoring-week-heading ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
-          })),
-          {
-            key: 'total',
-            content: 'Total',
-            className:
-              'border-0 text-center text-nowrap monitoring-total-col monitoring-week-heading',
-          },
-        ],
-      },
-    ]}
-    rows={rows.map((row, index) => ({
-      key: row.label,
-      cells: [
-        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
-        {
-          key: 'label',
-          content: formatPipelineToolLabel(row.label),
-          className: 'border-0 fw-semibold',
-        },
-        ...weeks.map((week) => ({
-          key: `${row.label}-${week.key}`,
-          content: renderDetailMetric(
-            row.weekly?.[week.key],
-            row.details?.weekly?.[week.key],
-            `${formatPipelineToolLabel(row.label)} - ${week.label}`,
-            'quantity',
-          ),
-          className: `border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
-        })),
-        {
-          key: 'total',
-          content: formatNumber(row.total),
-          className: 'border-0 text-center fw-semibold monitoring-total-col',
-        },
-      ],
-    }))}
-    footerRows={[
-      {
-        key: 'total',
-        className: 'fw-semibold text-muted',
-        cells: [
-          { key: 'index', content: ' ', className: 'border-0 text-center' },
-          { key: 'label', content: 'Total', className: 'border-0' },
-          ...weeks.map((week) => ({
-            key: `total-${week.key}`,
+          ...periodColumns.map((column) => ({
+            key: `${row.label}-${column.key}`,
             content: renderDetailMetric(
-              totals?.weekly?.[week.key],
-              totals?.details?.weekly?.[week.key],
-              `Total - ${week.label}`,
+              getColumnValue(row, column.key),
+              getColumnDetails(row, column.key),
+              `${formatPipelineToolLabel(row.label)} - ${column.label}`,
               'quantity',
             ),
-            className: `border-0 text-center ${week === weeks[0] ? 'monitoring-data-start-col' : ''}`,
+            className: `border-0 text-center monitoring-period-col ${column.key === firstColumnKey ? 'monitoring-data-start-col' : ''}`,
           })),
           {
             key: 'total',
-            content: formatNumber(totals?.total),
-            className: 'border-0 text-center monitoring-total-col',
+            content: formatNumber(row.total),
+            className: 'border-0 text-center fw-semibold monitoring-total-col',
           },
         ],
-      },
-    ]}
-  />
-)
+      }))}
+      footerRows={[
+        {
+          key: 'total',
+          className: 'fw-semibold text-muted',
+          cells: [
+            {
+              key: 'index',
+              content: ' ',
+              className: 'border-0 text-center monitoring-row-index-col',
+            },
+            { key: 'label', content: 'Total', className: 'border-0 monitoring-row-heading-col' },
+            ...periodColumns.map((column) => ({
+              key: `total-${column.key}`,
+              content: renderDetailMetric(
+                getColumnValue(totals, column.key),
+                getColumnDetails(totals, column.key),
+                `Total - ${column.label}`,
+                'quantity',
+              ),
+              className: `border-0 text-center monitoring-period-col ${column.key === firstColumnKey ? 'monitoring-data-start-col' : ''}`,
+            })),
+            {
+              key: 'total',
+              content: formatNumber(totals?.total),
+              className: 'border-0 text-center monitoring-total-col',
+            },
+          ],
+        },
+      ]}
+    />
+  )
+}
 
 const SegmentBreakdownTable = ({ rows }) => (
   <DataTableSheet
@@ -307,10 +341,14 @@ const SegmentBreakdownTable = ({ rows }) => (
             key: 'index',
             content: '#',
             rowSpan: 2,
-            className: 'border-0 text-center',
-            style: { width: '56px' },
+            className: 'border-0 text-center monitoring-row-index-col',
           },
-          { key: 'label', content: 'Pipeline Tools', rowSpan: 2, className: 'border-0' },
+          {
+            key: 'label',
+            content: 'Pipeline Tools',
+            rowSpan: 2,
+            className: 'border-0 monitoring-row-heading-col',
+          },
           ...segmentColumns.map((segment) => ({
             key: segment.key,
             content: segment.label,
@@ -338,11 +376,15 @@ const SegmentBreakdownTable = ({ rows }) => (
     rows={rows.map((row, index) => ({
       key: `${row.label}-segment`,
       cells: [
-        { key: 'index', content: index + 1, className: 'border-0 text-center fw-semibold' },
+        {
+          key: 'index',
+          content: index + 1,
+          className: 'border-0 text-center fw-semibold monitoring-row-index-col',
+        },
         {
           key: 'label',
           content: formatPipelineToolLabel(row.label),
-          className: 'border-0 fw-semibold',
+          className: 'border-0 fw-semibold monitoring-row-heading-col',
         },
         {
           key: 'individual-qty',
@@ -394,60 +436,78 @@ const SegmentBreakdownTable = ({ rows }) => (
   />
 )
 
-const MonitoringPipelineToolsContent = ({ data, segmentDataTitle }) => (
-  <>
-    <style>{`
-      .monitoring-pipeline-info-popover {
-        --cui-popover-max-width: min(640px, calc(100vw - 48px));
-        width: min(640px, calc(100vw - 48px));
-        max-width: min(640px, calc(100vw - 48px)) !important;
-      }
+const MonitoringPipelineToolsContent = ({ data, segmentDataTitle }) => {
+  const periodColumns = data?.periodColumns || data?.weeks || []
+  const periodScopeLabel = formatPeriodScope(data?.rangeLabel)
 
-      .monitoring-pipeline-info-popover .popover-body {
-        overflow-wrap: break-word;
-      }
-    `}</style>
-    <div className="d-flex flex-column gap-3">
-      <div>
-        <div
-          className="d-flex align-items-center gap-2 mb-2"
-          data-tour="monitoring-weekly-pipeline-quantity"
-        >
-          <div className="d-flex align-items-center gap-2">
-            <div className="fw-semibold">Weekly Pipeline Quantity</div>
-            <CPopover
-              className="monitoring-pipeline-info-popover"
-              trigger="focus"
-              placement="right"
-              title="Pipeline quantity logic"
-              content={<PipelineQuantityInfo />}
-            >
-              <CButton
-                type="button"
-                size="sm"
-                color="secondary"
-                variant="ghost"
-                className="p-0 text-muted"
-                aria-label="Pipeline quantity calculation information"
+  return (
+    <>
+      <style>{`
+        .monitoring-pipeline-info-popover {
+          --cui-popover-max-width: min(640px, calc(100vw - 48px));
+          width: min(640px, calc(100vw - 48px));
+          max-width: min(640px, calc(100vw - 48px)) !important;
+        }
+
+        .monitoring-pipeline-info-popover .popover-body {
+          overflow-wrap: break-word;
+        }
+      `}</style>
+      <div className="d-flex flex-column gap-3">
+        <div>
+          <div
+            className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2"
+            data-tour="monitoring-weekly-pipeline-quantity"
+          >
+            <div className="d-flex align-items-center gap-2">
+              <div className="fw-semibold">Pipeline Quantity by Period</div>
+              <CPopover
+                className="monitoring-pipeline-info-popover"
+                trigger="focus"
+                placement="right"
+                title="Pipeline quantity logic"
+                content={<PipelineQuantityInfo />}
               >
-                <CIcon icon={cilInfo} size="sm" />
-              </CButton>
-            </CPopover>
+                <CButton
+                  type="button"
+                  size="sm"
+                  color="secondary"
+                  variant="ghost"
+                  className="p-0 text-muted"
+                  aria-label="Pipeline quantity calculation information"
+                >
+                  <CIcon icon={cilInfo} size="sm" />
+                </CButton>
+              </CPopover>
+            </div>
+            <div className="small text-muted text-nowrap">{periodScopeLabel}</div>
           </div>
+          <PeriodQuantityMobileList
+            rows={data.rows}
+            periodColumns={periodColumns}
+            totals={data.totals}
+          />
+          <PeriodQuantityTable
+            rows={data.rows}
+            periodColumns={periodColumns}
+            totals={data.totals}
+          />
         </div>
-        <WeeklyQuantityMobileList rows={data.rows} weeks={data.weeks} totals={data.totals} />
-        <WeeklyQuantityTable rows={data.rows} weeks={data.weeks} totals={data.totals} />
-      </div>
 
-      <div>
-        <div className="mb-2" data-tour="monitoring-pipeline-segment-data">
-          <div className="fw-semibold text-capitalize">{segmentDataTitle}</div>
+        <div>
+          <div
+            className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2"
+            data-tour="monitoring-pipeline-segment-data"
+          >
+            <div className="fw-semibold text-capitalize">{segmentDataTitle}</div>
+            <div className="small text-muted text-nowrap">{periodScopeLabel}</div>
+          </div>
+          <SegmentBreakdownMobileList rows={data.rows} />
+          <SegmentBreakdownTable rows={data.rows} />
         </div>
-        <SegmentBreakdownMobileList rows={data.rows} />
-        <SegmentBreakdownTable rows={data.rows} />
       </div>
-    </div>
-  </>
-)
+    </>
+  )
+}
 
 export default MonitoringPipelineToolsContent

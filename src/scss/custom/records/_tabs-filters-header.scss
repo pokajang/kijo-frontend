@@ -1,0 +1,95 @@
+.records-tab-nav-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1.25rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.records-tab-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.records-tab-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  border-radius: 0;
+  padding: 0;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.records-tab-btn:hover,
+.records-tab-btn:focus,
+.records-tab-btn:active {
+  color: var(--cui-primary);
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.records-tab-btn--active,
+.records-tab-btn--active:hover,
+.records-tab-btn--active:focus,
+.records-tab-btn--active:active {
+  color: var(--cui-primary);
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.records-filter-row .form-label,
+.records-filter-advanced .form-label {
+  margin-bottom: 0.35rem;
+  font-size: var(--app-font-size-sm);
+}
+
+.records-filter-row {
+  --records-filter-control-height: calc(1.8125rem + 2px);
+}
+
+.data-table-card-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  justify-content: space-between;
+}
+
+.data-table-card-header__title-group {
+  align-items: baseline;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.65rem;
+  min-width: 0;
+}
+
+.data-table-card-header__title {
+  min-width: 0;
+}
+
+.data-table-card-header__scope {
+  color: var(--cui-secondary-color);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-table-card-header__actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  justify-content: flex-end;
+}
+

@@ -4,6 +4,7 @@ import {
   CCard,
   CCardHeader,
   CCardBody,
+  CCardFooter,
   CRow,
   CCol,
   CFormLabel,
@@ -227,14 +228,21 @@ const CreateProject = () => {
               onChange={handleChange}
             />
           </CCol>
-
-          <CCol md={12}>
-            <CButton color="primary" onClick={handleSubmit}>
-              Create Project
-            </CButton>
-          </CCol>
         </CRow>
       </CCardBody>
+      <CCardFooter className="d-flex justify-content-end gap-2">
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/project/manage')}
+        >
+          Cancel
+        </CButton>
+        <CButton color="primary" size="sm" onClick={handleSubmit}>
+          Create Project
+        </CButton>
+      </CCardFooter>
     </CCard>
   )
 }

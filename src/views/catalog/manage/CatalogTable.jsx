@@ -118,6 +118,7 @@ const CatalogTable = ({
   onDelete,
   desktopToolsId,
   mobileToolsId,
+  statsVisible = true,
 }) => {
   const normalizedItems = useMemo(
     () =>
@@ -213,7 +214,7 @@ const CatalogTable = ({
 
   return (
     <>
-      <StatsStrip items={statsItems} scopeLabel={`YTD ${new Date().getFullYear()}`} />
+      {statsVisible && <StatsStrip items={statsItems} />}
       {beforeList}
       <DataTableRecordList
         rows={normalizedItems}

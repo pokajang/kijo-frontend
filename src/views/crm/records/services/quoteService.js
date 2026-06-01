@@ -47,6 +47,28 @@ const toBool = (value) => {
   return false
 }
 
+const toPositiveInt = (value) => {
+  const id = Number(value)
+  return Number.isFinite(id) && id > 0 ? id : null
+}
+
+const normalizeProposalPayload = (row = {}, fallback = {}) => {
+  const proposal = row.proposal || {}
+
+  return {
+    attachedToPdf: toBool(
+      proposal.attachedToPdf ?? proposal.attached_to_pdf ?? fallback.attachedToPdf,
+    ),
+    templateType: proposal.templateType ?? proposal.template_type ?? fallback.templateType ?? null,
+    templateId: toPositiveInt(proposal.templateId ?? proposal.template_id ?? fallback.templateId),
+    title: proposal.title ?? fallback.title ?? null,
+    language: proposal.language ?? fallback.language ?? null,
+    canPreviewInline: toBool(
+      proposal.canPreviewInline ?? proposal.can_preview_inline ?? fallback.canPreviewInline,
+    ),
+  }
+}
+
 const normalizeProjectStatus = (status) =>
   String(status || '')
     .trim()
@@ -152,6 +174,25 @@ export async function fetchTrainingQuotes() {
         createdByCode: row.created_by_code || '-',
 
         attach_proposal: Number(row.attach_proposal) === 1,
+        attachProposal: Number(row.attach_proposal) === 1,
+        proposalId: row.proposal_id
+          ? Number(row.proposal_id)
+          : row.training_id
+            ? Number(row.training_id)
+            : null,
+        proposal_id: row.proposal_id
+          ? Number(row.proposal_id)
+          : row.training_id
+            ? Number(row.training_id)
+            : null,
+        proposalLanguage: row.proposal_language || 'en',
+        proposal_language: row.proposal_language || 'en',
+        proposal: normalizeProposalPayload(row, {
+          attachedToPdf: Number(row.attach_proposal) === 1,
+          templateType: 'training',
+          templateId: row.proposal_id ? Number(row.proposal_id) : null,
+          language: row.proposal_language || null,
+        }),
         revisionNo: row.revision_no ? parseInt(row.revision_no, 10) : 0,
         priceExceptionRequestId: row.price_exception_request_id
           ? Number(row.price_exception_request_id)
@@ -173,6 +214,8 @@ export async function fetchTrainingQuotes() {
 
         formData: {
           trainingTopic: row.training_title,
+          trainingId: row.training_id ? Number(row.training_id) : null,
+          proposalId: row.proposal_id ? Number(row.proposal_id) : null,
           trainingTypeOption: row.training_type,
           paymentMethod: row.payment_method,
           selectedDate: row.proposed_date,
@@ -280,6 +323,17 @@ export async function fetchIHQuotes() {
 
         // proposal flag
         attach_proposal: Number(row.attach_proposal) === 1,
+        attachProposal: Number(row.attach_proposal) === 1,
+        proposalId: row.service_id ? Number(row.service_id) : null,
+        proposal_id: row.service_id ? Number(row.service_id) : null,
+        proposalLanguage: row.proposal_language || 'en',
+        proposal_language: row.proposal_language || 'en',
+        proposal: normalizeProposalPayload(row, {
+          attachedToPdf: Number(row.attach_proposal) === 1,
+          templateType: 'ih',
+          templateId: row.service_id ? Number(row.service_id) : null,
+          language: row.proposal_language || null,
+        }),
         priceExceptionRequestId: row.price_exception_request_id
           ? Number(row.price_exception_request_id)
           : null,
@@ -302,6 +356,7 @@ export async function fetchIHQuotes() {
         // service‐specific form data
         formData: {
           serviceGroup: row.service_group,
+          serviceId: row.service_id ? Number(row.service_id) : null,
           serviceTitle: row.service_title,
           serviceCode: row.service_code,
           siteAddress: row.site_address,
@@ -397,6 +452,17 @@ export async function fetchManpowerQuotes() {
 
         // proposal flag
         attach_proposal: Number(row.attach_proposal) === 1,
+        attachProposal: Number(row.attach_proposal) === 1,
+        proposalId: row.mp_id ? Number(row.mp_id) : null,
+        proposal_id: row.mp_id ? Number(row.mp_id) : null,
+        proposalLanguage: row.proposal_language || 'en',
+        proposal_language: row.proposal_language || 'en',
+        proposal: normalizeProposalPayload(row, {
+          attachedToPdf: Number(row.attach_proposal) === 1,
+          templateType: 'manpower',
+          templateId: row.mp_id ? Number(row.mp_id) : null,
+          language: row.proposal_language || null,
+        }),
         priceExceptionRequestId: row.price_exception_request_id
           ? Number(row.price_exception_request_id)
           : null,
@@ -419,6 +485,7 @@ export async function fetchManpowerQuotes() {
         // service-specific form data
         formData: {
           serviceGroup: row.service_group,
+          mpId: row.mp_id ? Number(row.mp_id) : null,
           serviceTitle: row.service_title,
           serviceCode: row.service_code,
           manpowerRateType: row.manpower_rate_type || '',
@@ -515,6 +582,17 @@ export async function fetchSpecialQuotes() {
 
         // --- Proposal flag ---
         attachProposal: Number(row.attach_proposal) === 1,
+        attach_proposal: Number(row.attach_proposal) === 1,
+        proposalId: row.sp_id ? Number(row.sp_id) : null,
+        proposal_id: row.sp_id ? Number(row.sp_id) : null,
+        proposalLanguage: row.proposal_language || 'en',
+        proposal_language: row.proposal_language || 'en',
+        proposal: normalizeProposalPayload(row, {
+          attachedToPdf: Number(row.attach_proposal) === 1,
+          templateType: 'special',
+          templateId: row.sp_id ? Number(row.sp_id) : null,
+          language: row.proposal_language || null,
+        }),
         priceExceptionRequestId: row.price_exception_request_id
           ? Number(row.price_exception_request_id)
           : null,
@@ -537,6 +615,7 @@ export async function fetchSpecialQuotes() {
         // --- Service‐specific form data ---
         formData: {
           spId: row.sp_id ? parseInt(row.sp_id, 10) : null,
+          proposalId: row.sp_id ? parseInt(row.sp_id, 10) : null,
           serviceTitle: row.service_title || '',
           serviceCode: row.service_code || '',
           generalRemarks: row.general_remarks || '',
@@ -637,6 +716,15 @@ export async function fetchEquipmentQuotes() {
 
         // --- Proposal flag ---
         attachProposal: Number(row.attach_proposal) === 1,
+        attach_proposal: Number(row.attach_proposal) === 1,
+        proposal: normalizeProposalPayload(row, {
+          attachedToPdf: Number(row.attach_proposal) === 1,
+          templateType: null,
+          templateId: null,
+          title: null,
+          language: null,
+          canPreviewInline: false,
+        }),
         priceExceptionRequestId: row.price_exception_request_id
           ? Number(row.price_exception_request_id)
           : null,

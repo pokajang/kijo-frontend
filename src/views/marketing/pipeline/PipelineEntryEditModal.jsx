@@ -285,10 +285,15 @@ const PipelineEntryEditModal = ({ visible, entry, onClose, onSaved }) => {
         </CRow>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" variant="outline" disabled={saving} onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" disabled={saving} onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" disabled={saving || proofCompressing} onClick={saveEntry}>
+        <CButton
+          color="primary"
+          size="sm"
+          disabled={saving || proofCompressing}
+          onClick={saveEntry}
+        >
           {saving ? 'Saving...' : 'Save Changes'}
         </CButton>
       </CModalFooter>

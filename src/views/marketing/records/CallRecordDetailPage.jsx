@@ -114,7 +114,13 @@ const CallRecordDetailPage = () => {
 
   const handleDeleteContact = async () => {
     if (!contact?.id) return
-    if (!(await dialog.confirm('Delete this contact?'))) return
+    if (
+      !(await dialog.confirm('Delete this contact?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       await fetchApi.deleteContact(contact.id)
       showInfo('Contact deleted successfully.')
@@ -126,7 +132,13 @@ const CallRecordDetailPage = () => {
 
   const handleDeleteCall = async (call) => {
     if (!call?.id) return
-    if (!(await dialog.confirm('Delete this call log?'))) return
+    if (
+      !(await dialog.confirm('Delete this call log?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       await fetchApi.deleteCall(call.id)
       showInfo('Call log deleted.')

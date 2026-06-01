@@ -70,10 +70,16 @@ const DebtorMarkPaidModal = ({ visible, debtor, submitting = false, onClose, onC
         </div>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" variant="outline" onClick={onClose} disabled={submitting}>
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          disabled={submitting}
+        >
           Cancel
         </CButton>
-        <CButton color="primary" onClick={handleConfirm} disabled={submitting}>
+        <CButton color="primary" size="sm" onClick={handleConfirm} disabled={submitting}>
           {submitting ? 'Saving...' : 'Mark Paid'}
         </CButton>
       </CModalFooter>

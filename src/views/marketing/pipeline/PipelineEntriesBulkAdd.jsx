@@ -531,7 +531,6 @@ const PipelineEntriesBulkAdd = () => {
                     <CButton
                       size="sm"
                       color="primary"
-                      variant="outline"
                       onClick={addDraftToBatch}
                       disabled={!draftHasProspect || proofCompressing}
                     >
@@ -649,11 +648,17 @@ const PipelineEntriesBulkAdd = () => {
           {savedCount} pipeline {savedCount === 1 ? 'entry has' : 'entries have'} been saved.
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={() => setShowSavedModal(false)}>
+          <CButton
+            color="secondary"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSavedModal(false)}
+          >
             Add More
           </CButton>
           <CButton
             color="primary"
+            size="sm"
             onClick={() =>
               navigate('/pipeline/entries', {
                 state: { pipelineMessage: `${savedCount} pipeline entries saved.` },

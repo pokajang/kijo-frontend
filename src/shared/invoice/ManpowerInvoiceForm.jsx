@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/ManpowerInvoiceForm.jsx
+// src/shared/invoice/ManpowerInvoiceForm.jsx
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   CCardHeader,
@@ -549,7 +549,7 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
 
         <div className="mb-3 d-flex justify-content-start">
           <CButton
-            color="primary"
+            color={showAddItemRow ? 'secondary' : 'primary'}
             size="sm"
             variant={showAddItemRow ? 'outline' : undefined}
             onClick={() => setShowAddItemRow((prev) => !prev)}

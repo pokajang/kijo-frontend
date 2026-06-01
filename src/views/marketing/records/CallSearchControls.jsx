@@ -30,6 +30,7 @@ const CallSearchControls = ({
   loading = false,
   desktopToolsId,
   mobileToolsId,
+  controlsVisible = true,
 }) => {
   // build caller options from actual data
   const callerOptions = [
@@ -39,6 +40,7 @@ const CallSearchControls = ({
 
   return (
     <DataTableRecordControls
+      visible={controlsVisible}
       searchValue={q}
       onSearchChange={setQ}
       searchPlaceholder="Type to search..."

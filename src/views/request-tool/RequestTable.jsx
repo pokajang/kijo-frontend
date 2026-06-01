@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import {
   CCard,
-  CCardHeader,
   CCardBody,
   CCol,
   CFormLabel,
@@ -15,8 +14,10 @@ import {
   CFormTextarea,
 } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableStatsToggle,
   DataTableTextCell,
   RemarksCell,
   getAdvancedFilterCount,
@@ -29,6 +30,7 @@ import {
   isDefaultPeriodRange,
 } from '../../components/filters'
 import { StatsStrip } from '../../components/stats'
+import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { formatCount } from '../../utils/stats/formatStats'
 
 const emptyValue = '-'
@@ -183,6 +185,8 @@ export default function RequestTable({
   const [staffFilter, setStaffFilter] = useState('All')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('support.requests')
 
   // Extract unique staff names for filter dropdown
   const staffOptions = useMemo(() => {
@@ -378,8 +382,16 @@ export default function RequestTable({
 
   return (
     <CCard>
-      <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-        <strong>Usage Records</strong>
+      <DataTableCardHeader
+        title="Usage Records"
+        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+      >
+        <DataTableStatsToggle
+          visible={statsVisible}
+          onToggle={toggleStatsVisible}
+          controlsVisible={controlsVisible}
+          onControlsToggle={toggleControlsVisible}
+        />
         <span
           role={requestToolDisabled ? 'button' : undefined}
           aria-disabled={requestToolDisabled}
@@ -407,14 +419,11 @@ export default function RequestTable({
             Request Tool
           </CButton>
         </span>
-      </CCardHeader>
+      </DataTableCardHeader>
       <CCardBody>
-        <StatsStrip
-          loading={loading}
-          items={statsItems}
-          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-        />
+        {statsVisible && <StatsStrip loading={loading} items={statsItems} />}
         <DataTableRecordControls
+          visible={controlsVisible}
           searchValue={searchKeyword}
           onSearchChange={setSearchKeyword}
           searchPlaceholder="Search staff, details, purpose, remarks, achievement..."
@@ -501,10 +510,15 @@ export default function RequestTable({
             />
           </CModalBody>
           <CModalFooter>
-            <CButton color="secondary" onClick={() => setShowModal(false)}>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowModal(false)}
+            >
               Cancel
             </CButton>
-            <CButton color="primary" onClick={handleSaveAchievement}>
+            <CButton color="primary" size="sm" onClick={handleSaveAchievement}>
               Save
             </CButton>
           </CModalFooter>

@@ -1,0 +1,15 @@
+@media (max-height: 760px) and (min-width: 992px) {
+  .knowledge-assistant-chat {
+    grid-template-rows: auto auto minmax(15rem, 1fr) auto;
+  }
+
+  .knowledge-assistant-message-content {
+    padding: 0.55rem 0.65rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .knowledge-layout-shell {
+    display: block;
+  }
+}

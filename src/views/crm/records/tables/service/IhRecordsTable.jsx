@@ -19,6 +19,9 @@ const IhRecordsTable = ({
   onEmail,
   onSharePdf,
   onNegotiate,
+  onStatsScopeLabelChange,
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   return (
     <ServiceConfiguredRecordsTable
@@ -41,6 +44,9 @@ const IhRecordsTable = ({
       onEmail={onEmail}
       onSharePdf={onSharePdf}
       onNegotiate={onNegotiate}
+      onStatsScopeLabelChange={onStatsScopeLabelChange}
+      statsVisible={statsVisible}
+      controlsVisible={controlsVisible}
     />
   )
 }

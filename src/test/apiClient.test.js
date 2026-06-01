@@ -138,6 +138,27 @@ describe('apiClient', () => {
     expect(writeInit.headers.get('X-CSRF-TOKEN')).toBe('fresh-csrf')
   })
 
+  it('does not refresh csrf before public password reset requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'success' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const apiBase = import.meta.env.VITE_API_BASE || '/'
+    await apiFetch(`${apiBase}auth/password/forgot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'staff@example.com' }),
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toBe(`${apiBase}auth/password/forgot`)
+  })
+
   it('refreshes csrf token and retries unsafe requests once after a 419', async () => {
     setCsrfToken('stale-csrf')
 

@@ -1,0 +1,198 @@
+.salary-claim-selector,
+.salary-form-panel,
+.salary-review-panel {
+  padding: 0.875rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.375rem;
+  background: var(--app-surface-page);
+}
+
+.salary-review-panel {
+  background: var(--cui-tertiary-bg, rgba(0, 0, 0, 0.03));
+}
+
+.salary-claim-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.salary-adjustment-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.salary-adjustment-type-card {
+  --cui-btn-hover-bg: rgba(var(--cui-primary-rgb), 0.08);
+  --cui-btn-hover-border-color: rgba(var(--cui-primary-rgb), 0.35);
+  --cui-btn-hover-color: var(--cui-primary);
+  --cui-btn-active-bg: rgba(var(--cui-primary-rgb), 0.12);
+  --cui-btn-active-border-color: rgba(var(--cui-primary-rgb), 0.35);
+  --cui-btn-active-color: var(--cui-primary);
+
+  display: inline-flex;
+  min-width: 0;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--app-radius-sm);
+  text-align: center;
+}
+
+.salary-adjustment-type-card:hover,
+.salary-adjustment-type-card:focus-visible {
+  border-color: rgba(var(--cui-primary-rgb), 0.35) !important;
+  background-color: rgba(var(--cui-primary-rgb), 0.08) !important;
+  color: var(--cui-primary) !important;
+}
+
+.salary-adjustment-type-card--active,
+.salary-adjustment-type-card--active:hover,
+.salary-adjustment-type-card--active:focus-visible,
+.salary-adjustment-type-card[aria-pressed='true'] {
+  border-color: rgba(var(--cui-primary-rgb), 0.35) !important;
+  background-color: rgba(var(--cui-primary-rgb), 0.12) !important;
+  color: var(--cui-primary) !important;
+  font-weight: 600;
+}
+
+.salary-adjustment-type-cancel {
+  margin-left: auto;
+  align-self: center;
+}
+
+.salary-adjustment-input-panel {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--cui-border-color);
+}
+
+.salary-period-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+}
+
+.salary-period-context strong {
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-weight: 700;
+}
+
+.salary-month-picker {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.6rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+}
+
+.salary-month-picker-label {
+  white-space: nowrap;
+}
+
+.salary-month-picker-buttons {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.salary-month-picker-button.btn {
+  min-height: 1.85rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.salary-month-picker--body {
+  display: flex;
+  margin-bottom: 0.75rem;
+}
+
+.salary-month-guard-body.card-body {
+  padding: 0.75rem 1rem 0;
+}
+
+.salary-month-guard-alert {
+  border-radius: 0.45rem;
+}
+
+.salary-month-guard-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.salary-month-guard-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.salary-form-panel-heading {
+  margin: 0;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.salary-settings-form {
+  margin: 0;
+}
+
+.salary-settings-card-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.salary-settings-card-stack .salary-workspace {
+  margin-bottom: 0;
+}
+
+.salary-section-header.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.salary-section-heading-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  min-width: 0;
+}
+
+.salary-section-body.card-body {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .salary-settings-profile-row {
+    flex-wrap: nowrap;
+  }
+
+  .salary-settings-profile-col {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+.salary-settings-actions-body.card-body {
+  padding: 0 1rem 1rem;
+}
+
+.salary-section-body > .salary-claim-field-row + .salary-table-shell,
+.salary-section-body > .salary-claim-draft-actions + .salary-table-shell {
+  margin-top: 0.875rem;
+}
+

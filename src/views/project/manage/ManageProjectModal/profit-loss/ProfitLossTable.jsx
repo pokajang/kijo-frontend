@@ -8,6 +8,7 @@ import {
   CTableDataCell,
 } from '@coreui/react'
 import { toFiniteNumber } from '../../projectApi'
+import { formatProjectMoney } from '../../projectDetailFormatters'
 
 const ProfitLossTable = ({
   revenue,
@@ -35,23 +36,23 @@ const ProfitLossTable = ({
           <CTableDataCell>
             <strong>Project Revenue</strong>
           </CTableDataCell>
-          <CTableDataCell className="text-end">{revenue.toLocaleString()}</CTableDataCell>
+          <CTableDataCell className="text-end">{formatProjectMoney(revenue)}</CTableDataCell>
         </CTableRow>
 
         <CTableRow>
           <CTableDataCell>&emsp;Approved Vendor Cost</CTableDataCell>
-          <CTableDataCell className="text-end">{totalApproved.toLocaleString()}</CTableDataCell>
+          <CTableDataCell className="text-end">{formatProjectMoney(totalApproved)}</CTableDataCell>
         </CTableRow>
 
         <CTableRow>
           <CTableDataCell>&emsp;Pending Payments</CTableDataCell>
-          <CTableDataCell className="text-end">{totalPending.toLocaleString()}</CTableDataCell>
+          <CTableDataCell className="text-end">{formatProjectMoney(totalPending)}</CTableDataCell>
         </CTableRow>
 
         <CTableRow>
           <CTableDataCell>&emsp;Other Project Expenses</CTableDataCell>
           <CTableDataCell className="text-end">
-            {totalManualExpenses.toLocaleString()}
+            {formatProjectMoney(totalManualExpenses)}
           </CTableDataCell>
         </CTableRow>
 
@@ -85,7 +86,7 @@ const ProfitLossTable = ({
               </button>
             </CTableDataCell>
             <CTableDataCell className="text-end">
-              {toFiniteNumber(exp.amount).toLocaleString()}
+              {formatProjectMoney(toFiniteNumber(exp.amount))}
             </CTableDataCell>
           </CTableRow>
         ))}
@@ -93,14 +94,14 @@ const ProfitLossTable = ({
         <CTableRow className="project-profit-loss-summary-row fw-bold">
           <CTableDataCell>Net Profit (Confirmed)</CTableDataCell>
           <CTableDataCell className="text-end">
-            {confirmedNetProfit.toLocaleString()}
+            {formatProjectMoney(confirmedNetProfit)}
           </CTableDataCell>
         </CTableRow>
 
         <CTableRow className="project-profit-loss-summary-row fw-bold">
           <CTableDataCell>Net Profit (If All Pending Approved)</CTableDataCell>
           <CTableDataCell className="text-end">
-            {projectedNetProfit.toLocaleString()}
+            {formatProjectMoney(projectedNetProfit)}
           </CTableDataCell>
         </CTableRow>
       </CTableBody>

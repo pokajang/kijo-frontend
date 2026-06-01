@@ -290,7 +290,13 @@ export const handleMarkUnpaidConfirmed = async (invoice, refreshList) => {
  * 4) Delete invoice -> confirm & refresh
  */
 export const handleDelete = async (invoice, refreshList) => {
-  if (!(await dialog.confirm(`Delete invoice ${invoice.id}?`))) return
+  if (
+    !(await dialog.confirm(`Delete invoice ${invoice.id}?`, {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    }))
+  )
+    return
   try {
     const endpoint = getEndpoint('delete')
     const res = await fetch(endpoint, {

@@ -4,7 +4,6 @@ import {
   CAlert,
   CButton,
   CCardBody,
-  CCardHeader,
   CCol,
   CDropdown,
   CDropdownItem,
@@ -20,12 +19,15 @@ import {
   CModalTitle,
 } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableStatsToggle,
   DataTableTextCell,
 } from '../../../components/datatable'
 import {
   PeriodRangeSelector,
+  getPeriodDateParams,
   getPeriodRangeLabel,
   getPeriodRangePreset,
   getPeriodRangeScopeLabel,
@@ -33,22 +35,22 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
 import { buildCsv, downloadCsv } from '../../../utils/datatable/csv'
 import dialog from '../../../components/dialog/dialogService'
+import { appendQueryParams } from '../../../utils/detailPages'
 import { getDaysLapsedInfo, getStatusBadge, getStatusText } from './actionHandlers'
 import TaskAchievement from './TaskAchievement'
+import { compareTaskPriority } from '../../task-manager/taskPrioritySort'
+import TaskTitleProjectCell from '../../task-manager/TaskTitleProjectCell'
+
+export const buildAllTasksUrl = (apiBase, periodRange) =>
+  appendQueryParams(`${apiBase}tasks`, {
+    ...getPeriodDateParams(periodRange),
+  })
 
 const dataColumns = [
-  {
-    key: 'createdAt',
-    label: 'Created On',
-    width: '130px',
-    sortable: true,
-    sortType: 'date',
-    align: 'center',
-    shrinkToFit: true,
-  },
   {
     key: 'dueDate',
     label: 'Due Date',
@@ -62,21 +64,12 @@ const dataColumns = [
   {
     key: 'title',
     label: 'Task',
-    width: '240px',
+    width: '320px',
     sortable: true,
     sortType: 'string',
     textMode: 'expandable',
-    cellMaxWidth: '220px',
+    cellMaxWidth: '300px',
     previewCharThreshold: 34,
-  },
-  {
-    key: 'statusText',
-    label: 'Status',
-    width: '170px',
-    sortable: true,
-    sortType: 'string',
-    align: 'center',
-    shrinkToFit: true,
   },
   {
     key: 'daysLapsed',
@@ -84,6 +77,15 @@ const dataColumns = [
     width: '120px',
     sortable: true,
     sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+  },
+  {
+    key: 'statusText',
+    label: 'Status',
+    width: '210px',
+    sortable: true,
+    sortType: 'string',
     align: 'center',
     shrinkToFit: true,
   },
@@ -97,10 +99,19 @@ const dataColumns = [
     cellMaxWidth: '220px',
     previewCharThreshold: 34,
   },
+  {
+    key: 'createdAt',
+    label: 'Created On',
+    width: '130px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    shrinkToFit: true,
+  },
 ]
 
 const defaultVisibleColumns = {
-  createdAt: true,
+  createdAt: false,
   dueDate: true,
   staffName: true,
   title: true,
@@ -201,6 +212,7 @@ const mapTaskToExportRow = (task, todayStr) => {
     staffCode: getStaffCode(task) || '-',
     staffName: task.staffName || '-',
     title: task.title || '-',
+    project: task.projectName || '-',
     statusText,
     daysLapsed: daysLapsed.value ?? '',
     daysLapsedBasis: daysLapsed.basis,
@@ -212,17 +224,17 @@ const mapTaskToExportRow = (task, todayStr) => {
 }
 
 const getStatusRank = (statusText) => {
-  if (statusText === 'Overdue') return 1
+  if (statusText.startsWith('Overdue')) return 1
   if (statusText === 'Ongoing') return 2
   if (statusText === 'Completed') return 3
   if (statusText === 'Completed (On time)') return 3
-  if (statusText.startsWith('Completed (Late')) return 4
+  if (statusText.startsWith('Completed but late')) return 4
   return 99
 }
 
 export const buildAllTaskStatsItems = (normalizedTasks = []) => {
   const ongoingRows = normalizedTasks.filter((task) => task.statusText === 'Ongoing')
-  const overdueRows = normalizedTasks.filter((task) => task.statusText === 'Overdue')
+  const overdueRows = normalizedTasks.filter((task) => task.statusText.startsWith('Overdue'))
   const onTimeRows = normalizedTasks.filter((task) => task.statusText === 'Completed (On time)')
   const topOverdueStaff = getTopGroupByCount(overdueRows, getStaffCode)
   const topOnTimeStaff = getTopGroupByCount(onTimeRows, getStaffCode)
@@ -275,10 +287,13 @@ const AllTasks = () => {
   const [exportStartDate, setExportStartDate] = useState(currentWeek.start)
   const [exportEndDate, setExportEndDate] = useState(currentWeek.end)
   const [exporting, setExporting] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('staff.tasks')
 
   useEffect(() => {
     setLoading(true)
-    fetch(`${import.meta.env.VITE_API_BASE}tasks?year=${String(todayStr).slice(0, 4)}`, {
+    setError(null)
+    fetch(buildAllTasksUrl(import.meta.env.VITE_API_BASE, periodRange), {
       credentials: 'include',
     })
       .then((res) => res.json())
@@ -291,7 +306,7 @@ const AllTasks = () => {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [todayStr])
+  }, [periodRange])
 
   const staffOptions = useMemo(
     () => [...new Set(tasks.map((t) => t.staffName).filter(Boolean))].sort(),
@@ -332,6 +347,9 @@ const AllTasks = () => {
       const taskMatch = String(task.title || '')
         .toLowerCase()
         .includes(term)
+      const projectMatch = String(task.projectName || '')
+        .toLowerCase()
+        .includes(term)
       const statusText = getStatusText(task, todayStr).toLowerCase()
       const statusMatch = statusText.includes(term)
       const commentMatch = (task.commentLogs || []).some((log) =>
@@ -339,7 +357,8 @@ const AllTasks = () => {
           .toLowerCase()
           .includes(term),
       )
-      const matchesSearch = term === '' || staffMatch || taskMatch || statusMatch || commentMatch
+      const matchesSearch =
+        term === '' || staffMatch || taskMatch || projectMatch || statusMatch || commentMatch
 
       const inPeriod = isDateInPeriodRange(toDateOnly(task.createdAt), periodRange)
 
@@ -408,6 +427,7 @@ const AllTasks = () => {
         { key: 'staffCode', label: 'Staff Code' },
         { key: 'staffName', label: 'Staff' },
         { key: 'title', label: 'Task' },
+        { key: 'project', label: 'Project' },
         { key: 'statusText', label: 'Status' },
         { key: 'daysLapsed', label: 'Days Lapsed' },
         { key: 'daysLapsedBasis', label: 'Lapsed Basis' },
@@ -490,7 +510,10 @@ const AllTasks = () => {
   )
 
   const renderCell = (task, column) => {
-    if (column.key === 'staffName' || column.key === 'title') {
+    if (column.key === 'title') {
+      return <TaskTitleProjectCell task={task} maxWidth={column.cellMaxWidth} />
+    }
+    if (column.key === 'staffName') {
       return (
         <DataTableTextCell
           value={task[column.key] || '-'}
@@ -517,9 +540,17 @@ const AllTasks = () => {
 
   return (
     <>
-      <CCardHeader>
-        <strong>All Staff Tasks</strong>
-      </CCardHeader>
+      <DataTableCardHeader
+        title="All Staff Tasks"
+        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+      >
+        <DataTableStatsToggle
+          visible={statsVisible}
+          onToggle={toggleStatsVisible}
+          controlsVisible={controlsVisible}
+          onControlsToggle={toggleControlsVisible}
+        />
+      </DataTableCardHeader>
 
       <CCardBody>
         {error && (
@@ -528,16 +559,13 @@ const AllTasks = () => {
           </CAlert>
         )}
 
-        <StatsStrip
-          items={statsItems}
-          loading={loading}
-          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-        />
+        {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
 
         <DataTableRecordControls
+          visible={controlsVisible}
           searchValue={searchTerm}
           onSearchChange={setSearchTerm}
-          searchPlaceholder="Search staff, task, status, or comment..."
+          searchPlaceholder="Search staff, task, project, status, or comment..."
           showAdvancedFilters={showAdvancedFilters}
           setShowAdvancedFilters={setShowAdvancedFilters}
           activeFilterCount={activeFilterCount}
@@ -575,7 +603,7 @@ const AllTasks = () => {
           dataColumns={dataColumns}
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
-          storageKey="staff.tasks.all.visible-columns.v4"
+          storageKey="staff.tasks.all.visible-columns.v7"
           idPrefix="all-staff-task"
           emptyMessage="No staff tasks found."
           exportFilename={`all-staff-tasks-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -604,23 +632,29 @@ const AllTasks = () => {
           }
           getMobileTitle={(task) => task.title}
           getMobileSubtitle={(task) => task.staffName}
-          getMobileMeta={(task) => `${task.createdAt} | Due ${task.dueDate}`}
+          getMobileMeta={(task) => `Due ${task.dueDate || '-'}`}
           getMobileStatus={(task) => task.statusText}
           getMobileStatusTone={(task) => {
             if (task.statusText.startsWith('Completed')) return 'success'
-            if (task.statusText === 'Overdue') return 'danger'
+            if (task.statusText.startsWith('Overdue')) return 'danger'
             return 'info'
           }}
           mobileFieldKeys={{
             title: 'title',
             subtitle: 'staffName',
-            meta: ['createdAt', 'dueDate'],
+            meta: 'dueDate',
             status: 'statusText',
           }}
-          initialSortField="createdAt"
-          initialSortDir="desc"
-          initialSortDirByField={{ createdAt: 'desc', dueDate: 'desc', daysLapsed: 'desc' }}
+          initialSortField="statusText"
+          initialSortDir="asc"
+          initialSortDirByField={{
+            statusText: 'asc',
+            createdAt: 'desc',
+            dueDate: 'asc',
+            daysLapsed: 'desc',
+          }}
           getSortValue={(task, field) => (field === 'statusText' ? task.statusRank : task[field])}
+          sortComparators={{ statusText: compareTaskPriority }}
           resetDeps={[filteredTasks, staffFilter, periodRange, searchTerm]}
         />
       </CCardBody>
@@ -690,12 +724,13 @@ const AllTasks = () => {
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             disabled={exporting}
             onClick={() => setShowExportModal(false)}
           >
             Cancel
           </CButton>
-          <CButton color="primary" disabled={exporting} onClick={handleConfirmExport}>
+          <CButton color="primary" size="sm" disabled={exporting} onClick={handleConfirmExport}>
             {exporting ? 'Exporting...' : `Export ${exportType.toUpperCase()}`}
           </CButton>
         </CModalFooter>

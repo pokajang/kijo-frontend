@@ -32,6 +32,7 @@ const WhatsNewRecords = () => {
   const [canManage, setCanManage] = useState(false)
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState(null)
+  const [openActionId, setOpenActionId] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -95,6 +96,7 @@ const WhatsNewRecords = () => {
     canManage || hasAnyAllowedRole(extractRolesFromSession({ user }), ['System Admin'])
 
   const setPublished = async (notice, published) => {
+    setOpenActionId(null)
     setActionId(notice.id)
     setError('')
     setSuccess('')
@@ -120,6 +122,7 @@ const WhatsNewRecords = () => {
   }
 
   const deleteNotice = async (notice) => {
+    setOpenActionId(null)
     if (!window.confirm(`Delete What's New notice "${notice.version}"?`)) return
 
     setActionId(notice.id)
@@ -152,6 +155,10 @@ const WhatsNewRecords = () => {
 
     event.preventDefault()
     openNotice(notice)
+  }
+
+  const stopRowActivation = (event) => {
+    event.stopPropagation()
   }
 
   return (
@@ -228,7 +235,16 @@ const WhatsNewRecords = () => {
 
                       <div className="d-flex align-items-center gap-2 ms-auto">
                         {isSystemAdmin && (
-                          <CDropdown alignment="end">
+                          <CDropdown
+                            portal
+                            alignment="end"
+                            visible={openActionId === notice.id}
+                            onShow={() => setOpenActionId(notice.id)}
+                            onHide={() => setOpenActionId(null)}
+                            onMouseDown={stopRowActivation}
+                            onClick={stopRowActivation}
+                            onKeyDown={stopRowActivation}
+                          >
                             <CDropdownToggle
                               color="transparent"
                               size="sm"
@@ -236,14 +252,23 @@ const WhatsNewRecords = () => {
                               className="border-0"
                               disabled={busy}
                               aria-label="Manage notice"
-                              onClick={(event) => event.stopPropagation()}
+                              onMouseDown={stopRowActivation}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setOpenActionId(openActionId === notice.id ? null : notice.id)
+                              }}
                             >
                               <CIcon icon={cilOptions} />
                             </CDropdownToggle>
-                            <CDropdownMenu>
+                            <CDropdownMenu
+                              style={{ zIndex: 1080 }}
+                              onMouseDown={stopRowActivation}
+                              onClick={stopRowActivation}
+                            >
                               <CDropdownItem
                                 onClick={(event) => {
                                   event.stopPropagation()
+                                  setOpenActionId(null)
                                   navigate(`/system-admin/whats-new/${notice.id}/edit`)
                                 }}
                               >

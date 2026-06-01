@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CCol } from '@coreui/react'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
 import { DetailField, DetailSection, ItemsTable } from '../shared/CommercialDetailFields'
+import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import DoEditModalMain from './DoModal/DoEditModalMain'
 import dialog from '../../../components/dialog/dialogService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
@@ -31,6 +32,7 @@ const DeliveryOrderDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const returnContext = getCommercialReturnContext(location, '/commercial/delivery-order')
   const [record, setRecord] = useState(() =>
     location.state?.record ? normalizeDeliveryOrder(location.state.record) : null,
   )
@@ -81,7 +83,13 @@ const DeliveryOrderDetailPage = () => {
   }
 
   const handleDelete = async () => {
-    if (!(await dialog.confirm('Are you sure you want to delete this delivery order?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this delivery order?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE}delivery-orders/${record.do_id}`, {
         method: 'DELETE',
@@ -171,8 +179,8 @@ const DeliveryOrderDetailPage = () => {
     <>
       <DataTableDetailShell
         title="Delivery Order Details"
-        backLabel="Back"
-        onBack={() => navigate('/commercial/delivery-order')}
+        backLabel={returnContext.backLabel}
+        onBack={() => navigate(returnContext.backPath)}
         loading={loading}
         error={error}
         record={record}
@@ -183,6 +191,15 @@ const DeliveryOrderDetailPage = () => {
                 label: 'Back to Project',
                 buttonColor: 'secondary',
                 onClick: () => navigate(`/project/manage/${projectId}`),
+                hidden: returnContext.isProjectOrigin,
+              }
+            : null,
+          returnContext.isProjectOrigin
+            ? {
+                key: 'view-list',
+                label: 'View Delivery Order List',
+                buttonColor: 'secondary',
+                onClick: () => navigate(returnContext.listPath),
               }
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
@@ -206,7 +223,7 @@ const DeliveryOrderDetailPage = () => {
         </DetailSection>
 
         <DetailSection title="Project">
-          <DetailField label="DO Number" value={record?.do_number} />
+          <DetailField label="Reference Number" value={record?.do_number} />
           <DetailField label="Project" value={record?.project_name} />
           <DetailField label="Project Code" value={record?.project_code} />
           <DetailField label="Type" value={record?.project_type} />

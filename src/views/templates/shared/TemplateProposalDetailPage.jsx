@@ -128,6 +128,7 @@ const TemplateProposalDetailPage = ({ type }) => {
       } catch (err) {
         if (isAbortError(err)) return
         setRecord(null)
+        if (err?.notFound || err?.status === 404) return
         setLoadError(
           err?.message || `Unable to load ${config.titleFallback.toLowerCase()} template.`,
         )
@@ -149,7 +150,13 @@ const TemplateProposalDetailPage = ({ type }) => {
   const deleteRecord = async () => {
     const templateId = getTemplateId(record)
     if (!templateId) return
-    if (!(await dialog.confirm('Are you sure you want to delete this proposal?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this proposal?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     setActionError('')
 

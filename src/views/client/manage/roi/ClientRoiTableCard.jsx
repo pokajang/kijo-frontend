@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react'
-import { CCard, CCardBody, CCardHeader, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
+import { CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../../components/datatable'
@@ -14,6 +16,7 @@ import {
   isDefaultPeriodRange,
 } from '../../../../components/filters'
 import { StatsStrip } from '../../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { formatCount, formatMoney } from '../../../../utils/stats/formatStats'
 
 const emptyValue = '-'
@@ -232,6 +235,8 @@ const ClientRoiTableCard = ({
   onViewClient,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('client.roi')
 
   const normalizedRows = useMemo(
     () =>
@@ -361,19 +366,26 @@ const ClientRoiTableCard = ({
     <CRow>
       <CCol xs={12}>
         <CCard className="mb-4">
-          <CCardHeader>
-            <strong>ROI per Client</strong>
-          </CCardHeader>
-          <CCardBody>
-            <StatsStrip
-              items={statsItems}
-              loading={loading}
-              className="client-roi-stats"
-              layout="balanced"
-              scopeLabel={scopeLabel}
+          <DataTableCardHeader title="ROI per Client" scopeLabel={scopeLabel}>
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
             />
+          </DataTableCardHeader>
+          <CCardBody>
+            {statsVisible && (
+              <StatsStrip
+                items={statsItems}
+                loading={loading}
+                className="client-roi-stats"
+                layout="balanced"
+              />
+            )}
 
             <DataTableRecordControls
+              visible={controlsVisible}
               searchValue={searchTerm}
               onSearchChange={onSearchChange}
               searchPlaceholder="Search client"

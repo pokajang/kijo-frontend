@@ -13,6 +13,7 @@ import { hasAnyAllowedRole } from '../../utils/roles'
 
 const STAFF_ALLOWED_ROLES = ['Manager', 'System Admin', 'HR']
 const HR_SYSTEM_ADMIN_ALLOWED_ROLES = ['System Admin', 'HR']
+const WORKFLOW_ALLOWED_ROLES = ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank']
 const SYSTEM_ADMIN_ALLOWED_ROLES = ['System Admin']
 const MAX_RESULTS = 8
 const RECENT_STORAGE_KEY = 'kijo:module-search:recent:v1'
@@ -49,7 +50,14 @@ const moduleGroups = [
     tabs: vendorModuleTabs,
     keywords: ['vendor', 'supplier', 'payment', 'payables'],
     aliases: ['suppliers', 'pay vendor', 'pay supplier'],
-    intentPhrases: ['vendor payment', 'supplier payment', 'payment records', 'payables'],
+    intentPhrases: [
+      'vendor payment',
+      'supplier payment',
+      'payment queue',
+      'vendor ledger',
+      'payment records',
+      'payables',
+    ],
   },
   {
     group: 'Catalog',
@@ -160,11 +168,26 @@ const itemEnhancements = {
     intentPhrases: ['supplier purchase order', 'po number', 'grand total'],
   },
   '/vendor/payment-records': {
-    aliases: ['vendor payment', 'supplier payment', 'payables'],
-    intentPhrases: ['payment records', 'pay supplier', 'pay vendor'],
+    aliases: [
+      'payment queue',
+      'payment records',
+      'vendor payment records',
+      'supplier payment records',
+      'payables',
+    ],
+    intentPhrases: [
+      'payment queue',
+      'payment records',
+      'payment history',
+      'vendor payment history',
+    ],
+  },
+  '/vendor/paid': {
+    aliases: ['vendor ledger', 'paid by vendor', 'paid vendors', 'vendor paid ledger'],
+    intentPhrases: ['vendor ledger', 'paid by vendor', 'vendor paid history'],
   },
   '/vendor/pay': {
-    aliases: ['pay vendor', 'pay supplier'],
+    aliases: ['pay vendor', 'pay supplier', 'vendor payment', 'supplier payment'],
     intentPhrases: [
       'vendor payment',
       'supplier payment',
@@ -666,8 +689,8 @@ const actionItems = [
   {
     label: 'Leave Workflow',
     group: 'Staff Management',
-    to: '/staff/leaves/workflow',
-    allowedRoles: HR_SYSTEM_ADMIN_ALLOWED_ROLES,
+    to: '/workflows/leave-application',
+    allowedRoles: WORKFLOW_ALLOWED_ROLES,
     aliases: ['leave approval', 'leave workflow'],
     intentPhrases: [
       'approve leave',

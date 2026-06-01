@@ -1,0 +1,65 @@
+.internal-tools-page {
+  padding-bottom: 5rem;
+}
+
+.internal-tools-page-header {
+  max-width: 42rem;
+  margin-bottom: 1.5rem;
+}
+
+.internal-tools-section {
+  margin-bottom: 2rem;
+}
+
+.internal-tools-section-label {
+  margin-bottom: 0.5rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.8125rem;
+}
+
+.internal-tools-card {
+  min-width: 0;
+}
+
+.internal-tools-card--primary {
+  border-color: rgba(var(--cui-primary-rgb), 0.35);
+}
+
+.internal-tools-card-actions {
+  width: 100%;
+  margin-top: auto;
+}
+
+.internal-tools-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.internal-tools-action--external {
+  color: var(--cui-body-color);
+  border-color: var(--cui-border-color);
+}
+
+.internal-tools-action--external:hover,
+.internal-tools-action--external:focus {
+  color: var(--cui-body-color);
+  background-color: rgba(var(--cui-body-color-rgb), 0.04);
+  border-color: rgba(var(--cui-body-color-rgb), 0.25);
+}
+
+.internal-tools-action-external-icon {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 767.98px) {
+  .internal-tools-page {
+    padding-bottom: 8rem;
+  }
+
+  .internal-tools-section:last-child {
+    margin-bottom: 4rem;
+  }
+}

@@ -52,4 +52,39 @@ describe('commercialDocsWarning group filtering', () => {
     expect(firstItemByGroup['vendor-loas'].href).toBe('/commercial/vendor-loa/4')
     expect(firstItemByGroup['supplier-pos'].href).toBe('/commercial/supplier-po/6')
   })
+
+  it('adds stable commercial action metadata for project detail rows', () => {
+    const groups = buildProjectCommercialDocGroups(docs)
+    const firstItemByGroup = Object.fromEntries(groups.map((group) => [group.key, group.items[0]]))
+
+    expect(firstItemByGroup.invoices).toMatchObject({
+      documentType: 'invoice',
+      recordId: 1,
+      reference: 'INV-1',
+      canOpen: true,
+      canEdit: true,
+      canDelete: true,
+      deleteKind: 'invoice',
+    })
+    expect(firstItemByGroup['supplier-pos']).toMatchObject({
+      documentType: 'supplier-po',
+      recordId: 6,
+      canOpen: true,
+      canEdit: false,
+      canDelete: true,
+      deleteKind: 'supplier-po',
+    })
+    expect(firstItemByGroup['vendor-payments']).toMatchObject({
+      documentType: 'vendor-payment',
+      canEdit: false,
+      canDelete: false,
+    })
+    expect(firstItemByGroup['vendor-loas']).toMatchObject({
+      documentType: 'vendor-loa',
+      recordId: 4,
+      canEdit: true,
+      canDelete: true,
+      deleteKind: 'vendor-loa-assignment',
+    })
+  })
 })

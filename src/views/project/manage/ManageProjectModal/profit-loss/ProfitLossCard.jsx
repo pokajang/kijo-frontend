@@ -37,7 +37,13 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
 
   const handleDeleteExpense = async (expenseId) => {
     if (deletingExpenseId != null) return
-    if (!(await dialog.confirm('Are you sure you want to delete this expense?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this expense?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     try {
       setDeletingExpenseId(expenseId)
@@ -169,13 +175,7 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
           >
             Cancel
           </CButton>
-          <CButton
-            color="primary"
-            size="sm"
-            variant="outline"
-            onClick={handleSaveExpense}
-            disabled={savingExpense}
-          >
+          <CButton color="primary" size="sm" onClick={handleSaveExpense} disabled={savingExpense}>
             {savingExpense ? 'Saving...' : 'Save Expense'}
           </CButton>
         </CModalFooter>

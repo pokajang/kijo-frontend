@@ -1,5 +1,5 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { CButton, CCard, CCardHeader, CCardBody, CAlert } from '@coreui/react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { CButton, CCard, CCardBody, CAlert } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import CallSearchControls from './CallSearchControls'
 import CallTable from './CallTable'
@@ -9,10 +9,15 @@ import ViewContactModal from './ViewContactModal'
 import EditContactModal from './EditContactModal'
 import { fetchApi } from './fetchApi'
 import dialog from '../../../components/dialog/dialogService'
-import { getAdvancedFilterCount } from '../../../components/datatable'
+import {
+  DataTableCardHeader,
+  DataTableStatsToggle,
+  getAdvancedFilterCount,
+} from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { pipelineCrmModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { useAuth } from '../../../auth/AuthProvider'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
@@ -70,6 +75,8 @@ const CallRecords = () => {
   const [selectedYear, setSelectedYear] = useState('all')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('marketing.call-records')
 
   // Modal
   const [showAddCall, setShowAddCall] = useState(false)
@@ -319,7 +326,13 @@ const CallRecords = () => {
 
   const handleDeleteContact = async (contact) => {
     if (!contact?.id) return
-    if (!(await dialog.confirm('Delete this contact?'))) return
+    if (
+      !(await dialog.confirm('Delete this contact?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       await fetchApi.deleteContact(contact.id)
       setInfo('Contact deleted successfully.')
@@ -336,7 +349,13 @@ const CallRecords = () => {
 
   //  Delete single call log
   const handleDeleteCall = async (contact, call) => {
-    if (!(await dialog.confirm('Delete this call log?'))) return
+    if (
+      !(await dialog.confirm('Delete this call log?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       await fetchApi.deleteCall(call.id)
       setInfo('Call log deleted.')
@@ -362,18 +381,25 @@ const CallRecords = () => {
   }
 
   //  Render
+  const statsScopeLabel = periodRange ? getPeriodRangeScopeLabel(periodRange) : ''
+
   return (
     <>
       <ModuleNavStrip tabs={pipelineCrmModuleTabs} ariaLabel="Pipeline CRM sections" />
       <CCard className="mb-4">
-        <CCardHeader className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <strong>Call Records</strong>
+        <DataTableCardHeader title="Call Records" scopeLabel={statsScopeLabel}>
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
+          />
           <div className="d-flex flex-wrap align-items-center justify-content-end gap-3 ms-auto">
             <CButton color="primary" size="sm" onClick={handleAddContact}>
               Add My Contact
             </CButton>
           </div>
-        </CCardHeader>
+        </DataTableCardHeader>
 
         <CCardBody>
           {/* Alerts */}
@@ -406,6 +432,7 @@ const CallRecords = () => {
                 availableCallers={availableCallers}
                 showAdvancedFilters={showAdvancedFilters}
                 setShowAdvancedFilters={setShowAdvancedFilters}
+                controlsVisible={controlsVisible}
                 activeFilterCount={activeFilterCount}
                 activeChips={activeChips}
                 clearChip={clearChip}
@@ -422,8 +449,7 @@ const CallRecords = () => {
             onDeleteContact={handleDeleteContact}
             onDeleteCall={handleDeleteCall}
             currentUser={currentUser}
-            showInlineStats
-            statsScopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+            showInlineStats={statsVisible}
             renderQuickFilters={() => (
               <PeriodRangeSelector
                 value={periodRange}

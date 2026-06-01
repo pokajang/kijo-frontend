@@ -17,8 +17,10 @@ const DataTableDetailFields = ({ fields = [], className = '' }) => (
         } = field
         return (
           <CCol key={key || label} xs={xs} md={md} className={fieldClassName}>
-            <div className="small text-muted">{label}</div>
-            <div>{children ?? value ?? '-'}</div>
+            <div className="data-table-detail-field">
+              <div className="small text-muted data-table-detail-label">{label}</div>
+              <div className="data-table-detail-value">{children ?? value ?? '-'}</div>
+            </div>
           </CCol>
         )
       })}

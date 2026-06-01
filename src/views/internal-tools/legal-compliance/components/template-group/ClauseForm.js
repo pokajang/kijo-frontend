@@ -13,8 +13,9 @@ const ClauseForm = ({
   <form className="border rounded p-3" onSubmit={onSubmit}>
     <CRow className="g-3">
       <CCol xs={12}>
-        <CFormLabel>Clause Number and Title</CFormLabel>
+        <CFormLabel htmlFor="legal-template-clause-title">Clause Number and Title</CFormLabel>
         <CFormInput
+          id="legal-template-clause-title"
           value={clauseTitle}
           onChange={(event) => setClauseTitle(event.target.value)}
           placeholder="Section 15 (1) - Duty of Employer..."
@@ -23,8 +24,9 @@ const ClauseForm = ({
         />
       </CCol>
       <CCol xs={12}>
-        <CFormLabel>Description or Legal Text</CFormLabel>
+        <CFormLabel htmlFor="legal-template-clause-excerpt">Description or Legal Text</CFormLabel>
         <CFormTextarea
+          id="legal-template-clause-excerpt"
           rows={3}
           value={clauseExcerpt}
           onChange={(event) => setClauseExcerpt(event.target.value)}

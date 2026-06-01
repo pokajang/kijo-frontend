@@ -4,7 +4,6 @@ import {
   CButton,
   CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CFormInput,
   CFormLabel,
@@ -14,14 +13,17 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
 } from '../../../components/datatable'
 import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson } from '../../../utils/detailPages'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
 import DebtorMarkPaidModal from './DebtorMarkPaidModal'
@@ -200,6 +202,8 @@ const Debtors = () => {
   const [selectedDebtor, setSelectedDebtor] = useState(null)
   const [markPaidVisible, setMarkPaidVisible] = useState(false)
   const [submittingPayment, setSubmittingPayment] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('commercial.debtors')
 
   const fetchDebtors = useCallback(async () => {
     setLoading(true)
@@ -342,7 +346,13 @@ const Debtors = () => {
   }
 
   const handleDeleteManual = async (debtor) => {
-    if (!(await dialog.confirm(`Delete manual debtor ${debtor.invoiceRef}?`))) return
+    if (
+      !(await dialog.confirm(`Delete manual debtor ${debtor.invoiceRef}?`, {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       await fetchJson(
         `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(debtor.sourceId)}`,
@@ -462,8 +472,13 @@ const Debtors = () => {
         </CCol>
         <CCol xs={12}>
           <CCard className="mb-4">
-            <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-              <strong>Debtors</strong>
+            <DataTableCardHeader title="Debtors" scopeLabel={`As of ${asOfDate}`}>
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
+              />
               <CButton
                 color="primary"
                 size="sm"
@@ -472,15 +487,13 @@ const Debtors = () => {
                 <CIcon icon={cilPlus} className="me-1" />
                 Add Debtor
               </CButton>
-            </CCardHeader>
+            </DataTableCardHeader>
             <CCardBody>
-              <StatsStrip
-                items={statsItems}
-                scopeLabel={`As of ${asOfDate}`}
-                loading={loading}
-                layout="balanced"
-              />
+              {statsVisible && (
+                <StatsStrip items={statsItems} loading={loading} layout="balanced" />
+              )}
               <DataTableRecordControls
+                visible={controlsVisible}
                 searchValue={searchTerm}
                 onSearchChange={setSearchTerm}
                 searchPlaceholder="Type to search..."

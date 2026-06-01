@@ -160,21 +160,34 @@ const EmailSendConfirmModal = ({
         </div>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" variant="ghost" onClick={onPreviewPdf} disabled={isSubmitting}>
+        <CButton
+          color="secondary"
+          variant="ghost"
+          size="sm"
+          onClick={onPreviewPdf}
+          disabled={isSubmitting}
+        >
           Preview PDF
         </CButton>
         <CButton
           color="secondary"
           variant="ghost"
+          size="sm"
           onClick={onOpenGmailDraft}
           disabled={isSubmitting}
         >
           Open Gmail Draft
         </CButton>
-        <CButton color="secondary" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </CButton>
-        <CButton color="primary" onClick={onConfirm} disabled={isSubmitting}>
+        <CButton color="primary" size="sm" onClick={onConfirm} disabled={isSubmitting}>
           {isSubmitting ? 'Sending...' : 'Send Email'}
         </CButton>
       </CModalFooter>

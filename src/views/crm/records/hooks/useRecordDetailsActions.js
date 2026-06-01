@@ -16,6 +16,7 @@ import { createStateModalBindings, useRecordsActionBuilder } from './useRecordsA
 export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadRecord }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const currentUser = user
   const currentUserName = user?.full_name || user?.name || ''
   const currentUserEmail = user?.email || ''
   const [showFailModal, setShowFailModal] = useState(false)
@@ -128,7 +129,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     }
   }
 
-  const handleSuccessConfirm = async () => {
+  const handleSuccessConfirm = async (projectCollaborators = []) => {
     if (!handlers || !selectedRecordIdForSuccess) return
     setIsSuccessSubmitting(true)
     try {
@@ -138,6 +139,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
         awardDate,
         clientLoaRefNo,
         selectedRecordIdForSuccess,
+        projectCollaborators,
       }
       const ok =
         successActionType === 're-award'
@@ -157,9 +159,10 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     if (!urls.followUp) return
     setIsFollowUpSubmitting(true)
     try {
-      const result = await postJsonCompat(urls.followUp, {
-        quote_id: record.id,
-        id: record.id,
+      const quoteId = record.id
+      const result = await postJsonCompat(urls.followUp(quoteId), {
+        quote_id: quoteId,
+        id: quoteId,
         remarks: followUpRemarks,
         follow_up_date: followUpDate,
       })
@@ -275,6 +278,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
   return {
     currentUserName,
     currentUserEmail,
+    currentUser,
     handlers,
     showFailModal,
     setShowFailModal,

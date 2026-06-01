@@ -162,7 +162,14 @@ const hrdFilterLabel = (value) => {
   return 'All HRD statuses'
 }
 
-export default function TemplateTable({ data = [], onDelete, onCreateBmCopy, loading = false }) {
+export default function TemplateTable({
+  data = [],
+  onDelete,
+  onCreateBmCopy,
+  loading = false,
+  statsVisible = true,
+  controlsVisible = true,
+}) {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchTerm, setSearchTerm] = useState('')
@@ -378,9 +385,10 @@ export default function TemplateTable({ data = [], onDelete, onCreateBmCopy, loa
 
   return (
     <>
-      <StatsStrip items={statsItems} loading={loading} />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
 
       <DataTableRecordControls
+        visible={controlsVisible}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search title, code, HRD No, description, creator, or editor"

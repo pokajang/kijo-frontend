@@ -709,6 +709,7 @@ export default function Meetings() {
                 <CButton
                   color="secondary"
                   variant="outline"
+                  size="sm"
                   onClick={closeAddActionModal}
                   disabled={actionModal.submitting}
                 >
@@ -716,6 +717,7 @@ export default function Meetings() {
                 </CButton>
                 <CButton
                   color="primary"
+                  size="sm"
                   onClick={handleActionModalSubmit}
                   disabled={actionModal.submitting}
                 >
@@ -781,6 +783,7 @@ export default function Meetings() {
                 <CButton
                   color="secondary"
                   variant="outline"
+                  size="sm"
                   onClick={closeCompleteActionModal}
                   disabled={completeModal.submitting}
                 >
@@ -788,6 +791,7 @@ export default function Meetings() {
                 </CButton>
                 <CButton
                   color="primary"
+                  size="sm"
                   onClick={handleCompleteActionSubmit}
                   disabled={completeModal.submitting || (completeModal.items || []).length === 0}
                 >

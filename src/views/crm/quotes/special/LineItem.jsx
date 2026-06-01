@@ -46,7 +46,7 @@ export default function LineItem({ item, index, onChange, onRemove }) {
 
       {/* Remove button */}
       <CCol md={2} className="text-center">
-        <CButton color="danger" size="sm" onClick={() => onRemove(index)}>
+        <CButton color="danger" variant="outline" size="sm" onClick={() => onRemove(index)}>
           Remove
         </CButton>
       </CCol>

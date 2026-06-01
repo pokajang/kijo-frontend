@@ -1,138 +1,248 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  CAlert,
+  CButton,
   CCard,
   CCardBody,
-  CAlert,
-  CFormLabel,
-  CFormInput,
-  CButton,
-  CRow,
+  CCardHeader,
   CCol,
+  CFormInput,
+  CFormLabel,
+  CRow,
+  CSpinner,
 } from '@coreui/react'
 import dialog from '../dialog/dialogService'
 
-const PersonalSignature = ({ onClose }) => {
-  const [signatureFile, setSignatureFile] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [hasChecked, setHasChecked] = useState(false)
+const API_BASE = import.meta.env.VITE_API_BASE || '/'
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png']
+const MAX_SIGNATURE_SIZE = 2 * 1024 * 1024
 
-  // 1) Load existing signature on mount
+const formatFileSize = (size) => `${(size / (1024 * 1024)).toFixed(1)} MB`
+
+const PersonalSignature = ({ onClose, onStatusChange }) => {
+  const fileInputRef = useRef(null)
+  const [signatureFile, setSignatureFile] = useState(null)
+  const [currentSignatureUrl, setCurrentSignatureUrl] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState(null)
+
+  const hasExistingSignature = Boolean(currentSignatureUrl)
+  const hasSelectedFile = Boolean(signatureFile)
+  const activePreviewUrl = previewUrl || currentSignatureUrl
+  const saveDisabled = loading || saving || !hasSelectedFile || Boolean(error)
+
+  const statusText = useMemo(() => {
+    if (loading) return 'Checking signature...'
+    if (error && !activePreviewUrl) return 'Signature status unavailable'
+    if (hasSelectedFile) return 'New signature selected'
+    return hasExistingSignature ? 'Signature uploaded' : 'Signature missing'
+  }, [activePreviewUrl, error, hasExistingSignature, hasSelectedFile, loading])
+
   useEffect(() => {
+    onStatusChange?.({ signatureUploaded: hasExistingSignature })
+  }, [hasExistingSignature, onStatusChange])
+
+  useEffect(() => {
+    let ignore = false
+
     const fetchSignature = async () => {
+      setLoading(true)
+      setError('')
+      setNotice(null)
       try {
-        setLoading(true)
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}signature`, {
+        const res = await fetch(`${API_BASE}signature`, {
           credentials: 'include',
         })
         const data = await res.json()
-        if (data.status === 'success' && data.url) {
-          setPreviewUrl(data.url)
+        if (!res.ok || data.status !== 'success') {
+          throw new Error(data.message || 'Failed to load signature.')
         }
-      } catch {
-        setError('Failed to load signature.')
+        if (!ignore) {
+          setCurrentSignatureUrl(data.url || null)
+          setPreviewUrl(null)
+        }
+      } catch (fetchError) {
+        if (!ignore) setError(fetchError.message || 'Failed to load signature.')
       } finally {
-        setHasChecked(true)
-        setLoading(false)
+        if (!ignore) setLoading(false)
       }
     }
+
     fetchSignature()
+
+    return () => {
+      ignore = true
+    }
   }, [])
 
-  // 2) Handle new file selection (unchanged)
+  const resetSelectedFile = () => {
+    setSignatureFile(null)
+    setPreviewUrl(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleFileChange = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setError('Please select a JPEG or PNG image.')
-      return
-    }
-    if (previewUrl && !(await dialog.confirm('Replace existing signature?'))) {
-      e.target.value = null
-      return
-    }
-    setSignatureFile(file)
+    const file = e.target.files?.[0]
+    setNotice(null)
     setError('')
+    setSignatureFile(null)
+    setPreviewUrl(null)
+
+    if (!file) return
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setError('Please select a JPEG or PNG image.')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > MAX_SIGNATURE_SIZE) {
+      setError(
+        `Signature image must be 2 MB or smaller. Selected file is ${formatFileSize(file.size)}.`,
+      )
+      e.target.value = ''
+      return
+    }
+
+    setSignatureFile(file)
     const reader = new FileReader()
     reader.onloadend = () => setPreviewUrl(reader.result)
     reader.readAsDataURL(file)
   }
 
-  // 3) Upload & save signature (unchanged)
   const handleSaveSignature = async () => {
     if (!signatureFile) {
-      setError('No file selected.')
+      setError('Select a signature file before saving.')
       return
     }
-    setLoading(true)
+
+    if (hasExistingSignature && !(await dialog.confirm('Replace existing signature?'))) {
+      return
+    }
+
+    setSaving(true)
     setError('')
+    setNotice(null)
     try {
       const formData = new FormData()
       formData.append('signature', signatureFile)
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}signature`, {
+      const res = await fetch(`${API_BASE}signature`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       })
       const data = await res.json()
-      if (data.status === 'success' && data.url) {
-        setPreviewUrl(data.url)
-        onClose?.()
-      } else {
-        setError(data.message || 'Save failed.')
+      if (!res.ok || data.status !== 'success' || !data.url) {
+        throw new Error(data.message || 'Save failed.')
       }
-    } catch {
-      setError('Error saving signature.')
+
+      setCurrentSignatureUrl(data.url)
+      setPreviewUrl(null)
+      setSignatureFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setNotice({ color: 'success', message: 'Signature saved.' })
+      window.dispatchEvent(new Event('kijo:signature-updated'))
+      onStatusChange?.({ signatureUploaded: true })
+      onClose?.()
+    } catch (saveError) {
+      setError(saveError.message || 'Error saving signature.')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   return (
-    <CCard>
-      <CCardBody>
-        <CRow className="mb-3">
-          <CCol>
-            <CAlert color="primary">
-              <strong>
-                Upload image with transparent background (.png). Your digital signature will be used
-                for official invoicing.
-              </strong>
-            </CAlert>
-            <CFormLabel htmlFor="signatureUpload">Upload Signature (JPEG or PNG)</CFormLabel>
-            <CFormInput
-              type="file"
-              id="signatureUpload"
-              accept="image/jpeg,image/png"
-              onChange={handleFileChange}
-            />
+    <CCard className="account-card records-page-card">
+      <CCardHeader className="account-card-header records-page-card-header">
+        <div>
+          <strong>Digital Signature</strong>
+        </div>
+      </CCardHeader>
+      <CCardBody className="records-page-card-body">
+        {notice && (
+          <CAlert color={notice.color} className="mb-3" aria-live="polite">
+            {notice.message}
+          </CAlert>
+        )}
+        {error && (
+          <CAlert id="signatureUpload-error" color="danger" className="mb-3" aria-live="assertive">
+            {error}
+          </CAlert>
+        )}
+
+        <CRow className="g-4">
+          <CCol lg={5}>
+            <div className="account-signature-preview-panel">
+              <div className="account-signature-preview-heading">
+                <strong>Current Signature</strong>
+                <span>{statusText}</span>
+              </div>
+              <div className="account-signature-preview-box" aria-live="polite">
+                {loading ? (
+                  <div className="account-empty-state">
+                    <CSpinner size="sm" aria-hidden="true" />
+                    <span>Checking for existing signature...</span>
+                  </div>
+                ) : activePreviewUrl ? (
+                  <img src={activePreviewUrl} alt="Current digital signature preview" />
+                ) : (
+                  <div className="account-empty-state">
+                    <strong>No signature uploaded</strong>
+                    <span>
+                      Upload a signature before issuing invoice documents that require it.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </CCol>
-        </CRow>
 
-        {loading && <p>Loading...</p>}
-        {error && <CAlert color="danger">{error}</CAlert>}
+          <CCol lg={7}>
+            <div className="account-upload-panel">
+              <CFormLabel htmlFor="signatureUpload" className="account-field-label">
+                Upload Signature
+              </CFormLabel>
+              <CFormInput
+                ref={fileInputRef}
+                type="file"
+                id="signatureUpload"
+                accept="image/jpeg,image/png"
+                onChange={handleFileChange}
+                disabled={loading || saving}
+                invalid={Boolean(error)}
+                aria-describedby={error ? 'signatureUpload-error' : undefined}
+              />
 
-        <CRow className="mb-3">
-          <CCol>
-            <CFormLabel>Current Signature</CFormLabel>
-            {hasChecked ? (
-              <CAlert color={previewUrl ? 'success' : 'warning'}>
-                {previewUrl
-                  ? 'A signature file is present.'
-                  : 'No signature found. If you previously uploaded one, please upload again.'}
-              </CAlert>
-            ) : (
-              <CAlert color="secondary">Checking for existing signature...</CAlert>
-            )}
-          </CCol>
-        </CRow>
+              {hasSelectedFile && (
+                <CAlert color="info" className="mt-3 mb-0">
+                  Selected {signatureFile.name} ({formatFileSize(signatureFile.size)}).
+                </CAlert>
+              )}
 
-        <CRow>
-          <CCol className="text-end">
-            <CButton color="primary" onClick={handleSaveSignature} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Signature'}
-            </CButton>
+              <div className="account-form-actions account-form-actions--flush">
+                <CButton
+                  color="primary"
+                  size="sm"
+                  onClick={handleSaveSignature}
+                  disabled={saveDisabled}
+                >
+                  {saving ? 'Saving...' : 'Save Signature'}
+                </CButton>
+                <CButton
+                  color="secondary"
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={resetSelectedFile}
+                  disabled={!hasSelectedFile || saving}
+                >
+                  Clear Selection
+                </CButton>
+              </div>
+            </div>
           </CCol>
         </CRow>
       </CCardBody>

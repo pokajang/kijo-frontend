@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useState } from 'react'
-import { isAggregateRecordTab } from '../config/recordTabs'
-import { modalsByTab, sharedRecordModals } from '../config/recordModals'
+import { sharedRecordModals } from '../config/recordModals'
 import { initialModalState, modalReducer } from './recordsModalState'
 
 const NullComponent = () => null
@@ -12,29 +11,15 @@ export const useRecordsModalWorkflow = (activeTab) => {
   const [isFollowUpModalSubmitting, setIsFollowUpModalSubmitting] = useState(false)
   const [isSyncingClientDetails, setIsSyncingClientDetails] = useState(false)
 
-  const isAggregateTab = isAggregateRecordTab(activeTab)
-  const viewModalTabKey = isAggregateTab ? modalState.view.record?.serviceTab : activeTab
-  const activeModals = isAggregateTab ? sharedRecordModals : modalsByTab[activeTab] || {}
-
-  const ViewModal = (modalsByTab[viewModalTabKey] || {}).View || NullComponent
-  const FailModal = activeModals.Fail || NullComponent
-  const SuccessModal = activeModals.Success || NullComponent
-  const FollowUpModalComponent = activeModals.FollowUp || NullComponent
+  const FailModal = sharedRecordModals.Fail || NullComponent
+  const SuccessModal = sharedRecordModals.Success || NullComponent
+  const FollowUpModalComponent = sharedRecordModals.FollowUp || NullComponent
 
   useEffect(() => {
-    dispatchModal({ type: 'CLOSE_VIEW' })
     dispatchModal({ type: 'CLOSE_FAIL' })
     dispatchModal({ type: 'CLOSE_SUCCESS' })
     dispatchModal({ type: 'CLOSE_FOLLOWUP' })
   }, [activeTab])
-
-  const openViewModal = (record) => {
-    if (record) dispatchModal({ type: 'OPEN_VIEW', payload: record })
-  }
-
-  const closeViewModal = () => {
-    dispatchModal({ type: 'CLOSE_VIEW' })
-  }
 
   const openFailModal = ({ recordId, serviceKey }) => {
     dispatchModal({
@@ -97,7 +82,6 @@ export const useRecordsModalWorkflow = (activeTab) => {
   return {
     modalState,
     dispatchModal,
-    ViewModal,
     FailModal,
     SuccessModal,
     FollowUpModalComponent,
@@ -109,8 +93,6 @@ export const useRecordsModalWorkflow = (activeTab) => {
     setIsFollowUpModalSubmitting,
     isSyncingClientDetails,
     setIsSyncingClientDetails,
-    openViewModal,
-    closeViewModal,
     openFailModal,
     closeFailModal,
     setFailReason,

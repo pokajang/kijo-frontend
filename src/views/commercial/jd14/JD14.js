@@ -1,10 +1,16 @@
 // src/views/commercial/jd14/JD14.js
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { CRow, CCol, CCard, CCardHeader, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
-import { DataTableRecordControls } from '../../../components/datatable'
+import { CButton, CRow, CCol, CCard, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
+import { useNavigate } from 'react-router-dom'
+import {
+  DataTableCardHeader,
+  DataTableRecordControls,
+  DataTableStatsToggle,
+} from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
@@ -14,6 +20,7 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import JD14Table from './JD14Table'
+import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const parseLocalDate = (value) => {
   if (!value) return null
@@ -55,8 +62,10 @@ const getFormStatus = (form) => {
 }
 
 const JD14 = () => {
+  const navigate = useNavigate()
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
+  const [projectPickerVisible, setProjectPickerVisible] = useState(false)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
@@ -64,6 +73,8 @@ const JD14 = () => {
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('commercial.jd14')
 
   const personInChargeOptions = useMemo(() => {
     const options = new Set()
@@ -130,6 +141,16 @@ const JD14 = () => {
   const applyStatFilter = (_key, value) => {
     setStatusFilter(value)
     setShowAdvancedFilters(true)
+  }
+
+  const openJD14CreateForProject = (project) => {
+    const projectId = project?.id ?? project?.project_id
+    if (!projectId) return
+
+    setProjectPickerVisible(false)
+    navigate(`/commercial/jd14/create/${projectId}?from=jd14-list`, {
+      state: { project },
+    })
   }
 
   useEffect(() => {
@@ -209,16 +230,25 @@ const JD14 = () => {
       </CCol>
       <CCol xs={12}>
         <CCard className="mb-4">
-          <CCardHeader>
-            <strong>JD14 Forms</strong>
-          </CCardHeader>
+          <DataTableCardHeader title="JD14 Forms" scopeLabel={statsScopeLabel}>
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
+            <CButton color="primary" size="sm" onClick={() => setProjectPickerVisible(true)}>
+              Create JD14
+            </CButton>
+          </DataTableCardHeader>
           <CCardBody>
             <JD14Table
               forms={filteredForms}
               loading={loading}
-              scopeLabel={statsScopeLabel}
+              statsVisible={statsVisible}
               beforeList={
                 <DataTableRecordControls
+                  visible={controlsVisible}
                   searchValue={searchTerm}
                   onSearchChange={setSearchTerm}
                   searchPlaceholder="Type to search..."
@@ -292,6 +322,17 @@ const JD14 = () => {
           </CCardBody>
         </CCard>
       </CCol>
+      <CommercialProjectPickerModal
+        visible={projectPickerVisible}
+        onClose={() => setProjectPickerVisible(false)}
+        onContinue={openJD14CreateForProject}
+        title="Create JD14"
+        searchInputId="jd14ProjectSearch"
+        selectLabel="Select Training Project"
+        creationLabel="JD14"
+        projectScopeLabel="active training projects"
+        allowedProjectTypes={['Training']}
+      />
     </CRow>
   )
 }

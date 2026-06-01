@@ -84,8 +84,14 @@ export default function MeetingMinuteEditMode({
         />
       )}
 
-      <div className="d-flex gap-2">
-        <CButton color="secondary" variant="outline" onClick={onCancel} disabled={submitting}>
+      <div className="d-flex justify-content-end gap-2">
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          disabled={submitting}
+        >
           Cancel
         </CButton>
         {currentStep === stepNotes && (
@@ -93,6 +99,7 @@ export default function MeetingMinuteEditMode({
             type="button"
             color="secondary"
             variant="outline"
+            size="sm"
             onClick={() => onGoToStep(stepDetails)}
             disabled={submitting}
           >
@@ -107,6 +114,7 @@ export default function MeetingMinuteEditMode({
                   type="button"
                   color="secondary"
                   variant="outline"
+                  size="sm"
                   onClick={onSaveDraft}
                   disabled={submitting}
                 >
@@ -116,6 +124,7 @@ export default function MeetingMinuteEditMode({
                   type="button"
                   color="danger"
                   variant="outline"
+                  size="sm"
                   onClick={onDiscardDraft}
                   disabled={submitting}
                 >
@@ -123,7 +132,7 @@ export default function MeetingMinuteEditMode({
                 </CButton>
               </>
             )}
-            <CButton color="primary" type="submit" disabled={submitting}>
+            <CButton color="primary" size="sm" type="submit" disabled={submitting}>
               {submitting ? (
                 <>
                   <CSpinner size="sm" className="me-2" />

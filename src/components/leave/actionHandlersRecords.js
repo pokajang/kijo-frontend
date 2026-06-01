@@ -77,7 +77,13 @@ export const useLeaveRecordHandlers = () => {
 
   const handleCancel = useCallback(
     async (leaveId) => {
-      if (!(await dialog.confirm('Are you sure you want to cancel this leave application?'))) return
+      if (
+        !(await dialog.confirm('Are you sure you want to cancel this leave application?', {
+          confirmText: 'Cancel Application',
+          confirmColor: 'danger',
+        }))
+      )
+        return
 
       try {
         await fetchLeaveJson(

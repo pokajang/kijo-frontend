@@ -1,5 +1,4 @@
 export const initialModalState = {
-  view: { visible: false, record: null },
   fail: { visible: false, recordId: null, reason: '', serviceKey: null },
   success: {
     visible: false,
@@ -22,11 +21,6 @@ export const initialModalState = {
 
 export const modalReducer = (state, action) => {
   switch (action.type) {
-    case 'OPEN_VIEW':
-      return { ...state, view: { visible: true, record: action.payload } }
-    case 'CLOSE_VIEW':
-      return { ...state, view: { visible: false, record: null } }
-
     case 'OPEN_FAIL':
       return {
         ...state,

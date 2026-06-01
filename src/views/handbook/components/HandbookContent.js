@@ -58,7 +58,10 @@ const HandbookContent = ({
     }
 
     if (editingId && editingId !== chapter.id && isDirty) {
-      const discard = await dialog.confirm('Discard the unsaved handbook section changes?')
+      const discard = await dialog.confirm('Discard the unsaved handbook section changes?', {
+        confirmText: 'Discard',
+        confirmColor: 'danger',
+      })
       if (!discard) {
         return
       }
@@ -80,7 +83,10 @@ const HandbookContent = ({
     }
 
     if (isDirty) {
-      const discard = await dialog.confirm('Discard the unsaved handbook section changes?')
+      const discard = await dialog.confirm('Discard the unsaved handbook section changes?', {
+        confirmText: 'Discard',
+        confirmColor: 'danger',
+      })
       if (!discard) {
         return false
       }

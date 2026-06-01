@@ -1,0 +1,112 @@
+.right-side-drawer {
+  --right-side-drawer-sticky-top: 4.375rem;
+  --right-side-drawer-bottom-gap: 1rem;
+
+  display: none;
+  flex: 0 0 var(--right-side-drawer-width, 420px);
+  width: var(--right-side-drawer-width, 420px);
+  max-width: var(--right-side-drawer-width, 420px);
+  position: sticky;
+  top: var(--right-side-drawer-sticky-top);
+  align-self: flex-start;
+  height: calc(
+    100dvh - var(--right-side-drawer-sticky-top) - var(--right-side-drawer-bottom-gap)
+  );
+  padding: 0 1rem 1rem 0;
+  background: transparent;
+}
+
+.right-side-drawer.is-open {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-side-drawer-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.right-side-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+}
+
+.right-side-drawer-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--cui-body-color);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.right-side-drawer-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.right-side-drawer-close {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+
+.right-side-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--right-side-drawer-body-padding, 1rem);
+  scrollbar-color: var(--cui-gray-400) transparent;
+  scrollbar-width: thin;
+}
+
+.right-side-drawer-body::-webkit-scrollbar {
+  width: 0.4rem;
+}
+
+.right-side-drawer-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.right-side-drawer-body::-webkit-scrollbar-thumb {
+  background: var(--cui-gray-400);
+  border-radius: 999px;
+}
+
+@media (max-width: 991.98px) {
+  .right-side-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 1085;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    min-height: 0;
+    padding: 0;
+    background: var(--cui-body-bg);
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.18);
+  }
+
+  .right-side-drawer-card {
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .right-side-drawer-body {
+    max-height: none;
+  }
+}

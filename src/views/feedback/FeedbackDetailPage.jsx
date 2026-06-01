@@ -160,7 +160,13 @@ const FeedbackDetailPage = () => {
       dialog.alert('You can only delete your own feedback.')
       return
     }
-    if (!(await dialog.confirm('Delete this feedback? This action cannot be undone.'))) return
+    if (
+      !(await dialog.confirm('Delete this feedback? This action cannot be undone.', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     const result = await deleteFeedback(feedbackId)
     if (result.status === 'success') {
       dialog.alert('Feedback deleted.')
@@ -245,12 +251,13 @@ const FeedbackDetailPage = () => {
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             onClick={() => setEditVisible(false)}
             disabled={editSubmitting}
           >
             Cancel
           </CButton>
-          <CButton color="primary" onClick={saveEdit} disabled={editSubmitting}>
+          <CButton color="primary" size="sm" onClick={saveEdit} disabled={editSubmitting}>
             {editSubmitting ? 'Submitting...' : 'Submit'}
           </CButton>
         </CModalFooter>

@@ -3,6 +3,7 @@ import {
   CModal,
   CModalHeader,
   CModalBody,
+  CModalFooter,
   CCard,
   CCardHeader,
   CCardBody,
@@ -95,13 +96,12 @@ const ViewCatalogModal = ({ visible, onClose, item }) => {
             )}
           </CCardBody>
         </CCard>
-
-        <div className="text-end mt-3">
-          <CButton color="secondary" onClick={onClose}>
-            Close
-          </CButton>
-        </div>
       </CModalBody>
+      <CModalFooter>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
+          Close
+        </CButton>
+      </CModalFooter>
     </CModal>
   )
 }

@@ -39,20 +39,20 @@ const RecordDetailsActions = ({
       </CCardHeader>
       <CCardBody>
         <div className="d-flex flex-wrap gap-2">
-          <CButton size="sm" color="primary" variant="outline" onClick={onFollowUp}>
+          <CButton size="sm" color="secondary" variant="outline" onClick={onFollowUp}>
             Follow Up
           </CButton>
           {record?.clientDetails?.email ? (
-            <CButton size="sm" color="primary" variant="outline" onClick={onEmail}>
+            <CButton size="sm" color="secondary" variant="outline" onClick={onEmail}>
               Email
             </CButton>
           ) : null}
-          <CButton size="sm" color="primary" variant="outline" onClick={onSharePdf}>
+          <CButton size="sm" color="secondary" variant="outline" onClick={onSharePdf}>
             Share PDF
           </CButton>
           <CButton
             size="sm"
-            color="primary"
+            color="secondary"
             variant="outline"
             onClick={() => handlers?.handleGeneratePdf?.(record)}
           >

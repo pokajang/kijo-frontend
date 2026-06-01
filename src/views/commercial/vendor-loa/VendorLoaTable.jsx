@@ -131,12 +131,12 @@ const VendorLoaTable = ({
   loading = false,
   staffRoles = [],
   onRefresh,
-  scopeLabel = 'All years',
   beforeList,
   renderQuickFilters,
   desktopUtilityPortalId,
   mobileUtilityPortalId,
   onStatFilter,
+  statsVisible = true,
 }) => {
   const navigate = useNavigate()
   const [selectedRecord, setSelectedRecord] = useState(null)
@@ -241,6 +241,10 @@ const VendorLoaTable = ({
 
     const confirmed = await dialog.confirm(
       `Are you sure you want to delete LOA ${record.loa_ref_no || record.loa || ''}?`,
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) return
 
@@ -455,7 +459,7 @@ const VendorLoaTable = ({
 
   return (
     <>
-      <StatsStrip items={statsItems} scopeLabel={scopeLabel} loading={loading} />
+      {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
       {beforeList}
       <DataTableRecordList
         rows={normalizedRecords}

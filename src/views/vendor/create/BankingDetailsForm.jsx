@@ -6,6 +6,7 @@ import {
   CCardBody,
   CCardHeader,
   CCol,
+  CCardFooter,
   CFormInput,
   CFormLabel,
   CRow,
@@ -45,18 +46,15 @@ const BankingDetailsForm = ({ formData, handleChange, handleSubmit, handleReset 
               />
             </CCol>
           </CRow>
-
-          <CRow className="mt-4">
-            <CCol xs={12}>
-              <CButton color="primary" onClick={handleSubmit} className="me-2">
-                Create Vendor
-              </CButton>
-              <CButton color="secondary" onClick={handleReset}>
-                Cancel
-              </CButton>
-            </CCol>
-          </CRow>
         </CCardBody>
+        <CCardFooter className="d-flex justify-content-end gap-2">
+          <CButton color="secondary" variant="outline" size="sm" onClick={handleReset}>
+            Reset
+          </CButton>
+          <CButton color="primary" size="sm" onClick={handleSubmit}>
+            Create Vendor
+          </CButton>
+        </CCardFooter>
       </CCard>
     </CCol>
   )

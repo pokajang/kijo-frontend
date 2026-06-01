@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCardHeader, CCol, CRow, CSpinner } from '@coreui/react'
 import dialog from '../../../components/dialog/dialogService'
+import { fetchDetailJson } from '../../../utils/detailPages'
 
 const renderField = (label, value) => (
-  <>
+  <div className="records-detail-field">
     <div className="small text-muted">{label}</div>
     <div>{value ?? '-'}</div>
-  </>
+  </div>
 )
 
 export default function StaffDetailPage() {
@@ -18,24 +19,44 @@ export default function StaffDetailPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    let isMounted = true
     setLoading(true)
     setError(null)
-    fetch(`${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}`, {
-      credentials: 'include',
+    fetchDetailJson(`${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}`, {
+      notFoundMessage: 'Staff record not found.',
     })
-      .then((res) => res.json())
-      .then((result) => {
+      .then((detailResult) => {
+        if (!isMounted) return
+        if (detailResult.notFound) {
+          setDetail(null)
+          return
+        }
+        const result = detailResult.data
         if (result.status === 'success') setDetail(result.data)
         else setError(result.message || 'Failed to load staff details.')
       })
-      .catch(() => setError('Server error loading staff details.'))
-      .finally(() => setLoading(false))
+      .catch((err) => {
+        if (isMounted) setError(err?.message || 'Server error loading staff details.')
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [staffId])
 
   const handleEdit = () => navigate(`/staff/create?edit_id=${staffId}`)
 
   const handleTerminate = async () => {
-    if (!(await dialog.confirm('Are you sure? This cannot be undone.'))) return
+    if (
+      !(await dialog.confirm('Are you sure? This cannot be undone.', {
+        confirmText: 'Terminate',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_BASE}hr/staff/${encodeURIComponent(staffId)}/terminate`,

@@ -105,7 +105,7 @@ export default function HowToWriteModal({ visible, onClose }) {
         </CCard>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Close
         </CButton>
       </CModalFooter>

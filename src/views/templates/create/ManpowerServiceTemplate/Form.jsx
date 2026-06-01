@@ -87,8 +87,17 @@ export default function Form({
 
       {/* Action buttons */}
       <CRow className="mt-4">
-        <CCol>
-          <CButton color="primary" onClick={handleSave} disabled={saving}>
+        <CCol className="d-flex justify-content-end gap-2">
+          <CButton
+            variant="outline"
+            color="secondary"
+            size="sm"
+            onClick={handleSecondaryAction}
+            disabled={saving}
+          >
+            {isEdit ? 'Cancel' : 'Reset'}
+          </CButton>
+          <CButton color="primary" size="sm" onClick={handleSave} disabled={saving}>
             {saving
               ? finalizingBmTranslation
                 ? 'Saving BM Proposal...'
@@ -100,15 +109,6 @@ export default function Form({
                 : isEdit
                   ? 'Update Changes'
                   : 'Save Template'}
-          </CButton>
-          <CButton
-            variant="outline"
-            color="secondary"
-            className="ms-2"
-            onClick={handleSecondaryAction}
-            disabled={saving}
-          >
-            {isEdit ? 'Cancel' : 'Reset'}
           </CButton>
         </CCol>
       </CRow>

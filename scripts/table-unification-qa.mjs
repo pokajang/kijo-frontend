@@ -14,6 +14,18 @@ const reportPath = process.env.QA_REPORT_PATH
 const shouldStartServer = process.env.QA_START_SERVER !== '0'
 const requireTableCoverage =
   process.env.QA_REQUIRE_TABLES === '1' || Boolean(process.env.QA_ROUTE_FILTER)
+const navigationTimeoutMs = Number(process.env.QA_NAVIGATION_TIMEOUT_MS || 45_000)
+const renderTimeoutMs = Number(process.env.QA_RENDER_TIMEOUT_MS || 8_000)
+const metricSettleMs = Number(process.env.QA_METRIC_SETTLE_MS || 500)
+const tableReadySelector = [
+  '.data-table-shell',
+  '.records-table-shell',
+  '.data-table-mobile-list',
+  '.records-mobile-list',
+  '.records-mobile-wrap',
+  '.table-scroll-viewport',
+  'table',
+].join(', ')
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: npm run qa:tables
@@ -24,6 +36,9 @@ Environment:
   QA_ROUTE_FILTER=meetings,crm/records
   QA_VIEWPORT=desktop|mobile
   QA_REQUIRE_TABLES=1
+  QA_NAVIGATION_TIMEOUT_MS=45000
+  QA_RENDER_TIMEOUT_MS=8000
+  QA_METRIC_SETTLE_MS=500
 `)
   process.exit(0)
 }
@@ -288,8 +303,8 @@ const run = async () => {
 
       for (const [routePath, label] of activeRoutes) {
         const page = await context.newPage()
-        page.setDefaultTimeout(6_000)
-        page.setDefaultNavigationTimeout(12_000)
+        page.setDefaultTimeout(renderTimeoutMs)
+        page.setDefaultNavigationTimeout(navigationTimeoutMs)
         const errors = []
         page.on('pageerror', (error) => errors.push(error.message))
         page.on('console', (message) => {
@@ -302,9 +317,17 @@ const run = async () => {
         let metrics
         try {
           process.stdout.write(`checking ${viewportName} ${routePath}\n`)
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-          await page.waitForLoadState('load', { timeout: 3_000 }).catch(() => {})
-          await page.waitForTimeout(500)
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: navigationTimeoutMs })
+          await page
+            .waitForLoadState('load', { timeout: Math.min(renderTimeoutMs, 5_000) })
+            .catch(() => {})
+          await page
+            .waitForSelector(tableReadySelector, {
+              state: 'visible',
+              timeout: renderTimeoutMs,
+            })
+            .catch(() => {})
+          await page.waitForTimeout(metricSettleMs)
 
           metrics = await page.evaluate(() => {
             const visible = (selector) =>
@@ -320,7 +343,19 @@ const run = async () => {
                 if (rect.width <= 0 || rect.height <= 0) return false
                 if (rect.left < -2 || rect.right > window.innerWidth + 2) {
                   const style = window.getComputedStyle(el)
-                  return style.position !== 'fixed'
+                  if (style.position === 'fixed') return false
+
+                  let ancestor = el.parentElement
+                  while (ancestor && ancestor !== document.body) {
+                    const ancestorStyle = window.getComputedStyle(ancestor)
+                    if (ancestorStyle.position === 'fixed') return false
+                    if (['auto', 'scroll', 'hidden', 'clip'].includes(ancestorStyle.overflowX)) {
+                      return false
+                    }
+                    ancestor = ancestor.parentElement
+                  }
+
+                  return true
                 }
                 return false
               })

@@ -1,0 +1,14 @@
+.data-table-action-menu {
+  --cui-dropdown-item-padding-y: 0.12rem;
+  --cui-dropdown-item-padding-x: 0.6rem;
+  min-width: 9.5rem;
+}
+
+.data-table-action-menu .dropdown-item {
+  line-height: 1.02;
+  min-height: unset;
+}
+
+.data-table-action-menu .dropdown-divider {
+  margin: 0.12rem 0;
+}

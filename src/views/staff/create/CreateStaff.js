@@ -112,22 +112,11 @@ const CreateStaff = () => {
                   handleInputChange={handleInputChange}
                 />
 
-                <CCol xs={12} className="mt-4">
-                  <CButton
-                    color="primary"
-                    onClick={() => {
-                      if (isEditMode && editId) {
-                        handleUpdate(editId, staffDetails, navigate)
-                      } else {
-                        handleSubmit(staffDetails, setStaffDetails, navigate)
-                      }
-                    }}
-                    className="me-2"
-                  >
-                    {isEditMode ? 'Update Staff' : 'Create Staff'}
-                  </CButton>
+                <CCol xs={12} className="mt-4 d-flex justify-content-end gap-2 flex-wrap">
                   <CButton
                     color="secondary"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
                       if (isEditMode && initialEditDetails) {
                         setStaffDetails(initialEditDetails)
@@ -138,6 +127,19 @@ const CreateStaff = () => {
                     }}
                   >
                     {isEditMode ? 'Reset Changes' : 'Reset'}
+                  </CButton>
+                  <CButton
+                    color="primary"
+                    size="sm"
+                    onClick={() => {
+                      if (isEditMode && editId) {
+                        handleUpdate(editId, staffDetails, navigate)
+                      } else {
+                        handleSubmit(staffDetails, setStaffDetails, navigate)
+                      }
+                    }}
+                  >
+                    {isEditMode ? 'Update Staff' : 'Create Staff'}
                   </CButton>
                 </CCol>
               </CForm>

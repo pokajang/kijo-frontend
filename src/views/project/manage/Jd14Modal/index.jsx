@@ -195,7 +195,7 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
 
   const footerContent = (
     <>
-      <CButton color="secondary" size="sm" onClick={onClose}>
+      <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
         Cancel
       </CButton>
       <CButton

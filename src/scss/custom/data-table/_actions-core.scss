@@ -1,0 +1,43 @@
+.data-table-action-toggle {
+  color: var(--app-text-action) !important;
+}
+
+.data-table-action-dropdown {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.data-table-action-cell {
+  padding: 0 !important;
+  background-color: var(--cui-card-bg, var(--app-surface-page)) !important;
+  box-shadow: -1px 0 0 var(--cui-border-color, var(--app-border-card));
+}
+
+.data-table-action-cell .data-table-action-dropdown {
+  width: 100%;
+  height: 100%;
+}
+
+.data-table-action-cell .data-table-action-toggle {
+  width: 100%;
+  min-height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.35rem !important;
+  border-radius: 0;
+}
+
+.data-table-action-kebab {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.data-table-action-toggle:hover,
+.data-table-action-toggle:focus {
+  color: var(--app-text-action-hover) !important;
+}
+

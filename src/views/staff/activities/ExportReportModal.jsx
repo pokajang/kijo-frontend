@@ -173,10 +173,10 @@ const ExportReportModal = ({ visible, onClose, activityList }) => {
       </CModalBody>
 
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose} disabled={loading}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose} disabled={loading}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={handleGenerate} disabled={loading}>
+        <CButton color="primary" size="sm" onClick={handleGenerate} disabled={loading}>
           {loading ? (
             <>
               <CSpinner size="sm" className="me-2" />

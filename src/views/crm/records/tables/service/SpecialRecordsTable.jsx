@@ -19,6 +19,9 @@ const SpecialRecordsTable = ({
   onEmail,
   onSharePdf,
   onNegotiate,
+  onStatsScopeLabelChange,
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   return (
     <ServiceConfiguredRecordsTable
@@ -40,6 +43,9 @@ const SpecialRecordsTable = ({
       onEmail={onEmail}
       onSharePdf={onSharePdf}
       onNegotiate={onNegotiate}
+      onStatsScopeLabelChange={onStatsScopeLabelChange}
+      statsVisible={statsVisible}
+      controlsVisible={controlsVisible}
     />
   )
 }

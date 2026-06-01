@@ -1,20 +1,13 @@
 import React, { useMemo, useState } from 'react'
-import {
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CFormLabel,
-  CFormSelect,
-  CRow,
-} from '@coreui/react'
+import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilPlus } from '@coreui/icons'
+import { cilPlus, cilReload } from '@coreui/icons'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../../components/datatable'
@@ -26,6 +19,7 @@ import {
   isDateInPeriodRange,
 } from '../../../../components/filters'
 import { StatsStrip } from '../../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { formatCount, getTopGroupByCount } from '../../../../utils/stats/formatStats'
 import { getClientPaymentTermsMeta } from '../../../../shared/paymentTerms'
 
@@ -235,9 +229,13 @@ const ClientListTableCard = ({
   onSeeBranches,
   onSeePics,
   onCreateClient,
+  onRefreshClientStatuses,
+  refreshStatusLoading = false,
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [periodRange, setPeriodRange] = useState(() => defaultPeriodRange)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('client.manage')
 
   const periodFilteredClients = useMemo(
     () =>
@@ -442,24 +440,36 @@ const ClientListTableCard = ({
     <CRow>
       <CCol xs={12}>
         <CCard className="mb-4">
-          <CCardHeader>
-            <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-              <strong>Clients List</strong>
-              <CButton size="sm" color="primary" onClick={onCreateClient}>
-                <CIcon icon={cilPlus} className="me-1" />
-                Create Client
-              </CButton>
-            </div>
-          </CCardHeader>
-          <CCardBody>
-            <StatsStrip
-              items={statsItems}
-              loading={loading}
-              layout="balanced"
-              scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+          <DataTableCardHeader
+            title="Clients List"
+            scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+          >
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
             />
+            <CButton
+              size="sm"
+              color="secondary"
+              variant="outline"
+              onClick={onRefreshClientStatuses}
+              disabled={loading || refreshStatusLoading}
+            >
+              <CIcon icon={cilReload} className="me-1" />
+              {refreshStatusLoading ? 'Refreshing...' : 'Refresh Status'}
+            </CButton>
+            <CButton size="sm" color="primary" onClick={onCreateClient}>
+              <CIcon icon={cilPlus} className="me-1" />
+              Create Client
+            </CButton>
+          </DataTableCardHeader>
+          <CCardBody>
+            {statsVisible && <StatsStrip items={statsItems} loading={loading} layout="balanced" />}
 
             <DataTableRecordControls
+              visible={controlsVisible}
               searchValue={searchTerm}
               onSearchChange={onSearchChange}
               searchPlaceholder="Search company, PIC, email, mobile, address"

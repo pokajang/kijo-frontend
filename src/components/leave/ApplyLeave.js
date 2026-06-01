@@ -26,6 +26,7 @@ const normalizeLeaveType = (value) =>
     .trim()
     .toLowerCase()
 const isUnpaidLeave = (value) => ['unpaid', 'unpaid leave'].includes(normalizeLeaveType(value))
+const hasPositiveBalance = (entitlement) => Number(entitlement.remaining) > 0
 
 const ApplyLeave = ({ onViewRecords }) => {
   const [entitlements, setEntitlements] = useState([])
@@ -102,7 +103,10 @@ const ApplyLeave = ({ onViewRecords }) => {
   const leaveOptions = useMemo(
     () => [
       ...currentYearEntitlements
-        .filter((entitlement) => !isUnpaidLeave(entitlement.leave_type))
+        .filter(
+          (entitlement) =>
+            !isUnpaidLeave(entitlement.leave_type) && hasPositiveBalance(entitlement),
+        )
         .map((entitlement) => ({
           key: `${entitlement.id ?? entitlement.leave_type}-${entitlement.year}`,
           value: entitlement.leave_type,
@@ -116,21 +120,16 @@ const ApplyLeave = ({ onViewRecords }) => {
   )
 
   const hasCurrentYearEntitlements = currentYearEntitlements.length > 0
+  const canApplyLeave = leaveOptions.length > 0
 
   useEffect(() => {
-    if (loadingEntitlements || !hasCurrentYearEntitlements) return
+    if (loadingEntitlements || !canApplyLeave) return
 
     const validValues = new Set(leaveOptions.map((option) => option.value))
     if (!validValues.has(leaveFormData.typeOfLeave)) {
       setTypeOfLeave(leaveOptions[0]?.value ?? 'Unpaid')
     }
-  }, [
-    hasCurrentYearEntitlements,
-    leaveFormData.typeOfLeave,
-    leaveOptions,
-    loadingEntitlements,
-    setTypeOfLeave,
-  ])
+  }, [canApplyLeave, leaveFormData.typeOfLeave, leaveOptions, loadingEntitlements, setTypeOfLeave])
 
   const showSubmissionPanel = isSubmitting || (notice.visible && notice.scope === 'submission')
 
@@ -169,7 +168,7 @@ const ApplyLeave = ({ onViewRecords }) => {
             )}
           </div>
 
-          {!hasCurrentYearEntitlements ? (
+          {!canApplyLeave ? (
             notice.visible &&
             notice.scope !== 'submission' && (
               <CAlert color={notice.color} className="py-2" dismissible onClose={hideNotice}>
@@ -189,11 +188,11 @@ const ApplyLeave = ({ onViewRecords }) => {
                 </div>
               ) : (
                 <div className="leave-submit-actions">
-                  <CButton color="primary" onClick={hideNotice}>
+                  <CButton color="primary" size="sm" onClick={hideNotice}>
                     {notice.color === 'danger' ? 'Back to Form' : 'Apply Another Leave'}
                   </CButton>
                   {notice.color !== 'danger' && onViewRecords && (
-                    <CButton color="secondary" variant="outline" onClick={onViewRecords}>
+                    <CButton color="secondary" variant="outline" size="sm" onClick={onViewRecords}>
                       View Records
                     </CButton>
                   )}
@@ -318,7 +317,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                 </CRow>
               )}
 
-              <CButton type="submit" color="primary" disabled={isSubmitting}>
+              <CButton type="submit" color="primary" size="sm" disabled={isSubmitting}>
                 Submit
               </CButton>
             </CForm>

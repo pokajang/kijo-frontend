@@ -38,13 +38,14 @@ export default function UploadAttachment({
                 >
                   <button
                     type="button"
-                    className="btn btn-link p-0"
+                    className="btn btn-link btn-sm p-0"
                     onClick={() => onPreviewFile(att)}
                   >
                     {att.fileName}
                   </button>
                   <CButton
                     color="danger"
+                    variant="outline"
                     size="sm"
                     onClick={() => onRemoveExistingAttachment(att.id)}
                   >
@@ -89,7 +90,7 @@ export default function UploadAttachment({
                     <CCol md={4}>
                       <button
                         type="button"
-                        className="btn btn-link p-0"
+                        className="btn btn-link btn-sm p-0"
                         onClick={() => onPreviewFile(fileObj)}
                       >
                         {fileObj.customName || fileObj.file.name}
@@ -104,7 +105,12 @@ export default function UploadAttachment({
                       />
                     </CCol>
                     <CCol md={2} className="text-end">
-                      <CButton color="danger" size="sm" onClick={() => onRemoveNewAttachment(idx)}>
+                      <CButton
+                        color="danger"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onRemoveNewAttachment(idx)}
+                      >
                         Remove
                       </CButton>
                     </CCol>

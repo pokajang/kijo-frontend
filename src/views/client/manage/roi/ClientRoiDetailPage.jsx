@@ -13,9 +13,11 @@ import {
 } from '@coreui/react'
 
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../../components/datatable'
@@ -25,6 +27,8 @@ import {
   isDefaultPeriodRange,
 } from '../../../../components/filters'
 import { StatsStrip } from '../../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
+import { fetchDetailJson } from '../../../../utils/detailPages'
 import { formatCount, formatMoney } from '../../../../utils/stats/formatStats'
 import { getRecordDetailPath } from '../../../crm/records/config/recordTabs'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
@@ -287,6 +291,7 @@ const HistoryTableCard = ({
   typeOptions = [],
   typeFilter,
   onTypeFilterChange,
+  controlsVisible,
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -340,6 +345,7 @@ const HistoryTableCard = ({
       </CCardHeader>
       <CCardBody>
         <DataTableRecordControls
+          visible={controlsVisible}
           searchValue={searchTerm}
           onSearchChange={setSearchTerm}
           searchPlaceholder={searchPlaceholder}
@@ -461,12 +467,16 @@ const ClientRoiDetailPage = () => {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(buildHistoryUrl(companyId, periodRange), {
-          credentials: 'include',
+        const detail = await fetchDetailJson(buildHistoryUrl(companyId, periodRange), {
           signal: controller.signal,
+          notFoundMessage: 'Client commercial history not found.',
         })
-        const result = await res.json()
-        if (!res.ok || result.status !== 'success') {
+        if (detail.notFound) {
+          setPayload({ client: null, summary: null, payments: [], invoices: [], quotes: [] })
+          return
+        }
+        const result = detail.data
+        if (result.status !== 'success') {
           throw new Error(result.message || 'Failed to fetch client commercial history.')
         }
         setPayload({
@@ -565,6 +575,8 @@ const ClientRoiDetailPage = () => {
     }
     navigate(`/commercial/invoice/${row.id}`)
   }
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('client.roi.detail')
 
   const openQuoteRow = (row) => {
     const tab = quoteRecordTabBySource[row.source_type]
@@ -578,12 +590,21 @@ const ClientRoiDetailPage = () => {
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4">
-            <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-              <div>
-                <strong>Client Commercial History</strong>
-                <div className="small text-muted">{clientName}</div>
-              </div>
+            <DataTableCardHeader
+              title={
+                <span>
+                  Client Commercial History <span className="text-muted ms-2">{clientName}</span>
+                </span>
+              }
+              scopeLabel={periodChip ? getPeriodRangeLabel(periodRange) : ''}
+            >
               <div className="d-flex gap-2 align-items-center">
+                <DataTableStatsToggle
+                  visible={statsVisible}
+                  onToggle={toggleStatsVisible}
+                  controlsVisible={controlsVisible}
+                  onControlsToggle={toggleControlsVisible}
+                />
                 <PeriodRangeSelector value={periodRange} onChange={updatePeriodRange} />
                 <CButton
                   size="sm"
@@ -602,14 +623,10 @@ const ClientRoiDetailPage = () => {
                   Back
                 </CButton>
               </div>
-            </CCardHeader>
+            </DataTableCardHeader>
             <CCardBody>
               {error ? <CAlert color="danger">{error}</CAlert> : null}
-              <StatsStrip
-                items={summaryStats}
-                loading={loading}
-                scopeLabel={periodChip ? getPeriodRangeLabel(periodRange) : ''}
-              />
+              {statsVisible && <StatsStrip items={summaryStats} loading={loading} />}
             </CCardBody>
           </CCard>
         </CCol>
@@ -655,6 +672,7 @@ const ClientRoiDetailPage = () => {
         getMobileMeta={(row) => `${row.paidDate || emptyValue} | ${formatMoney(row.paidAmount)}`}
         getMobileStatus={(row) => row.status}
         getMobileStatusTone={(row) => getStatusTone(row.status)}
+        controlsVisible={controlsVisible}
       />
 
       <HistoryTableCard
@@ -697,6 +715,7 @@ const ClientRoiDetailPage = () => {
         getMobileMeta={(row) => `${row.invoiceDate || emptyValue} | ${formatMoney(row.grandTotal)}`}
         getMobileStatus={(row) => row.status}
         getMobileStatusTone={(row) => getStatusTone(row.status)}
+        controlsVisible={controlsVisible}
       />
 
       <HistoryTableCard
@@ -749,6 +768,7 @@ const ClientRoiDetailPage = () => {
         getMobileMeta={(row) => `${row.quoteDate || emptyValue} | ${formatMoney(row.grandTotal)}`}
         getMobileStatus={(row) => row.status}
         getMobileStatusTone={(row) => getStatusTone(row.status)}
+        controlsVisible={controlsVisible}
       />
     </>
   )

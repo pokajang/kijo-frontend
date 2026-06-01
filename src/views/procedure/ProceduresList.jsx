@@ -213,7 +213,10 @@ export default function ProceduresList() {
 
   const onDelete = async (id) => {
     if (!id) return
-    const ok = await dialog.confirm('Delete this procedure? This action cannot be undone.')
+    const ok = await dialog.confirm('Delete this procedure? This action cannot be undone.', {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!ok) return
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE}procedures/${id}`, {

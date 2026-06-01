@@ -4,7 +4,6 @@ import {
   CAlert,
   CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CDropdown,
   CDropdownItem,
@@ -14,8 +13,10 @@ import {
   CFormSelect,
 } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../components/datatable'
@@ -28,6 +29,7 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount } from '../../../utils/stats/formatStats'
 import AppraisalModal from './AppraisalModal'
 import {
@@ -134,6 +136,8 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
   })
   const [editSection, setEditSection] = useState('')
   const [editingRecordId, setEditingRecordId] = useState(null)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('staff.appraise')
 
   const loadRecords = useCallback(async () => {
     setLoading(true)
@@ -354,6 +358,10 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
       record.recordKind === 'final'
         ? 'Delete this final appraisal record?'
         : 'Delete this appraisal record?',
+      {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      },
     )
     if (!confirmed) return
 
@@ -417,8 +425,16 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
   return (
     <>
       <CCard className={`mb-4 ${className}`}>
-        <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-          <strong>Appraisal Records</strong>
+        <DataTableCardHeader
+          title="Appraisal Records"
+          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        >
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
+          />
           {(onAddFeedback || onFinalAppraisal) && (
             <CDropdown alignment="end">
               <CDropdownToggle color="primary" size="sm">
@@ -434,7 +450,7 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
               </CDropdownMenu>
             </CDropdown>
           )}
-        </CCardHeader>
+        </DataTableCardHeader>
         <CCardBody>
           <>
             {loadError && (
@@ -442,12 +458,9 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
                 {loadError}
               </CAlert>
             )}
-            <StatsStrip
-              items={statsItems}
-              scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-              loading={loading}
-            />
+            {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
             <DataTableRecordControls
+              visible={controlsVisible}
               searchValue={searchText}
               onSearchChange={setSearchText}
               searchPlaceholder="Search staff, appraiser, type, or feedback..."

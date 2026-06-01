@@ -1,5 +1,5 @@
 import React from 'react'
-import { CModal, CModalHeader, CModalTitle, CModalBody, CButton } from '@coreui/react'
+import { CButton, CModal, CModalBody, CModalFooter, CModalHeader, CModalTitle } from '@coreui/react'
 import { resolveAssetUrl } from '../../../../../utils/assetUrls'
 
 const ViewReceiptModal = ({ visible, onClose, filePath }) => {
@@ -44,13 +44,12 @@ const ViewReceiptModal = ({ visible, onClose, filePath }) => {
         ) : (
           <p className="text-muted">No file available.</p>
         )}
-
-        <div className="mt-3 text-end">
-          <CButton color="secondary" size="sm" onClick={onClose}>
-            Close
-          </CButton>
-        </div>
       </CModalBody>
+      <CModalFooter>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
+          Close
+        </CButton>
+      </CModalFooter>
     </CModal>
   )
 }

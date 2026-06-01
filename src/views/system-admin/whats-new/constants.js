@@ -24,12 +24,13 @@ const collectActionDestinations = (items = []) =>
     const children = collectActionDestinations(item.items)
     const path = normalizePath(item.to)
     if (!path || path.includes(':')) return children
+    const label = String(item.name || '')
 
     return [
       {
-        label: item.name,
+        label,
         path,
-        actionLabel: item.name?.startsWith('Create ') ? item.name : `View ${item.name}`,
+        actionLabel: label.startsWith('Create ') ? label : `View ${label}`,
       },
       ...children,
     ]
@@ -44,4 +45,4 @@ export const actionDestinations = Array.from(
       return map
     }, new Map())
     .values(),
-).sort((a, b) => a.label.localeCompare(b.label))
+).sort((a, b) => String(a.label || '').localeCompare(String(b.label || '')))

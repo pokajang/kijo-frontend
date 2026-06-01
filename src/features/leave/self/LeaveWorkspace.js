@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CButton, CCard, CCardBody, CCardHeader } from '@coreui/react'
+import { CButton, CCard, CCardBody } from '@coreui/react'
+import { DataTableCardHeader, DataTableStatsToggle } from '../../../components/datatable'
 import ApplyLeave from '../../../components/leave/ApplyLeave'
 import LeaveRecord from '../../../components/leave/LeaveRecord'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 
 const sections = [
   {
@@ -24,6 +26,9 @@ const validSectionKeys = new Set(sections.map((section) => section.key))
 
 const LeaveWorkspace = ({ routeSection }) => {
   const navigate = useNavigate()
+  const [headerScopeLabel, setHeaderScopeLabel] = useState('')
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('my.leaves')
   const activeSection =
     routeSection && validSectionKeys.has(routeSection) ? routeSection : 'records'
   const activeConfig = useMemo(
@@ -34,9 +39,20 @@ const LeaveWorkspace = ({ routeSection }) => {
 
   return (
     <CCard className="leave-workspace">
-      <CCardHeader className="leave-workspace-header">
-        <strong>{activeConfig.title}</strong>
+      <DataTableCardHeader
+        title={activeConfig.title}
+        scopeLabel={activeSection === 'records' ? headerScopeLabel : ''}
+        className="leave-workspace-header"
+      >
         <div className="leave-workspace-action-cluster">
+          {activeSection === 'records' ? (
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
+          ) : null}
           {activeSection === 'records' ? (
             <CButton color="primary" size="sm" onClick={() => navigate(sectionPath('apply'))}>
               Apply Leave
@@ -52,10 +68,15 @@ const LeaveWorkspace = ({ routeSection }) => {
             </CButton>
           )}
         </div>
-      </CCardHeader>
+      </DataTableCardHeader>
       <CCardBody>
         <div className="leave-workspace-panel" role="tabpanel">
-          <ActiveComponent onViewRecords={() => navigate(sectionPath('records'))} />
+          <ActiveComponent
+            onViewRecords={() => navigate(sectionPath('records'))}
+            onScopeLabelChange={setHeaderScopeLabel}
+            statsVisible={activeSection === 'records' ? statsVisible : true}
+            controlsVisible={activeSection === 'records' ? controlsVisible : true}
+          />
         </div>
       </CCardBody>
     </CCard>

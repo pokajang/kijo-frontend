@@ -15,10 +15,6 @@ import {
   CModalTitle,
   CModalBody,
   CModalFooter,
-  CDropdown,
-  CDropdownToggle,
-  CDropdownMenu,
-  CDropdownItem,
   CTable,
   CTableHead,
   CTableRow,
@@ -27,11 +23,15 @@ import {
   CTableDataCell,
   CSpinner,
 } from '@coreui/react'
-import CIcon from '@coreui/icons-react'
-import { cilOptions } from '@coreui/icons'
-import { DataTableLoadingState } from '../../../../components/datatable'
+import { DataTableActionMenu, DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
+import { stripExactProjectMention } from '../../../../utils/projectMentionText'
 import { deleteProjectProgress, listProjectProgress, saveProjectProgress } from '../projectApi'
+import {
+  formatProjectCumulativeDays,
+  formatProjectDateTimeParts,
+  formatProjectDeltaDays,
+} from '../projectDetailFormatters'
 
 const parseDateOnly = (value) => {
   const text = String(value || '').trim()
@@ -67,7 +67,16 @@ const compareProgressAsc = (a, b) => {
   return String(a?.updated_on || '').localeCompare(String(b?.updated_on || ''))
 }
 
-const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
+const isTaskLinkedProgress = (item) =>
+  String(item?.source_type || '').toLowerCase() === 'task' || item?.source_task_id != null
+
+const getProgressDisplayText = (item, projectName) => {
+  if (!isTaskLinkedProgress(item)) return item?.progress_text || '-'
+
+  return stripExactProjectMention(item?.progress_text || '-', projectName) || '-'
+}
+
+const ProgressTrackerCard = ({ projectId, projectName = '', refreshKey = 0 }) => {
   const [progressList, setProgressList] = useState([])
   const [progressDate, setProgressDate] = useState('')
   const [progressText, setProgressText] = useState('')
@@ -197,6 +206,11 @@ const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
 
   const handleEditProgress = (item) => {
     if (!item?.id) return
+    if (isTaskLinkedProgress(item)) {
+      dialog.alert('Task-linked progress updates must be changed from the task list.')
+      return
+    }
+
     setEditingProgressId(item.id)
     setProgressDate(item.progress_date || '')
     setProgressText(item.progress_text || '')
@@ -206,7 +220,17 @@ const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
   const handleDeleteProgress = async (item) => {
     if (!item?.id || !projectId) return
     if (deletingProgressId != null) return
-    if (!(await dialog.confirm('Delete this progress update?'))) return
+    if (isTaskLinkedProgress(item)) {
+      dialog.alert('Task-linked progress updates must be deleted from the task list.')
+      return
+    }
+    if (
+      !(await dialog.confirm('Delete this progress update?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     try {
       setDeletingProgressId(item.id)
@@ -230,13 +254,11 @@ const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
   return (
     <>
       <CCardHeader className="rounded-0 d-flex align-items-center justify-content-between">
-        <strong>Project Progress Tracking</strong>
-        <CButton
-          color="primary"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowUpdateModal(true)}
-        >
+        <div className="d-flex align-items-baseline gap-2">
+          <strong>Project Progress Tracking</strong>
+          <small className="text-muted">({tableRows.length})</small>
+        </div>
+        <CButton color="primary" size="sm" onClick={() => setShowUpdateModal(true)}>
           Update
         </CButton>
       </CCardHeader>
@@ -275,39 +297,57 @@ const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
                   </CTableDataCell>
                 </CTableRow>
               ) : (
-                visibleRows.map((item, idx) => (
-                  <CTableRow key={`${item?.id || item?.updated_on || 'row'}-${idx}`}>
-                    <CTableDataCell>{item?.updated_on || '-'}</CTableDataCell>
-                    <CTableDataCell>{item?.progress_date || '-'}</CTableDataCell>
-                    <CTableDataCell>
-                      {item?.daysLapsed != null ? item.daysLapsed : '-'}{' '}
-                      <small className="text-muted">
-                        (Cum.: {item?.cumulative != null ? `${item.cumulative}d` : '-'})
-                      </small>
-                    </CTableDataCell>
-                    <CTableDataCell>{item?.progress_text || '-'}</CTableDataCell>
-                    <CTableDataCell>{item?.updated_by || '-'}</CTableDataCell>
-                    <CTableDataCell className="text-end">
-                      <CDropdown alignment="end" portal>
-                        <CDropdownToggle color="transparent" size="sm">
-                          <CIcon icon={cilOptions} />
-                        </CDropdownToggle>
-                        <CDropdownMenu>
-                          <CDropdownItem onClick={() => handleEditProgress(item)}>
-                            Edit
-                          </CDropdownItem>
-                          <CDropdownItem
-                            className="text-danger"
-                            disabled={deletingProgressId != null}
-                            onClick={() => handleDeleteProgress(item)}
-                          >
-                            {deletingProgressId === item.id ? 'Deleting...' : 'Delete'}
-                          </CDropdownItem>
-                        </CDropdownMenu>
-                      </CDropdown>
-                    </CTableDataCell>
-                  </CTableRow>
-                ))
+                visibleRows.map((item, idx) => {
+                  const taskLinked = isTaskLinkedProgress(item)
+                  const logged = formatProjectDateTimeParts(item?.updated_on)
+
+                  return (
+                    <CTableRow key={`${item?.id || item?.updated_on || 'row'}-${idx}`}>
+                      <CTableDataCell>
+                        {logged.date}
+                        <br />
+                        <small className="text-muted">{logged.time}</small>
+                      </CTableDataCell>
+                      <CTableDataCell>{item?.progress_date || '-'}</CTableDataCell>
+                      <CTableDataCell>
+                        {formatProjectDeltaDays(item?.daysLapsed)}
+                        <br />
+                        <small className="text-muted">
+                          {formatProjectCumulativeDays(item?.cumulative)}
+                        </small>
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        {getProgressDisplayText(item, projectName)}
+                        {taskLinked ? (
+                          <small className="text-muted ms-2 text-nowrap">Task</small>
+                        ) : null}
+                      </CTableDataCell>
+                      <CTableDataCell>{item?.updated_by || '-'}</CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        <DataTableActionMenu
+                          record={item}
+                          actions={[
+                            {
+                              key: 'edit',
+                              label: 'Edit',
+                              disabled: taskLinked,
+                              onClick: () => handleEditProgress(item),
+                            },
+                            {
+                              key: 'delete',
+                              label: deletingProgressId === item.id ? 'Deleting...' : 'Delete',
+                              danger: true,
+                              dividerBefore: true,
+                              disabled: taskLinked || deletingProgressId != null,
+                              onClick: () => handleDeleteProgress(item),
+                            },
+                          ]}
+                          ariaLabel="Progress actions"
+                        />
+                      </CTableDataCell>
+                    </CTableRow>
+                  )
+                })
               )}
             </CTableBody>
           </CTable>
@@ -358,13 +398,7 @@ const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
           >
             Cancel Update
           </CButton>
-          <CButton
-            color="primary"
-            size="sm"
-            variant="outline"
-            onClick={handleSaveProgress}
-            disabled={!canSubmit}
-          >
+          <CButton color="primary" size="sm" onClick={handleSaveProgress} disabled={!canSubmit}>
             {submitting ? <CSpinner size="sm" /> : editingProgressId ? 'Save Update' : 'Add Update'}
           </CButton>
         </CModalFooter>
@@ -375,6 +409,7 @@ const ProgressTrackerCard = ({ projectId, refreshKey = 0 }) => {
 
 ProgressTrackerCard.propTypes = {
   projectId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  projectName: PropTypes.string,
   refreshKey: PropTypes.number,
 }
 

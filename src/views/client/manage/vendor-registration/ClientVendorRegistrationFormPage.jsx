@@ -392,6 +392,7 @@ const ClientVendorRegistrationFormPage = () => {
               <CButton
                 color="secondary"
                 variant="outline"
+                size="sm"
                 data-api-busy-allow="true"
                 onClick={goBack}
                 disabled={saving}
@@ -400,6 +401,7 @@ const ClientVendorRegistrationFormPage = () => {
               </CButton>
               <CButton
                 color="primary"
+                size="sm"
                 data-api-busy-allow="true"
                 onClick={submitForm}
                 disabled={saving || loading}

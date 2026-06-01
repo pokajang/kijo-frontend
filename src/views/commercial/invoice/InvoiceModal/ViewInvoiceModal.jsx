@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/ViewInvoiceModal.jsx
+// src/views/commercial/invoice/InvoiceModal/ViewInvoiceModal.jsx
 import React from 'react'
 import {
   CModal,
@@ -431,7 +431,7 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
       </CModalBody>
 
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Close
         </CButton>
       </CModalFooter>

@@ -70,10 +70,10 @@ const AdminFixModal = ({ visible, data, onClose, onChangeField, onSave }) => {
         </CForm>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
           Cancel
         </CButton>
-        <CButton color="primary" onClick={onSave}>
+        <CButton color="primary" size="sm" onClick={onSave}>
           Save
         </CButton>
       </CModalFooter>

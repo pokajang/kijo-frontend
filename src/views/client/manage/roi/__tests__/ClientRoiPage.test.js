@@ -12,7 +12,9 @@ describe('buildClientRoiDetailSearch', () => {
     ).toBe('?start=2026-01-01&end=2026-05-19')
   })
 
-  it('omits query params for all-time drilldown', () => {
-    expect(buildClientRoiDetailSearch({ preset: 'all', startDate: '', endDate: '' })).toBe('')
+  it('passes all-time to the client ROI drilldown route', () => {
+    expect(buildClientRoiDetailSearch({ preset: 'all', startDate: '', endDate: '' })).toBe(
+      '?period=all',
+    )
   })
 })

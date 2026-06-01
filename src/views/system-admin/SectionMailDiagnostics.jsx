@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
+  CAlert,
   CButton,
   CCard,
   CCardBody,
@@ -127,10 +128,54 @@ const completedDateFromPayload = (payload) => {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed
 }
 
+const testTypeByLogType = {
+  default: 'Default Email Test',
+  quote_pdf: 'Quote PDF Email Test',
+}
+
+const rowFromDiagnosticLog = (log, fallback = {}) => {
+  const action = fallback.action || testActions.find((item) => item.key === 'default')
+  const completedAt = completedDateFromPayload({ data: log })
+  return {
+    id:
+      log?.id ||
+      fallback.id ||
+      `mail-diagnostic-${completedAt.getTime()}-${Math.random().toString(16).slice(2)}`,
+    timestamp: formatTimestamp(completedAt),
+    timestampValue: completedAt.toISOString(),
+    testType:
+      testTypeByLogType[log?.type] || fallback.testType || action.label.replace(/^Send\s+/i, ''),
+    recipient: log?.to || fallback.recipient || fallback.email || '',
+    from: log?.from || fallback.from || action.from,
+    status: log?.status || fallback.status || 'failed',
+    response: log?.response || fallback.response || 'Email test completed.',
+    attachment: log?.attachment || fallback.attachment || '-',
+  }
+}
+
 const SectionMailDiagnostics = () => {
   const [recipientEmail, setRecipientEmail] = useState('')
   const [sendingType, setSendingType] = useState('')
   const [logRows, setLogRows] = useState([])
+  const [loadError, setLoadError] = useState('')
+
+  const loadDiagnosticLogs = useCallback(async () => {
+    setLoadError('')
+    try {
+      const payload = await apiJson(apiUrl('admin/mail-diagnostics'), {
+        credentials: 'include',
+        silentError: true,
+      })
+      const logs = Array.isArray(payload?.data?.logs) ? payload.data.logs : []
+      setLogRows(logs.map((log) => rowFromDiagnosticLog(log)))
+    } catch (err) {
+      setLoadError(err.message || 'Failed to load email diagnostic records.')
+    }
+  }, [])
+
+  useEffect(() => {
+    loadDiagnosticLogs()
+  }, [loadDiagnosticLogs])
 
   const handleSend = useCallback(
     async (action) => {
@@ -159,6 +204,13 @@ const SectionMailDiagnostics = () => {
           current.map((row) =>
             row.id === pendingRow.id
               ? (() => {
+                  if (payload.data?.log) {
+                    return rowFromDiagnosticLog(payload.data.log, {
+                      ...row,
+                      action,
+                      email,
+                    })
+                  }
                   const completedAt = completedDateFromPayload(payload)
                   return {
                     ...row,
@@ -187,6 +239,14 @@ const SectionMailDiagnostics = () => {
           current.map((row) =>
             row.id === pendingRow.id
               ? (() => {
+                  if (errorData.log) {
+                    return rowFromDiagnosticLog(errorData.log, {
+                      ...row,
+                      action,
+                      email,
+                      response: message,
+                    })
+                  }
                   const completedAt = completedDateFromPayload(err.data)
                   return {
                     ...row,
@@ -245,6 +305,11 @@ const SectionMailDiagnostics = () => {
         </CRow>
 
         <div className="mt-4">
+          {loadError && (
+            <CAlert color="warning" className="mb-3">
+              {loadError}
+            </CAlert>
+          )}
           <DataTableRecordList
             rows={logRows}
             dataColumns={logColumns}

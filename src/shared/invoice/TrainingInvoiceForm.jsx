@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/TrainingInvoiceForm.jsx
+// src/shared/invoice/TrainingInvoiceForm.jsx
 import React, { useEffect, useState } from 'react'
 import {
   CCardHeader,
@@ -454,7 +454,7 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
 
         <div className="mb-3 d-flex justify-content-start">
           <CButton
-            color="primary"
+            color={showAddItemRow ? 'secondary' : 'primary'}
             size="sm"
             variant={showAddItemRow ? 'outline' : undefined}
             onClick={() => setShowAddItemRow((prev) => !prev)}

@@ -1,4 +1,4 @@
-// src/views/project/InvoiceProjectModal/SpecialInvoiceForm.jsx
+// src/shared/invoice/SpecialInvoiceForm.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import {
   CCardHeader,
@@ -341,7 +341,7 @@ const SpecialInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
 
         <div className="mb-3 d-flex justify-content-start">
           <CButton
-            color="primary"
+            color={showAddItemRow ? 'secondary' : 'primary'}
             size="sm"
             variant={showAddItemRow ? 'outline' : undefined}
             onClick={() => setShowAddItemRow((prev) => !prev)}

@@ -286,7 +286,9 @@ const AppDialogProvider = ({ children }) => {
           <CModalTitle>{title}</CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <div style={{ whiteSpace: 'pre-wrap' }}>{current?.message || ''}</div>
+          <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+            {current?.message || ''}
+          </div>
 
           {alertMessage ? (
             <CAlert color={alertColor} className="mt-3 mb-0">
@@ -502,7 +504,7 @@ const AppDialogProvider = ({ children }) => {
         </CModalBody>
         <CModalFooter>
           {currentType === 'alert' ? (
-            <CButton color={confirmColor} onClick={() => closeWithResult(undefined)}>
+            <CButton color={confirmColor} size="sm" onClick={() => closeWithResult(undefined)}>
               {okText}
             </CButton>
           ) : null}
@@ -512,6 +514,7 @@ const AppDialogProvider = ({ children }) => {
               <CButton
                 color="secondary"
                 variant="outline"
+                size="sm"
                 disabled={asyncActionActive}
                 onClick={() =>
                   showSelect || showChecklist || acknowledgeLabel
@@ -531,6 +534,7 @@ const AppDialogProvider = ({ children }) => {
               </CButton>
               <CButton
                 color={confirmColor}
+                size="sm"
                 disabled={disableConfirm || asyncActionActive}
                 onClick={submitConfirm}
                 title={currentOptions.confirmDisabledReason || undefined}
@@ -542,10 +546,15 @@ const AppDialogProvider = ({ children }) => {
 
           {currentType === 'prompt' ? (
             <>
-              <CButton color="secondary" variant="outline" onClick={() => closeWithResult(null)}>
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                onClick={() => closeWithResult(null)}
+              >
                 {cancelText}
               </CButton>
-              <CButton color={confirmColor} onClick={submitPrompt}>
+              <CButton color={confirmColor} size="sm" onClick={submitPrompt}>
                 {confirmText}
               </CButton>
             </>

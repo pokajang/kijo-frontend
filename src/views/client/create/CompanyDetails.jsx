@@ -526,6 +526,7 @@ const CompanyDetails = ({
                             <CButton
                               size="sm"
                               color="danger"
+                              variant="outline"
                               className="align-self-end"
                               onClick={() => handleRemoveBranch(index)}
                             >
@@ -670,7 +671,7 @@ const CompanyDetails = ({
               </CCol>
 
               <CCol xs={12} className="d-flex justify-content-end">
-                <CButton color="primary" variant="outline" size="sm" onClick={addBranchToList}>
+                <CButton color="primary" size="sm" onClick={addBranchToList}>
                   Add Branch
                 </CButton>
               </CCol>

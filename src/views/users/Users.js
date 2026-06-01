@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo } from 'react'
-import { CAlert, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
+import { CAlert, CCard, CCardBody, CCol, CRow } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordList,
+  DataTableStatsToggle,
   DataTableStatusBadge,
   DataTableTextCell,
 } from '../../components/datatable'
 import { StatsStrip } from '../../components/stats'
+import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { countByPredicate, formatCount } from '../../utils/stats/formatStats'
 
 const emptyValue = '-'
@@ -67,6 +70,7 @@ const getStatusTone = (status) => {
 }
 
 const Users = () => {
+  const { statsVisible, toggleStatsVisible } = useDataTableStatsVisibility('users.system')
   const [users, setUsers] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState('')
@@ -177,12 +181,12 @@ const Users = () => {
     <CRow>
       <CCol xs={12}>
         <CCard className="mb-4">
-          <CCardHeader>
-            <strong>System Users</strong>
-          </CCardHeader>
+          <DataTableCardHeader title="System Users">
+            <DataTableStatsToggle visible={statsVisible} onToggle={toggleStatsVisible} />
+          </DataTableCardHeader>
           <CCardBody>
             {error && <CAlert color="danger">{error}</CAlert>}
-            <StatsStrip items={statsItems} />
+            {statsVisible && <StatsStrip items={statsItems} />}
             <DataTableRecordList
               rows={normalizedUsers}
               loading={loading}

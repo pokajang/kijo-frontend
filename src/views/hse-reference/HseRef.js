@@ -93,13 +93,15 @@ const HseRef = () => {
                   flex: 1,
                 }}
               />
-              <CButton type="submit" color="primary" style={{ height: '38px' }}>
+              <CButton type="submit" color="primary" size="sm" style={{ height: '38px' }}>
                 Send
               </CButton>
               {chatStarted && (
                 <CButton
                   type="button"
-                  color="danger"
+                  color="secondary"
+                  variant="outline"
+                  size="sm"
                   onClick={handleReset}
                   style={{ height: '38px' }}
                 >

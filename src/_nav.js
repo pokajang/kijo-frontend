@@ -6,7 +6,7 @@ import {
   cilDescription,
   cilPaintBucket,
   cilMoney,
-  cilBell,
+  cilLifeRing,
   cilChartPie,
   cilBook,
   cilPuzzle,
@@ -98,7 +98,7 @@ const _nav = [
     component: CNavItem,
     name: 'Vendors',
     icon: <CIcon icon={cilPaintBucket} customClassName="nav-icon" />,
-    to: '/vendor/manage',
+    to: '/vendor/payment-records',
     activePaths: ['/vendor'],
   },
 
@@ -135,10 +135,29 @@ const _nav = [
 
   {
     component: CNavItem,
+    name: 'Financial',
+    to: '/financial/salary-records',
+    activePaths: ['/financial'],
+    icon: <CIcon icon={cilMoney} customClassName="nav-icon" />,
+    allowedRoles: ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank'],
+    notificationRouteGroups: ['/financial/salary-records', '/financial/other-claim-records'],
+  },
+
+  {
+    component: CNavItem,
+    name: 'Workflows',
+    to: '/workflows/salary-application',
+    activePaths: ['/workflows'],
+    icon: <CIcon icon={cilApplications} customClassName="nav-icon" />,
+    allowedRoles: ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank'],
+  },
+
+  {
+    component: CNavItem,
     name: 'Support',
     to: '/support/requests',
     activePaths: ['/support', '/request-tool', '/feedback'],
-    icon: <CIcon icon={cilBell} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilLifeRing} customClassName="nav-icon" />,
   },
 
   // Extras pages or tools

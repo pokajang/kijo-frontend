@@ -376,8 +376,8 @@ const FinalAppraisal = () => {
                   placeholder="e.g. Senior Executive"
                 />
               </CCol>
-              <CCol xs={12}>
-                <CButton type="submit" color="primary" disabled={submitting}>
+              <CCol xs={12} className="d-flex justify-content-end">
+                <CButton type="submit" color="primary" size="sm" disabled={submitting}>
                   {submitting
                     ? 'Saving...'
                     : isEditMode

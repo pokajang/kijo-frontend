@@ -1,0 +1,98 @@
+.knowledge-assistant {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
+}
+
+.knowledge-assistant-history {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 0.45rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.knowledge-assistant-view-switch {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--cui-border-color);
+}
+
+.knowledge-assistant-view-switch--header {
+  align-items: center;
+  flex: 0 1 auto;
+  gap: 0.75rem;
+  height: 1.1rem;
+  min-width: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.knowledge-assistant-view-switch--header .btn {
+  flex: 0 0 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  min-height: 1.1rem;
+  padding: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.knowledge-assistant-view-switch--header .icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.knowledge-assistant-view-switch--header .knowledge-assistant-history-button,
+.knowledge-assistant-view-switch--header .knowledge-assistant-history-button:hover,
+.knowledge-assistant-view-switch--header .knowledge-assistant-history-button:focus,
+.knowledge-assistant-view-switch--header .knowledge-assistant-history-button:active,
+.knowledge-assistant-view-switch--header .knowledge-assistant-history-button:disabled,
+.knowledge-assistant-view-switch--header .knowledge-assistant-history-button.disabled {
+  --cui-btn-bg: transparent;
+  --cui-btn-border-color: transparent;
+  --cui-btn-color: var(--cui-secondary-color);
+  --cui-btn-hover-bg: transparent;
+  --cui-btn-hover-border-color: transparent;
+  --cui-btn-hover-color: var(--cui-primary);
+  --cui-btn-active-bg: transparent;
+  --cui-btn-active-border-color: transparent;
+  --cui-btn-active-color: var(--cui-secondary-color);
+  --cui-btn-disabled-bg: transparent;
+  --cui-btn-disabled-border-color: transparent;
+  --cui-btn-disabled-color: var(--cui-secondary-color);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.knowledge-assistant-view-switch--header .knowledge-assistant-new-chat,
+.knowledge-assistant-view-switch--header .knowledge-assistant-new-chat:hover,
+.knowledge-assistant-view-switch--header .knowledge-assistant-new-chat:focus,
+.knowledge-assistant-view-switch--header .knowledge-assistant-new-chat:active,
+.knowledge-assistant-view-switch--header .knowledge-assistant-new-chat:disabled,
+.knowledge-assistant-view-switch--header .knowledge-assistant-new-chat.disabled {
+  --cui-btn-bg: transparent;
+  --cui-btn-border-color: transparent;
+  --cui-btn-color: var(--cui-secondary-color);
+  --cui-btn-hover-bg: transparent;
+  --cui-btn-hover-border-color: transparent;
+  --cui-btn-hover-color: var(--cui-primary);
+  --cui-btn-active-bg: transparent;
+  --cui-btn-active-border-color: transparent;
+  --cui-btn-active-color: var(--cui-primary);
+  --cui-btn-disabled-bg: transparent;
+  --cui-btn-disabled-border-color: transparent;
+  --cui-btn-disabled-color: var(--cui-secondary-color);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+

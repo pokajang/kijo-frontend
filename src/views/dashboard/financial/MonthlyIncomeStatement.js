@@ -63,6 +63,10 @@ const computeAge = (date, asOfDate) => {
 }
 
 const formatInvoiceAmount = (value) => Number(value || 0).toLocaleString()
+const formatProjectCount = (count) => {
+  const normalizedCount = Number(count || 0)
+  return `${normalizedCount.toLocaleString()} ${normalizedCount === 1 ? 'project' : 'projects'}`
+}
 const formatInvoiceRef = (invoice) => String(invoice?.invoice_ref_no || '').trim() || '-'
 const getInvoiceDebtor = (invoice) => invoice.client_name || invoice.invoice_client_name || '-'
 const getInvoiceProject = (invoice) => invoice.project_name || '-'
@@ -178,6 +182,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
     totalReceived: 0,
     outstandingAmount: 0,
     outstandingCount: 0,
+    uninvoicedAwardedAmount: 0,
+    uninvoicedAwardedCount: 0,
     asOfDate: '',
   })
   const [invoices, setInvoices] = useState([])
@@ -203,6 +209,11 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
     const asOfLabel = formatScopeDate(totals.asOfDate || endDate)
     return asOfLabel ? `All years as of ${asOfLabel}` : 'All years'
   }, [endDate, totals.asOfDate])
+  const uninvoicedAwardedScopeLabel = useMemo(() => {
+    const asOfLabel = formatScopeDate(totals.asOfDate || endDate)
+    const countLabel = formatProjectCount(totals.uninvoicedAwardedCount)
+    return asOfLabel ? `${countLabel} as of ${asOfLabel}` : countLabel
+  }, [endDate, totals.asOfDate, totals.uninvoicedAwardedCount])
   const financialStatsItems = useMemo(
     () => [
       {
@@ -226,6 +237,13 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
         sublabel: receivablesScopeLabel,
         tone: 'warning',
       },
+      {
+        key: 'awarded-not-invoiced',
+        label: 'Awarded Not Invoiced',
+        value: formatMoney(totals.uninvoicedAwardedAmount),
+        sublabel: uninvoicedAwardedScopeLabel,
+        tone: 'info',
+      },
     ],
     [
       periodScopeLabel,
@@ -233,6 +251,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
       totals.outstandingAmount,
       totals.totalInvoiced,
       totals.totalReceived,
+      totals.uninvoicedAwardedAmount,
+      uninvoicedAwardedScopeLabel,
     ],
   )
 
@@ -251,6 +271,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
           totalReceived = 0,
           outstandingAmount = 0,
           outstandingCount = 0,
+          uninvoicedAwardedAmount = 0,
+          uninvoicedAwardedCount = 0,
           asOfDate = '',
         } = await fetchJsonGet(
           `${import.meta.env.VITE_API_BASE}stats/monthly-income-statement`,
@@ -266,6 +288,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
             totalReceived,
             outstandingAmount,
             outstandingCount,
+            uninvoicedAwardedAmount,
+            uninvoicedAwardedCount,
             asOfDate,
           })
         } else {
@@ -274,6 +298,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
             totalReceived: 0,
             outstandingAmount: 0,
             outstandingCount: 0,
+            uninvoicedAwardedAmount: 0,
+            uninvoicedAwardedCount: 0,
             asOfDate: '',
           })
           setTotalsError('Unable to load income totals.')
@@ -285,6 +311,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
           totalReceived: 0,
           outstandingAmount: 0,
           outstandingCount: 0,
+          uninvoicedAwardedAmount: 0,
+          uninvoicedAwardedCount: 0,
           asOfDate: '',
         })
         setTotalsError('Unable to load income totals.')

@@ -2,20 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
+import { CAlert, CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import {
-  CAlert,
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CFormLabel,
-  CFormSelect,
-} from '@coreui/react'
-import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../components/datatable'
@@ -27,6 +20,7 @@ import {
   getPeriodRangeScopeLabel,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import InquiryAssignModal from './InquiryAssignModal'
 import InquiryEditModal from './InquiryEditModal'
 import InquiryProofModal from './components/InquiryProofModal'
@@ -71,6 +65,8 @@ const InquiryRecords = () => {
   const [proofPreviewInquiry, setProofPreviewInquiry] = useState(null)
   const [editInquiry, setEditInquiry] = useState(null)
   const [assignInquiry, setAssignInquiry] = useState(null)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('marketing.inquiries')
 
   const reloadRecords = async () => {
     setLoading(true)
@@ -368,29 +364,25 @@ const InquiryRecords = () => {
       )}
 
       <CCard>
-        <CCardHeader>
-          <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <div>
-              <strong>Inquiry Records</strong>
-              <span className="text-muted ms-2">{normalizedRecords.length} records</span>
-            </div>
-            <CButton
-              size="sm"
-              color="primary"
-              onClick={() => navigate('/pipeline/inquiries/create')}
-            >
-              <CIcon icon={cilPlus} className="me-1" />
-              Add Inquiry
-            </CButton>
-          </div>
-        </CCardHeader>
-        <CCardBody>
-          <StatsStrip
-            loading={loading}
-            items={statsItems}
-            scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        <DataTableCardHeader
+          title="Inquiry Records"
+          scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        >
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
           />
+          <CButton size="sm" color="primary" onClick={() => navigate('/pipeline/inquiries/create')}>
+            <CIcon icon={cilPlus} className="me-1" />
+            Add Inquiry
+          </CButton>
+        </DataTableCardHeader>
+        <CCardBody>
+          {statsVisible && <StatsStrip loading={loading} items={statsItems} />}
           <DataTableRecordControls
+            visible={controlsVisible}
             searchValue={searchInput}
             onSearchChange={setSearchInput}
             searchPlaceholder="Search company, SSM, contact, PIC, assigned by, email, or remarks"

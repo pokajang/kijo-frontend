@@ -19,6 +19,7 @@ import { DataTableToolbar } from '../../../../../components/datatable'
 import { PeriodRangeSelector } from '../../../../../components/filters'
 
 const RecordsFilterPanelShared = ({
+  visible = true,
   searchInput,
   setSearchInput,
   periodRange,
@@ -58,6 +59,8 @@ const RecordsFilterPanelShared = ({
   dropdownColumnIdPrefix,
   renderExtraAdvancedFilters,
 }) => {
+  if (!visible) return null
+
   const renderPeriodRangeSelector = () => {
     if (typeof setPeriodRange !== 'function') return null
 
@@ -89,7 +92,7 @@ const RecordsFilterPanelShared = ({
           </div>
         ))}
         <div className="d-flex justify-content-end mt-2">
-          <CButton size="sm" color="secondary" variant="ghost" onClick={resetColumnVisibility}>
+          <CButton size="sm" color="secondary" variant="outline" onClick={resetColumnVisibility}>
             Reset
           </CButton>
         </div>
@@ -246,7 +249,7 @@ const RecordsFilterPanelShared = ({
                   <CButton
                     size="sm"
                     color="secondary"
-                    variant="ghost"
+                    variant="outline"
                     onClick={resetColumnVisibility}
                   >
                     Reset

@@ -1,0 +1,126 @@
+.records-table-compact > :not(caption) > * > * {
+  padding: 0.4rem 0.6rem;
+  vertical-align: middle;
+}
+
+.records-table-compact thead th {
+  background: var(--app-surface-raised);
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text-strong);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.records-table-compact tbody td {
+  font-family: var(--cui-body-font-family);
+  font-size: var(--cui-body-font-size);
+  font-weight: var(--cui-body-font-weight);
+  line-height: 1.22;
+}
+
+.records-table-compact tbody td small {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.records-table-compact > :not(caption) > * > .text-center,
+.records-table-compact > :not(caption) > * > .text-end {
+  white-space: nowrap;
+}
+
+.records-table-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  font: inherit;
+  color: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.records-table-sort-icon {
+  flex: 0 0 auto;
+  vertical-align: middle;
+}
+
+.records-status-badge {
+  font-weight: 400;
+  background-color: var(--app-surface-subtle);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-secondary);
+}
+
+.records-status-badge--info {
+  background-color: rgba(var(--cui-info-rgb), 0.1);
+  border-color: rgba(var(--cui-info-rgb), 0.35);
+  color: color-mix(in srgb, var(--cui-info) 82%, var(--app-text-base) 18%);
+}
+
+.records-status-badge--success {
+  background-color: rgba(var(--cui-success-rgb), 0.1);
+  border-color: rgba(var(--cui-success-rgb), 0.35);
+  color: color-mix(in srgb, var(--cui-success) 82%, var(--app-text-base) 18%);
+}
+
+.records-status-badge--danger {
+  background-color: rgba(var(--cui-danger-rgb), 0.08);
+  border-color: rgba(var(--cui-danger-rgb), 0.32);
+  color: color-mix(in srgb, var(--cui-danger) 82%, var(--app-text-base) 18%);
+}
+
+.records-status-badge--dark {
+  background-color: rgba(var(--cui-dark-rgb), 0.08);
+  border-color: rgba(var(--cui-dark-rgb), 0.28);
+  color: color-mix(in srgb, var(--cui-dark) 82%, var(--app-text-base) 18%);
+}
+
+.factory-directory-source-badge {
+  align-items: center;
+  min-height: 1.45rem;
+}
+
+.records-scroll-tip-kbd {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 0.08rem 0.32rem;
+  font-size: var(--app-font-size-xs);
+  line-height: 1.2;
+}
+
+.records-scroll-tip-btn {
+  --cui-btn-color: var(--app-btn-muted-text);
+  --cui-btn-hover-color: var(--app-btn-muted-text-hover);
+  --cui-btn-hover-bg: var(--app-btn-muted-bg-hover);
+  --cui-btn-active-bg: var(--app-btn-muted-bg-active);
+  padding: 0.15rem 0.25rem;
+  min-width: auto;
+  line-height: 1;
+}
+
+.records-remarks-more {
+  --cui-btn-bg: var(--app-accent-bg);
+  --cui-btn-border-color: var(--app-accent-border);
+  --cui-btn-color: var(--app-accent-text);
+  --cui-btn-hover-bg: var(--app-accent-bg-hover);
+  --cui-btn-hover-border-color: var(--app-accent-border-hover);
+  --cui-btn-hover-color: var(--app-accent-text-hover);
+  --cui-btn-active-bg: var(--app-accent-bg-active);
+  --cui-btn-active-border-color: var(--app-accent-border-active);
+  --cui-btn-active-color: var(--app-accent-text-active);
+  --cui-btn-font-weight: 400;
+  --cui-btn-border-radius: var(--app-radius-pill);
+  --cui-btn-padding-y: 0.1rem;
+  --cui-btn-padding-x: 0.45rem;
+  --cui-btn-font-size: var(--app-font-size-xs);
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.records-remarks-more--compact {
+  --cui-btn-padding-y: 0.06rem;
+  --cui-btn-padding-x: 0.4rem;
+}
+

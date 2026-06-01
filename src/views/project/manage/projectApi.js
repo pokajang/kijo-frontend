@@ -1,3 +1,5 @@
+import { getYearScopedParamSets, mergeUniqueRecordsById } from '../../../components/filters'
+
 const apiBase = () => import.meta.env.VITE_API_BASE
 
 export const emptyList = []
@@ -31,6 +33,9 @@ export const toFiniteNumber = (value, fallback = 0) => {
 export const asArray = (value) => (Array.isArray(value) ? value : emptyList)
 
 export const normalizeProjectList = (payload) =>
+  normalizeListPayload(payload, ['data', 'projects', 'records']).filter(Boolean)
+
+export const normalizeProjectOptions = (payload) =>
   normalizeListPayload(payload, ['data', 'projects', 'records']).filter(Boolean)
 
 export const normalizeProjectDetails = (payload) => {
@@ -97,11 +102,28 @@ export async function requestJson(path, options = {}) {
   return payload
 }
 
-export const listProjects = ({ signal } = {}) =>
-  requestJson(`projects?year=${new Date().getFullYear()}`, { signal }).then(normalizeProjectList)
+export const listProjects = async ({ signal, periodRange } = {}) => {
+  const paramSets = getYearScopedParamSets(periodRange)
+  const recordLists = await Promise.all(
+    paramSets.map((params) => {
+      const searchParams = new URLSearchParams()
+      if (params.year) searchParams.set('year', String(params.year))
+
+      const query = searchParams.toString()
+      return requestJson(query ? `projects?${query}` : 'projects', { signal }).then(
+        normalizeProjectList,
+      )
+    }),
+  )
+
+  return mergeUniqueRecordsById(recordLists.flat())
+}
 
 export const listAllProjects = ({ signal } = {}) =>
   requestJson('projects', { signal }).then(normalizeProjectList)
+
+export const listActiveProjectOptions = ({ signal } = {}) =>
+  requestJson('projects/options?status=active&scope=mine', { signal }).then(normalizeProjectOptions)
 
 export const getProjectDetails = (projectId, { signal } = {}) =>
   requestJson(`projects/${enc(projectId)}`, {
@@ -146,6 +168,25 @@ export const deleteProject = (projectId) =>
     method: 'DELETE',
     body: { id: projectId },
   })
+
+export const closeProject = (projectId, payload) =>
+  requestJson(`projects/${enc(projectId)}/close`, {
+    method: 'POST',
+    body: payload,
+  })
+
+export const getProjectLoaUrl = (projectId, assignment = {}) => {
+  const params = new URLSearchParams({
+    project_id: String(projectId),
+    vendor_id: String(assignment.vendor_id),
+  })
+
+  if (assignment.assignment_id) {
+    params.set('assignment_id', String(assignment.assignment_id))
+  }
+
+  return buildUrl(`projects/${enc(projectId)}/loa?${params.toString()}`)
+}
 
 export const listAssignedVendors = (projectId, { signal } = {}) =>
   requestJson(`projects/${enc(projectId)}/vendors`, {
@@ -225,3 +266,50 @@ export const deleteProjectExpense = (payload) =>
     method: 'DELETE',
     body: payload,
   })
+
+export const deleteCommercialInvoice = (invoiceRefNo) =>
+  requestJson('invoices', {
+    method: 'DELETE',
+    body: { invoice_ref_no: invoiceRefNo },
+  })
+
+export const deleteCommercialDeliveryOrder = (deliveryOrderId) =>
+  requestJson(`delivery-orders/${enc(deliveryOrderId)}`, {
+    method: 'DELETE',
+  })
+
+export const deleteCommercialJd14 = (jd14Id) =>
+  requestJson(`jd14-forms/${enc(jd14Id)}`, {
+    method: 'DELETE',
+  })
+
+export const deleteCommercialVendorLoa = ({ projectId, assignmentId }) =>
+  requestJson(`projects/${enc(projectId)}/vendors/${enc(assignmentId)}`, {
+    method: 'DELETE',
+    body: {
+      project_id: projectId,
+      assignment_id: assignmentId,
+    },
+  })
+
+export const deleteCommercialSupplierPo = (supplierPoId) =>
+  requestJson(`catalog/purchase-orders/${enc(supplierPoId)}`, {
+    method: 'DELETE',
+  })
+
+export const deleteProjectCommercialRecord = ({ projectId, record }) => {
+  switch (record?.deleteKind) {
+    case 'invoice':
+      return deleteCommercialInvoice(record.reference)
+    case 'delivery-order':
+      return deleteCommercialDeliveryOrder(record.recordId)
+    case 'jd14':
+      return deleteCommercialJd14(record.recordId)
+    case 'vendor-loa-assignment':
+      return deleteCommercialVendorLoa({ projectId, assignmentId: record.recordId })
+    case 'supplier-po':
+      return deleteCommercialSupplierPo(record.recordId)
+    default:
+      throw new Error('Unsupported commercial record delete action.')
+  }
+}

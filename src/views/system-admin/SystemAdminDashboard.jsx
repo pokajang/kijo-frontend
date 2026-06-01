@@ -8,6 +8,9 @@ import SchemaScriptsTable from './schema-sync/SchemaScriptsTable'
 import { normalizeScripts } from './schema-sync/schemaSyncUtils'
 import SummaryTile from './schema-sync/SummaryTile'
 import SectionMailDiagnostics from './SectionMailDiagnostics'
+import SectionAiAssistantGovernance from './SectionAiAssistantGovernance'
+import SectionAiWorkloadGovernance from './SectionAiWorkloadGovernance'
+import SectionMonthlyReportSchedulerTest from './SectionMonthlyReportSchedulerTest'
 
 const SystemAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('migration-status')
@@ -72,6 +75,12 @@ const SystemAdminDashboard = () => {
 
       {activeTab === 'email-test' ? (
         <SectionMailDiagnostics />
+      ) : activeTab === 'monthly-report-test' ? (
+        <SectionMonthlyReportSchedulerTest />
+      ) : activeTab === 'ai-workload-governance' ? (
+        <SectionAiWorkloadGovernance />
+      ) : activeTab === 'ai-assistant-governance' ? (
+        <SectionAiAssistantGovernance />
       ) : (
         <CRow>
           <CCol xl={12}>

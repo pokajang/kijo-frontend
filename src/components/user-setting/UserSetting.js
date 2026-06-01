@@ -1,49 +1,164 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
-  CRow,
-  CCol,
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CForm,
-  CFormLabel,
-  CFormInput,
-  CButton,
-  CInputGroup,
   CAlert,
+  CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
+  CCol,
+  CForm,
+  CFormFeedback,
+  CFormInput,
+  CFormLabel,
+  CInputGroup,
+  CRow,
 } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
-
 import CIcon from '@coreui/icons-react'
 import { cilToggleOff, cilToggleOn } from '@coreui/icons'
-import dialog from '../dialog/dialogService'
+
+const API_BASE = import.meta.env.VITE_API_BASE || '/'
+const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_MAX_LENGTH = 128
+
+const initialFormData = {
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+}
+
+const normalizeErrors = (errors = {}) =>
+  Object.fromEntries(
+    Object.entries(errors).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value.join(' ') : String(value || ''),
+    ]),
+  )
+
+const validatePasswordForm = (formData) => {
+  const errors = {}
+
+  if (!formData.currentPassword) {
+    errors.currentPassword = 'Current password is required.'
+  }
+
+  if (!formData.newPassword) {
+    errors.newPassword = 'New password is required.'
+  } else if (formData.newPassword.length < PASSWORD_MIN_LENGTH) {
+    errors.newPassword = `Use at least ${PASSWORD_MIN_LENGTH} characters.`
+  } else if (formData.newPassword.length > PASSWORD_MAX_LENGTH) {
+    errors.newPassword = `Use ${PASSWORD_MAX_LENGTH} characters or fewer.`
+  }
+
+  if (!formData.confirmPassword) {
+    errors.confirmPassword = 'Confirm your new password.'
+  } else if (formData.newPassword !== formData.confirmPassword) {
+    errors.confirmPassword = 'New passwords do not match.'
+  }
+
+  if (
+    formData.currentPassword &&
+    formData.newPassword &&
+    formData.currentPassword === formData.newPassword
+  ) {
+    errors.newPassword = 'New password must be different from your current password.'
+  }
+
+  return errors
+}
+
+const PasswordField = ({
+  autoComplete,
+  errors,
+  label,
+  name,
+  onBlur,
+  onChange,
+  disabled = false,
+  showPassword,
+  value,
+}) => (
+  <>
+    <CFormLabel htmlFor={name} className="account-field-label">
+      {label}
+    </CFormLabel>
+    <CInputGroup>
+      <CFormInput
+        type={showPassword ? 'text' : 'password'}
+        id={name}
+        name={name}
+        value={value}
+        onBlur={onBlur}
+        onChange={onChange}
+        autoComplete={autoComplete}
+        invalid={Boolean(errors[name])}
+        disabled={disabled}
+        aria-invalid={Boolean(errors[name]) || undefined}
+        aria-describedby={errors[name] ? `${name}-error` : undefined}
+      />
+      <CFormFeedback id={`${name}-error`} invalid>
+        {errors[name]}
+      </CFormFeedback>
+    </CInputGroup>
+  </>
+)
+
 const UserSetting = ({ closeModal }) => {
   const navigate = useNavigate()
-  // Unified toggle for all password visibility
   const [showPassword, setShowPassword] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [notice, setNotice] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [touched, setTouched] = useState({})
+  const [serverErrors, setServerErrors] = useState({})
+  const [formData, setFormData] = useState(initialFormData)
 
-  const [formData, setFormData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  })
+  const validationErrors = useMemo(() => validatePasswordForm(formData), [formData])
+  const touchedErrors = Object.fromEntries(
+    Object.entries(validationErrors).filter(([field]) => touched[field]),
+  )
+  const visibleErrors = submitted
+    ? { ...validationErrors, ...serverErrors }
+    : { ...touchedErrors, ...serverErrors }
+  const hasValidationErrors = Object.keys(validationErrors).length > 0
+  const formDisabled = saving || redirecting
+
+  const resetForm = () => {
+    setFormData(initialFormData)
+    setSubmitted(false)
+    setTouched({})
+    setServerErrors({})
+    setNotice(null)
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    setNotice(null)
+    setServerErrors((prev) => {
+      if (!prev[name]) return prev
+      const next = { ...prev }
+      delete next[name]
+      return next
+    })
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setTouched((prev) => ({ ...prev, [name]: true }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setSubmitted(true)
+    setNotice(null)
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      dialog.alert('New passwords do not match.')
-      return
-    }
+    if (hasValidationErrors) return
 
+    setSaving(true)
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE}auth/password`, {
+      const res = await fetch(`${API_BASE}auth/password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -52,140 +167,146 @@ const UserSetting = ({ closeModal }) => {
 
       const result = await res.json()
 
-      if (result.status === 'success') {
-        // 1. Show success alert
-        setSuccessMessage(
-          '✅ Password updated. You will be automatically logged out. Log in with your new credentials.',
-        )
-
-        // 2. Clear fields
-        setFormData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        })
-
-        // 3. Trigger logout after delay
-        setTimeout(async () => {
-          await fetch(`${import.meta.env.VITE_API_BASE}auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-          })
-          navigate('/login', { replace: true })
-        }, 3000) // 3 seconds delay
-      } else {
-        dialog.alert('❌ ' + result.message)
+      if (!res.ok || result.status !== 'success') {
+        const nextErrors = normalizeErrors(result.errors || {})
+        if (Object.keys(nextErrors).length) {
+          setServerErrors(nextErrors)
+          setSubmitted(true)
+          setNotice({ color: 'warning', message: 'Review the highlighted fields before saving.' })
+          return
+        }
+        throw new Error(result.message || 'Failed to update password.')
       }
+
+      setNotice({
+        color: 'success',
+        message:
+          'Password updated. You will be automatically logged out. Log in with your new credentials.',
+      })
+      setRedirecting(true)
+      setFormData(initialFormData)
+      setSubmitted(false)
+      setTouched({})
+      setServerErrors({})
+
+      setTimeout(async () => {
+        await fetch(`${API_BASE}auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+        navigate('/login', { replace: true })
+      }, 3000)
     } catch (err) {
-      console.error('Update failed:', err)
-      dialog.alert('❌ Failed to update settings.')
+      setNotice({ color: 'danger', message: err.message || 'Failed to update password.' })
+      setRedirecting(false)
+    } finally {
+      setSaving(false)
     }
   }
 
   const handleCancel = () => {
-    if (closeModal) closeModal() // ✅ close the modal
+    resetForm()
+    closeModal?.()
   }
 
   return (
-    <CRow className="justify-content-center">
-      <CCol xs={12}>
-        {/* <CCard> */}
-        {/* <CCardHeader><strong>User Settings</strong></CCardHeader> */}
-        {/* <CCardBody> */}
-        <CForm onSubmit={handleSubmit}>
-          {/* Password Fields */}
-          <CRow className="mb-3">
-            <CCol xs={12} md={4} className="mb-2">
-              <CFormLabel htmlFor="currentPassword">Current Password</CFormLabel>
-              <CInputGroup>
-                <CFormInput
-                  type={showPassword ? 'text' : 'password'}
-                  id="currentPassword"
-                  name="currentPassword"
-                  placeholder="Enter current password"
-                  value={formData.currentPassword}
-                  onChange={handleChange}
-                  autoComplete="current-password"
-                />
-              </CInputGroup>
-            </CCol>
-
-            <CCol xs={12} md={4} className="mb-2">
-              <CFormLabel htmlFor="newPassword">New Password</CFormLabel>
-              <CInputGroup>
-                <CFormInput
-                  type={showPassword ? 'text' : 'password'}
-                  id="newPassword"
-                  name="newPassword"
-                  placeholder="Enter new password"
-                  value={formData.newPassword}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                />
-              </CInputGroup>
-            </CCol>
-
-            <CCol xs={12} md={4}>
-              <CFormLabel htmlFor="confirmPassword">Confirm New Password</CFormLabel>
-              <CInputGroup>
-                <CFormInput
-                  type={showPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  placeholder="Re-enter new password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                />
-              </CInputGroup>
-            </CCol>
-          </CRow>
-
-          {/* Toggle Button (Affects All Password Fields) */}
-          <CRow className="mb-3 justify-content-start text-center">
-            <CCol xs="auto">
-              <button
-                type="button"
-                className="btn btn-link px-0 text-decoration-none d-flex align-items-center justify-content-center"
-                onClick={() => setShowPassword((prev) => !prev)}
-              >
-                <CIcon
-                  size="xxl"
-                  icon={showPassword ? cilToggleOn : cilToggleOff}
-                  className={`me-2 ${showPassword ? 'text-primary' : 'text-secondary'}`}
-                />
-                <span className={showPassword ? 'text-secondary' : 'text-primary'}>
-                  {showPassword ? 'Hide Passwords' : 'Show Passwords'}
-                </span>
-              </button>
-            </CCol>
-          </CRow>
-
-          {/* Action Buttons */}
-          <CRow className="mt-2 justify-content-start g-2">
-            <CCol xs="auto">
-              <CButton color="primary" type="submit">
-                Update Settings
-              </CButton>
-            </CCol>
-            <CCol xs="auto">
-              <CButton color="secondary" type="reset" onClick={handleCancel}>
-                Cancel
-              </CButton>
-            </CCol>
-          </CRow>
-        </CForm>
-
-        {successMessage && (
-          <CAlert color="primary" className="mt-3">
-            <strong>{successMessage}</strong>
+    <CCard className="account-card records-page-card">
+      <CCardHeader className="account-card-header records-page-card-header">
+        <div>
+          <strong>Password</strong>
+        </div>
+      </CCardHeader>
+      <CCardBody className="records-page-card-body">
+        {notice && (
+          <CAlert color={notice.color} className="mb-3" aria-live="polite">
+            {notice.message}
           </CAlert>
         )}
 
-        {/* </CCardBody> */}
-        {/* </CCard> */}
-      </CCol>
-    </CRow>
+        <CForm onSubmit={handleSubmit} noValidate>
+          <CRow className="g-3">
+            <CCol md={4}>
+              <PasswordField
+                label="Current Password"
+                name="currentPassword"
+                value={formData.currentPassword}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                disabled={formDisabled}
+                showPassword={showPassword}
+                autoComplete="current-password"
+                errors={visibleErrors}
+              />
+            </CCol>
+            <CCol md={4}>
+              <PasswordField
+                label="New Password"
+                name="newPassword"
+                value={formData.newPassword}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                disabled={formDisabled}
+                showPassword={showPassword}
+                autoComplete="new-password"
+                errors={visibleErrors}
+              />
+            </CCol>
+            <CCol md={4}>
+              <PasswordField
+                label="Confirm New Password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onBlur={handleBlur}
+                onChange={handleChange}
+                disabled={formDisabled}
+                showPassword={showPassword}
+                autoComplete="new-password"
+                errors={visibleErrors}
+              />
+            </CCol>
+          </CRow>
+
+          <div className="account-password-tools">
+            <button
+              type="button"
+              className="btn btn-link px-0 text-decoration-none d-inline-flex align-items-center gap-2"
+              onClick={() => setShowPassword((prev) => !prev)}
+              disabled={formDisabled}
+              aria-pressed={showPassword}
+              aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
+            >
+              <CIcon
+                size="xl"
+                icon={showPassword ? cilToggleOn : cilToggleOff}
+                className={showPassword ? 'text-primary' : 'text-secondary'}
+              />
+              <span>{showPassword ? 'Hide Passwords' : 'Show Passwords'}</span>
+            </button>
+          </div>
+
+          <div className="account-form-actions">
+            <CButton
+              color="primary"
+              size="sm"
+              type="submit"
+              disabled={formDisabled || hasValidationErrors}
+            >
+              {redirecting ? 'Logging out...' : saving ? 'Saving...' : 'Update Password'}
+            </CButton>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={handleCancel}
+              disabled={formDisabled}
+            >
+              Clear
+            </CButton>
+          </div>
+        </CForm>
+      </CCardBody>
+    </CCard>
   )
 }
 

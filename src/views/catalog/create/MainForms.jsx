@@ -11,6 +11,7 @@ import {
   CFormTextarea,
   CButton,
   CAlert,
+  CCardFooter,
 } from '@coreui/react'
 import Select from '../../../components/forms/ThemedSelect'
 import PasteImage from './PasteImage'
@@ -194,33 +195,34 @@ const MainForms = () => {
             <CFormLabel>Product Brochure (Recommended)</CFormLabel>
             <PasteImage setFormData={setFormData} ref={fileInputRef} />
           </CCol>
-
-          <CCol md={12} className="d-flex gap-2">
-            <CButton
-              color="primary"
-              onClick={() =>
-                handleSubmit(formData, remarks, {
-                  setFormData,
-                  setRemarks,
-                  initialFormData,
-                  fileInputRef,
-                  navigate,
-                  returnTo,
-                })
-              }
-            >
-              Create Catalog Item
-            </CButton>
-            <CButton
-              color="secondary"
-              variant="outline"
-              onClick={() => handleReset(setFormData, setRemarks, initialFormData, fileInputRef)}
-            >
-              Reset
-            </CButton>
-          </CCol>
         </CRow>
       </CCardBody>
+      <CCardFooter className="d-flex justify-content-end gap-2">
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          onClick={() => handleReset(setFormData, setRemarks, initialFormData, fileInputRef)}
+        >
+          Reset
+        </CButton>
+        <CButton
+          color="primary"
+          size="sm"
+          onClick={() =>
+            handleSubmit(formData, remarks, {
+              setFormData,
+              setRemarks,
+              initialFormData,
+              fileInputRef,
+              navigate,
+              returnTo,
+            })
+          }
+        >
+          Create Catalog Item
+        </CButton>
+      </CCardFooter>
     </CCard>
   )
 }

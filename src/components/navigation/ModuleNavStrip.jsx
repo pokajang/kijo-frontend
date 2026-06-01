@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom'
 import { CBadge, CButton } from '@coreui/react'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { getTabNotificationBadge } from '../../notifications/notificationRegistry'
+import { AuthContext } from '../../auth/AuthProvider'
+import { extractRolesFromSession, hasAnyAllowedRole } from '../../utils/roles'
 
 const normalizePath = (path) => {
   if (!path) return ''
@@ -52,19 +54,30 @@ const ModuleNavStripShell = ({
   const [hasScrolled, setHasScrolled] = useState(false)
   const [tabScrollHint, setTabScrollHint] = useState(false)
   const { getTabCount } = useAppNotifications()
+  const auth = useContext(AuthContext)
+  const roles = useMemo(() => extractRolesFromSession({ user: auth?.user }), [auth?.user])
+  const visibleTabs = useMemo(
+    () =>
+      tabs.filter(
+        (tab) => !Array.isArray(tab.allowedRoles) || hasAnyAllowedRole(roles, tab.allowedRoles),
+      ),
+    [roles, tabs],
+  )
 
   const inferredActiveTab = useMemo(() => {
     if (activeTab) return activeTab
-    return tabs.find((tab) => isModuleTabActive(tab, pathname))?.key || tabs[0]?.key || ''
-  }, [activeTab, pathname, tabs])
+    return (
+      visibleTabs.find((tab) => isModuleTabActive(tab, pathname))?.key || visibleTabs[0]?.key || ''
+    )
+  }, [activeTab, pathname, visibleTabs])
 
   const shouldHideForNestedRoute = useMemo(
     () =>
       hideOnNestedRoute &&
       !activeTab &&
       !onTabChange &&
-      tabs.some((tab) => isModuleTabNestedRoute(tab, pathname)),
-    [activeTab, hideOnNestedRoute, onTabChange, pathname, tabs],
+      visibleTabs.some((tab) => isModuleTabNestedRoute(tab, pathname)),
+    [activeTab, hideOnNestedRoute, onTabChange, pathname, visibleTabs],
   )
 
   useEffect(() => {
@@ -149,9 +162,10 @@ const ModuleNavStripShell = ({
       window.removeEventListener('resize', scheduleScrollHintUpdate)
       resizeObserver?.disconnect()
     }
-  }, [tabs])
+  }, [visibleTabs])
 
   if (shouldHideForNestedRoute) return null
+  if (visibleTabs.length === 0) return null
 
   const handleTabClick = (tab) => {
     if (onTabChange) {
@@ -183,7 +197,7 @@ const ModuleNavStripShell = ({
             role="tablist"
             aria-label={ariaLabel}
           >
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
               const isActive = inferredActiveTab === tab.key
               const notificationCount = tab.notificationTabKey
                 ? getTabCount(tab.notificationTabKey)
@@ -263,6 +277,7 @@ ModuleNavStripShell.propTypes = {
       label: PropTypes.string.isRequired,
       notificationTabKey: PropTypes.string,
       to: PropTypes.string,
+      allowedRoles: PropTypes.arrayOf(PropTypes.string),
     }),
   ).isRequired,
 }

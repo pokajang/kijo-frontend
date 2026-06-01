@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
 import { DetailField, DetailSection } from '../shared/CommercialDetailFields'
+import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import ViewInvoiceModal from './InvoiceModal/ViewInvoiceModal'
 import EditInvoiceModal from './InvoiceModal/edit/EditInvoiceModal'
 import MarkPaidModal from './InvoiceModal/MarkPaidModal'
@@ -27,7 +28,9 @@ const getStatusTone = (status) => {
 
 const InvoiceDetailPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams()
+  const returnContext = getCommercialReturnContext(location, '/commercial/invoice')
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentInvoice, setCurrentInvoice] = useState(null)
@@ -70,7 +73,15 @@ const InvoiceDetailPage = () => {
 
   const actions = invoice
     ? [
-        invoice.projectId || invoice.raw?.project_id
+        returnContext.isProjectOrigin
+          ? {
+              key: 'view-list',
+              label: 'View Invoice List',
+              buttonColor: 'secondary',
+              onClick: () => navigate(returnContext.listPath),
+            }
+          : null,
+        !returnContext.isProjectOrigin && (invoice.projectId || invoice.raw?.project_id)
           ? {
               key: 'back-project',
               label: 'Back to Project',
@@ -82,6 +93,7 @@ const InvoiceDetailPage = () => {
         {
           key: 'edit',
           label: 'Edit',
+          buttonColor: 'primary',
           onClick: () => runAction('edit'),
           hidden: invoice.status === 'Paid',
         },
@@ -89,6 +101,7 @@ const InvoiceDetailPage = () => {
           ? {
               key: 'edit-disabled',
               label: 'Edit',
+              buttonColor: 'secondary',
               disabled: true,
               tooltip: 'Mark as Pending to edit',
             }
@@ -97,16 +110,37 @@ const InvoiceDetailPage = () => {
           ? {
               key: 'updatehrdclaim',
               label: 'HRD Claim Ref',
+              buttonColor: 'secondary',
               onClick: () => runAction('updatehrdclaim'),
             }
           : null,
-        { key: 'generate', label: 'PDF Invoice', onClick: () => runAction('generate') },
+        {
+          key: 'generate',
+          label: 'PDF Invoice',
+          buttonColor: 'secondary',
+          onClick: () => runAction('generate'),
+        },
         invoice.status === 'Paid'
-          ? { key: 'receipt', label: 'PDF Receipt', onClick: () => runAction('receipt') }
+          ? {
+              key: 'receipt',
+              label: 'PDF Receipt',
+              buttonColor: 'secondary',
+              onClick: () => runAction('receipt'),
+            }
           : null,
         invoice.status === 'Paid'
-          ? { key: 'markunpaid', label: 'Mark as Pending', onClick: () => runAction('markunpaid') }
-          : { key: 'markpaid', label: 'Mark as Paid', onClick: () => runAction('markpaid') },
+          ? {
+              key: 'markunpaid',
+              label: 'Mark as Pending',
+              buttonColor: 'warning',
+              onClick: () => runAction('markunpaid'),
+            }
+          : {
+              key: 'markpaid',
+              label: 'Mark as Paid',
+              buttonColor: 'success',
+              onClick: () => runAction('markpaid'),
+            },
         {
           key: 'delete',
           label: 'Delete',
@@ -124,15 +158,15 @@ const InvoiceDetailPage = () => {
     <>
       <DataTableDetailShell
         title="Invoice Details"
-        backLabel="Back"
-        onBack={() => navigate('/commercial/invoice')}
+        backLabel={returnContext.backLabel}
+        onBack={() => navigate(returnContext.backPath)}
         loading={loading}
         record={invoice}
         actions={actions}
         emptyMessage="Invoice not found."
       >
         <DetailSection title="Details">
-          <DetailField label="Invoice" value={invoice?.id} />
+          <DetailField label="Reference Number" value={invoice?.id} />
           <DetailField
             label="Status"
             value={

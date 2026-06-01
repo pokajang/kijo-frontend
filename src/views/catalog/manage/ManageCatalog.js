@@ -1,25 +1,22 @@
-﻿// src/views/catalog/manage/ManageCatalog.js
+// src/views/catalog/manage/ManageCatalog.js
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  CButton,
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CCol,
-  CFormLabel,
-  CFormSelect,
-} from '@coreui/react'
+import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
 import CatalogTable from './CatalogTable'
 import EditCatalogModal from './EditCatalogModal'
-import { DataTableRecordControls } from '../../../components/datatable'
+import {
+  DataTableCardHeader,
+  DataTableRecordControls,
+  DataTableStatsToggle,
+} from '../../../components/datatable'
 import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { catalogModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 
 const normalizeText = (value) => String(value || '').toLowerCase()
 
@@ -33,6 +30,8 @@ const ManageCatalog = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [showEdit, setShowEdit] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('catalog.manage')
 
   useEffect(() => {
     fetchAllPagedRecords({
@@ -55,7 +54,13 @@ const ManageCatalog = () => {
   }
 
   const handleDelete = async (id) => {
-    if (!(await dialog.confirm('Are you sure you want to delete this item?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this item?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     fetch(`${import.meta.env.VITE_API_BASE}catalog/items/${id}`, {
       method: 'DELETE',
@@ -141,20 +146,25 @@ const ManageCatalog = () => {
     <>
       <ModuleNavStrip tabs={catalogModuleTabs} ariaLabel="Catalog sections" />
       <CCard>
-        <CCardHeader>
-          <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <strong>Manage Catalog</strong>
-            <CButton size="sm" color="primary" onClick={() => navigate('/catalog/create')}>
-              <CIcon icon={cilPlus} className="me-1" />
-              Create Item
-            </CButton>
-          </div>
-        </CCardHeader>
+        <DataTableCardHeader title="Manage Catalog" scopeLabel={`YTD ${currentYear}`}>
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
+          />
+          <CButton size="sm" color="primary" onClick={() => navigate('/catalog/create')}>
+            <CIcon icon={cilPlus} className="me-1" />
+            Create Item
+          </CButton>
+        </DataTableCardHeader>
         <CCardBody>
           <CatalogTable
             data={filteredCatalog}
+            statsVisible={statsVisible}
             beforeList={
               <DataTableRecordControls
+                visible={controlsVisible}
                 searchValue={search}
                 onSearchChange={setSearch}
                 searchPlaceholder="Search item, category, supplier, price, remarks"

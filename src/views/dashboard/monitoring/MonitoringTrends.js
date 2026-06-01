@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { CButton, CButtonGroup, CCol, CRow } from '@coreui/react'
+import { CCol, CRow } from '@coreui/react'
 import { CChartBar } from '@coreui/react-chartjs'
 import { DataTableLoadingState } from '../../../components/datatable'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
@@ -11,12 +11,6 @@ import {
   useChartTickColor,
 } from '../../../utils/chartTheme'
 import { StatsStrip } from '../../../components/stats'
-
-const trendPeriods = [
-  { key: 'last6', label: '6M' },
-  { key: 'last12', label: '12M' },
-  { key: 'ytd', label: 'YTD' },
-]
 
 const stageColumns = [
   { key: 'LEADS', label: 'Leads' },
@@ -51,6 +45,8 @@ const chartStyle = {
 }
 
 const MonitoringTrends = ({
+  period,
+  startDate,
   endDate,
   selectedStaffCode,
   selectedStaffLabel,
@@ -62,7 +58,6 @@ const MonitoringTrends = ({
   const tickColor = useChartTickColor()
   const chartColors = useChartSemanticColors()
   const chartPalette = useChartPalette()
-  const [trendPeriod, setTrendPeriod] = useState('last6')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -78,9 +73,10 @@ const MonitoringTrends = ({
         const response = await fetchJsonGet(
           `${API_BASE}stats/monitoring-trends`,
           {
+            start_date: startDate,
             end_date: endDate,
+            period,
             staff_code: selectedStaffCode,
-            trend_period: trendPeriod,
           },
           controller.signal,
         )
@@ -107,12 +103,11 @@ const MonitoringTrends = ({
     loadTrends()
 
     return () => controller.abort()
-  }, [endDate, reloadKey, selectedStaffCode, trendPeriod])
+  }, [endDate, period, reloadKey, selectedStaffCode, startDate])
 
   const series = useMemo(() => (Array.isArray(data?.series) ? data.series : []), [data?.series])
   const labels = series.map((row) => row.monthLabel || row.month)
   const scopeLabel = selectedStaffCode ? `Staff: ${selectedStaffLabel}` : 'All staff'
-  const totalProposalRm = series.reduce((sum, row) => sum + Number(row.proposalRm || 0), 0)
   const totalProposalQty = series.reduce((sum, row) => sum + Number(row.proposalQty || 0), 0)
   const totalRevenueQty = series.reduce((sum, row) => sum + Number(row.revenueQty || 0), 0)
   const trendWinRate = totalProposalQty > 0 ? (totalRevenueQty / totalProposalQty) * 100 : 0
@@ -128,7 +123,9 @@ const MonitoringTrends = ({
   const targetScopeLabel = normalizeScopeLabel(
     statusData?.achievementPeriodLabel || `YTD to ${statusData?.monthLabel || '-'}`,
   )
-  const trendScopeLabel = data?.periodLabel || 'Trend period'
+  const trendScopeLabel = data?.periodLabel || 'Reporting period'
+  const kpiScopeLabel = `Revenue scope: ${targetScopeLabel} | Win rate scope: ${trendScopeLabel}`
+  const reportingPeriodScopeLabel = `Reporting period: ${trendScopeLabel}`
   const statsItems = useMemo(
     () =>
       [
@@ -152,15 +149,6 @@ const MonitoringTrends = ({
           : null,
         showTrendStats
           ? {
-              key: 'proposal-value',
-              label: 'Proposal Value',
-              value: formatCurrency(totalProposalRm),
-              sublabel: trendScopeLabel,
-              tone: 'primary',
-            }
-          : null,
-        showTrendStats
-          ? {
               key: 'win-rate',
               label: 'Win Rate',
               value: formatPercent(trendWinRate),
@@ -176,7 +164,6 @@ const MonitoringTrends = ({
       targetRemaining,
       targetScopeLabel,
       targetValue,
-      totalProposalRm,
       trendWinRate,
       trendScopeLabel,
       ytdRevenueValue,
@@ -234,32 +221,11 @@ const MonitoringTrends = ({
   )
 
   return (
-    <MonitoringSheetCard
-      title="Monitoring Trends"
-      scopeLabel={scopeLabel}
-      headerActions={
-        <CButtonGroup size="sm" role="group" aria-label="Monitoring trend period">
-          {trendPeriods.map((period) => (
-            <CButton
-              key={period.key}
-              type="button"
-              size="sm"
-              color="primary"
-              variant={trendPeriod === period.key ? undefined : 'outline'}
-              className="px-2 py-1"
-              style={{ fontSize: '0.8rem', lineHeight: 1.1 }}
-              data-api-busy-allow="true"
-              onClick={() => setTrendPeriod(period.key)}
-            >
-              {period.label}
-            </CButton>
-          ))}
-        </CButtonGroup>
-      }
-    >
+    <MonitoringSheetCard title="Monitoring Trends" scopeLabel={scopeLabel}>
       <div className="d-flex flex-column gap-4">
         <div data-tour="monitoring-performance-summary">
           {statusError ? <div className="text-danger small mb-2">{statusError}</div> : null}
+          {(statusData || data) && <div className="small text-muted mb-2">{kpiScopeLabel}</div>}
           <StatsStrip
             items={statsItems}
             loading={statusLoading && !statusData && statsItems.length === 0}
@@ -275,7 +241,10 @@ const MonitoringTrends = ({
         ) : (
           <CRow className="gy-4">
             <CCol xs={12} xl={6}>
-              <div className="fw-semibold mb-2">Monthly Pipeline Stages</div>
+              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div className="fw-semibold">Monthly Pipeline Stages</div>
+                <div className="small text-muted text-nowrap">{reportingPeriodScopeLabel}</div>
+              </div>
               <div className="position-relative w-100" style={{ minHeight: '320px' }}>
                 <CChartBar
                   style={chartStyle}
@@ -316,7 +285,10 @@ const MonitoringTrends = ({
             </CCol>
 
             <CCol xs={12} xl={6}>
-              <div className="fw-semibold mb-2">Proposal vs Revenue</div>
+              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div className="fw-semibold">Proposal vs Revenue</div>
+                <div className="small text-muted text-nowrap">{reportingPeriodScopeLabel}</div>
+              </div>
               <div className="position-relative w-100" style={{ minHeight: '320px' }}>
                 <CChartBar
                   style={chartStyle}

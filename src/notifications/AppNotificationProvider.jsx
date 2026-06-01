@@ -4,6 +4,7 @@ import { APP_NOTIFICATIONS_CHANGED_EVENT } from './appNotificationEvents'
 
 const EMPTY_SUMMARY = {
   total: 0,
+  listable_total: 0,
   by_module: {},
   by_route_group: {},
   by_tab: {},
@@ -11,6 +12,7 @@ const EMPTY_SUMMARY = {
 
 const AppNotificationContext = createContext({
   summary: EMPTY_SUMMARY,
+  isStale: false,
   refresh: () => {},
   getRouteGroupCount: () => 0,
   getTabCount: () => 0,
@@ -24,6 +26,9 @@ const normalizeSummary = (payload) => {
 
   return {
     total: Number(data.total || 0),
+    // Count of rows the notification list can display (stored rows only).
+    // Falls back to total for older payloads that don't send it.
+    listable_total: Number(data.listable_total ?? data.total ?? 0),
     by_module: data.by_module || {},
     by_route_group: data.by_route_group || {},
     by_tab: data.by_tab || {},
@@ -44,6 +49,7 @@ const readJsonResponse = async (response) => {
 
 const AppNotificationProvider = ({ children }) => {
   const [summary, setSummary] = useState(EMPTY_SUMMARY)
+  const [isStale, setIsStale] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -55,8 +61,12 @@ const AppNotificationProvider = ({ children }) => {
         throw new Error(result.message || 'Failed to fetch notification summary.')
       }
       setSummary(normalizeSummary(result))
+      setIsStale(false)
     } catch {
-      setSummary(EMPTY_SUMMARY)
+      // Keep the last-known summary so badges do not flicker to zero on a
+      // transient fetch failure; flag the data as stale for observability.
+      // (Internal only this phase — must not drive any rendering.)
+      setIsStale(true)
     }
   }, [])
 
@@ -140,6 +150,7 @@ const AppNotificationProvider = ({ children }) => {
   const value = useMemo(
     () => ({
       summary,
+      isStale,
       refresh,
       getRouteGroupCount: (route) => Number(summary.by_route_group?.[route] || 0),
       getTabCount: (tabKey) => Number(summary.by_tab?.[tabKey] || 0),
@@ -147,7 +158,7 @@ const AppNotificationProvider = ({ children }) => {
       consumeEntity,
       consumeRouteGroup,
     }),
-    [consumeEntity, consumeRouteGroup, refresh, summary],
+    [consumeEntity, consumeRouteGroup, isStale, refresh, summary],
   )
 
   return <AppNotificationContext.Provider value={value}>{children}</AppNotificationContext.Provider>

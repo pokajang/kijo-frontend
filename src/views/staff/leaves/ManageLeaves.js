@@ -1,16 +1,16 @@
 // src/views/ManageLeaves.js
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import SectionAllLeaves from './SectionAllLeaves'
 import SectionViewAssignments from './SectionViewAssignments'
 import SectionAssignLeaves from './SectionAssignLeaves'
-import SectionLeaveWorkflowSettings from './SectionLeaveWorkflowSettings'
 import * as AH from './actionHandlers'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { useAuth } from '../../../auth/AuthProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
+import { getPeriodRangePreset } from '../../../components/filters'
 
 const LEAVE_ADMIN_ALLOWED_ROLES = ['System Admin', 'HR']
 
@@ -26,15 +26,28 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
   const [allLeaveRecords, setAllLeaveRecords] = useState([])
   const [staffList, setStaffList] = useState([])
   const [entitlements, setEntitlements] = useState([])
+  const [leaveActionPermissions, setLeaveActionPermissions] = useState(null)
+  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
 
-  const fetchAllLeaveRecords = async () => {
+  const defaultLeaveActionPermissions = useMemo(
+    () => ({
+      canRecommend: hasAnyAllowedRole(roles, ['Manager', 'System Admin']),
+      canApprove: hasAnyAllowedRole(roles, ['HR', 'System Admin']),
+    }),
+    [roles],
+  )
+
+  const effectiveLeaveActionPermissions = leaveActionPermissions || defaultLeaveActionPermissions
+
+  const fetchAllLeaveRecords = useCallback(async () => {
     try {
-      const leaves = await AH.getAllLeaves()
+      const { leaves, actionPermissions } = await AH.getAllLeavesPayload(periodRange)
       setAllLeaveRecords(leaves)
+      setLeaveActionPermissions(actionPermissions)
     } catch (err) {
       console.error(err)
     }
-  }
+  }, [periodRange])
 
   const fetchStaffList = async () => {
     try {
@@ -63,10 +76,8 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
     if (!canManageLeaveAdmin) return
 
     fetchStaffList()
-    if (routeSection !== 'workflow') {
-      fetchEntitlements()
-    }
-  }, [canManageLeaveAdmin, routeSection])
+    fetchEntitlements()
+  }, [canManageLeaveAdmin, fetchAllLeaveRecords, routeSection])
 
   const editEntitlement = useMemo(
     () =>
@@ -101,27 +112,22 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         onCancelEdit={() => navigate('/staff/leaves/entitlements')}
       />
     )
-  } else if (routeSection === 'workflow') {
-    content = (
-      <SectionLeaveWorkflowSettings
-        staffList={staffList}
-        onBack={() => navigate('/staff/leaves')}
-      />
-    )
   } else {
     content = (
       <SectionAllLeaves
         allLeaveRecords={allLeaveRecords}
         fetchAllLeaveRecords={fetchAllLeaveRecords}
+        periodRange={periodRange}
+        onPeriodRangeChange={setPeriodRange}
         onManageEntitlements={
           canManageLeaveAdmin ? () => navigate('/staff/leaves/entitlements') : undefined
         }
         onAssignLeave={canManageLeaveAdmin ? () => navigate('/staff/leaves/assign') : undefined}
         onManageWorkflow={
-          canManageLeaveAdmin ? () => navigate('/staff/leaves/workflow') : undefined
+          canManageLeaveAdmin ? () => navigate('/workflows/leave-application') : undefined
         }
-        canRecommendActions={hasAnyAllowedRole(roles, ['HR'])}
-        canApproveActions={hasAnyAllowedRole(roles, ['Manager', 'System Admin'])}
+        canRecommendActions={effectiveLeaveActionPermissions.canRecommend}
+        canApproveActions={effectiveLeaveActionPermissions.canApprove}
         onViewRecord={(record) =>
           navigate(`/staff/leaves/records/${record.id}`, {
             state: { record, returnTo: '/staff/leaves' },

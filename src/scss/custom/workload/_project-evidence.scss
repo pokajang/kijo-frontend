@@ -1,0 +1,46 @@
+.workload-project-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--cui-secondary-color);
+}
+.workload-project-title-mobile {
+  display: none;
+}
+.workload-project-value {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.workload-evidence-main {
+  flex: 1 1 auto;
+}
+.workload-evidence-meta {
+  margin-top: 0.15rem;
+}
+.workload-evidence-classification-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.05rem;
+}
+.workload-evidence-classification-line .workload-evidence-work-type {
+  margin-top: 0;
+}
+.workload-evidence-work-type {
+  margin-top: 0.05rem;
+}
+.task-ai-classification-status {
+  font-weight: 500;
+  width: -webkit-fit-content;
+  width: fit-content;
+}
+.workload-evidence-inline-meta {
+  display: inline-block;
+  margin-left: 0.85rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.875em;
+  font-weight: 400;
+  white-space: nowrap;
+}

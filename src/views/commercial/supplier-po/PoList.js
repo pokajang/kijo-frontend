@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CCard, CCardBody, CCardHeader, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
+import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 
 import ViewPoModal from './SupplierModal/ViewPoModal '
 import MarkSupplierPaid from './SupplierModal/MarkSupplierPaid '
 import dialog from '../../../components/dialog/dialogService'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
 } from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
@@ -21,15 +23,18 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const emptyValue = '-'
-const columnStorageKey = 'commercial.supplier-po.visible-columns.v3'
+const columnStorageKey = 'commercial.supplier-po.visible-columns.v4'
 
 const defaultVisibleColumns = {
   po: true,
   supplier: true,
+  createdBy: true,
   contact: true,
   contactPhone: false,
   items: false,
@@ -43,6 +48,14 @@ const requiredColumns = new Set(['po', 'supplier', 'status'])
 const dataColumns = [
   { key: 'po', label: 'PO', width: '130px', sortable: true, sortType: 'string', shrinkToFit: true },
   { key: 'supplier', label: 'Supplier', width: '210px', sortable: true, sortType: 'string' },
+  {
+    key: 'createdBy',
+    label: 'PIC',
+    width: '140px',
+    sortable: true,
+    sortType: 'string',
+    shrinkToFit: true,
+  },
   { key: 'contact', label: 'Contact', width: '180px', sortable: true, sortType: 'string' },
   {
     key: 'contactPhone',
@@ -107,6 +120,11 @@ const getStatusTone = (status) => {
   return 'info'
 }
 
+const getCreatedByDisplay = (po = {}) =>
+  String(po?.created_by_code || po?.created_by_name || po?.created_by || '').trim()
+
+const isPaidStatus = (status) => String(status || '').toLowerCase() === 'paid'
+
 export default function SupplierPoRecords() {
   const navigate = useNavigate()
   const [poList, setPoList] = useState([])
@@ -120,6 +138,9 @@ export default function SupplierPoRecords() {
   const [selectedPo, setSelectedPo] = useState(null)
   const [viewModalVisible, setViewModalVisible] = useState(false)
   const [markPaidVisible, setMarkPaidVisible] = useState(false)
+  const [projectPickerVisible, setProjectPickerVisible] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('commercial.supplier-po')
 
   const fetchAllPos = useCallback(async () => {
     setLoading(true)
@@ -144,10 +165,7 @@ export default function SupplierPoRecords() {
   const personInChargeOptions = useMemo(() => {
     const options = new Set()
     poList.forEach((po) => {
-      const code = String(po?.created_by_code || '').trim()
-      const name = String(po?.created_by_name || '').trim()
-      const id = po?.created_by != null ? String(po.created_by).trim() : ''
-      const value = code || name || id
+      const value = getCreatedByDisplay(po)
       if (value) options.add(value)
     })
     return Array.from(options).sort((a, b) => a.localeCompare(b))
@@ -193,14 +211,14 @@ export default function SupplierPoRecords() {
       ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
       : null,
     personInChargeFilter !== 'all' ? { key: 'pic', label: `PIC: ${personInChargeFilter}` } : null,
-    serviceTypeFilter !== 'all' ? { key: 'service', label: `Service: ${serviceTypeFilter}` } : null,
+    serviceTypeFilter !== 'all' ? { key: 'item', label: `Item: ${serviceTypeFilter}` } : null,
     statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
   ].filter(Boolean)
   const clearChip = (key) => {
     if (key === 'search') setSearchTerm('')
     if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
     if (key === 'pic') setPersonInChargeFilter('all')
-    if (key === 'service') setServiceTypeFilter('all')
+    if (key === 'item') setServiceTypeFilter('all')
     if (key === 'status') setStatusFilter('all')
   }
 
@@ -213,13 +231,27 @@ export default function SupplierPoRecords() {
     navigate(`/commercial/supplier-po/${po.po_id}`)
   }
 
+  const openSupplierPoCreateForProject = (project) => {
+    const projectId = project?.id ?? project?.project_id
+    if (!projectId) return
+
+    setProjectPickerVisible(false)
+    navigate(`/commercial/supplier-po/create/${projectId}?from=supplier-po-list`, {
+      state: { project },
+    })
+  }
+
   const handleMarkPaid = (po) => {
+    if (isPaidStatus(po?.status)) return
     setSelectedPo(po)
     setMarkPaidVisible(true)
   }
 
   const handleDeletePo = async (po) => {
-    const confirmed = await dialog.confirm(`Are you sure you want to delete PO ${po.po_ref_no}?`)
+    const confirmed = await dialog.confirm(`Are you sure you want to delete PO ${po.po_ref_no}?`, {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!confirmed) return
 
     fetch(`${import.meta.env.VITE_API_BASE}catalog/purchase-orders/${po.po_id}`, {
@@ -276,9 +308,13 @@ export default function SupplierPoRecords() {
         if (!isDateInPeriodRange(po?.created_at, periodRange)) return false
 
         if (personInChargeFilter !== 'all') {
-          const code = String(po?.created_by_code || '').toLowerCase()
-          const name = String(po?.created_by_name || '').toLowerCase()
-          const id = po?.created_by != null ? String(po.created_by).toLowerCase() : ''
+          const code = String(po?.created_by_code || '')
+            .trim()
+            .toLowerCase()
+          const name = String(po?.created_by_name || '')
+            .trim()
+            .toLowerCase()
+          const id = po?.created_by != null ? String(po.created_by).trim().toLowerCase() : ''
           const chosen = String(personInChargeFilter).toLowerCase()
           if (chosen !== code && chosen !== name && chosen !== id) return false
         }
@@ -305,9 +341,7 @@ export default function SupplierPoRecords() {
           .map((item) => `${item?.item_name || ''} ${item?.description || ''}`.trim())
           .join(' ')
           .toLowerCase()
-        const personInCharge = String(
-          po?.created_by_code || po?.created_by_name || '',
-        ).toLowerCase()
+        const personInCharge = getCreatedByDisplay(po).toLowerCase()
 
         return (
           String(po?.po_ref_no || '')
@@ -341,6 +375,7 @@ export default function SupplierPoRecords() {
           ...po,
           po: po.po_ref_no || emptyValue,
           supplier: po.supplier_name || emptyValue,
+          createdBy: getCreatedByDisplay(po) || emptyValue,
           contact: po.supplier_contact_name || emptyValue,
           contactPhone: po.supplier_contact_number || emptyValue,
           items: itemsSummary || emptyValue,
@@ -360,7 +395,7 @@ export default function SupplierPoRecords() {
     )
     const topCreator = getTopGroupBySum(
       normalizedPos,
-      (po) => po.created_by_code || po.created_by_name || po.created_by,
+      (po) => po.createdBy,
       (po) => po.total,
     )
 
@@ -406,38 +441,44 @@ export default function SupplierPoRecords() {
   }, [normalizedPos])
   const statsScopeLabel = periodRange ? getPeriodRangeScopeLabel(periodRange) : ''
 
-  const getActions = (po) => [
-    {
-      key: 'view',
-      label: 'View',
-      onClick: handleViewPo,
-    },
-    {
-      key: 'preview',
-      label: 'Preview Modal',
-      onClick: (record) => {
-        setSelectedPo(record)
-        setViewModalVisible(true)
+  const getActions = (po) => {
+    const alreadyPaid = isPaidStatus(po?.status)
+
+    return [
+      {
+        key: 'view',
+        label: 'View',
+        onClick: handleViewPo,
       },
-    },
-    {
-      key: 'export-pdf',
-      label: 'Export PDF',
-      onClick: handleGeneratePdf,
-    },
-    {
-      key: 'mark-paid',
-      label: 'Mark Paid',
-      onClick: handleMarkPaid,
-    },
-    {
-      key: 'delete',
-      label: 'Delete',
-      danger: true,
-      dividerBefore: true,
-      onClick: handleDeletePo,
-    },
-  ]
+      {
+        key: 'preview',
+        label: 'Preview',
+        onClick: (record) => {
+          setSelectedPo(record)
+          setViewModalVisible(true)
+        },
+      },
+      {
+        key: 'export-pdf',
+        label: 'PDF PO',
+        onClick: handleGeneratePdf,
+      },
+      {
+        key: 'mark-paid',
+        label: 'Mark Paid',
+        disabled: alreadyPaid,
+        tooltip: alreadyPaid ? 'Supplier PO is already paid.' : undefined,
+        onClick: handleMarkPaid,
+      },
+      {
+        key: 'delete',
+        label: 'Delete',
+        danger: true,
+        dividerBefore: true,
+        onClick: handleDeletePo,
+      },
+    ]
+  }
 
   const renderCell = (po, column) => {
     if (column.key === 'issued') return po.issuedDisplay
@@ -457,126 +498,133 @@ export default function SupplierPoRecords() {
         <CCol xs={12}>
           <ModuleNavStrip tabs={commercialModuleTabs} ariaLabel="Commercial sections" />
           <CCard className="mb-4">
-            <CCardHeader>
-              <strong>Equipment Supplier PO</strong>
-            </CCardHeader>
+            <DataTableCardHeader title="Supplier POs" scopeLabel={statsScopeLabel}>
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
+              />
+              <CButton color="primary" size="sm" onClick={() => setProjectPickerVisible(true)}>
+                Create Supplier PO
+              </CButton>
+            </DataTableCardHeader>
             <CCardBody>
-              <>
-                <StatsStrip items={statsItems} scopeLabel={statsScopeLabel} />
-                <DataTableRecordControls
-                  searchValue={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  searchPlaceholder="Type to search..."
-                  showAdvancedFilters={showAdvancedFilters}
-                  setShowAdvancedFilters={setShowAdvancedFilters}
-                  activeFilterCount={activeFilterCount}
-                  activeChips={activeChips}
-                  clearChip={clearChip}
-                  resetFilters={resetFilters}
-                  desktopToolsId="supplier-po-table-tools"
-                  mobileToolsId="supplier-po-mobile-table-tools"
-                  loading={loading}
-                >
-                  <CCol xs={12} md={4} lg={3}>
-                    <CFormLabel>Person In Charge</CFormLabel>
-                    <CFormSelect
-                      value={personInChargeFilter}
-                      onChange={(e) => setPersonInChargeFilter(e.target.value)}
-                    >
-                      <option value="all">All</option>
-                      {personInChargeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </CFormSelect>
-                  </CCol>
+              {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
+              <DataTableRecordControls
+                visible={controlsVisible}
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+                searchPlaceholder="Search PO, supplier, contact, item, PIC"
+                showAdvancedFilters={showAdvancedFilters}
+                setShowAdvancedFilters={setShowAdvancedFilters}
+                activeFilterCount={activeFilterCount}
+                activeChips={activeChips}
+                clearChip={clearChip}
+                resetFilters={resetFilters}
+                desktopToolsId="supplier-po-table-tools"
+                mobileToolsId="supplier-po-mobile-table-tools"
+                loading={loading}
+              >
+                <CCol xs={12} md={4} lg={3}>
+                  <CFormLabel>Person In Charge</CFormLabel>
+                  <CFormSelect
+                    value={personInChargeFilter}
+                    onChange={(e) => setPersonInChargeFilter(e.target.value)}
+                  >
+                    <option value="all">All</option>
+                    {personInChargeOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </CFormSelect>
+                </CCol>
 
-                  <CCol xs={12} md={4} lg={3}>
-                    <CFormLabel>Type of Service</CFormLabel>
-                    <CFormSelect
-                      value={serviceTypeFilter}
-                      onChange={(e) => setServiceTypeFilter(e.target.value)}
-                    >
-                      <option value="all">All</option>
-                      {serviceTypeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </CFormSelect>
-                  </CCol>
+                <CCol xs={12} md={4} lg={3}>
+                  <CFormLabel>Item</CFormLabel>
+                  <CFormSelect
+                    value={serviceTypeFilter}
+                    onChange={(e) => setServiceTypeFilter(e.target.value)}
+                  >
+                    <option value="all">All</option>
+                    {serviceTypeOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </CFormSelect>
+                </CCol>
 
-                  <CCol xs={12} md={4} lg={3}>
-                    <CFormLabel>Status</CFormLabel>
-                    <CFormSelect
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                      <option value="all">All</option>
-                      {statusOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </CFormSelect>
-                  </CCol>
-                </DataTableRecordControls>
+                <CCol xs={12} md={4} lg={3}>
+                  <CFormLabel>Status</CFormLabel>
+                  <CFormSelect
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All</option>
+                    {statusOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </CFormSelect>
+                </CCol>
+              </DataTableRecordControls>
 
-                <DataTableRecordList
-                  rows={normalizedPos}
-                  loading={loading}
-                  loadingMessage="Loading supplier PO records..."
-                  dataColumns={dataColumns}
-                  defaultVisibleColumns={defaultVisibleColumns}
-                  requiredColumns={requiredColumns}
-                  storageKey={columnStorageKey}
-                  idPrefix="supplier-po-record"
-                  emptyMessage="No PO records found."
-                  exportFilename={`supplier-po-records-${new Date().toISOString().slice(0, 10)}.csv`}
-                  showDesktopSummary={false}
-                  desktopUtilityPlacement="portal"
-                  desktopUtilityPortalId="supplier-po-table-tools"
-                  mobileUtilityPlacement="portal"
-                  mobileUtilityPortalId="supplier-po-mobile-table-tools"
-                  showMobileUtilityRow={false}
-                  renderQuickFilters={() => (
-                    <PeriodRangeSelector
-                      value={periodRange}
-                      onChange={setPeriodRange}
-                      className="d-none d-lg-block"
-                    />
-                  )}
-                  getRowKey={(po, index) => po.po_id || po.po_ref_no || index}
-                  renderCell={renderCell}
-                  getActions={getActions}
-                  onRowOpen={handleViewPo}
-                  getMobileTitle={(po) => po.po}
-                  getMobileSubtitle={(po) => po.supplier}
-                  getMobileMeta={(po) => `${po.issuedDisplay} | ${po.totalDisplay}`}
-                  getMobileStatus={(po) => po.status}
-                  getMobileStatusTone={(po) => getStatusTone(po.status)}
-                  mobileFieldKeys={{
-                    title: 'po',
-                    subtitle: 'supplier',
-                    meta: ['issued', 'total'],
-                    status: 'status',
-                  }}
-                  initialSortField="issued"
-                  initialSortDir="desc"
-                  initialSortDirByField={{ issued: 'desc', total: 'desc' }}
-                  getSortValue={(po, field) => po[field]}
-                  resetDeps={[
-                    filteredPos,
-                    searchTerm,
-                    periodRange,
-                    personInChargeFilter,
-                    serviceTypeFilter,
-                    statusFilter,
-                  ]}
-                  actionColumnWidth="56px"
-                />
-              </>
+              <DataTableRecordList
+                rows={normalizedPos}
+                loading={loading}
+                loadingMessage="Loading supplier PO records..."
+                dataColumns={dataColumns}
+                defaultVisibleColumns={defaultVisibleColumns}
+                requiredColumns={requiredColumns}
+                storageKey={columnStorageKey}
+                idPrefix="supplier-po-record"
+                emptyMessage="No supplier PO records found."
+                exportFilename={`supplier-po-records-${new Date().toISOString().slice(0, 10)}.csv`}
+                showDesktopSummary={false}
+                desktopUtilityPlacement="portal"
+                desktopUtilityPortalId="supplier-po-table-tools"
+                mobileUtilityPlacement="portal"
+                mobileUtilityPortalId="supplier-po-mobile-table-tools"
+                showMobileUtilityRow={false}
+                renderQuickFilters={() => (
+                  <PeriodRangeSelector
+                    value={periodRange}
+                    onChange={setPeriodRange}
+                    className="d-none d-lg-block"
+                  />
+                )}
+                getRowKey={(po, index) => po.po_id || po.po_ref_no || index}
+                renderCell={renderCell}
+                getActions={getActions}
+                onRowOpen={handleViewPo}
+                getMobileTitle={(po) => po.po}
+                getMobileSubtitle={(po) => po.supplier}
+                getMobileMeta={(po) => `${po.issuedDisplay} | RM ${po.totalDisplay}`}
+                getMobileStatus={(po) => po.status}
+                getMobileStatusTone={(po) => getStatusTone(po.status)}
+                mobileFieldKeys={{
+                  title: 'po',
+                  subtitle: 'supplier',
+                  meta: ['issued', 'total', 'createdBy'],
+                  status: 'status',
+                }}
+                initialSortField="issued"
+                initialSortDir="desc"
+                initialSortDirByField={{ issued: 'desc', total: 'desc' }}
+                getSortValue={(po, field) => po[field]}
+                resetDeps={[
+                  filteredPos,
+                  searchTerm,
+                  periodRange,
+                  personInChargeFilter,
+                  serviceTypeFilter,
+                  statusFilter,
+                ]}
+                actionColumnWidth="56px"
+              />
             </CCardBody>
           </CCard>
         </CCol>
@@ -593,6 +641,15 @@ export default function SupplierPoRecords() {
         onClose={() => setMarkPaidVisible(false)}
         onConfirm={handleConfirmMarkPaid}
         record={selectedPo}
+      />
+
+      <CommercialProjectPickerModal
+        visible={projectPickerVisible}
+        onClose={() => setProjectPickerVisible(false)}
+        onContinue={openSupplierPoCreateForProject}
+        title="Create Supplier PO"
+        searchInputId="supplierPoProjectSearch"
+        creationLabel="Supplier PO"
       />
     </>
   )

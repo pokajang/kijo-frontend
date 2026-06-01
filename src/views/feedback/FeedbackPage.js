@@ -192,7 +192,10 @@ const FeedbackPage = () => {
       return
     }
 
-    const confirmed = await dialog.confirm('Delete this feedback? This action cannot be undone.')
+    const confirmed = await dialog.confirm('Delete this feedback? This action cannot be undone.', {
+      confirmText: 'Delete',
+      confirmColor: 'danger',
+    })
     if (!confirmed) return
 
     const result = await deleteFeedback(fb.id)
@@ -250,12 +253,18 @@ const FeedbackPage = () => {
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             onClick={closeUserEditModal}
             disabled={userEditSubmitting}
           >
             Cancel
           </CButton>
-          <CButton color="primary" onClick={handleUserEditSubmit} disabled={userEditSubmitting}>
+          <CButton
+            color="primary"
+            size="sm"
+            onClick={handleUserEditSubmit}
+            disabled={userEditSubmitting}
+          >
             {userEditSubmitting ? 'Submitting...' : 'Submit'}
           </CButton>
         </CModalFooter>

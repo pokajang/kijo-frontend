@@ -158,6 +158,7 @@ const LeaveRecordTable = ({
   handleCancel,
   getStatusBadge,
   onView,
+  controlsVisible = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [leaveTypeFilter, setLeaveTypeFilter] = useState('')
@@ -297,6 +298,7 @@ const LeaveRecordTable = ({
   return (
     <>
       <DataTableRecordControls
+        visible={controlsVisible}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search leave type, reason, or status..."

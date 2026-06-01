@@ -140,7 +140,6 @@ const VendorLoaEditModal = ({ visible, record, submitting = false, onClose, onSa
         <CButton
           color="primary"
           size="sm"
-          variant="outline"
           onClick={handleSubmit}
           disabled={
             submitting ||

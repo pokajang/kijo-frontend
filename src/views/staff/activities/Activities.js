@@ -1,29 +1,36 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import { CRow, CCol, CCard, CCardBody, CButton, CFormLabel, CFormSelect } from '@coreui/react'
 import {
-  CRow,
-  CCol,
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CButton,
-  CFormLabel,
-  CFormSelect,
-} from '@coreui/react'
-import { DataTableRecordControls, getAdvancedFilterCount } from '../../../components/datatable'
+  DataTableCardHeader,
+  DataTableRecordControls,
+  DataTableStatsToggle,
+  getAdvancedFilterCount,
+} from '../../../components/datatable'
 import {
   PeriodRangeSelector,
+  getActivityPeriodParams,
   getPeriodRangeLabel,
   getPeriodRangePreset,
   getPeriodRangeScopeLabel,
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
+import { fetchAllPagedRecords } from '../../../utils/detailPages'
 import ActivityTable from './ActivityTable'
 import ExportReportModal from './ExportReportModal'
 import { filterActivities } from './utils'
+
+export const loadActivitiesForPeriod = (apiBase, periodRange) =>
+  fetchAllPagedRecords({
+    url: `${apiBase}staff/activities`,
+    params: getActivityPeriodParams(periodRange),
+    dataKeys: ['activities', 'items', 'data.items', 'data'],
+    perPage: 500,
+  })
 
 const getActivityVerb = (activity) => {
   const details = String(activity?.details || '').trim()
@@ -50,27 +57,27 @@ const Activities = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   const [exportModalVisible, setExportModalVisible] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('staff.activities')
 
   useEffect(() => {
+    let active = true
     setLoading(true)
-    fetch(`${import.meta.env.VITE_API_BASE}staff/activities?per_page=500`, {
-      credentials: 'include',
-    })
-      .then((res) => res.json())
-      .then((data) =>
-        setActivities(
-          Array.isArray(data)
-            ? data
-            : Array.isArray(data?.activities)
-              ? data.activities
-              : Array.isArray(data?.items)
-                ? data.items
-                : [],
-        ),
-      )
-      .catch((err) => console.error('Failed to load activities:', err))
-      .finally(() => setLoading(false))
-  }, [])
+    loadActivitiesForPeriod(import.meta.env.VITE_API_BASE, periodRange)
+      .then((records) => {
+        if (active) setActivities(records)
+      })
+      .catch((err) => {
+        if (active) console.error('Failed to load activities:', err)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [periodRange])
 
   const userOptions = useMemo(() => {
     const userCodes = [...new Set(activities.map((a) => a.user_code))].filter(Boolean)
@@ -175,26 +182,31 @@ const Activities = () => {
         <CCol xs={12}>
           <ModuleNavStrip tabs={staffModuleTabs} ariaLabel="Staff sections" />
           <CCard className="mb-4">
-            <CCardHeader className="d-flex justify-content-between align-items-center">
-              <strong>User Activity Log</strong>
+            <DataTableCardHeader
+              title="User Activity Log"
+              scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+            >
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
+              />
               <CButton
                 size="sm"
-                color="primary"
+                color="secondary"
                 variant="outline"
                 onClick={() => setExportModalVisible(true)}
               >
                 Export Report
               </CButton>
-            </CCardHeader>
+            </DataTableCardHeader>
 
             <CCardBody>
-              <StatsStrip
-                items={statsItems}
-                loading={loading}
-                scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-              />
+              {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
 
               <DataTableRecordControls
+                visible={controlsVisible}
                 searchValue={q}
                 onSearchChange={setQ}
                 searchPlaceholder="Search by user code or activity details..."

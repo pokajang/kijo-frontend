@@ -133,7 +133,7 @@ const PipelineEntryDetailPage = () => {
       } catch (err) {
         if (isAbortError(err)) return
         setEntry(null)
-        setLoadError(err?.message || 'Unable to load pipeline entry.')
+        setLoadError(err?.notFound ? '' : err?.message || 'Unable to load pipeline entry.')
       } finally {
         if (signal.aborted) return
         setLoading(false)

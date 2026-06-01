@@ -135,6 +135,9 @@ const ServiceConfiguredRecordsTable = ({
   onSyncClientDetails,
   onEmail,
   onSharePdf,
+  onStatsScopeLabelChange,
+  statsVisible = true,
+  controlsVisible = true,
 }) => {
   const columnWidths = serviceRecordColumnWidths
   const truncateStyle = serviceRecordTruncateStyle
@@ -535,6 +538,7 @@ const ServiceConfiguredRecordsTable = ({
   }
 
   const isLargeDataset = records.length > LARGE_DATASET_THRESHOLD
+  const statsScopeLabel = periodRange ? getPeriodRangeScopeLabel(periodRange) : ''
 
   const renderRow = (record, idx, rowUi = {}) => {
     const meta = record?.__serviceTableMeta || {}
@@ -691,7 +695,10 @@ const ServiceConfiguredRecordsTable = ({
       activeFilterCount={activeFilterCount}
       activeChips={activeChips}
       statsItems={statsItems}
-      statsScopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+      statsVisible={statsVisible}
+      controlsVisible={controlsVisible}
+      statsScopeLabel={statsScopeLabel}
+      onStatsScopeLabelChange={onStatsScopeLabelChange}
       clearChip={clearChip}
       handleExportCsv={handleExportCsv}
       sortedRecordsLength={sortedRecords.length}

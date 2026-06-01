@@ -10,6 +10,16 @@ const jsonResponse = (payload, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   })
 
+const diagnosticsResponse = (logs = []) =>
+  jsonResponse({
+    status: 'success',
+    data: {
+      default: {},
+      quote: {},
+      logs,
+    },
+  })
+
 describe('SectionMailDiagnostics', () => {
   beforeEach(() => {
     setCsrfToken('csrf-test')
@@ -22,8 +32,31 @@ describe('SectionMailDiagnostics', () => {
     vi.unstubAllGlobals()
   })
 
-  it('sends only the recipient email and records a successful default email test', async () => {
+  it('loads persisted diagnostic records from the backend', async () => {
     window.fetch.mockResolvedValueOnce(
+      diagnosticsResponse([
+        {
+          id: 42,
+          type: 'quote_pdf',
+          status: 'failed',
+          from: 'info.admin@amiosh.com',
+          to: 'azam@example.test',
+          attachment: 'quote-mail-diagnostic.pdf',
+          response: 'Quote PDF diagnostic email failed. Check the quote SMTP configuration.',
+          completed_at: '2026-05-21T02:01:00.000000Z',
+        },
+      ]),
+    )
+
+    render(<SectionMailDiagnostics />)
+
+    expect(await screen.findAllByText(/quote smtp configuration/i)).not.toHaveLength(0)
+    expect(screen.getByText('info.admin@amiosh.com')).toBeInTheDocument()
+    expect(screen.getAllByText('failed')).not.toHaveLength(0)
+  })
+
+  it('sends only the recipient email and records a successful default email test', async () => {
+    window.fetch.mockResolvedValueOnce(diagnosticsResponse()).mockResolvedValueOnce(
       jsonResponse({
         status: 'success',
         message: 'Default system email sent.',
@@ -38,6 +71,7 @@ describe('SectionMailDiagnostics', () => {
     )
 
     render(<SectionMailDiagnostics />)
+    await waitFor(() => expect(window.fetch).toHaveBeenCalledTimes(1))
 
     fireEvent.change(screen.getByLabelText(/recipient email/i), {
       target: { value: 'azam@example.test' },
@@ -46,7 +80,7 @@ describe('SectionMailDiagnostics', () => {
 
     expect(await screen.findAllByText('Default system email sent.')).not.toHaveLength(0)
 
-    const [, init] = window.fetch.mock.calls[0]
+    const [, init] = window.fetch.mock.calls[1]
     expect(JSON.parse(init.body)).toEqual({ recipient_email: 'azam@example.test' })
     expect(screen.queryByLabelText(/subject/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/message/i)).not.toBeInTheDocument()
@@ -54,7 +88,7 @@ describe('SectionMailDiagnostics', () => {
   })
 
   it('records blocked quote PDF tests using backend diagnostic metadata', async () => {
-    window.fetch.mockResolvedValueOnce(
+    window.fetch.mockResolvedValueOnce(diagnosticsResponse()).mockResolvedValueOnce(
       jsonResponse(
         {
           status: 'error',
@@ -75,6 +109,7 @@ describe('SectionMailDiagnostics', () => {
     )
 
     render(<SectionMailDiagnostics />)
+    await waitFor(() => expect(window.fetch).toHaveBeenCalledTimes(1))
 
     fireEvent.change(screen.getByLabelText(/recipient email/i), {
       target: { value: 'azam@example.test' },

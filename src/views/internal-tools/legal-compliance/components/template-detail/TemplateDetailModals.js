@@ -93,8 +93,9 @@ const TemplateDetailModals = ({
         <CModalBody>
           <CRow className="g-3">
             <CCol xs={12}>
-              <CFormLabel>Template Name</CFormLabel>
+              <CFormLabel htmlFor="legal-template-edit-name">Template Name</CFormLabel>
               <CFormInput
+                id="legal-template-edit-name"
                 value={editName}
                 onChange={(event) => setEditName(event.target.value)}
                 placeholder="Enter template name"
@@ -103,8 +104,9 @@ const TemplateDetailModals = ({
               />
             </CCol>
             <CCol xs={12}>
-              <CFormLabel>Description</CFormLabel>
+              <CFormLabel htmlFor="legal-template-edit-description">Description</CFormLabel>
               <CFormInput
+                id="legal-template-edit-description"
                 value={editDescription}
                 onChange={(event) => setEditDescription(event.target.value)}
                 placeholder="Enter template description"
@@ -112,8 +114,9 @@ const TemplateDetailModals = ({
               />
             </CCol>
             <CCol xs={12}>
-              <CFormLabel>Assessment Tier</CFormLabel>
+              <CFormLabel htmlFor="legal-template-edit-tier">Assessment Tier</CFormLabel>
               <CFormSelect
+                id="legal-template-edit-tier"
                 value={editTier}
                 onChange={(event) => {
                   const nextTier = normalizeAssessmentTier(event.target.value)
@@ -133,8 +136,9 @@ const TemplateDetailModals = ({
               </CFormSelect>
             </CCol>
             <CCol xs={12}>
-              <CFormLabel>Report Title</CFormLabel>
+              <CFormLabel htmlFor="legal-template-edit-report-title">Report Title</CFormLabel>
               <CFormInput
+                id="legal-template-edit-report-title"
                 value={editReportTitle}
                 onChange={(event) => setEditReportTitle(event.target.value)}
                 placeholder={getDefaultReportTitle(editName.trim(), editTier)}
@@ -142,8 +146,9 @@ const TemplateDetailModals = ({
               />
             </CCol>
             <CCol xs={12}>
-              <CFormLabel>Disclaimer Text</CFormLabel>
+              <CFormLabel htmlFor="legal-template-edit-disclaimer">Disclaimer Text</CFormLabel>
               <CFormTextarea
+                id="legal-template-edit-disclaimer"
                 rows={4}
                 value={editDisclaimerText}
                 onChange={(event) => setEditDisclaimerText(event.target.value)}
@@ -178,8 +183,9 @@ const TemplateDetailModals = ({
           </CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <CFormLabel>Legislation Name</CFormLabel>
+          <CFormLabel htmlFor="legal-template-group-name">Legislation Name</CFormLabel>
           <CFormInput
+            id="legal-template-group-name"
             value={groupName}
             onChange={(event) => setGroupName(event.target.value)}
             placeholder="Occupational Safety and Health Act 1994"
@@ -226,8 +232,7 @@ const TemplateDetailModals = ({
         </CButton>
         {isDirty && (
           <CButton
-            color="secondary"
-            variant="outline"
+            color="danger"
             size="sm"
             onClick={discardAndContinueNavigation}
             disabled={isSaving}
@@ -236,7 +241,8 @@ const TemplateDetailModals = ({
           </CButton>
         )}
         <CButton
-          color="secondary"
+          color={isDirty && pendingNavigation?.type !== 'templates' ? 'primary' : 'secondary'}
+          variant={isDirty && pendingNavigation?.type !== 'templates' ? undefined : 'outline'}
           size="sm"
           onClick={isDirty ? saveAndContinueNavigation : discardAndContinueNavigation}
           disabled={isSaving}

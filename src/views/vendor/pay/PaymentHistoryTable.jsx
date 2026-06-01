@@ -1,20 +1,23 @@
 import React, { useMemo, useState } from 'react'
 import { CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
 } from '../../../components/datatable'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
-  getPeriodRangePreset,
   getPeriodRangeScopeLabel,
+  getPeriodRangePreset,
   isDateInPeriodRange,
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 
@@ -118,14 +121,20 @@ const getStatusTone = (status) => {
 
 const PaymentHistoryTable = ({
   payments = [],
+  periodRange,
+  onPeriodRangeChange,
   setSelectedInvoiceUrl,
   setShowInvoiceModal,
   onViewPayment,
 }) => {
   const [searchText, setSearchText] = useState('')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const selectedPeriodRange = periodRange || localPeriodRange
+  const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('vendor.pay.history')
   const grandTotal = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
   const totalPaid = payments
     .filter((payment) => payment.status === 'Approved')
@@ -183,10 +192,10 @@ const PaymentHistoryTable = ({
             .includes(q),
         )
       const matchesStatus = statusFilter === 'all' || payment.status === statusFilter
-      const matchesPeriod = isDateInPeriodRange(payment.requested, periodRange)
+      const matchesPeriod = isDateInPeriodRange(payment.requested, selectedPeriodRange)
       return matchesSearch && matchesPeriod && matchesStatus
     })
-  }, [normalizedPayments, periodRange, searchText, statusFilter])
+  }, [normalizedPayments, selectedPeriodRange, searchText, statusFilter])
 
   const statusOptions = useMemo(
     () =>
@@ -244,20 +253,20 @@ const PaymentHistoryTable = ({
 
   const resetFilters = () => {
     setSearchText('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    handlePeriodRangeChange(getPeriodRangePreset('ytd'))
     setStatusFilter('all')
   }
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
     if (key === 'status') setStatusFilter('all')
   }
 
   const activeChips = [
     searchText.trim() ? { key: 'search', label: `Search: ${searchText.trim()}` } : null,
-    periodRange && !isDefaultPeriodRange(periodRange)
-      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+    selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
+      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
       : null,
     statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
   ].filter(Boolean)
@@ -332,11 +341,20 @@ const PaymentHistoryTable = ({
 
   return (
     <>
-      <StatsStrip
-        items={statsItems}
-        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-      />
+      <DataTableCardHeader
+        title="Payment History"
+        scopeLabel={selectedPeriodRange ? getPeriodRangeScopeLabel(selectedPeriodRange) : ''}
+      >
+        <DataTableStatsToggle
+          visible={statsVisible}
+          onToggle={toggleStatsVisible}
+          controlsVisible={controlsVisible}
+          onControlsToggle={toggleControlsVisible}
+        />
+      </DataTableCardHeader>
+      {statsVisible && <StatsStrip items={statsItems} />}
       <DataTableRecordControls
+        visible={controlsVisible}
         searchValue={searchText}
         onSearchChange={setSearchText}
         searchPlaceholder="Search payment, project, remarks"
@@ -384,8 +402,8 @@ const PaymentHistoryTable = ({
         showMobileUtilityRow={false}
         renderQuickFilters={() => (
           <PeriodRangeSelector
-            value={periodRange}
-            onChange={setPeriodRange}
+            value={selectedPeriodRange}
+            onChange={handlePeriodRangeChange}
             className="d-none d-lg-block"
           />
         )}
@@ -424,7 +442,7 @@ const PaymentHistoryTable = ({
         initialSortField="requested"
         initialSortDir="asc"
         initialSortDirByField={{ amount: 'desc' }}
-        resetDeps={[payments, searchText, periodRange, statusFilter]}
+        resetDeps={[payments, searchText, selectedPeriodRange, statusFilter]}
       />
       <div className="text-end fw-bold mt-2">
         <div>Total Paid: RM {totalPaid.toFixed(2)}</div>

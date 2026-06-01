@@ -532,7 +532,7 @@ const InquiryCreate = () => {
                       <CButton
                         type="button"
                         size="sm"
-                        color="secondary"
+                        color="danger"
                         variant="outline"
                         className="mt-2 w-100"
                         disabled={saving || proofProcessing}

@@ -4,7 +4,6 @@ import {
   CButton,
   CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CDropdown,
   CDropdownItem,
@@ -20,9 +19,11 @@ import {
   CModalTitle,
 } from '@coreui/react'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
   DataTableTextCell,
   getAdvancedFilterCount,
 } from '../../../components/datatable'
@@ -35,6 +36,7 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
 import * as AH from './actionHandlers'
@@ -153,6 +155,12 @@ const getStatusTone = (status) => {
   }
 }
 
+const getWorkflowActionColor = (action) => {
+  if (action === 'approve') return 'success'
+  if (action === 'reject' || action === 'revoke') return 'danger'
+  return 'info'
+}
+
 export const getLeaveApplicationScopeDate = (record = {}) =>
   record.applied_at || record.start_date || null
 
@@ -239,6 +247,8 @@ export const getLeaveStatusSortPriority = (status) => {
 const SectionAllLeaves = ({
   allLeaveRecords = [],
   fetchAllLeaveRecords,
+  periodRange,
+  onPeriodRangeChange,
   onManageEntitlements,
   onAssignLeave,
   onManageWorkflow,
@@ -248,7 +258,9 @@ const SectionAllLeaves = ({
 }) => {
   const { getModuleCount } = useAppNotifications()
   const [searchText, setSearchText] = useState('')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const selectedPeriodRange = periodRange || localPeriodRange
+  const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -266,6 +278,8 @@ const SectionAllLeaves = ({
     message: '',
     color: 'info',
   })
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('staff.leaves')
 
   const typeOptions = useMemo(
     () => [...new Set(allLeaveRecords.map((r) => r.type).filter(Boolean))].sort(),
@@ -342,11 +356,11 @@ const SectionAllLeaves = ({
       [
         filterType ? { key: 'type', label: `Type: ${filterType}` } : null,
         filterStatus ? { key: 'status', label: `Status: ${filterStatus}` } : null,
-        periodRange && !isDefaultPeriodRange(periodRange)
-          ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+        selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
+          ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
           : null,
       ].filter(Boolean),
-    [filterType, filterStatus, periodRange],
+    [filterType, filterStatus, selectedPeriodRange],
   )
 
   const activeFilterCount = getAdvancedFilterCount(activeChips)
@@ -354,12 +368,12 @@ const SectionAllLeaves = ({
   const clearChip = (key) => {
     if (key === 'type') setFilterType('')
     if (key === 'status') setFilterStatus('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
   }
 
   const resetFilters = () => {
     setSearchText('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    handlePeriodRangeChange(getPeriodRangePreset('ytd'))
     setFilterType('')
     setFilterStatus('')
   }
@@ -387,12 +401,15 @@ const SectionAllLeaves = ({
           .join(' ')
           .toLowerCase()
         const nameMatch = !term || searchableText.includes(term)
-        const periodMatch = isDateInPeriodRange(getLeaveApplicationScopeDate(record), periodRange)
+        const periodMatch = isDateInPeriodRange(
+          getLeaveApplicationScopeDate(record),
+          selectedPeriodRange,
+        )
         const typeMatch = !filterType || record.type === filterType
         const statusMatch = !filterStatus || record.status === filterStatus
         return nameMatch && periodMatch && typeMatch && statusMatch
       }),
-    [allLeaveRecords, searchText, periodRange, filterType, filterStatus],
+    [allLeaveRecords, searchText, selectedPeriodRange, filterType, filterStatus],
   )
 
   const normalizedRecords = useMemo(
@@ -464,9 +481,10 @@ const SectionAllLeaves = ({
         key: 'pending-actions',
         label: 'Pending Actions',
         value: formatCount(pendingActionCount),
-        sublabel: `${formatCount(pendingRows.length)} pending visible`,
+        sublabel: `awaiting you · ${formatCount(pendingRows.length)} in current period`,
         tone: pendingActionCount > 0 ? 'warning' : 'secondary',
         onClick: () => {
+          handlePeriodRangeChange(getPeriodRangePreset('all'))
           setFilterStatus('Pending')
           setShowAdvancedFilters(true)
         },
@@ -492,7 +510,7 @@ const SectionAllLeaves = ({
         tone: 'secondary',
       },
     ]
-  }, [getModuleCount, normalizedRecords])
+  }, [getModuleCount, normalizedRecords, handlePeriodRangeChange])
 
   const getActions = (record) => {
     const isPending = record.status === 'Pending'
@@ -596,7 +614,7 @@ const SectionAllLeaves = ({
 
     const primaryAction = hasReviewed
       ? { action: 'approve', label: 'Approve', color: 'success' }
-      : { action: 'recommend', label: 'Recommend', color: 'primary' }
+      : { action: 'recommend', label: 'Recommend', color: 'info' }
 
     const openPendingAction = (event, action) => {
       event.stopPropagation()
@@ -676,8 +694,16 @@ const SectionAllLeaves = ({
   return (
     <>
       <CCard className="mb-4">
-        <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-          <strong>All Leave Records</strong>
+        <DataTableCardHeader
+          title="All Leave Records"
+          scopeLabel={selectedPeriodRange ? getPeriodRangeScopeLabel(selectedPeriodRange) : ''}
+        >
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
+          />
           {(onManageEntitlements || onAssignLeave || onManageWorkflow) && (
             <CDropdown alignment="end">
               <CDropdownToggle color="primary" size="sm">
@@ -691,18 +717,16 @@ const SectionAllLeaves = ({
                   <CDropdownItem onClick={onAssignLeave}>Assign Leave</CDropdownItem>
                 )}
                 {onManageWorkflow && (
-                  <CDropdownItem onClick={onManageWorkflow}>Email Workflow</CDropdownItem>
+                  <CDropdownItem onClick={onManageWorkflow}>Workflows</CDropdownItem>
                 )}
               </CDropdownMenu>
             </CDropdown>
           )}
-        </CCardHeader>
+        </DataTableCardHeader>
         <CCardBody>
-          <StatsStrip
-            items={statsItems}
-            scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
-          />
+          {statsVisible && <StatsStrip items={statsItems} />}
           <DataTableRecordControls
+            visible={controlsVisible}
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="Search by staff name or code..."
@@ -796,7 +820,7 @@ const SectionAllLeaves = ({
             initialSortDir="asc"
             initialSortDirByField={{ appliedAt: 'desc', duration: 'desc', status: 'asc' }}
             sortComparators={sortComparators}
-            resetDeps={[filteredRecords, searchText, periodRange, filterType, filterStatus]}
+            resetDeps={[filteredRecords, searchText, selectedPeriodRange, filterType, filterStatus]}
             desktopUtilityPlacement="portal"
             desktopUtilityPortalId="all-leaves-table-tools"
             mobileUtilityPlacement="portal"
@@ -804,8 +828,8 @@ const SectionAllLeaves = ({
             showMobileUtilityRow={false}
             renderQuickFilters={() => (
               <PeriodRangeSelector
-                value={periodRange}
-                onChange={setPeriodRange}
+                value={selectedPeriodRange}
+                onChange={handlePeriodRangeChange}
                 className="d-none d-lg-block"
               />
             )}
@@ -847,12 +871,18 @@ const SectionAllLeaves = ({
           <CButton
             color="secondary"
             variant="outline"
+            size="sm"
             onClick={closeActionModal}
             disabled={isSubmittingAction}
           >
             Cancel
           </CButton>
-          <CButton color="primary" onClick={handleActionSubmit} disabled={isSubmittingAction}>
+          <CButton
+            color={getWorkflowActionColor(actionModal.action)}
+            size="sm"
+            onClick={handleActionSubmit}
+            disabled={isSubmittingAction}
+          >
             {isSubmittingAction ? 'Submitting...' : actionModal.label || 'Confirm'}
           </CButton>
         </CModalFooter>
@@ -874,6 +904,7 @@ const SectionAllLeaves = ({
         <CModalFooter>
           <CButton
             color="primary"
+            size="sm"
             onClick={() => setResponseModal((prev) => ({ ...prev, visible: false }))}
           >
             OK

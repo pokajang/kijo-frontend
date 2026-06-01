@@ -147,7 +147,6 @@ export default function ManpowerDetailsCard({
                           : 'No manpower services found.'}{' '}
                         <CButton
                           color="primary"
-                          variant="outline"
                           size="sm"
                           className="p-1 m-0 align-baseline"
                           onClick={() => navigate('/templates/create')}

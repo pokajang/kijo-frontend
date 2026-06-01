@@ -14,10 +14,10 @@ const SubmitReportModal = ({ visible, isSaving, onClose, onConfirm }) => (
     </CModalHeader>
     <CModalBody>Submit this assessment report?</CModalBody>
     <CModalFooter>
-      <CButton color="secondary" variant="outline" onClick={onClose} disabled={isSaving}>
+      <CButton color="secondary" variant="outline" size="sm" onClick={onClose} disabled={isSaving}>
         Cancel
       </CButton>
-      <CButton color="primary" onClick={onConfirm} disabled={isSaving}>
+      <CButton color="primary" size="sm" onClick={onConfirm} disabled={isSaving}>
         {isSaving ? 'Submitting...' : 'Submit Report'}
       </CButton>
     </CModalFooter>

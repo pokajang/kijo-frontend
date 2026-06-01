@@ -78,7 +78,7 @@ describe('SectionAllLeaves', () => {
     expect(workflow).toBe('Cancellation: Cancelled by Employee One (EMP1) at 2026-05-20 10:30:00')
   })
 
-  it('shows email workflow in the module actions menu', () => {
+  it('shows workflows in the module actions menu', () => {
     const onManageWorkflow = vi.fn()
     render(
       <SectionAllLeaves
@@ -91,7 +91,7 @@ describe('SectionAllLeaves', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /^actions$/i }))
-    fireEvent.click(screen.getByText('Email Workflow'))
+    fireEvent.click(screen.getByText('Workflows'))
 
     expect(onManageWorkflow).toHaveBeenCalledTimes(1)
   })
@@ -146,7 +146,7 @@ describe('SectionAllLeaves', () => {
     await waitFor(() => {
       const card = screen.getByText('Pending Actions').closest('.stats-strip-widget')
       expect(within(card).getByText('3')).toBeInTheDocument()
-      expect(within(card).getByText('2 pending visible')).toBeInTheDocument()
+      expect(within(card).getByText('awaiting you · 2 in current period')).toBeInTheDocument()
     })
   })
 
@@ -176,5 +176,44 @@ describe('SectionAllLeaves', () => {
 
     expect(screen.getByText('Pending approval')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument()
+  })
+
+  it('uses info for first-stage workflow actions and success for final approval', () => {
+    render(
+      <SectionAllLeaves
+        allLeaveRecords={[
+          {
+            id: 1,
+            status: 'Pending',
+            type: 'Annual',
+            duration_days: 1,
+            applied_at: '2026-05-20 09:15:00',
+            start_date: '2026-06-01',
+            start_time: '08:30',
+            end_date: '2026-06-01',
+            end_time: '17:30',
+          },
+          {
+            id: 2,
+            status: 'Pending',
+            type: 'Medical',
+            duration_days: 1,
+            applied_at: '2026-05-21 09:15:00',
+            start_date: '2026-06-02',
+            start_time: '08:30',
+            end_date: '2026-06-02',
+            end_time: '17:30',
+            reviewed_by: 20,
+            reviewed_status: 'Recommended',
+          },
+        ]}
+        fetchAllLeaveRecords={vi.fn()}
+        canRecommendActions
+        canApproveActions
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /^recommend$/i })).toHaveClass('btn-outline-info')
+    expect(screen.getByRole('button', { name: /^approve$/i })).toHaveClass('btn-outline-success')
   })
 })

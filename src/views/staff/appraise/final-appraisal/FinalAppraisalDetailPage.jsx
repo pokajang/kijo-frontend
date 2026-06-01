@@ -51,6 +51,8 @@ const FinalAppraisalDetailPage = () => {
     } catch (err) {
       if (location.state?.record) {
         setRecord(normalizeFinalAppraisal(location.state.record))
+      } else if (err?.notFound || err?.status === 404) {
+        setRecord(null)
       } else {
         setError(err?.message || 'Unable to load final appraisal details.')
       }
@@ -64,7 +66,13 @@ const FinalAppraisalDetailPage = () => {
   }, [loadRecord])
 
   const removeRecord = useCallback(async () => {
-    if (!(await dialog.confirm('Delete this final appraisal record?'))) return
+    if (
+      !(await dialog.confirm('Delete this final appraisal record?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
 
     try {
       await deleteFinalAppraisal(finalAppraisalId)

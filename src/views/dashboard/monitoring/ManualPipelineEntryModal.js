@@ -331,7 +331,7 @@ const ManualPipelineEntryModal = ({
                         type="button"
                         size="sm"
                         color="secondary"
-                        variant="ghost"
+                        variant="outline"
                         className="px-1 py-0"
                         onClick={onClearProofFile}
                       >
@@ -356,7 +356,6 @@ const ManualPipelineEntryModal = ({
                     type="button"
                     size="sm"
                     color="primary"
-                    variant="outline"
                     onClick={onAddDraftToBatch}
                     disabled={
                       proofCompressing ||

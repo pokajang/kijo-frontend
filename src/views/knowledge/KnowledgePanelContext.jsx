@@ -7,10 +7,11 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { useDispatch } from 'react-redux'
+import { RIGHT_DRAWER_IDS, useRightDrawer } from '../../components/right-drawer/RightDrawerContext'
 import { getKnowledgeArticle, getKnowledgeArticles } from './knowledgeApi'
 
 const noop = () => {}
+export const KNOWLEDGE_DRAWER_ID = RIGHT_DRAWER_IDS.knowledge
 
 const fallbackContext = {
   isOpen: false,
@@ -31,8 +32,8 @@ const fallbackContext = {
 const KnowledgePanelContext = createContext(fallbackContext)
 
 export const KnowledgePanelProvider = ({ children }) => {
-  const dispatch = useDispatch()
-  const [isOpen, setIsOpen] = useState(false)
+  const { activeDrawerId, closeRightDrawer, isRightDrawerActive, openRightDrawer } =
+    useRightDrawer()
   const [activeSlug, setActiveSlug] = useState('')
   const [article, setArticle] = useState(null)
   const [articles, setArticles] = useState([])
@@ -41,15 +42,34 @@ export const KnowledgePanelProvider = ({ children }) => {
   const [loadingArticles, setLoadingArticles] = useState(false)
   const [error, setError] = useState('')
   const articleRequestRef = useRef(null)
+  const isOpen = isRightDrawerActive(KNOWLEDGE_DRAWER_ID)
 
-  const closeKnowledgePanel = useCallback(() => {
+  const resetKnowledgePanelState = useCallback(() => {
     articleRequestRef.current?.abort()
     articleRequestRef.current = null
-    setIsOpen(false)
     setActiveSlug('')
     setArticle(null)
     setSearch('')
     setError('')
+    setLoadingArticle(false)
+    setLoadingArticles(false)
+  }, [])
+
+  const closeKnowledgePanel = useCallback(() => {
+    resetKnowledgePanelState()
+    closeRightDrawer(KNOWLEDGE_DRAWER_ID)
+  }, [closeRightDrawer, resetKnowledgePanelState])
+
+  useEffect(() => {
+    if (activeDrawerId !== KNOWLEDGE_DRAWER_ID) {
+      resetKnowledgePanelState()
+    }
+  }, [activeDrawerId, resetKnowledgePanelState])
+
+  useEffect(() => {
+    return () => {
+      articleRequestRef.current?.abort()
+    }
   }, [])
 
   const loadArticles = useCallback(async ({ signal } = {}) => {
@@ -104,23 +124,24 @@ export const KnowledgePanelProvider = ({ children }) => {
   const openKnowledgeArticle = useCallback(
     (slugOrId) => {
       if (!slugOrId) return
-      dispatch({ type: 'set', sidebarShow: false })
-      setIsOpen(true)
+      openRightDrawer(KNOWLEDGE_DRAWER_ID)
       setSearch('')
       setActiveSlug(String(slugOrId))
       loadKnowledgeArticle(slugOrId)
     },
-    [dispatch, loadKnowledgeArticle],
+    [loadKnowledgeArticle, openRightDrawer],
   )
 
   const openKnowledgeSearch = useCallback(() => {
-    dispatch({ type: 'set', sidebarShow: false })
-    setIsOpen(true)
+    articleRequestRef.current?.abort()
+    articleRequestRef.current = null
+    openRightDrawer(KNOWLEDGE_DRAWER_ID)
     setActiveSlug('')
     setArticle(null)
     setSearch('')
     setError('')
-  }, [dispatch])
+    setLoadingArticle(false)
+  }, [openRightDrawer])
 
   const value = useMemo(
     () => ({

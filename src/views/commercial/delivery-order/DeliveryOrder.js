@@ -2,14 +2,16 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CCard, CCardBody, CCardHeader, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
+import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 import DoViewModal from './DoModal/DoViewModal'
 import DoEditModalMain from './DoModal/DoEditModalMain'
 import dialog from '../../../components/dialog/dialogService'
 import {
+  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatusBadge,
+  DataTableStatsToggle,
 } from '../../../components/datatable'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
@@ -22,8 +24,10 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.delivery-orders.visible-columns.v3'
@@ -178,9 +182,12 @@ const DeliveryOrder = () => {
   const [serviceTypeFilter, setServiceTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('commercial.delivery-order')
   const [selectedDo, setSelectedDo] = useState(null)
   const [viewModalVisible, setViewModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
+  const [projectPickerVisible, setProjectPickerVisible] = useState(false)
 
   const fetchAllDos = useCallback(async () => {
     setLoading(true)
@@ -327,7 +334,13 @@ const DeliveryOrder = () => {
   }
 
   const handleDeleteDo = async (doId) => {
-    if (!(await dialog.confirm('Are you sure you want to delete this delivery order?'))) return
+    if (
+      !(await dialog.confirm('Are you sure you want to delete this delivery order?', {
+        confirmText: 'Delete',
+        confirmColor: 'danger',
+      }))
+    )
+      return
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE}delivery-orders/${doId}`, {
         method: 'DELETE',
@@ -498,6 +511,16 @@ const DeliveryOrder = () => {
     navigate(`/commercial/delivery-order/${doItem.do_id}`)
   }
 
+  const openDeliveryOrderCreateForProject = (project) => {
+    const projectId = project?.id ?? project?.project_id
+    if (!projectId) return
+
+    setProjectPickerVisible(false)
+    navigate(`/commercial/delivery-order/create/${projectId}?from=delivery-order-list`, {
+      state: { project },
+    })
+  }
+
   const getActions = (doItem) => [
     {
       key: 'view',
@@ -553,13 +576,22 @@ const DeliveryOrder = () => {
         <CCol xs={12}>
           <ModuleNavStrip tabs={commercialModuleTabs} ariaLabel="Commercial sections" />
           <CCard className="mb-4">
-            <CCardHeader>
-              <strong>Delivery Orders</strong>
-            </CCardHeader>
+            <DataTableCardHeader title="Delivery Orders" scopeLabel={statsScopeLabel}>
+              <DataTableStatsToggle
+                visible={statsVisible}
+                onToggle={toggleStatsVisible}
+                controlsVisible={controlsVisible}
+                onControlsToggle={toggleControlsVisible}
+              />
+              <CButton color="primary" size="sm" onClick={() => setProjectPickerVisible(true)}>
+                Create Delivery Order
+              </CButton>
+            </DataTableCardHeader>
             <CCardBody>
               <>
-                <StatsStrip items={statsItems} scopeLabel={statsScopeLabel} />
+                {statsVisible && <StatsStrip items={statsItems} />}
                 <DataTableRecordControls
+                  visible={controlsVisible}
                   searchValue={searchTerm}
                   onSearchChange={setSearchTerm}
                   searchPlaceholder="Type to search..."
@@ -688,6 +720,14 @@ const DeliveryOrder = () => {
         onClose={() => setEditModalVisible(false)}
         data={selectedDo}
         onSave={handleUpdateDo}
+      />
+      <CommercialProjectPickerModal
+        visible={projectPickerVisible}
+        onClose={() => setProjectPickerVisible(false)}
+        onContinue={openDeliveryOrderCreateForProject}
+        title="Create Delivery Order"
+        searchInputId="deliveryOrderProjectSearch"
+        creationLabel="delivery order"
       />
     </>
   )
