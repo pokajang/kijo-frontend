@@ -14,10 +14,23 @@ vi.mock('../../api/apiClient', () => ({
 const defaultProfile = () => ({
   basicSalary: '3000',
   effectiveMonth: '2026-05',
+  vehicle: '',
   defaultMileageRate: '0.60',
   yearlyMedicalClaim: '0.00',
   notes: '',
   recurringAllowances: [],
+  previousYearSnapshot: {
+    year: '2025',
+    source: 'missing',
+    sourceLabel: 'Not configured',
+    editable: true,
+    available: false,
+    message: '2025 snapshot not configured. Set in Salary Settings.',
+    basicSalary: '',
+    allowanceTotal: '',
+    incrementAmount: '',
+    total: '',
+  },
 })
 
 describe('SalarySettings', () => {
@@ -41,9 +54,26 @@ describe('SalarySettings', () => {
         profile = {
           basicSalary: String(body.basic_salary),
           effectiveMonth: body.effective_month,
+          vehicle: body.vehicle || '',
           defaultMileageRate: String(body.default_mileage_rate),
           yearlyMedicalClaim: String(body.yearly_medical_claim),
           notes: body.notes || '',
+          previousYearSnapshot: {
+            year: String(body.previous_year_snapshot?.year || '2025'),
+            source: 'manual',
+            sourceLabel: 'Manual snapshot from Salary Settings',
+            editable: true,
+            available: true,
+            message: '',
+            basicSalary: String(body.previous_year_snapshot?.basic_salary ?? ''),
+            allowanceTotal: String(body.previous_year_snapshot?.allowance_total ?? ''),
+            incrementAmount: String(body.previous_year_snapshot?.increment_amount ?? ''),
+            total: String(
+              Number(body.previous_year_snapshot?.basic_salary || 0) +
+                Number(body.previous_year_snapshot?.allowance_total || 0) +
+                Number(body.previous_year_snapshot?.increment_amount || 0),
+            ),
+          },
           recurringAllowances: (body.recurring_allowances || []).map((allowance, index) => ({
             id: String(index + 1),
             description: allowance.description,
@@ -73,6 +103,16 @@ describe('SalarySettings', () => {
     fireEvent.change(screen.getByLabelText('Basic Salary'), { target: { value: '4800' } })
     fireEvent.change(screen.getByLabelText('Effective From'), { target: { value: '2026-06' } })
     fireEvent.change(screen.getByLabelText('Yearly Medical Claim'), { target: { value: '1200' } })
+    expect(screen.getByText('Previous Year Salary Snapshot')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'No approved Dec 2025 salary record found. Configure this snapshot for Salary Claim PDF reference.',
+      ),
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Basic'), { target: { value: '3600' } })
+    fireEvent.change(screen.getByLabelText('Allowance'), { target: { value: '240' } })
+    fireEvent.change(screen.getByLabelText('Increment'), { target: { value: '100' } })
+    expect(screen.getByLabelText('Total')).toHaveValue('3940.00')
     expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
 
@@ -94,6 +134,14 @@ describe('SalarySettings', () => {
     expect(profile.basicSalary).toBe('4800')
     expect(profile.effectiveMonth).toBe('2026-06')
     expect(profile.yearlyMedicalClaim).toBe('1200')
+    expect(profile.previousYearSnapshot).toEqual(
+      expect.objectContaining({
+        year: '2025',
+        basicSalary: '3600',
+        allowanceTotal: '240',
+        incrementAmount: '100',
+      }),
+    )
     expect(profile.recurringAllowances[0]).toEqual(
       expect.objectContaining({
         description: 'Phone allowance',
@@ -171,5 +219,34 @@ describe('SalarySettings', () => {
       expect(screen.getByText(/Apply Salary uses these values/)).toBeInTheDocument()
     })
     expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
+  })
+
+  it('renders approved December previous-year snapshot values as read-only', async () => {
+    profile = {
+      ...defaultProfile(),
+      previousYearSnapshot: {
+        year: '2025',
+        source: 'auto',
+        sourceLabel: 'Approved Dec 2025 salary record',
+        editable: false,
+        available: true,
+        message: '',
+        basicSalary: '3800.00',
+        allowanceTotal: '250.00',
+        incrementAmount: '0.00',
+        total: '4050.00',
+      },
+    }
+
+    render(<SalarySettings />)
+    await screen.findByDisplayValue('3000')
+
+    expect(screen.getByText('Using approved Dec 2025 salary record.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Basic')).toHaveValue(3800)
+    expect(screen.getByLabelText('Basic')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Allowance')).toHaveValue(250)
+    expect(screen.getByLabelText('Allowance')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Increment')).toHaveValue(0)
+    expect(screen.getByLabelText('Increment')).toHaveAttribute('readonly')
   })
 })

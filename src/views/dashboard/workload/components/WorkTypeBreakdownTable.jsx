@@ -21,9 +21,6 @@ const WorkTypeBreakdownTable = ({ rows = [] }) => {
               Active
             </th>
             <th className="workload-score-table-points" scope="col">
-              Done
-            </th>
-            <th className="workload-score-table-points" scope="col">
               Effort
             </th>
           </tr>
@@ -35,7 +32,6 @@ const WorkTypeBreakdownTable = ({ rows = [] }) => {
                 <div className="workload-score-table-label">{line.workTypeLabel}</div>
               </td>
               <td className="workload-score-table-points">{formatCount(line.activeCount)}</td>
-              <td className="workload-score-table-points">{formatCount(line.completedCount)}</td>
               <td className="workload-score-table-points">{formatCount(line.effortPoints)}</td>
             </tr>
           ))}
@@ -51,7 +47,6 @@ WorkTypeBreakdownTable.propTypes = {
       workType: PropTypes.string,
       workTypeLabel: PropTypes.string,
       activeCount: PropTypes.number,
-      completedCount: PropTypes.number,
       effortPoints: PropTypes.number,
     }),
   ),

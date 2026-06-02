@@ -70,6 +70,10 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
   useEffect(() => {
     if (routeSection === 'records') {
       fetchAllLeaveRecords()
+      if (canManageLeaveAdmin) {
+        fetchStaffList()
+        fetchEntitlements()
+      }
       return
     }
 
@@ -126,6 +130,9 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         onManageWorkflow={
           canManageLeaveAdmin ? () => navigate('/workflows/leave-application') : undefined
         }
+        staffList={staffList}
+        entitlements={entitlements}
+        canManageLeaveAdmin={canManageLeaveAdmin}
         canRecommendActions={effectiveLeaveActionPermissions.canRecommend}
         canApproveActions={effectiveLeaveActionPermissions.canApprove}
         onViewRecord={(record) =>

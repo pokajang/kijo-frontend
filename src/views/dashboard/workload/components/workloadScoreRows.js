@@ -10,8 +10,6 @@ const OVERDUE_PRESSURE_MULTIPLIER = 0.5
 const DUE_SOON_PRESSURE_MULTIPLIER = 0.25
 const DEADLINE_PRESSURE_FIXED_CAP = 4
 const DEADLINE_PRESSURE_ACTIVE_BASE_CAP_RATIO = 0.35
-const COMPLETED_ON_TIME_MULTIPLIER = 0.5
-const COMPLETED_LATE_MULTIPLIER = 0.35
 const PROJECT_BASE_POINTS = 1
 const PROJECT_PROGRESS_POINTS_CAP = 2
 const PROJECT_VALUE_BAND_CAP = 2
@@ -47,17 +45,9 @@ const getProjectTaskPoints = (activeTasks = []) =>
   sortTasksByEffortDesc(activeTasks).reduce((total, task) => total + getEffortScore(task), 0)
 
 const isTaskLinkedProgressUpdate = (update = {}) =>
-  String(update.sourceType || '').toLowerCase() === 'task' || update.sourceTaskId != null
-
-const getCompletedTasks = (row = {}) => [
-  ...(Array.isArray(row.completedTasks) ? row.completedTasks : []),
-  ...(row.projectGroups || []).flatMap((group) =>
-    (Array.isArray(group.completedTasks) ? group.completedTasks : []).map((task) => ({
-      ...task,
-      projectName: task.projectName || group.projectName,
-    })),
-  ),
-]
+  String(update.sourceType || '')
+    .trim()
+    .toLowerCase() === 'task' || update.sourceTaskId != null
 
 const getProjectResponsibilityDetails = (group = {}) => {
   const activeTaskCount = countActiveTasks(group.activeTasks)
@@ -138,17 +128,6 @@ const allocateProportionalRoundedPoints = (items, finalTotal) => {
   const scale = Number(finalTotal) / rawTotal
   return allocateRoundedPoints(items, (item) => Number(item.rawPoints || 0) * scale)
 }
-
-const isLateCompletedTask = (task = {}) => {
-  const dueDate = String(task.dueDate || '')
-  const completedAt = String(task.completedAt || '')
-  if (!dueDate || !completedAt) return false
-
-  return completedAt > dueDate
-}
-
-const getCompletedWorkMultiplier = (task = {}) =>
-  isLateCompletedTask(task) ? COMPLETED_LATE_MULTIPLIER : COMPLETED_ON_TIME_MULTIPLIER
 
 const getCappedDeadlinePressure = (rawDeadlinePressure, row = {}) => {
   const activeWorkloadBase =
@@ -285,34 +264,6 @@ const getDeadlineRows = (row = {}, deadlineTotal = null) => {
   ]
 }
 
-const getCompletedWorkRows = (row = {}) => {
-  const completedTasks = sortTasksByEffortDesc(getCompletedTasks(row))
-  const completedPoints = allocateRoundedPoints(
-    completedTasks,
-    (task) => getEffortScore(task) * getCompletedWorkMultiplier(task),
-  )
-
-  return completedTasks.map((task, index) => {
-    const effortScore = getEffortScore(task)
-    const isLate = isLateCompletedTask(task)
-
-    return {
-      key: task.id ?? `completed-${index}`,
-      item: getTaskTitle(task, `Completed task ${index + 1}`),
-      calculation: `${formatCount(effortScore)} effort x ${
-        isLate ? '35% late completed credit' : '50% on-time completed credit'
-      }`,
-      detail: [
-        task.projectName ? `Project: ${task.projectName}` : '',
-        task.completedAt ? `Completed ${task.completedAt}` : '',
-      ]
-        .filter(Boolean)
-        .join(', '),
-      points: completedPoints[index] || 0,
-    }
-  })
-}
-
 const formatRole = (role) => {
   const text = String(role || '').trim()
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : 'Role not set'
@@ -349,9 +300,7 @@ export const buildWorkloadScoreTableRows = (row = {}) => {
   const nonProjectLine = findBreakdownLine(scoreLines, 'Non-project tasks')
   const projectLine = findBreakdownLine(scoreLines, 'Project responsibility')
   const deadlineLine = findBreakdownLine(scoreLines, 'Deadline pressure')
-  const completedWorkLine = findBreakdownLine(scoreLines, 'Completed work')
   const deadlineRows = getDeadlineRows(row, deadlineLine?.points)
-  const completedWorkRows = getCompletedWorkRows(row)
 
   return [
     {
@@ -397,21 +346,6 @@ export const buildWorkloadScoreTableRows = (row = {}) => {
             type: 'empty',
             key: 'empty-deadline',
             item: 'No overdue or due-soon tasks.',
-          },
-        ]),
-    {
-      type: 'section',
-      key: 'section-completed-work',
-      item: 'Completed Work Score',
-      points: completedWorkLine?.points || 0,
-    },
-    ...(completedWorkRows.length
-      ? completedWorkRows
-      : [
-          {
-            type: 'empty',
-            key: 'empty-completed-work',
-            item: 'No completed tasks in this period.',
           },
         ]),
     {

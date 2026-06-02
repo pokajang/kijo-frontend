@@ -1,0 +1,1 @@
+const o=t=>t.toLocaleDateString("en-GB",{day:"numeric",month:"short"}),c=t=>{const n=String(t||"").match(/^YTD\s+(\d{4})$/i);if(!n)return t;const e=Number(n[1]),a=new Date;return`1 Jan - ${a.getFullYear()===e?`${o(a)} ${e}`:`31 Dec ${e}`}`};export{c as f};

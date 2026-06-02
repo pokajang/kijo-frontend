@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 
 import ModuleNavStrip, { isModuleTabNestedRoute } from './ModuleNavStrip'
 import AppNotificationProvider from '../../notifications/AppNotificationProvider'
+import WorkflowSetupStatusProvider from '../../workflows/WorkflowSetupStatusProvider'
 import { AuthContext } from '../../auth/AuthProvider'
 
 afterEach(() => {
@@ -72,6 +73,99 @@ describe('ModuleNavStrip', () => {
     await waitFor(() => {
       expect(screen.getByText('1')).toHaveAttribute('title', 'Leave requests need attention')
     })
+  })
+
+  it('renders workflow setup warning badges for workflow tabs', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        status: 'success',
+        data: {
+          total_missing: 2,
+          templates: {
+            'salary-application': { missing: 0 },
+            'vendor-payment': { missing: 0 },
+            'leave-application': { missing: 2 },
+            'quote-price-exception': { missing: 0 },
+          },
+        },
+      }),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/workflows/leave-application']}>
+        <WorkflowSetupStatusProvider>
+          <ModuleNavStrip
+            ariaLabel="Workflow sections"
+            tabs={[
+              {
+                key: 'salary-application',
+                label: 'Salary',
+                to: '/workflows/salary-application',
+                workflowSetupKey: 'salary-application',
+              },
+              {
+                key: 'leave-application',
+                label: 'Leave Application',
+                to: '/workflows/leave-application',
+                workflowSetupKey: 'leave-application',
+              },
+            ]}
+          />
+        </WorkflowSetupStatusProvider>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('2')).toHaveAttribute('title', 'Workflow recipients not configured')
+    })
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
+  })
+
+  it('prefers explicit tab badges over workflow setup badges', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({
+        status: 'success',
+        data: {
+          total_missing: 3,
+          templates: {
+            'leave-application': { missing: 3 },
+          },
+        },
+      }),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/workflows/leave-application']}>
+        <WorkflowSetupStatusProvider>
+          <ModuleNavStrip
+            ariaLabel="Workflow sections"
+            tabs={[
+              {
+                key: 'leave-application',
+                label: 'Leave Application',
+                to: '/workflows/leave-application',
+                workflowSetupKey: 'leave-application',
+                badge: {
+                  color: 'danger',
+                  text: 'A',
+                  title: 'Explicit badge',
+                },
+              },
+            ]}
+          />
+        </WorkflowSetupStatusProvider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('A')).toHaveAttribute('title', 'Explicit badge')
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled()
+    })
+    expect(screen.queryByText('3')).not.toBeInTheDocument()
   })
 
   it('does not render on routes nested below a module tab path', () => {

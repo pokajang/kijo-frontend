@@ -15,13 +15,34 @@ import {
 } from '@coreui/react'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import Select from '../../../components/forms/ThemedSelect'
+import { useWorkflowSetupStatus } from '../../../workflows/WorkflowSetupStatusProvider'
 import { fetchWorkflowTemplate, fetchWorkflowTemplates, saveWorkflowTemplate } from './workflowApi'
 
 export const workflowTabs = [
-  { key: 'salary-application', label: 'Salary', to: '/workflows/salary-application' },
-  { key: 'vendor-payment', label: 'Vendor Payment', to: '/workflows/vendor-payment' },
-  { key: 'leave-application', label: 'Leave Application', to: '/workflows/leave-application' },
-  { key: 'quote-price-exception', label: 'Negotiation', to: '/workflows/quote-price-exception' },
+  {
+    key: 'salary-application',
+    label: 'Salary',
+    to: '/workflows/salary-application',
+    workflowSetupKey: 'salary-application',
+  },
+  {
+    key: 'vendor-payment',
+    label: 'Vendor Payment',
+    to: '/workflows/vendor-payment',
+    workflowSetupKey: 'vendor-payment',
+  },
+  {
+    key: 'leave-application',
+    label: 'Leave Application',
+    to: '/workflows/leave-application',
+    workflowSetupKey: 'leave-application',
+  },
+  {
+    key: 'quote-price-exception',
+    label: 'Negotiation',
+    to: '/workflows/quote-price-exception',
+    workflowSetupKey: 'quote-price-exception',
+  },
 ]
 
 const workflowHeaderText = {
@@ -107,6 +128,7 @@ const buildVendorStepDrafts = (settings = {}, steps = []) => {
 const WorkflowsPage = () => {
   const { templateKey } = useParams()
   const navigate = useNavigate()
+  const { refreshWorkflowSetupStatus } = useWorkflowSetupStatus()
   const activeTab = templateKey || 'salary-application'
   const [templates, setTemplates] = useState([])
   const [template, setTemplate] = useState(null)
@@ -214,6 +236,7 @@ const WorkflowsPage = () => {
       const saved = await saveWorkflowTemplate(templateKey, payload)
       setNotice({ color: 'success', message: saved.message || 'Workflow settings saved.' })
       await loadTemplate(templateKey)
+      await refreshWorkflowSetupStatus()
     } catch (err) {
       setNotice({ color: 'danger', message: err?.message || 'Unable to save workflow settings.' })
     } finally {

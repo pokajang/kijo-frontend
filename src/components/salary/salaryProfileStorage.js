@@ -4,6 +4,25 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/'
 
 const getCurrentMonth = () => new Date().toLocaleDateString('en-CA').slice(0, 7)
 
+const getPreviousYear = (month = getCurrentMonth()) => {
+  const year = Number(String(month || '').slice(0, 4))
+
+  return Number.isFinite(year) && year > 0 ? String(year - 1) : String(new Date().getFullYear() - 1)
+}
+
+const createDefaultPreviousYearSnapshot = (month = getCurrentMonth()) => ({
+  year: getPreviousYear(month),
+  source: 'missing',
+  sourceLabel: 'Not configured',
+  editable: true,
+  available: false,
+  message: `${getPreviousYear(month)} snapshot not configured. Set in Salary Settings.`,
+  basicSalary: '',
+  allowanceTotal: '',
+  incrementAmount: '',
+  total: '',
+})
+
 export const createDefaultSalaryProfile = () => ({
   basicSalary: '3000',
   effectiveMonth: getCurrentMonth(),
@@ -12,6 +31,7 @@ export const createDefaultSalaryProfile = () => ({
   yearlyMedicalClaim: '0.00',
   notes: '',
   recurringAllowances: [],
+  previousYearSnapshot: createDefaultPreviousYearSnapshot(),
 })
 
 const normalizeAllowance = (allowance = {}, index = 0) => ({
@@ -23,12 +43,33 @@ const normalizeAllowance = (allowance = {}, index = 0) => ({
   active: true,
 })
 
+export const normalizePreviousYearSnapshot = (
+  snapshot = {},
+  effectiveMonth = getCurrentMonth(),
+) => {
+  const fallback = createDefaultPreviousYearSnapshot(effectiveMonth)
+
+  return {
+    year: String(snapshot.year || fallback.year),
+    source: String(snapshot.source || fallback.source),
+    sourceLabel: String(snapshot.sourceLabel || fallback.sourceLabel),
+    editable: snapshot.editable !== false,
+    available: Boolean(snapshot.available),
+    message: String(snapshot.message || fallback.message),
+    basicSalary: String(snapshot.basicSalary ?? fallback.basicSalary),
+    allowanceTotal: String(snapshot.allowanceTotal ?? fallback.allowanceTotal),
+    incrementAmount: String(snapshot.incrementAmount ?? fallback.incrementAmount),
+    total: String(snapshot.total ?? fallback.total),
+  }
+}
+
 export const normalizeSalaryProfile = (profile = {}) => {
   const fallback = createDefaultSalaryProfile()
+  const effectiveMonth = String(profile.effectiveMonth || fallback.effectiveMonth)
 
   return {
     basicSalary: String(profile.basicSalary ?? fallback.basicSalary),
-    effectiveMonth: String(profile.effectiveMonth || fallback.effectiveMonth),
+    effectiveMonth,
     vehicle: String(profile.vehicle || ''),
     defaultMileageRate: String(profile.defaultMileageRate ?? fallback.defaultMileageRate),
     yearlyMedicalClaim: String(profile.yearlyMedicalClaim ?? fallback.yearlyMedicalClaim),
@@ -36,6 +77,10 @@ export const normalizeSalaryProfile = (profile = {}) => {
     recurringAllowances: Array.isArray(profile.recurringAllowances)
       ? profile.recurringAllowances.map(normalizeAllowance)
       : [],
+    previousYearSnapshot: normalizePreviousYearSnapshot(
+      profile.previousYearSnapshot,
+      effectiveMonth,
+    ),
   }
 }
 
@@ -58,6 +103,12 @@ export const saveSalaryProfile = async (profile) => {
       vehicle: normalizedProfile.vehicle,
       default_mileage_rate: normalizedProfile.defaultMileageRate,
       yearly_medical_claim: normalizedProfile.yearlyMedicalClaim,
+      previous_year_snapshot: {
+        year: normalizedProfile.previousYearSnapshot.year,
+        basic_salary: normalizedProfile.previousYearSnapshot.basicSalary,
+        allowance_total: normalizedProfile.previousYearSnapshot.allowanceTotal,
+        increment_amount: normalizedProfile.previousYearSnapshot.incrementAmount,
+      },
       recurring_allowances: normalizedProfile.recurringAllowances.map((allowance) => ({
         id: allowance.id,
         description: allowance.description,

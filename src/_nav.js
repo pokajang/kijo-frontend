@@ -150,6 +150,7 @@ const _nav = [
     activePaths: ['/workflows'],
     icon: <CIcon icon={cilApplications} customClassName="nav-icon" />,
     allowedRoles: ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank'],
+    workflowSetupBadge: true,
   },
 
   {

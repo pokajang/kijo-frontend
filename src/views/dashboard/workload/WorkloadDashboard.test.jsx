@@ -79,28 +79,27 @@ const workloadStaff = [
     staffName: 'Alpha Staff',
     staffLabel: 'ALP - Alpha Staff',
     staffKey: '10',
-    score: 9.55,
+    score: 8.5,
     activeTasks: 1,
     overdueTasks: 1,
     dueSoonTasks: 0,
     projectTaggedActiveTasks: 1,
-    completedInPeriod: 1,
+    completedInPeriod: 0,
     lateCompletedInPeriod: 0,
     avgDaysLapsed: 24,
     scoreBreakdown: [
       { label: 'Non-project tasks', points: 0 },
       { label: 'Project responsibility', points: 7 },
       { label: 'Deadline pressure', points: 1.5 },
-      { label: 'Completed work', points: 1.05 },
     ],
     workTypeBreakdown: [
       {
         workType: 'technical_specialist',
         workTypeLabel: 'Technical / Specialist',
         activeCount: 1,
-        completedCount: 1,
-        taskCount: 2,
-        effortPoints: 6,
+        completedCount: 0,
+        taskCount: 1,
+        effortPoints: 3,
       },
     ],
     projectGroups: [
@@ -197,19 +196,18 @@ const workloadStaff = [
     staffName: 'Beta Staff',
     staffLabel: 'BET - Beta Staff',
     staffKey: '20',
-    score: 7.55,
+    score: 6.5,
     activeTasks: 3,
     overdueTasks: 0,
     dueSoonTasks: 1,
     projectTaggedActiveTasks: 0,
-    completedInPeriod: 1,
-    lateCompletedInPeriod: 1,
+    completedInPeriod: 0,
+    lateCompletedInPeriod: 0,
     avgDaysLapsed: 2,
     scoreBreakdown: [
       { label: 'Non-project tasks', points: 6 },
       { label: 'Project responsibility', points: 0 },
       { label: 'Deadline pressure', points: 0.5 },
-      { label: 'Completed work', points: 1.05 },
     ],
     workTypeBreakdown: [
       {
@@ -224,53 +222,13 @@ const workloadStaff = [
         workType: 'management_strategy',
         workTypeLabel: 'Management / Strategy',
         activeCount: 1,
-        completedCount: 1,
-        taskCount: 2,
-        effortPoints: 6,
+        completedCount: 0,
+        taskCount: 1,
+        effortPoints: 3,
       },
     ],
-    projectGroups: [
-      {
-        projectId: 200,
-        projectName: 'Project B',
-        clientName: 'Client B',
-        projectValue: 2000,
-        projectRole: 'assistant',
-        roleWeight: 0.65,
-        valueBand: 1,
-        scoreContribution: 0,
-        scoreableProgressCount: 0,
-        activeTasks: [],
-        completedTasks: [],
-        progressUpdates: [
-          {
-            id: 20,
-            projectId: 200,
-            projectName: 'Project B',
-            progressDate: '2026-05-12',
-            progressText: 'Completed task: Completed delivery @Project B',
-            sourceType: 'task',
-            sourceTaskId: 4,
-          },
-        ],
-      },
-    ],
+    projectGroups: [],
     otherTasks: [
-      {
-        id: 3,
-        staffId: 20,
-        staffName: 'Beta Staff',
-        staffCode: 'BET',
-        status: 'Completed',
-        title: 'Closed period task',
-        createdAt: '2026-05-01',
-        dueDate: '2026-05-06',
-        completedAt: '2026-05-10',
-        taskCategory: 'real_effort',
-        effortScore: 3,
-        workType: 'management_strategy',
-        workTypeLabel: 'Management / Strategy',
-      },
       {
         id: 5,
         staffId: 20,
@@ -318,23 +276,7 @@ const workloadStaff = [
         workTypeLabel: 'Clerical / Admin',
       },
     ],
-    completedTasks: [
-      {
-        id: 3,
-        staffId: 20,
-        staffName: 'Beta Staff',
-        staffCode: 'BET',
-        status: 'Completed',
-        title: 'Closed period task',
-        createdAt: '2026-05-01',
-        dueDate: '2026-05-06',
-        completedAt: '2026-05-10',
-        taskCategory: 'real_effort',
-        effortScore: 3,
-        workType: 'management_strategy',
-        workTypeLabel: 'Management / Strategy',
-      },
-    ],
+    completedTasks: [],
   },
 ]
 
@@ -447,7 +389,7 @@ describe('WorkloadDashboard', () => {
     expect(screen.getByText(/Alpha Staff/)).toBeInTheDocument()
     expect(screen.getAllByText('1 Active Task').length).toBeGreaterThan(0)
     expect(screen.getByText('1 Overdue Task')).toBeInTheDocument()
-    expect(screen.getAllByText('1 Project')).toHaveLength(2)
+    expect(screen.getAllByText('1 Project')).toHaveLength(1)
     expect(
       screen.getAllByText((_, element) => element?.textContent === 'workload score').length,
     ).toBeGreaterThan(0)
@@ -553,24 +495,14 @@ describe('WorkloadDashboard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^BET/ }))
 
-    expect(screen.getByText('Project 1 - Project B for Client B')).toBeInTheDocument()
-    expect(screen.getByText('RM 2,000.00')).toBeInTheDocument()
-    // Task-sourced progress updates show project mention stripped and a completed 5MM badge
-    expect(screen.getByText('Completed task: Completed delivery')).toBeInTheDocument()
-    expect(
-      screen.queryByText('Completed task: Completed delivery @Project B'),
-    ).not.toBeInTheDocument()
-    expect(screen.getAllByText('Done 5MM Task').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Project 1 - Project B for Client B')).not.toBeInTheDocument()
+    expect(screen.queryByText('Completed task: Completed delivery')).not.toBeInTheDocument()
+    expect(screen.queryByText('Done 5MM Task')).not.toBeInTheDocument()
     expect(screen.getAllByText('Other 5MM Tasks').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Closed period task').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Closed period task')).not.toBeInTheDocument()
     expect(screen.getByText('Internal follow up')).toBeInTheDocument()
-    expect(screen.getByText('Prepare internal memo')).toBeInTheDocument()
-    expect(screen.queryByText('Hidden admin task')).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getAllByRole('button', { name: '+1 more' }).at(-1))
     expect(screen.getByText('Hidden admin task')).toBeInTheDocument()
-    fireEvent.click(screen.getAllByRole('button', { name: 'Show less' }).at(-1))
-    expect(screen.queryByText('Hidden admin task')).not.toBeInTheDocument()
+    expect(screen.getByText('Prepare internal memo')).toBeInTheDocument()
   })
 
   it('opens the backend workload PDF export URL with the selected date range', async () => {
@@ -590,7 +522,7 @@ describe('WorkloadDashboard', () => {
     const exportButton = await screen.findByRole('button', { name: /export pdf/i })
     expect(exportButton).toBeEnabled()
     expect(screen.queryByText('Fifth update for project A')).not.toBeInTheDocument()
-    expect(screen.queryByText('Hidden admin task')).not.toBeInTheDocument()
+    expect(screen.getByText('Hidden admin task')).toBeInTheDocument()
 
     fireEvent.click(exportButton)
 
@@ -626,7 +558,7 @@ describe('WorkloadDashboard', () => {
             staffName: 'Alpha Staff',
             points: [
               { date: '2026-05-29', score: 8, captureMode: 'reconstructed' },
-              { date: '2026-05-30', score: 9.55 },
+              { date: '2026-05-30', score: 8.5 },
             ],
           },
           {
@@ -636,7 +568,7 @@ describe('WorkloadDashboard', () => {
             staffName: 'Beta Staff',
             points: [
               { date: '2026-05-29', score: 6 },
-              { date: '2026-05-30', score: 7.55 },
+              { date: '2026-05-30', score: 6.5 },
             ],
           },
         ],
@@ -664,16 +596,14 @@ describe('WorkloadDashboard', () => {
     const chart = await screen.findByRole('img', { name: 'Workload score chart' })
     expect(chart).toHaveTextContent('May 1, May 2, May 3')
     expect(chart).toHaveTextContent('null, null')
-    expect(chart).toHaveTextContent('8, 9.55')
+    expect(chart).toHaveTextContent('8, 8.5')
     expect(screen.getAllByRole('img', { name: 'Workload score chart' })).toHaveLength(1)
     expect(screen.queryByText('Project 1 - Project A for Client A')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /^BET/ }))
 
     await waitFor(() =>
-      expect(screen.getByRole('img', { name: 'Workload score chart' })).toHaveTextContent(
-        '6, 7.55',
-      ),
+      expect(screen.getByRole('img', { name: 'Workload score chart' })).toHaveTextContent('6, 6.5'),
     )
     expect(screen.getAllByRole('img', { name: 'Workload score chart' })).toHaveLength(1)
 
@@ -998,8 +928,8 @@ describe('WorkloadDashboard', () => {
     expect(scoreTrigger).toHaveAttribute('aria-haspopup', 'dialog')
     expect(scoreTrigger).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getAllByText('Low').length).toBeGreaterThan(0)
-    expect(screen.getByText('Technical / Specialist: 2')).toBeInTheDocument()
-    expect(alphaToggle).not.toHaveTextContent('Technical / Specialist: 2')
+    expect(screen.getByText('Technical / Specialist: 1')).toBeInTheDocument()
+    expect(alphaToggle).not.toHaveTextContent('Technical / Specialist: 1')
 
     fireEvent.click(scoreTrigger)
 
@@ -1009,13 +939,13 @@ describe('WorkloadDashboard', () => {
     expect(screen.getByText('Non Project Tasks Score')).toBeInTheDocument()
     expect(screen.getByText('Project Task / Responsibility Score')).toBeInTheDocument()
     expect(screen.getByText('Deadline Pressure Score')).toBeInTheDocument()
-    expect(screen.getByText('Completed Work Score')).toBeInTheDocument()
+    expect(screen.queryByText('Completed Work Score')).not.toBeInTheDocument()
     expect(screen.getByText('Work type breakdown')).toBeInTheDocument()
     expect(screen.getAllByText('Technical / Specialist').length).toBeGreaterThan(0)
-    expect(screen.getByText('Completed project report')).toBeInTheDocument()
-    expect(screen.getByText(/Completed 2026-05-24/)).toBeInTheDocument()
+    expect(screen.queryByText('Completed project report')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Completed 2026-05-24/)).not.toBeInTheDocument()
     expect(screen.getByText('3 effort x 0.5 overdue weight')).toBeInTheDocument()
-    expect(screen.getByText('3 effort x 35% late completed credit')).toBeInTheDocument()
+    expect(screen.queryByText('3 effort x 35% late completed credit')).not.toBeInTheDocument()
     expect(
       screen.getByText('Deadline pressure capped at lower of 4 or 35% of active workload base.'),
     ).toBeInTheDocument()
@@ -1024,7 +954,7 @@ describe('WorkloadDashboard', () => {
       screen.queryByText('1 project weighted by role, value, tasks, and progress'),
     ).not.toBeInTheDocument()
     expect(screen.getByText('Total Score')).toBeInTheDocument()
-    expect(screen.getAllByText('9.55').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('8.5').length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByLabelText('Show workload score rules'))
 
@@ -1054,7 +984,7 @@ describe('WorkloadDashboard', () => {
     expect(screen.getByText(/within 7 days of the dashboard snapshot date/i)).toBeInTheDocument()
     expect(screen.getByText(/Due-soon tasks add effort score x 0.25/i)).toBeInTheDocument()
     expect(screen.getByText(/capped at the lower of 4 points or 35%/i)).toBeInTheDocument()
-    expect(screen.getByText(/completed on or before the due date/i)).toBeInTheDocument()
+    expect(screen.getByText(/Completed tasks are not included in/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Close' }).at(-1))
     await waitFor(() => expect(screen.queryByText('Workload score rules')).not.toBeInTheDocument())
@@ -1075,7 +1005,8 @@ describe('WorkloadDashboard', () => {
 
     expect(alphaToggle).toHaveAttribute('aria-expanded', 'false')
     expect(betaToggle).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('Project 1 - Project B for Client B')).toBeInTheDocument()
+    expect(screen.getByText('Internal follow up')).toBeInTheDocument()
+    expect(screen.queryByText('Project 1 - Project B for Client B')).not.toBeInTheDocument()
 
     fireEvent.click(betaToggle)
 

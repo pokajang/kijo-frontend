@@ -22,6 +22,15 @@
   border-bottom: 0;
 }
 
+.data-table-mobile-group-header {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--cui-border-color, var(--app-border-card));
+  background: var(--app-surface-raised);
+  color: var(--app-text-secondary);
+  font-weight: 600;
+  text-align: left;
+}
+
 .data-table-mobile-footer-item {
   background: var(--app-surface-raised);
   color: var(--app-text-secondary);

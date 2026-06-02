@@ -25,6 +25,11 @@ import { createRowOpenHandlers } from '../../utils/datatable/rowOpen'
 const defaultGetRowKey = (row, index) => row?.id || index
 const isPrimitiveTextCell = (content) => typeof content === 'string' || typeof content === 'number'
 const mergeClassNames = (...classNames) => classNames.filter(Boolean).join(' ')
+const getSafeGroupKey = (groupKey) =>
+  groupKey === null || typeof groupKey === 'undefined' || groupKey === ''
+    ? 'Ungrouped'
+    : String(groupKey)
+
 const resolveUtilityPortalTarget = (portalId, setPortalTarget) => {
   if (!portalId || typeof document === 'undefined') {
     setPortalTarget(null)
@@ -107,6 +112,9 @@ const DataTableRecordList = ({
   showExport = true,
   showColumnMenu = true,
   renderQuickFilters,
+  getRowGroupKey,
+  getRowGroupLabel,
+  rowGroupSortComparator,
   showDesktopSummary = true,
   desktopUtilityPlacement = 'inside',
   desktopUtilityPortalId,
@@ -184,6 +192,25 @@ const DataTableRecordList = ({
   const sortDir = hasControlledSort ? controlledSortDir : internalSort.sortDir
   const toggleSort = hasControlledSort ? onControlledSort : internalSort.toggleSort
   const sortedRows = hasControlledSort ? rows : internalSort.sortedRows
+  const displayOrderedRows = useMemo(() => {
+    if (typeof getRowGroupKey !== 'function') return sortedRows
+
+    const groups = new Map()
+    sortedRows.forEach((row) => {
+      const safeGroupKey = getSafeGroupKey(getRowGroupKey(row))
+      if (!groups.has(safeGroupKey)) groups.set(safeGroupKey, [])
+      groups.get(safeGroupKey).push(row)
+    })
+
+    const entries = Array.from(groups.entries())
+    if (typeof rowGroupSortComparator === 'function') {
+      entries.sort(([leftKey, leftRows], [rightKey, rightRows]) =>
+        rowGroupSortComparator(leftKey, rightKey, leftRows, rightRows),
+      )
+    }
+
+    return entries.flatMap(([, groupRows]) => groupRows)
+  }, [getRowGroupKey, rowGroupSortComparator, sortedRows])
 
   const fallbackSortField = useMemo(() => {
     const preferredColumn = dataColumns.find((column) => column.key === initialSortField)
@@ -233,7 +260,7 @@ const DataTableRecordList = ({
     pagedRows: internalPagedRows,
     setCurrentPage: setInternalCurrentPage,
   } = useDataTablePagination({
-    rows: sortedRows,
+    rows: displayOrderedRows,
     initialPageSize,
     resetDeps: [sortField, sortDir, ...resetDeps],
   })
@@ -242,7 +269,7 @@ const DataTableRecordList = ({
     Number.isFinite(Number(controlledCurrentPage)) &&
     typeof controlledSetPageSize === 'function' &&
     typeof controlledSetCurrentPage === 'function'
-  const controlledTotalRows = sortedRows.length
+  const controlledTotalRows = displayOrderedRows.length
   const pageSize = hasControlledPagination ? Number(controlledPageSize) : internalPageSize
   const totalRows = hasControlledPagination ? controlledTotalRows : internalTotalRows
   const totalPages = hasControlledPagination
@@ -260,8 +287,35 @@ const DataTableRecordList = ({
     ? Math.min(pageStart + pageSize, totalRows)
     : internalPageEnd
   const pagedRows = hasControlledPagination
-    ? sortedRows.slice(pageStart, pageEnd)
+    ? displayOrderedRows.slice(pageStart, pageEnd)
     : internalPagedRows
+  const displayRows = useMemo(() => {
+    if (typeof getRowGroupKey !== 'function') return pagedRows
+
+    const groups = new Map()
+    pagedRows.forEach((row) => {
+      const safeGroupKey = getSafeGroupKey(getRowGroupKey(row))
+      if (!groups.has(safeGroupKey)) groups.set(safeGroupKey, [])
+      groups.get(safeGroupKey).push(row)
+    })
+
+    const entries = Array.from(groups.entries())
+    if (typeof rowGroupSortComparator === 'function') {
+      entries.sort(([leftKey, leftRows], [rightKey, rightRows]) =>
+        rowGroupSortComparator(leftKey, rightKey, leftRows, rightRows),
+      )
+    }
+
+    return entries.flatMap(([groupKey, groupRows]) => [
+      {
+        __dataTableGroupRow: true,
+        key: `group-${groupKey}`,
+        label:
+          typeof getRowGroupLabel === 'function' ? getRowGroupLabel(groupKey, groupRows) : groupKey,
+      },
+      ...groupRows,
+    ])
+  }, [getRowGroupKey, getRowGroupLabel, pagedRows, rowGroupSortComparator])
   const setPageSize = hasControlledPagination
     ? (value) => {
         controlledSetPageSize(value)
@@ -349,14 +403,14 @@ const DataTableRecordList = ({
   }
 
   const handleExportCsv = () => {
-    if (!sortedRows.length || !exportFilename) return
+    if (!displayOrderedRows.length || !exportFilename) return
 
     const exportColumns = visibleDataColumns.map((column) => ({
       key: column.key,
       label: column.label,
       getValue: column.getExportValue,
     }))
-    const csv = buildCsv({ rows: sortedRows, columns: exportColumns })
+    const csv = buildCsv({ rows: displayOrderedRows, columns: exportColumns })
     downloadCsv(exportFilename, csv)
   }
 
@@ -374,7 +428,7 @@ const DataTableRecordList = ({
       idPrefix={`${idPrefix}-column${idSuffix}`}
       showColumnMenu={showColumnMenu}
       showExport={showExport && Boolean(exportFilename)}
-      exportDisabled={sortedRows.length === 0}
+      exportDisabled={displayOrderedRows.length === 0}
       onExportCsv={handleExportCsv}
       columnToggleClassName={toggleClassName}
       columnIconOnly={exportIconOnly}
@@ -544,7 +598,7 @@ const DataTableRecordList = ({
         >
           <DataTableDesktop
             columns={desktopColumns}
-            rows={pagedRows}
+            rows={displayRows}
             getRowKey={getRowKey}
             renderCell={renderTableCell}
             emptyMessage={emptyMessage}
@@ -556,7 +610,7 @@ const DataTableRecordList = ({
         </DataTableViewport>
 
         <DataTableMobileList
-          rows={pagedRows}
+          rows={displayRows}
           getRowKey={getRowKey}
           renderItem={renderMobileItem}
           pageStart={pageStart}

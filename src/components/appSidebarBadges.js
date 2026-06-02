@@ -10,8 +10,27 @@ const routeKeysForItem = (item = {}) =>
     ),
   )
 
-export const applySidebarBadges = (items, { getRouteGroupCount = () => 0 } = {}) =>
+const workflowSetupBadge = (count) => ({
+  color: 'warning',
+  text: String(count),
+  title: 'Workflow recipients not configured',
+})
+
+export const applySidebarBadges = (
+  items,
+  { getRouteGroupCount = () => 0, getWorkflowSetupTotal = () => 0 } = {},
+) =>
   items.map((item) => {
+    if (item.workflowSetupBadge) {
+      const count = Number(getWorkflowSetupTotal() || 0)
+      if (count > 0 && !item.badge) {
+        return {
+          ...item,
+          badge: workflowSetupBadge(count),
+        }
+      }
+    }
+
     const routeKeys = routeKeysForItem(item)
     const count = routeKeys.reduce(
       (total, routeKey) => total + Number(getRouteGroupCount(routeKey) || 0),

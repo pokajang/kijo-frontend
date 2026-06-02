@@ -13,7 +13,12 @@ import {
 } from '@coreui/react'
 import { DataTableActionMenu, DataTableLoadingState } from '../datatable'
 import { calculateSalarySummary, formatMoney } from './salaryCalculations'
-import { fetchSalaryProfile, getSalaryProfile, saveSalaryProfile } from './salaryProfileStorage'
+import {
+  fetchSalaryProfile,
+  getSalaryProfile,
+  normalizePreviousYearSnapshot,
+  saveSalaryProfile,
+} from './salaryProfileStorage'
 import { SalaryEmbeddedTable, SalaryPayablePreviewTable } from './SalaryTables'
 
 const createAllowanceRow = () => ({
@@ -42,6 +47,12 @@ const buildAllowanceMeta = (allowance) => {
   if (startMonth) meta.push(`Starts ${startMonth}`)
 
   return meta.join(' - ') || 'Recurring monthly'
+}
+
+const previousYearFromMonth = (month) => {
+  const year = Number(String(month || '').slice(0, 4))
+
+  return Number.isFinite(year) && year > 0 ? String(year - 1) : ''
 }
 
 const SalarySettings = () => {
@@ -160,7 +171,28 @@ const SalarySettings = () => {
 
   const handleProfileChange = (event) => {
     const { name, value } = event.target
-    setProfile((prev) => ({ ...prev, [name]: value }))
+    setProfile((prev) => {
+      const nextProfile = { ...prev, [name]: value }
+      if (name === 'effectiveMonth') {
+        const nextYear = previousYearFromMonth(value)
+        if (nextYear && nextYear !== String(prev.previousYearSnapshot?.year || '')) {
+          nextProfile.previousYearSnapshot = normalizePreviousYearSnapshot({}, value)
+        }
+      }
+
+      return nextProfile
+    })
+  }
+
+  const handlePreviousYearSnapshotChange = (event) => {
+    const { name, value } = event.target
+    setProfile((prev) => ({
+      ...prev,
+      previousYearSnapshot: {
+        ...normalizePreviousYearSnapshot(prev.previousYearSnapshot, prev.effectiveMonth),
+        [name]: value,
+      },
+    }))
   }
 
   const handleAllowanceDraftChange = (event) => {
@@ -355,6 +387,23 @@ const SalarySettings = () => {
     )
   }
 
+  const previousYearSnapshot = normalizePreviousYearSnapshot(
+    profile.previousYearSnapshot,
+    profile.effectiveMonth,
+  )
+  const previousYearSnapshotReadOnly = previousYearSnapshot.editable === false
+  const previousYearSnapshotStatus =
+    previousYearSnapshot.source === 'auto'
+      ? `Using approved Dec ${previousYearSnapshot.year} salary record.`
+      : previousYearSnapshot.source === 'manual'
+        ? 'Manual snapshot from Salary Settings.'
+        : `No approved Dec ${previousYearSnapshot.year} salary record found. Configure this snapshot for Salary Claim PDF reference.`
+  const previousYearSnapshotTotal = formatMoney(
+    Number(previousYearSnapshot.basicSalary || 0) +
+      Number(previousYearSnapshot.allowanceTotal || 0) +
+      Number(previousYearSnapshot.incrementAmount || 0),
+  ).replace('RM ', '')
+
   return (
     <CForm onSubmit={handleSubmit} className="salary-settings-form salary-settings-card-stack">
       <CCard className="salary-workspace">
@@ -528,6 +577,82 @@ const SalarySettings = () => {
               renderMobileItem={renderRecurringAllowanceMobileItem}
             />
           )}
+        </CCardBody>
+
+        <CCardHeader className="salary-section-header">
+          <div>
+            <h3 className="salary-form-panel-heading" id="previousYearSnapshotHeading">
+              Previous Year Salary Snapshot
+            </h3>
+            <div className="text-muted small">
+              Used for the prior-year reference column in Salary Claim PDFs when no approved
+              December salary record exists.
+            </div>
+          </div>
+        </CCardHeader>
+
+        <CCardBody className="salary-section-body">
+          <div className="salary-settings-snapshot-meta">
+            <span className="fw-semibold">{previousYearSnapshot.year}</span>
+            <span className="text-muted">{previousYearSnapshotStatus}</span>
+          </div>
+          <CRow className="g-3 salary-settings-profile-row">
+            <CCol xs={12} md className="salary-settings-profile-col">
+              <CFormLabel htmlFor="previousYearBasicSalary" className="mb-1">
+                Basic
+              </CFormLabel>
+              <CFormInput
+                id="previousYearBasicSalary"
+                name="basicSalary"
+                type="number"
+                min="0"
+                step="0.01"
+                value={previousYearSnapshot.basicSalary}
+                onChange={handlePreviousYearSnapshotChange}
+                readOnly={previousYearSnapshotReadOnly}
+              />
+            </CCol>
+            <CCol xs={12} md className="salary-settings-profile-col">
+              <CFormLabel htmlFor="previousYearAllowanceTotal" className="mb-1">
+                Allowance
+              </CFormLabel>
+              <CFormInput
+                id="previousYearAllowanceTotal"
+                name="allowanceTotal"
+                type="number"
+                min="0"
+                step="0.01"
+                value={previousYearSnapshot.allowanceTotal}
+                onChange={handlePreviousYearSnapshotChange}
+                readOnly={previousYearSnapshotReadOnly}
+              />
+            </CCol>
+            <CCol xs={12} md className="salary-settings-profile-col">
+              <CFormLabel htmlFor="previousYearIncrementAmount" className="mb-1">
+                Increment
+              </CFormLabel>
+              <CFormInput
+                id="previousYearIncrementAmount"
+                name="incrementAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={previousYearSnapshot.incrementAmount}
+                onChange={handlePreviousYearSnapshotChange}
+                readOnly={previousYearSnapshotReadOnly}
+              />
+            </CCol>
+            <CCol xs={12} md className="salary-settings-profile-col">
+              <CFormLabel htmlFor="previousYearSnapshotTotal" className="mb-1">
+                Total
+              </CFormLabel>
+              <CFormInput
+                id="previousYearSnapshotTotal"
+                value={previousYearSnapshotTotal}
+                readOnly
+              />
+            </CCol>
+          </CRow>
         </CCardBody>
 
         <CCardBody className="salary-settings-actions-body">

@@ -11,9 +11,18 @@ import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
   getPeriodRangePreset,
-  isDateInPeriodRange,
   isDefaultPeriodRange,
 } from '../filters'
+import {
+  compareLeaveRecordYearGroupsDesc,
+  filterLeaveRecords,
+  getLeaveRecordScopeDate,
+  getLeaveRecordStatusOptions,
+  getLeaveRecordTypeOptions,
+  getLeaveRecordYearGroupKey,
+  getLeaveStatusSortPriority,
+  shouldGroupLeaveRecordsByYear,
+} from './leaveRecordFilters'
 
 const dataColumns = [
   {
@@ -96,27 +105,13 @@ const getStatusTone = (status, getStatusBadge) => {
   return 'info'
 }
 
-export const getLeaveRecordScopeDate = (record = {}) => record.appliedAt || record.startDate || null
-
 const buildWorkflowStep = ({ label, at, status, remarks }) =>
   [`${label}: ${status || '-'}`, at ? `at ${at}` : '', remarks ? `Remarks: ${remarks}` : '']
     .filter(Boolean)
     .join(' ')
 
-export const getPersonalLeaveStatusSortPriority = (status) => {
-  switch (status) {
-    case 'Pending':
-      return 0
-    case 'Approved':
-      return 1
-    case 'Rejected':
-      return 2
-    case 'Cancelled':
-      return 3
-    default:
-      return 4
-  }
-}
+export { getLeaveRecordScopeDate }
+export const getPersonalLeaveStatusSortPriority = getLeaveStatusSortPriority
 
 export const getPersonalLeaveWorkflowSteps = (record = {}) => {
   const steps = [
@@ -159,28 +154,32 @@ const LeaveRecordTable = ({
   getStatusBadge,
   onView,
   controlsVisible = true,
+  periodRange,
+  onPeriodRangeChange,
 }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [leaveTypeFilter, setLeaveTypeFilter] = useState('')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [statusFilter, setStatusFilter] = useState('')
+  const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const selectedPeriodRange = periodRange || localPeriodRange
+  const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
 
-  const leaveTypeOptions = useMemo(
-    () => [...new Set(leaveRecords.map((r) => r.leaveType).filter(Boolean))].sort(),
-    [leaveRecords],
-  )
+  const leaveTypeOptions = useMemo(() => getLeaveRecordTypeOptions(leaveRecords), [leaveRecords])
+  const statusOptions = useMemo(() => getLeaveRecordStatusOptions(leaveRecords), [leaveRecords])
 
   const activeChips = useMemo(
     () =>
-      [leaveTypeFilter ? { key: 'leaveType', label: `Type: ${leaveTypeFilter}` } : null].filter(
-        Boolean,
-      ),
-    [leaveTypeFilter],
+      [
+        leaveTypeFilter ? { key: 'leaveType', label: `Type: ${leaveTypeFilter}` } : null,
+        statusFilter ? { key: 'status', label: `Status: ${statusFilter}` } : null,
+      ].filter(Boolean),
+    [leaveTypeFilter, statusFilter],
   )
 
   const periodChip =
-    periodRange && !isDefaultPeriodRange(periodRange)
-      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` }
+    selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
+      ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
       : null
 
   const allActiveChips = periodChip ? [...activeChips, periodChip] : activeChips
@@ -189,28 +188,27 @@ const LeaveRecordTable = ({
 
   const clearChip = (key) => {
     if (key === 'leaveType') setLeaveTypeFilter('')
-    if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
+    if (key === 'status') setStatusFilter('')
+    if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
   }
 
   const resetFilters = () => {
     setSearchTerm('')
     setLeaveTypeFilter('')
-    setPeriodRange(getPeriodRangePreset('ytd'))
+    setStatusFilter('')
+    handlePeriodRangeChange(getPeriodRangePreset('ytd'))
   }
 
-  const filteredRecords = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
-    return leaveRecords.filter((record) => {
-      const matchesSearch =
-        !term ||
-        record.leaveType?.toLowerCase().includes(term) ||
-        record.reason?.toLowerCase().includes(term) ||
-        record.status?.toLowerCase().includes(term)
-      const matchesType = !leaveTypeFilter || record.leaveType === leaveTypeFilter
-      const matchesPeriod = isDateInPeriodRange(getLeaveRecordScopeDate(record), periodRange)
-      return matchesSearch && matchesType && matchesPeriod
-    })
-  }, [leaveRecords, searchTerm, leaveTypeFilter, periodRange])
+  const filteredRecords = useMemo(
+    () =>
+      filterLeaveRecords(leaveRecords, {
+        searchTerm,
+        leaveType: leaveTypeFilter,
+        status: statusFilter,
+        periodRange: selectedPeriodRange,
+      }),
+    [leaveRecords, searchTerm, leaveTypeFilter, statusFilter, selectedPeriodRange],
+  )
 
   const normalizedRecords = useMemo(
     () =>
@@ -328,6 +326,21 @@ const LeaveRecordTable = ({
             ))}
           </CFormSelect>
         </CCol>
+        <CCol xs={6} md={3} lg={2}>
+          <CFormLabel htmlFor="leave-filter-status">Status</CFormLabel>
+          <CFormSelect
+            id="leave-filter-status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </CFormSelect>
+        </CCol>
       </DataTableRecordControls>
 
       <DataTableRecordList
@@ -361,14 +374,21 @@ const LeaveRecordTable = ({
         initialSortDir="asc"
         initialSortDirByField={{ appliedAt: 'desc', duration: 'desc', status: 'asc' }}
         sortComparators={sortComparators}
+        getRowGroupKey={
+          shouldGroupLeaveRecordsByYear(selectedPeriodRange)
+            ? getLeaveRecordYearGroupKey
+            : undefined
+        }
+        getRowGroupLabel={(year) => year}
+        rowGroupSortComparator={compareLeaveRecordYearGroupsDesc}
         renderQuickFilters={() => (
-          <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
+          <PeriodRangeSelector value={selectedPeriodRange} onChange={handlePeriodRangeChange} />
         )}
         getSortValue={(record, field) => {
           if (field === 'duration') return record.durationValue
           return record[field]
         }}
-        resetDeps={[filteredRecords, periodRange]}
+        resetDeps={[filteredRecords, selectedPeriodRange, statusFilter]}
         desktopUtilityPlacement="portal"
         desktopUtilityPortalId="leave-record-table-tools"
         mobileUtilityPlacement="portal"

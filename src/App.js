@@ -14,6 +14,7 @@ import VersionNotifier from './components/VersionNotifier'
 import AppDialogProvider from './components/dialog/AppDialogProvider'
 import AppApiProvider from './api/AppApiProvider'
 import AppNotificationProvider from './notifications/AppNotificationProvider'
+import WorkflowSetupStatusProvider from './workflows/WorkflowSetupStatusProvider'
 import { RightDrawerProvider } from './components/right-drawer/RightDrawerContext'
 
 // Set global defaults for all charts
@@ -74,7 +75,9 @@ const App = () => {
                   element={
                     <RequireAuth>
                       <AppNotificationProvider>
-                        <DefaultLayout />
+                        <WorkflowSetupStatusProvider>
+                          <DefaultLayout />
+                        </WorkflowSetupStatusProvider>
                       </AppNotificationProvider>
                     </RequireAuth>
                   }

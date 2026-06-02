@@ -4,6 +4,7 @@ import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom'
 import { CBadge, CButton } from '@coreui/react'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { getTabNotificationBadge } from '../../notifications/notificationRegistry'
+import { useWorkflowSetupStatus } from '../../workflows/WorkflowSetupStatusProvider'
 import { AuthContext } from '../../auth/AuthProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../utils/roles'
 
@@ -54,6 +55,7 @@ const ModuleNavStripShell = ({
   const [hasScrolled, setHasScrolled] = useState(false)
   const [tabScrollHint, setTabScrollHint] = useState(false)
   const { getTabCount } = useAppNotifications()
+  const { getWorkflowSetupCount } = useWorkflowSetupStatus()
   const auth = useContext(AuthContext)
   const roles = useMemo(() => extractRolesFromSession({ user: auth?.user }), [auth?.user])
   const visibleTabs = useMemo(
@@ -205,12 +207,22 @@ const ModuleNavStripShell = ({
               const notificationBadgeConfig = tab.notificationTabKey
                 ? getTabNotificationBadge(tab.notificationTabKey)
                 : null
+              const workflowSetupCount = tab.workflowSetupKey
+                ? getWorkflowSetupCount(tab.workflowSetupKey)
+                : 0
               const badge =
                 tab.badge ||
                 (notificationCount > 0 && notificationBadgeConfig
                   ? {
                       ...notificationBadgeConfig,
                       text: String(notificationCount),
+                    }
+                  : null) ||
+                (workflowSetupCount > 0
+                  ? {
+                      color: 'warning',
+                      text: String(workflowSetupCount),
+                      title: 'Workflow recipients not configured',
                     }
                   : null)
 
@@ -278,6 +290,7 @@ ModuleNavStripShell.propTypes = {
       notificationTabKey: PropTypes.string,
       to: PropTypes.string,
       allowedRoles: PropTypes.arrayOf(PropTypes.string),
+      workflowSetupKey: PropTypes.string,
     }),
   ).isRequired,
 }

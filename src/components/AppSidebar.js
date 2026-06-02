@@ -15,6 +15,7 @@ import { applySidebarBadges } from './appSidebarBadges'
 import { useAuth } from '../auth/AuthProvider'
 import navigation from '../_nav' // your _nav.js with allowedRoles
 import { useAppNotifications } from '../notifications/AppNotificationProvider'
+import { useWorkflowSetupStatus } from '../workflows/WorkflowSetupStatusProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../utils/roles'
 
 import logoUrl from 'src/assets/brand/logo.svg'
@@ -31,7 +32,7 @@ const filterNav = (items, roles) =>
       return acc
     }
     // Destructure to remove allowedRoles, keep everything else
-    const { allowedRoles, notificationRouteGroups, ...cleanItem } = item
+    const { allowedRoles, notificationRouteGroups, workflowSetupBadge, ...cleanItem } = item
 
     // Recurse into children if present
     if (Array.isArray(cleanItem.items)) {
@@ -53,10 +54,14 @@ const AppSidebar = () => {
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { user } = useAuth()
   const { getRouteGroupCount } = useAppNotifications()
+  const { getWorkflowSetupTotal } = useWorkflowSetupStatus()
   const roles = useMemo(() => extractRolesFromSession({ user }), [user])
 
   // Now filter _and clean_ your nav items
-  const navigationWithBadges = applySidebarBadges(navigation, { getRouteGroupCount })
+  const navigationWithBadges = applySidebarBadges(navigation, {
+    getRouteGroupCount,
+    getWorkflowSetupTotal,
+  })
   const filteredNav = filterNav(navigationWithBadges, roles)
 
   useEffect(() => {

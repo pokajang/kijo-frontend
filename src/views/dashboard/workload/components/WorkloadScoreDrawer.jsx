@@ -66,7 +66,6 @@ WorkloadScoreDrawer.propTypes = {
     overdueTasks: PropTypes.number,
     dueSoonTasks: PropTypes.number,
     otherTasks: PropTypes.array,
-    completedTasks: PropTypes.array,
     projectGroups: PropTypes.array,
     workTypeBreakdown: PropTypes.array,
   }),

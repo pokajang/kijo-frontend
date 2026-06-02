@@ -181,6 +181,75 @@ describe('FinancialSalaryRecordsPage', () => {
     })
   })
 
+  it('renders restricted salary rows without leaking staff or salary values', async () => {
+    records = [
+      buildRecord({
+        staffId: null,
+        staffName: 'Restricted',
+        staffCode: '',
+        basicSalary: null,
+        claimsTotal: null,
+        employeeDeductions: null,
+        payableSalary: null,
+        canViewSalaryDetails: false,
+        salaryRestricted: true,
+        workflow: {
+          instanceId: 100,
+          currentStepLabel: 'Check',
+          availableActions: [],
+          history: [],
+        },
+      }),
+    ]
+
+    render(
+      <MemoryRouter>
+        <FinancialSalaryRecordsPage />
+      </MemoryRouter>,
+    )
+
+    expect((await screen.findAllByText('Restricted')).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Staff Example (STA)')).not.toBeInTheDocument()
+    expect(screen.getByText('Visible Payable')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^check$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument()
+  })
+
+  it('sums only visible payable salary in stats', async () => {
+    records = [
+      buildRecord(),
+      buildRecord({
+        id: 2,
+        staffId: null,
+        staffName: 'Restricted',
+        staffCode: '',
+        basicSalary: null,
+        claimsTotal: null,
+        employeeDeductions: null,
+        payableSalary: null,
+        canViewSalaryDetails: false,
+        salaryRestricted: true,
+        workflow: {
+          instanceId: 101,
+          currentStepLabel: 'Check',
+          availableActions: [],
+          history: [],
+        },
+      }),
+    ]
+
+    render(
+      <MemoryRouter>
+        <FinancialSalaryRecordsPage />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Visible Payable')).toBeInTheDocument()
+    expect(screen.getAllByText('RM 3,029.95').length).toBeGreaterThan(0)
+    expect(screen.queryByText('RM 6,059.90')).not.toBeInTheDocument()
+  })
+
   it('shows pending check when the submitted row is not actionable for the current staff', async () => {
     records = [
       buildRecord({

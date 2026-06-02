@@ -7,24 +7,178 @@ import {
   getLeaveWorkflowText,
 } from './SectionAllLeaves'
 import AppNotificationProvider from '../../../notifications/AppNotificationProvider'
+import { getPeriodRangePreset } from '../../../components/filters'
+
+vi.mock('../../../components/forms/ThemedSelect', () => ({
+  default: ({
+    options = [],
+    value,
+    onChange,
+    placeholder = 'Select...',
+    'aria-label': ariaLabel,
+  }) => (
+    <select
+      aria-label={ariaLabel || placeholder}
+      value={value?.value ?? ''}
+      onChange={(event) => {
+        const selected = options.find((option) => String(option.value) === event.target.value)
+        onChange?.(selected || null)
+      }}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}))
+
+const currentYear = new Date().getFullYear()
+
+const hrStaffList = [
+  { staff_id: 7, full_name: 'Azam Bin Husain', name_code: 'AZM' },
+  { staff_id: 8, full_name: 'Bina Noor', name_code: 'BIN' },
+]
+
+const hrLeaveRecords = [
+  {
+    id: 70,
+    staff_id: 7,
+    applicant_name: 'Azam Bin Husain',
+    applicant_code: 'AZM',
+    status: 'Approved',
+    type: 'Annual',
+    duration_days: 3,
+    reason: 'Azam annual 2025',
+    applied_at: '2025-05-20 09:15:00',
+    start_date: '2025-06-01',
+    start_time: '08:30',
+    end_date: '2025-06-03',
+    end_time: '17:30',
+  },
+  {
+    id: 71,
+    staff_id: 7,
+    applicant_name: 'Azam Bin Husain',
+    applicant_code: 'AZM',
+    status: 'Approved',
+    type: 'Medical',
+    duration_days: 2,
+    reason: 'Azam medical 2026',
+    applied_at: '2026-03-20 09:15:00',
+    start_date: '2026-03-21',
+    start_time: '08:30',
+    end_date: '2026-03-22',
+    end_time: '17:30',
+  },
+  {
+    id: 72,
+    staff_id: 7,
+    applicant_name: 'Azam Bin Husain',
+    applicant_code: 'AZM',
+    status: 'Approved',
+    type: 'Annual',
+    duration_days: 1,
+    reason: 'Azam applied 2025 start 2026',
+    applied_at: '2025-12-20 09:15:00',
+    start_date: '2026-01-03',
+    start_time: '08:30',
+    end_date: '2026-01-03',
+    end_time: '17:30',
+  },
+  {
+    id: 80,
+    staff_id: 8,
+    applicant_name: 'Bina Noor',
+    applicant_code: 'BIN',
+    status: 'Approved',
+    type: 'Annual',
+    duration_days: 5,
+    reason: 'Bina annual 2025',
+    applied_at: '2025-07-20 09:15:00',
+    start_date: '2025-07-21',
+    start_time: '08:30',
+    end_date: '2025-07-25',
+    end_time: '17:30',
+  },
+]
+
+const hrEntitlements = [
+  {
+    id: 700,
+    staff_id: 7,
+    full_name: 'Azam Bin Husain',
+    name_code: 'AZM',
+    leave_type: 'Annual',
+    year: currentYear,
+    total_days: 14,
+    used_days: 3,
+    remaining: 11,
+  },
+  {
+    id: 701,
+    staff_id: 7,
+    full_name: 'Azam Bin Husain',
+    name_code: 'AZM',
+    leave_type: 'Annual',
+    year: currentYear - 1,
+    total_days: 12,
+    used_days: 4,
+    remaining: 8,
+  },
+  {
+    id: 702,
+    staff_id: 7,
+    full_name: 'Azam Bin Husain',
+    name_code: 'AZM',
+    leave_type: 'Medical',
+    year: currentYear,
+    total_days: 10,
+    used_days: 2,
+    remaining: 8,
+  },
+  {
+    id: 800,
+    staff_id: 8,
+    full_name: 'Bina Noor',
+    name_code: 'BIN',
+    leave_type: 'Annual',
+    year: currentYear,
+    total_days: 18,
+    used_days: 5,
+    remaining: 13,
+  },
+]
+
+const renderHrSection = (props = {}) =>
+  render(
+    <SectionAllLeaves
+      allLeaveRecords={hrLeaveRecords}
+      fetchAllLeaveRecords={vi.fn()}
+      staffList={hrStaffList}
+      entitlements={hrEntitlements}
+      canManageLeaveAdmin
+      periodRange={getPeriodRangePreset('all')}
+      {...props}
+    />,
+  )
 
 afterEach(() => {
   cleanup()
+  window.localStorage.removeItem('datatable.stats-visible.staff.leaves.v1')
   vi.restoreAllMocks()
 })
 
 describe('SectionAllLeaves', () => {
-  it('filters leave applications by applied date before leave start date', () => {
+  it('filters leave applications by leave start date', () => {
     expect(
       getLeaveApplicationScopeDate({
         applied_at: '2026-05-20 09:15:00',
         start_date: '2026-08-01',
       }),
-    ).toBe('2026-05-20 09:15:00')
-  })
-
-  it('falls back to start date for legacy records without applied date', () => {
-    expect(getLeaveApplicationScopeDate({ start_date: '2026-08-01' })).toBe('2026-08-01')
+    ).toBe('2026-08-01')
   })
 
   it('prioritizes pending leave records before completed statuses', () => {
@@ -148,6 +302,134 @@ describe('SectionAllLeaves', () => {
       expect(within(card).getByText('3')).toBeInTheDocument()
       expect(within(card).getByText('awaiting you · 2 in current period')).toBeInTheDocument()
     })
+  })
+
+  it('keeps HR staff and leave type selectors inside advanced filters', () => {
+    const { container } = renderHrSection()
+
+    expect(container.querySelector('.leave-record-balance-card')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pending Actions')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Toggle advanced filters'))
+
+    expect(screen.getByLabelText('Select staff')).toBeInTheDocument()
+    const leaveTypeSelect = screen.getByLabelText('Filter leave type')
+    expect(leaveTypeSelect).not.toBeDisabled()
+    expect(leaveTypeSelect).toHaveValue('')
+  })
+
+  it('filters HR leave records by exact selected staff id', () => {
+    renderHrSection()
+
+    fireEvent.change(screen.getByLabelText('Select staff'), { target: { value: '7' } })
+
+    expect(screen.getByText('Azam annual 2025')).toBeInTheDocument()
+    expect(screen.getByText('Azam medical 2026')).toBeInTheDocument()
+    expect(screen.getByText('Azam applied 2025 start 2026')).toBeInTheDocument()
+    expect(screen.queryByText('Bina annual 2025')).not.toBeInTheDocument()
+  })
+
+  it('combines selected staff and a 2025 period filter', () => {
+    renderHrSection({
+      periodRange: {
+        preset: 'custom',
+        startDate: '2025-01-01',
+        endDate: '2025-12-31',
+      },
+    })
+
+    fireEvent.change(screen.getByLabelText('Select staff'), { target: { value: '7' } })
+
+    expect(screen.getByText('Azam annual 2025')).toBeInTheDocument()
+    expect(screen.queryByText('Azam medical 2026')).not.toBeInTheDocument()
+    expect(screen.queryByText('Azam applied 2025 start 2026')).not.toBeInTheDocument()
+    expect(screen.queryByText('Bina annual 2025')).not.toBeInTheDocument()
+  })
+
+  it('renders all-time year separators for HR records', () => {
+    const { container } = renderHrSection()
+
+    const groupRows = container.querySelectorAll('tr.data-table-group-row')
+    expect(groupRows).toHaveLength(2)
+    expect(groupRows[0]).toHaveTextContent('2026')
+    expect(groupRows[1]).toHaveTextContent('2025')
+  })
+
+  it('shows selected staff annual entitlement totals in HR balance cards', () => {
+    renderHrSection()
+
+    fireEvent.change(screen.getByLabelText('Select staff'), { target: { value: '7' } })
+
+    const thisYearCard = screen.getByText('This Year').closest('.leave-record-balance-card')
+    const lastYearCard = screen.getByText('Last Year').closest('.leave-record-balance-card')
+    const allTimeCard = screen
+      .getAllByText('All Time')
+      .find((node) => node.classList.contains('leave-balance-card-title'))
+      .closest('.leave-record-balance-card')
+
+    expect(
+      Array.from(thisYearCard.querySelectorAll('.leave-record-balance-metric-value')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['14', '3', '11'])
+    expect(
+      Array.from(lastYearCard.querySelectorAll('.leave-record-balance-metric-value')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['12', '4', '8'])
+    expect(
+      Array.from(allTimeCard.querySelectorAll('.leave-record-balance-metric-value')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['26', '7', '19'])
+  })
+
+  it('changes HR balance cards when the leave type selector changes', () => {
+    renderHrSection()
+
+    fireEvent.change(screen.getByLabelText('Select staff'), { target: { value: '7' } })
+    fireEvent.change(screen.getByLabelText('Filter leave type'), { target: { value: 'Medical' } })
+
+    const thisYearCard = screen.getByText('This Year').closest('.leave-record-balance-card')
+    const lastYearCard = screen.getByText('Last Year').closest('.leave-record-balance-card')
+
+    expect(
+      Array.from(thisYearCard.querySelectorAll('.leave-record-balance-metric-value')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['10', '2', '8'])
+    expect(
+      Array.from(lastYearCard.querySelectorAll('.leave-record-balance-metric-value')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['0', '0', '0'])
+  })
+
+  it('keeps the HR staff selector filtering rows when balance cards are hidden', () => {
+    window.localStorage.setItem('datatable.stats-visible.staff.leaves.v1', 'false')
+    const { container } = renderHrSection()
+
+    expect(container.querySelector('.leave-record-balance-card')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Select staff'), { target: { value: '7' } })
+
+    expect(screen.getByText('Azam annual 2025')).toBeInTheDocument()
+    expect(screen.getByText('Azam medical 2026')).toBeInTheDocument()
+    expect(screen.queryByText('Bina annual 2025')).not.toBeInTheDocument()
+  })
+
+  it('keeps operational stats for non-HR records users without entitlement props', () => {
+    render(
+      <AppNotificationProvider>
+        <SectionAllLeaves
+          allLeaveRecords={hrLeaveRecords}
+          fetchAllLeaveRecords={vi.fn()}
+          canManageLeaveAdmin={false}
+        />
+      </AppNotificationProvider>,
+    )
+
+    expect(screen.getByText('Pending Actions')).toBeInTheDocument()
   })
 
   it('does not render approval controls for users outside the approval stage', () => {

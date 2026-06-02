@@ -51,4 +51,23 @@ describe('applySidebarBadges', () => {
       title: 'Vendor payments need attention',
     })
   })
+
+  it('adds the workflow setup warning badge only to the Workflows item', () => {
+    const rows = applySidebarBadges(
+      [
+        { name: 'Financial', to: '/financial/salary-records' },
+        { name: 'Workflows', to: '/workflows/salary-application', workflowSetupBadge: true },
+      ],
+      {
+        getWorkflowSetupTotal: () => 5,
+      },
+    )
+
+    expect(rows[0].badge).toBeUndefined()
+    expect(rows[1].badge).toEqual({
+      color: 'warning',
+      text: '5',
+      title: 'Workflow recipients not configured',
+    })
+  })
 })

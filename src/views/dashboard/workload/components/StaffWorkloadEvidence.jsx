@@ -11,7 +11,6 @@ import WorkTypeSummary from './WorkTypeSummary'
 const StaffWorkloadEvidence = ({ row, todayStr, printMode = false }) => {
   const projectGroups = row.projectGroups || []
   const otherTasks = row.otherTasks || []
-  const completedTasks = row.completedTasks || []
   const evidenceDate = row.asOfDate || todayStr
   const [showAllOtherTasks, setShowAllOtherTasks] = useState(false)
   const hasProjectWorkload = projectGroups.length > 0
@@ -79,30 +78,6 @@ const StaffWorkloadEvidence = ({ row, todayStr, printMode = false }) => {
           )}
         </div>
       ) : null}
-
-      {printMode ? (
-        <div className="mt-3">
-          <div className="small text-muted text-uppercase mb-2">Completed 5MM Tasks</div>
-          {completedTasks.length ? (
-            <WorkloadCompactListGroup>
-              {completedTasks.map((task, index) => (
-                <TaskEvidenceRow
-                  key={task.id ?? `completed-${index}-${task.title || ''}`}
-                  task={task}
-                  todayStr={evidenceDate}
-                  showProject
-                  showDateMeta
-                  className="bg-light"
-                />
-              ))}
-            </WorkloadCompactListGroup>
-          ) : (
-            <div className="small text-muted fst-italic">
-              No completed non-project tasks in this period.
-            </div>
-          )}
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -112,7 +87,6 @@ StaffWorkloadEvidence.propTypes = {
     asOfDate: PropTypes.string,
     projectGroups: PropTypes.array,
     otherTasks: PropTypes.array,
-    completedTasks: PropTypes.array,
     workTypeBreakdown: PropTypes.array,
   }).isRequired,
   todayStr: PropTypes.string.isRequired,

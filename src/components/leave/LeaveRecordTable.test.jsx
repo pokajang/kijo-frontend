@@ -1,22 +1,60 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { getPeriodRangePreset } from '../filters'
 import {
   getLeaveRecordScopeDate,
   getPersonalLeaveStatusSortPriority,
   getPersonalLeaveWorkflowSteps,
 } from './LeaveRecordTable'
+import LeaveRecordTable from './LeaveRecordTable'
+
+const renderTable = (props = {}) =>
+  render(
+    <LeaveRecordTable
+      leaveRecords={[
+        {
+          id: 1,
+          status: 'Approved',
+          leaveType: 'Annual',
+          duration: 3,
+          reason: 'Annual 2026 leave',
+          appliedAt: '2025-12-20 09:15:00',
+          startDate: '2026-01-10',
+          startTime: '08:30',
+          endDate: '2026-01-12',
+          endTime: '17:30',
+        },
+        {
+          id: 2,
+          status: 'Pending',
+          leaveType: 'Medical',
+          duration: 1,
+          reason: 'Medical 2025 leave',
+          appliedAt: '2026-01-05 09:15:00',
+          startDate: '2025-12-30',
+          startTime: '08:30',
+          endDate: '2025-12-30',
+          endTime: '17:30',
+        },
+      ]}
+      handleCancel={vi.fn()}
+      getStatusBadge={() => 'info'}
+      {...props}
+    />,
+  )
+
+afterEach(() => {
+  cleanup()
+})
 
 describe('LeaveRecordTable', () => {
-  it('filters personal leave records by applied date before leave start date', () => {
+  it('filters personal leave records by leave start date', () => {
     expect(
       getLeaveRecordScopeDate({
         appliedAt: '2026-05-20 09:15:00',
         startDate: '2026-08-01',
       }),
-    ).toBe('2026-05-20 09:15:00')
-  })
-
-  it('falls back to start date for legacy records without applied date', () => {
-    expect(getLeaveRecordScopeDate({ startDate: '2026-08-01' })).toBe('2026-08-01')
+    ).toBe('2026-08-01')
   })
 
   it('prioritizes pending personal leave records before completed statuses', () => {
@@ -56,5 +94,39 @@ describe('LeaveRecordTable', () => {
         cancelledAt: '2026-05-20 10:30:00',
       }),
     ).toEqual(['Cancellation: Cancelled at 2026-05-20 10:30:00'])
+  })
+
+  it('filters personal records by exact status', () => {
+    renderTable({ periodRange: getPeriodRangePreset('all') })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle advanced filters' }))
+    fireEvent.change(document.getElementById('leave-filter-status'), {
+      target: { value: 'Pending' },
+    })
+
+    expect(screen.getAllByText('Medical 2025 leave').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Annual 2026 leave')).not.toBeInTheDocument()
+  })
+
+  it('uses leave start date for personal period filtering', () => {
+    renderTable({
+      periodRange: {
+        preset: 'custom',
+        startDate: '2026-01-01',
+        endDate: '2026-12-31',
+      },
+    })
+
+    expect(screen.getAllByText('Annual 2026 leave').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Medical 2025 leave')).not.toBeInTheDocument()
+  })
+
+  it('renders all-time year separators for personal records', () => {
+    const { container } = renderTable({ periodRange: getPeriodRangePreset('all') })
+
+    const groupRows = container.querySelectorAll('tr.data-table-group-row')
+    expect(groupRows).toHaveLength(2)
+    expect(groupRows[0]).toHaveTextContent('2026')
+    expect(groupRows[1]).toHaveTextContent('2025')
   })
 })

@@ -144,13 +144,8 @@ const WorkloadScoreInfoModal = ({ visible, onClose }) => (
             </li>
             <li>Manual/non-task project progress contributes up to 2 points per project.</li>
             <li>Project value band contributes up to 2 points per project.</li>
-            <li>
-              Task-linked completed progress is visible as project activity but is not scored here,
-              because the completed task is already scored under Completed Work.
-            </li>
-            <li>
-              Completed-only project groups remain visible but add 0 project responsibility points.
-            </li>
+            <li>Task-linked completed progress does not add project responsibility points.</li>
+            <li>Completed-only project groups are not shown in the workload snapshot.</li>
             <li>The result is rounded to 2 decimal places.</li>
           </ul>
           <div className="workload-score-info-grid">
@@ -195,23 +190,11 @@ const WorkloadScoreInfoModal = ({ visible, onClose }) => (
         </section>
 
         <section>
-          <h6>Completed Work Score</h6>
-          <p>
-            Completed tasks in the selected completed-work period add effort score x 50% when
-            completed on or before the due date, or effort score x 35% when completed late. A
-            completed task with no due date is treated as on-time. This includes completed
-            project-tagged tasks and completed non-project tasks. Completed project-tagged tasks
-            still appear inside project progress/activity, but their task-linked progress row does
-            not add another Project Task / Responsibility point.
-          </p>
-        </section>
-
-        <section>
           <h6>Total Score</h6>
           <p>
             Total workload score is the sum of Non Project Tasks Score, Project Task /
-            Responsibility Score, Deadline Pressure Score, and Completed Work Score. Section totals
-            and line allocations are rounded to 2 decimal places.
+            Responsibility Score, and Deadline Pressure Score. Completed tasks are not included in
+            the workload score. Section totals and line allocations are rounded to 2 decimal places.
           </p>
         </section>
       </div>

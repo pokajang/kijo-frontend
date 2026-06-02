@@ -47,6 +47,13 @@ const displayStatus = (status) => {
   return status
 }
 
+const restrictedMoneyLabel = '-'
+const canViewSalary = (record = {}) =>
+  record.canViewSalaryDetails !== false && !record.salaryRestricted
+const formatSalaryMoney = (record, value) =>
+  canViewSalary(record) ? formatMoney(value || 0) : restrictedMoneyLabel
+const numericSalaryValue = (record, value) => (canViewSalary(record) ? Number(value || 0) : null)
+
 const dataColumns = [
   {
     key: 'status',
@@ -104,7 +111,7 @@ const dataColumns = [
     sortType: 'number',
     align: 'right',
     shrinkToFit: true,
-    getExportValue: (record) => formatMoney(record.basicSalary),
+    getExportValue: (record) => formatSalaryMoney(record, record.basicSalary),
   },
   {
     key: 'claimsTotal',
@@ -114,7 +121,7 @@ const dataColumns = [
     sortType: 'number',
     align: 'right',
     shrinkToFit: true,
-    getExportValue: (record) => formatMoney(record.claimsTotal),
+    getExportValue: (record) => formatSalaryMoney(record, record.claimsTotal),
   },
   {
     key: 'employeeDeductions',
@@ -124,7 +131,10 @@ const dataColumns = [
     sortType: 'number',
     align: 'right',
     shrinkToFit: true,
-    getExportValue: (record) => `-${formatMoney(record.employeeDeductions)}`,
+    getExportValue: (record) =>
+      canViewSalary(record)
+        ? `-${formatMoney(record.employeeDeductions || 0)}`
+        : restrictedMoneyLabel,
   },
   {
     key: 'payableSalary',
@@ -134,7 +144,7 @@ const dataColumns = [
     sortType: 'number',
     align: 'right',
     shrinkToFit: true,
-    getExportValue: (record) => formatMoney(record.payableSalary),
+    getExportValue: (record) => formatSalaryMoney(record, record.payableSalary),
   },
 ]
 
@@ -356,8 +366,9 @@ const FinancialSalaryRecordsPage = () => {
         const normalizedRecord = {
           ...record,
           workflowPayload,
-          staffLabel:
-            record.staffName && record.staffCode
+          staffLabel: record.salaryRestricted
+            ? 'Restricted'
+            : record.staffName && record.staffCode
               ? `${record.staffName} (${record.staffCode})`
               : record.staffName || record.staffCode || `Staff #${record.staffId || '-'}`,
           submittedDisplay: formatSubmittedAt(record.submittedAt),
@@ -426,8 +437,12 @@ const FinancialSalaryRecordsPage = () => {
       },
       {
         key: 'payable',
-        label: 'Total Payable',
-        value: formatMoney(sumBy(filteredRecords, (record) => record.payableSalary)),
+        label: 'Visible Payable',
+        value: formatMoney(
+          sumBy(filteredRecords, (record) =>
+            canViewSalary(record) ? record.payableSalary || 0 : 0,
+          ),
+        ),
         tone: 'warning',
       },
     ],
@@ -592,10 +607,20 @@ const FinancialSalaryRecordsPage = () => {
     }
     if (column.key === 'workflow') return renderWorkflowCell(record)
     if (column.key === 'submittedAt') return record.submittedDisplay
-    if (column.key === 'basicSalary') return formatMoney(record.basicSalary)
-    if (column.key === 'claimsTotal') return formatMoney(record.claimsTotal)
-    if (column.key === 'employeeDeductions') return `-${formatMoney(record.employeeDeductions)}`
-    if (column.key === 'payableSalary') return <strong>{formatMoney(record.payableSalary)}</strong>
+    if (column.key === 'basicSalary') return formatSalaryMoney(record, record.basicSalary)
+    if (column.key === 'claimsTotal') return formatSalaryMoney(record, record.claimsTotal)
+    if (column.key === 'employeeDeductions') {
+      return canViewSalary(record)
+        ? `-${formatMoney(record.employeeDeductions || 0)}`
+        : restrictedMoneyLabel
+    }
+    if (column.key === 'payableSalary') {
+      return canViewSalary(record) ? (
+        <strong>{formatMoney(record.payableSalary || 0)}</strong>
+      ) : (
+        restrictedMoneyLabel
+      )
+    }
     if (column.key === 'status') {
       return (
         <DataTableStatusBadge tone={getStatusTone(record.status)}>
@@ -608,6 +633,10 @@ const FinancialSalaryRecordsPage = () => {
   }
 
   const getActions = (record) => {
+    if (!canViewSalary(record)) {
+      return []
+    }
+
     const isExportingClaims = exportingRecordId === `claims-${record.id}`
     const isExportingPayslip = exportingRecordId === `payslip-${record.id}`
     const payslipAvailability = getSalaryPayslipAvailability(record)
@@ -659,6 +688,14 @@ const FinancialSalaryRecordsPage = () => {
     ]
   }
 
+  const renderActions = (record, actionKey) => {
+    if (!canViewSalary(record)) return null
+
+    return (
+      <DataTableActionMenu record={record} actions={getActions(record)} actionKey={actionKey} />
+    )
+  }
+
   const renderMobileRecordItem = (
     record,
     index,
@@ -686,7 +723,7 @@ const FinancialSalaryRecordsPage = () => {
               <div className="records-mobile-subtitle mt-1 text-truncate">{record.salaryMonth}</div>
             )}
             <div className="records-mobile-client mt-1">
-              Payable {formatMoney(record.payableSalary)}
+              Payable {formatSalaryMoney(record, record.payableSalary)}
             </div>
           </div>
           <div className="salary-record-mobile-card-actions">
@@ -710,15 +747,23 @@ const FinancialSalaryRecordsPage = () => {
           </div>
           <div className="records-mobile-kv">
             <span className="records-mobile-k">Claims</span>
-            <span className="records-mobile-v">{formatMoney(record.claimsTotal)}</span>
+            <span className="records-mobile-v">
+              {formatSalaryMoney(record, record.claimsTotal)}
+            </span>
           </div>
           <div className="records-mobile-kv">
             <span className="records-mobile-k">Deductions</span>
-            <span className="records-mobile-v">-{formatMoney(record.employeeDeductions)}</span>
+            <span className="records-mobile-v">
+              {canViewSalary(record)
+                ? `-${formatMoney(record.employeeDeductions || 0)}`
+                : restrictedMoneyLabel}
+            </span>
           </div>
           <div className="records-mobile-kv">
             <span className="records-mobile-k">Basic Salary</span>
-            <span className="records-mobile-v">{formatMoney(record.basicSalary)}</span>
+            <span className="records-mobile-v">
+              {formatSalaryMoney(record, record.basicSalary)}
+            </span>
           </div>
         </div>
       </div>
@@ -809,6 +854,7 @@ const FinancialSalaryRecordsPage = () => {
                 getRowKey={(record, index) => record.id || index}
                 renderCell={renderCell}
                 getActions={getActions}
+                renderActions={renderActions}
                 renderMobileItem={renderMobileRecordItem}
                 getSortValue={(record, field) => {
                   if (field === 'status') return getStatusSortPriority(record.status)
@@ -816,13 +862,23 @@ const FinancialSalaryRecordsPage = () => {
                   if (field === 'salaryMonth') return record.salaryMonthValue
                   if (field === 'submittedAt') return record.submittedAt
                   if (field === 'workflow') return record.workflow
+                  if (
+                    ['basicSalary', 'claimsTotal', 'employeeDeductions', 'payableSalary'].includes(
+                      field,
+                    )
+                  ) {
+                    return numericSalaryValue(record, record[field])
+                  }
 
                   return record[field]
                 }}
                 getMobileTitle={(record) => record.staffLabel}
                 getMobileSubtitle={(record) => record.salaryMonth}
                 getMobileMeta={(record) =>
-                  `${formatMoney(record.payableSalary)} | Claims ${formatMoney(record.claimsTotal)}`
+                  `${formatSalaryMoney(record, record.payableSalary)} | Claims ${formatSalaryMoney(
+                    record,
+                    record.claimsTotal,
+                  )}`
                 }
                 getMobileStatus={(record) => displayStatus(record.status)}
                 getMobileStatusTone={(record) => getStatusTone(record.status)}
@@ -836,7 +892,9 @@ const FinancialSalaryRecordsPage = () => {
                   title: (record) => record.staffLabel,
                   subtitle: (record) => record.salaryMonth,
                   meta: (record) =>
-                    `Payable ${formatMoney(record.payableSalary)} | ${record.submittedDisplay}`,
+                    `Payable ${formatSalaryMoney(record, record.payableSalary)} | ${
+                      record.submittedDisplay
+                    }`,
                   badges: (record) => [
                     {
                       key: 'status',
@@ -853,17 +911,19 @@ const FinancialSalaryRecordsPage = () => {
                     {
                       key: 'claimsTotal',
                       label: 'Claims',
-                      value: formatMoney(record.claimsTotal),
+                      value: formatSalaryMoney(record, record.claimsTotal),
                     },
                     {
                       key: 'deductions',
                       label: 'Deductions',
-                      value: `-${formatMoney(record.employeeDeductions)}`,
+                      value: canViewSalary(record)
+                        ? `-${formatMoney(record.employeeDeductions || 0)}`
+                        : restrictedMoneyLabel,
                     },
                     {
                       key: 'basicSalary',
                       label: 'Basic Salary',
-                      value: formatMoney(record.basicSalary),
+                      value: formatSalaryMoney(record, record.basicSalary),
                     },
                   ],
                 }}

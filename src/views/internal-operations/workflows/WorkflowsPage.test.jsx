@@ -2,7 +2,18 @@ import React from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import WorkflowsPage from './WorkflowsPage'
+
+const { refreshWorkflowSetupStatus } = vi.hoisted(() => ({
+  refreshWorkflowSetupStatus: vi.fn(() => Promise.resolve()),
+}))
+
+vi.mock('../../../workflows/WorkflowSetupStatusProvider', () => ({
+  useWorkflowSetupStatus: () => ({
+    refreshWorkflowSetupStatus,
+    getWorkflowSetupCount: () => 0,
+    getWorkflowSetupTotal: () => 0,
+  }),
+}))
 
 vi.mock('../../../api/apiClient', () => ({
   apiJson: vi.fn(),
@@ -31,8 +42,11 @@ vi.mock('../../../components/forms/ThemedSelect', () => ({
 }))
 
 const { apiJson } = await import('../../../api/apiClient')
+const { default: WorkflowsPage } = await import('./WorkflowsPage')
 
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+})
 
 const renderPage = (path = '/workflows/salary-application') =>
   render(
@@ -47,6 +61,7 @@ const renderPage = (path = '/workflows/salary-application') =>
 describe('WorkflowsPage', () => {
   beforeEach(() => {
     apiJson.mockReset()
+    refreshWorkflowSetupStatus.mockClear()
     apiJson.mockImplementation((url, options = {}) => {
       if (
         String(url).includes('workflows/templates/salary-application') &&
@@ -170,6 +185,9 @@ describe('WorkflowsPage', () => {
           body: expect.stringContaining('"recipient_staff_ids":[30]'),
         }),
       )
+    })
+    await waitFor(() => {
+      expect(refreshWorkflowSetupStatus).toHaveBeenCalled()
     })
   })
 

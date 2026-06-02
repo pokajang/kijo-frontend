@@ -1,68 +1,132 @@
 import { describe, expect, it } from 'vitest'
-import { buildLeaveRecordStats } from './LeaveRecord'
+import { buildLeaveBalanceSummary, getDefaultLeaveType } from './leaveBalanceSummary'
 
 describe('LeaveRecord', () => {
-  it('builds staff leave stats from entitlements and records', () => {
-    const stats = buildLeaveRecordStats(
-      [
-        {
-          status: 'Pending',
-          duration: 1.5,
-          appliedAt: '2026-05-20 09:00:00',
-        },
-        {
-          status: 'Cancelled',
-          duration: 1,
-          appliedAt: '2026-05-19 09:00:00',
-        },
-        {
-          status: 'Approved',
-          duration: 2,
-          appliedAt: '2026-05-18 09:00:00',
-        },
-      ],
+  it('builds type-scoped this-year, last-year, and all-time balance summaries', () => {
+    const summary = buildLeaveBalanceSummary(
       [
         {
           year: 2026,
+          leave_type: 'Annual',
           total_days: 14,
           used_days: 2,
           remaining: 12,
         },
+        {
+          year: 2026,
+          leave_type: 'Annual',
+          total_days: 1.5,
+          used_days: 0.5,
+        },
+        {
+          year: 2025,
+          leave_type: 'Annual',
+          total_days: 12,
+          used_days: 9,
+          remaining: 3,
+        },
+        {
+          year: 2024,
+          leave_type: 'Annual',
+          total_days: 10,
+          used_days: 4,
+        },
+        {
+          year: 2026,
+          leave_type: 'Medical',
+          total_days: 30,
+          used_days: 5,
+          remaining: 25,
+        },
       ],
       2026,
+      'Annual',
     )
 
-    expect(stats.find((item) => item.key === 'balance')?.label).toBe('Days Balance')
-    expect(stats.find((item) => item.key === 'balance')?.value).toBe('12')
-    expect(stats.find((item) => item.key === 'used')?.label).toBe('Days Used')
-    expect(stats.find((item) => item.key === 'used')?.value).toBe('2')
-    expect(stats.find((item) => item.key === 'pending')?.label).toBe('Days Pending Approval')
-    expect(stats.find((item) => item.key === 'pending')?.value).toBe('1.5')
-    expect(stats.find((item) => item.key === 'pending')?.sublabel).toBe('1 pending request')
-    expect(stats.find((item) => item.key === 'cancelled')?.label).toBe('Days Cancelled')
-    expect(stats.find((item) => item.key === 'cancelled')?.value).toBe('1')
+    expect(summary).toHaveLength(3)
+    expect(summary[0]).toEqual({
+      key: 'this-year',
+      title: 'This Year',
+      badge: '2026',
+      metrics: [
+        { key: 'assigned', label: 'Assigned', value: '15.5' },
+        { key: 'used', label: 'Used', value: '2.5' },
+        { key: 'balance', label: 'Balance', value: '13' },
+      ],
+    })
+    expect(summary[1]).toEqual({
+      key: 'last-year',
+      title: 'Last Year',
+      badge: '2025',
+      metrics: [
+        { key: 'assigned', label: 'Assigned', value: '12' },
+        { key: 'used', label: 'Used', value: '9' },
+        { key: 'balance', label: 'Balance', value: '3' },
+      ],
+    })
+    expect(summary[2]).toEqual({
+      key: 'all-time',
+      title: 'All Time',
+      badge: 'Total',
+      metrics: [
+        { key: 'assigned', label: 'Assigned', value: '37.5' },
+        { key: 'used', label: 'Used', value: '15.5' },
+        { key: 'balance', label: 'Balance', value: '22' },
+      ],
+    })
   })
 
-  it('normalizes record statuses when building leave stats', () => {
-    const stats = buildLeaveRecordStats(
+  it('returns zero values when this-year and last-year entitlements are missing', () => {
+    const summary = buildLeaveBalanceSummary(
       [
         {
-          status: ' pending ',
-          duration: 2,
-          appliedAt: '2026-05-20 09:00:00',
-        },
-        {
-          status: 'cancelled',
-          duration: 1,
-          appliedAt: '2026-05-19 09:00:00',
+          year: 2024,
+          leave_type: 'Annual',
+          total_days: 8,
+          used_days: 3,
+          remaining: 5,
         },
       ],
-      [],
       2026,
     )
 
-    expect(stats.find((item) => item.key === 'pending')?.value).toBe('2')
-    expect(stats.find((item) => item.key === 'pending')?.sublabel).toBe('1 pending request')
-    expect(stats.find((item) => item.key === 'cancelled')?.value).toBe('1')
+    expect(summary[0].metrics.map((metric) => metric.value)).toEqual(['0', '0', '0'])
+    expect(summary[1].metrics.map((metric) => metric.value)).toEqual(['0', '0', '0'])
+    expect(summary[2].metrics.map((metric) => metric.value)).toEqual(['8', '3', '5'])
+  })
+
+  it('can intentionally summarize all leave types', () => {
+    const summary = buildLeaveBalanceSummary(
+      [
+        {
+          year: 2026,
+          leave_type: 'Annual',
+          total_days: 14,
+          used_days: 2,
+          remaining: 12,
+        },
+        {
+          year: 2026,
+          leave_type: 'Medical',
+          total_days: 30,
+          used_days: 5,
+          remaining: 25,
+        },
+      ],
+      2026,
+    )
+
+    expect(summary[0].metrics.map((metric) => metric.value)).toEqual(['44', '7', '37'])
+    expect(summary[2].metrics.map((metric) => metric.value)).toEqual(['44', '7', '37'])
+  })
+
+  it('defaults the selector to an annual leave type when available', () => {
+    expect(
+      getDefaultLeaveType([
+        { leave_type: 'Medical' },
+        { leave_type: 'Annual Leave' },
+        { leave_type: 'Emergency' },
+      ]),
+    ).toBe('Annual Leave')
   })
 })

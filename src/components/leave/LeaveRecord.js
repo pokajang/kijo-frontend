@@ -1,96 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CAlert } from '@coreui/react'
-import { StatsStrip } from '../stats'
+import { CAlert, CBadge, CFormLabel, CFormSelect } from '@coreui/react'
 import { getMyEntitlements } from './actionHandlers'
 import { useLeaveRecordHandlers } from './actionHandlersRecords'
 import LeaveRecordTable from './LeaveRecordTable'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
+import { getPeriodRangePreset, getPeriodRangeScopeLabel } from '../filters'
+import {
+  allLeaveTypesValue,
+  buildLeaveBalanceSummary,
+  getDefaultLeaveType,
+  getLeaveTypeOptions,
+} from './leaveBalanceSummary'
 
 const currentYear = new Date().getFullYear()
-
-const toNumber = (value) => {
-  const number = Number(value || 0)
-  return Number.isFinite(number) ? number : 0
-}
-
-const formatDays = (value) => {
-  const number = toNumber(value)
-  return Number.isInteger(number) ? String(number) : number.toFixed(1)
-}
-
-const normalizeStatus = (status) =>
-  String(status || '')
-    .trim()
-    .toLowerCase()
-
-const formatRequestCount = (count) => `${count} pending request${count === 1 ? '' : 's'}`
-
-export const buildLeaveRecordStats = (leaveRecords = [], entitlements = [], year = currentYear) => {
-  const currentYearEntitlements = entitlements.filter(
-    (entitlement) => Number(entitlement.year) === year,
-  )
-  const currentYearRecords = leaveRecords.filter((record) => {
-    const dateText = record.appliedAt || record.startDate || ''
-    const recordYear = new Date(dateText).getFullYear()
-    return recordYear === year
-  })
-
-  const totalDays = currentYearEntitlements.reduce(
-    (sum, entitlement) => sum + toNumber(entitlement.total_days),
-    0,
-  )
-  const usedDays = currentYearEntitlements.reduce(
-    (sum, entitlement) => sum + toNumber(entitlement.used_days),
-    0,
-  )
-  const balanceDays = currentYearEntitlements.reduce(
-    (sum, entitlement) => sum + toNumber(entitlement.remaining),
-    0,
-  )
-  const pendingRows = currentYearRecords.filter(
-    (record) => normalizeStatus(record.status) === 'pending',
-  )
-  const cancelledRows = currentYearRecords.filter(
-    (record) => normalizeStatus(record.status) === 'cancelled',
-  )
-  const pendingDays = pendingRows.reduce((sum, record) => sum + toNumber(record.duration), 0)
-  const cancelledDays = cancelledRows.reduce((sum, record) => sum + toNumber(record.duration), 0)
-
-  return [
-    {
-      key: 'balance',
-      label: 'Days Balance',
-      value: formatDays(balanceDays),
-      tone: 'success',
-    },
-    {
-      key: 'used',
-      label: 'Days Used',
-      value: formatDays(usedDays),
-      tone: 'primary',
-    },
-    {
-      key: 'pending',
-      label: 'Days Pending Approval',
-      value: formatDays(pendingDays),
-      sublabel: formatRequestCount(pendingRows.length),
-      tone: 'warning',
-    },
-    {
-      key: 'cancelled',
-      label: 'Days Cancelled',
-      value: formatDays(cancelledDays),
-      tone: 'secondary',
-    },
-  ]
-}
 
 const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible = true }) => {
   const navigate = useNavigate()
   const [entitlements, setEntitlements] = useState([])
   const [loadingEntitlements, setLoadingEntitlements] = useState(false)
   const [entitlementsError, setEntitlementsError] = useState('')
+  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [selectedLeaveType, setSelectedLeaveType] = useState('')
   const {
     leaveRecords,
     loadingRecords,
@@ -145,11 +76,16 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
     }
   }, [])
 
-  const statsItems = useMemo(
-    () => buildLeaveRecordStats(leaveRecords, entitlements),
-    [entitlements, leaveRecords],
+  const leaveTypeOptions = useMemo(() => getLeaveTypeOptions(entitlements), [entitlements])
+  const effectiveLeaveType = selectedLeaveType || getDefaultLeaveType(entitlements)
+  const balanceSummary = useMemo(
+    () => buildLeaveBalanceSummary(entitlements, currentYear, effectiveLeaveType),
+    [effectiveLeaveType, entitlements],
   )
-  const scopeLabel = `YTD ${currentYear}`
+  const scopeLabel = useMemo(
+    () => (periodRange ? getPeriodRangeScopeLabel(periodRange) : ''),
+    [periodRange],
+  )
 
   useEffect(() => {
     if (typeof onScopeLabelChange !== 'function') return undefined
@@ -171,12 +107,60 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
       )}
 
       {statsVisible && (
-        <StatsStrip items={statsItems} loading={loadingRecords || loadingEntitlements} />
+        <div className="leave-record-balance-section mb-3">
+          <div className="leave-record-balance-toolbar">
+            <CFormLabel htmlFor="leave-record-balance-type" className="mb-0">
+              Leave Balance
+            </CFormLabel>
+            <CFormSelect
+              id="leave-record-balance-type"
+              size="sm"
+              className="leave-record-balance-type-select"
+              value={effectiveLeaveType}
+              onChange={(event) => setSelectedLeaveType(event.target.value)}
+              disabled={loadingEntitlements || leaveTypeOptions.length === 0}
+            >
+              {leaveTypeOptions.length === 0 && (
+                <option value={allLeaveTypesValue}>No leave types</option>
+              )}
+              {leaveTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </CFormSelect>
+          </div>
+          <div
+            className="leave-balance-grid leave-record-balance-grid"
+            aria-busy={loadingEntitlements ? 'true' : undefined}
+          >
+            {balanceSummary.map((card) => (
+              <div key={card.key} className="leave-balance-card leave-record-balance-card">
+                <div className="leave-balance-card-title">{card.title}</div>
+                <CBadge color="secondary" className="leave-balance-card-badge">
+                  {card.badge}
+                </CBadge>
+                <div className="leave-record-balance-metrics">
+                  {card.metrics.map((metric) => (
+                    <div key={metric.key} className="leave-record-balance-metric">
+                      <div className="leave-record-balance-metric-value">
+                        {loadingEntitlements ? '...' : metric.value}
+                      </div>
+                      <div className="leave-record-balance-metric-label">{metric.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <LeaveRecordTable
         controlsVisible={controlsVisible}
         leaveRecords={leaveRecords}
+        periodRange={periodRange}
+        onPeriodRangeChange={setPeriodRange}
         loading={loadingRecords}
         handleCancel={handleCancel}
         getStatusBadge={getStatusBadge}

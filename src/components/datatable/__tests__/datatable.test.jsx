@@ -681,6 +681,129 @@ describe('datatable shared components', () => {
     expect(screen.getAllByText('Page 2/3').length).toBeGreaterThan(0)
   })
 
+  it('renders grouped record rows without counting group headers as records', () => {
+    const onOpen = vi.fn()
+    const { container } = render(
+      <DataTableRecordList
+        rows={[
+          { id: 1, name: 'Alpha', year: '2026' },
+          { id: 2, name: 'Bravo', year: '2025' },
+        ]}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        onRowOpen={onOpen}
+        getRowGroupKey={(row) => row.year}
+        getRowGroupLabel={(year) => year}
+        rowGroupSortComparator={(left, right) => Number(right) - Number(left)}
+      />,
+    )
+
+    const groupRows = container.querySelectorAll('tr.data-table-group-row')
+    expect(groupRows).toHaveLength(2)
+    expect(groupRows[0].querySelector('td')).toHaveAttribute('colspan', '2')
+    expect(groupRows[0]).toHaveTextContent('2026')
+    expect(screen.getByRole('button', { name: /1 Alpha/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /2 Bravo/i })).toBeInTheDocument()
+
+    fireEvent.click(groupRows[0])
+    expect(onOpen).not.toHaveBeenCalled()
+  })
+
+  it('applies group ordering before pagination for grouped record rows', () => {
+    const { container } = render(
+      <DataTableRecordList
+        rows={[
+          { id: 1, name: 'Alpha', year: '2025' },
+          { id: 2, name: 'Zulu', year: '2026' },
+        ]}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        initialSortField="name"
+        initialPageSize={1}
+        getRowGroupKey={(row) => row.year}
+        getRowGroupLabel={(year) => year}
+        rowGroupSortComparator={(left, right) => Number(right) - Number(left)}
+      />,
+    )
+
+    expect(container.querySelector('.data-table-group-row')).toHaveTextContent('2026')
+    expect(screen.getByText('Zulu')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+  })
+
+  it('renders grouped record rows on mobile', () => {
+    const { container } = render(
+      <DataTableRecordList
+        rows={[
+          { id: 1, name: 'Alpha', year: '2026' },
+          { id: 2, name: 'Bravo', year: '2025' },
+        ]}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        getMobileTitle={(row) => row.name}
+        getRowGroupKey={(row) => row.year}
+        getRowGroupLabel={(year) => year}
+      />,
+    )
+
+    const mobileGroups = container.querySelectorAll('.data-table-mobile-group-header')
+    expect(mobileGroups).toHaveLength(2)
+    expect(mobileGroups[0]).toHaveTextContent('2026')
+    expect(
+      within(container.querySelector('.records-mobile-list')).getByText('Alpha'),
+    ).toBeInTheDocument()
+  })
+
+  it('exports grouped record lists without group headers', async () => {
+    const capturedBlobs = []
+    const originalBlob = global.Blob
+    const originalCreateObjectUrl = URL.createObjectURL
+    const originalRevokeObjectUrl = URL.revokeObjectURL
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    global.Blob = class TestBlob {
+      constructor(parts, options) {
+        this.parts = parts
+        this.options = options
+      }
+    }
+    URL.createObjectURL = vi.fn((blob) => {
+      capturedBlobs.push(blob)
+      return 'blob:records'
+    })
+    URL.revokeObjectURL = vi.fn()
+
+    render(
+      <DataTableRecordList
+        rows={[
+          { id: 1, name: 'Alpha', year: '2026' },
+          { id: 2, name: 'Bravo', year: '2025' },
+        ]}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        getRowGroupKey={(row) => row.year}
+        getRowGroupLabel={(year) => year}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByLabelText('Export CSV')[0])
+    const csvText = capturedBlobs[0].parts.join('')
+
+    expect(clickSpy).toHaveBeenCalled()
+    expect(csvText).toContain('Alpha')
+    expect(csvText).toContain('Bravo')
+    expect(csvText).not.toContain('2026')
+    expect(csvText).not.toContain('2025')
+
+    global.Blob = originalBlob
+    URL.createObjectURL = originalCreateObjectUrl
+    URL.revokeObjectURL = originalRevokeObjectUrl
+    clickSpy.mockRestore()
+  })
+
   it('row-open utility ignores nested controls', () => {
     const onOpen = vi.fn()
     const row = document.createElement('div')

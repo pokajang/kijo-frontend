@@ -14,6 +14,8 @@ import {
   shouldNoWrapDataTableColumn,
 } from '../../utils/datatable/tableFormatters'
 
+const isGroupRow = (row) => row?.__dataTableGroupRow === true
+
 const getColumnStyle = (column, style) => ({
   ...(column.key === '__rowIndex'
     ? { width: '1%', minWidth: '3.25rem', maxWidth: '4.5rem', whiteSpace: 'nowrap' }
@@ -77,28 +79,52 @@ const DataTableDesktop = ({
           </CTableDataCell>
         </CTableRow>
       ) : (
-        rows.map((row, rowIndex) => (
-          <CTableRow key={getRowKey(row, rowIndex)} {...(rowProps?.(row, rowIndex) || {})}>
-            {columns.map((column) => {
-              const isRowIndexColumn = column.key === '__rowIndex'
-              const noWrap = isRowIndexColumn || shouldNoWrapDataTableColumn(column)
+        (() => {
+          let recordIndex = -1
 
+          return rows.map((row, rowIndex) => {
+            if (isGroupRow(row)) {
               return (
-                <CTableDataCell
-                  key={column.key}
-                  className={appendClassNames(
-                    column.cellClassName,
-                    isRowIndexColumn && 'data-table-row-index-cell',
-                    noWrap && 'text-nowrap',
-                  )}
-                  style={getColumnStyle(column, column.cellStyle)}
+                <CTableRow
+                  key={row.key || `group-${rowIndex}`}
+                  className="data-table-group-row"
+                  data-group-row="true"
                 >
-                  {renderCell ? renderCell(row, column, rowIndex) : row?.[column.key]}
-                </CTableDataCell>
+                  <CTableDataCell colSpan={columns.length} className="data-table-group-cell">
+                    {row.label}
+                  </CTableDataCell>
+                </CTableRow>
               )
-            })}
-          </CTableRow>
-        ))
+            }
+
+            recordIndex += 1
+            return (
+              <CTableRow
+                key={getRowKey(row, recordIndex)}
+                {...(rowProps?.(row, recordIndex) || {})}
+              >
+                {columns.map((column) => {
+                  const isRowIndexColumn = column.key === '__rowIndex'
+                  const noWrap = isRowIndexColumn || shouldNoWrapDataTableColumn(column)
+
+                  return (
+                    <CTableDataCell
+                      key={column.key}
+                      className={appendClassNames(
+                        column.cellClassName,
+                        isRowIndexColumn && 'data-table-row-index-cell',
+                        noWrap && 'text-nowrap',
+                      )}
+                      style={getColumnStyle(column, column.cellStyle)}
+                    >
+                      {renderCell ? renderCell(row, column, recordIndex) : row?.[column.key]}
+                    </CTableDataCell>
+                  )
+                })}
+              </CTableRow>
+            )
+          })
+        })()
       )}
     </CTableBody>
   </CTable>

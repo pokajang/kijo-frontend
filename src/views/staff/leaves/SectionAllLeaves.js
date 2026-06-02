@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import {
   CAlert,
+  CBadge,
   CButton,
   CCard,
   CCardBody,
@@ -32,14 +33,31 @@ import {
   getPeriodRangeLabel,
   getPeriodRangePreset,
   getPeriodRangeScopeLabel,
-  isDateInPeriodRange,
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
+import Select from '../../../components/forms/ThemedSelect'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
+import {
+  buildLeaveBalanceSummary,
+  filterEntitlementsByStaff,
+  getDefaultLeaveType,
+} from '../../../components/leave/leaveBalanceSummary'
+import {
+  compareLeaveRecordYearGroupsDesc,
+  filterLeaveRecords,
+  getLeaveRecordScopeDate,
+  getLeaveRecordStatusOptions,
+  getLeaveRecordTypeOptions,
+  getLeaveRecordYearGroupKey,
+  getLeaveStatusSortPriority as getSharedLeaveStatusSortPriority,
+  shouldGroupLeaveRecordsByYear,
+} from '../../../components/leave/leaveRecordFilters'
 import * as AH from './actionHandlers'
+
+const currentYear = new Date().getFullYear()
 
 const dataColumns = [
   {
@@ -161,8 +179,7 @@ const getWorkflowActionColor = (action) => {
   return 'info'
 }
 
-export const getLeaveApplicationScopeDate = (record = {}) =>
-  record.applied_at || record.start_date || null
+export const getLeaveApplicationScopeDate = (record = {}) => getLeaveRecordScopeDate(record)
 
 const buildWorkflowStep = ({ label, person, at, status, remarks }) =>
   [
@@ -229,20 +246,15 @@ export const getLeaveWorkflowText = (record = {}, reviewer = '', approver = '', 
   return steps.join('\n')
 }
 
-export const getLeaveStatusSortPriority = (status) => {
-  switch (status) {
-    case 'Pending':
-      return 0
-    case 'Approved':
-      return 1
-    case 'Rejected':
-      return 2
-    case 'Cancelled':
-      return 3
-    default:
-      return 4
-  }
+export const getLeaveStatusSortPriority = getSharedLeaveStatusSortPriority
+
+const formatStaffLabel = (staff = {}) => {
+  const name = staff.full_name || staff.name || staff.applicant_name || 'Unknown Staff'
+  const code = staff.name_code || staff.staff_code || staff.applicant_code || ''
+  return code ? `${name} (${code})` : name
 }
+
+const getStaffOptionId = (staff = {}) => staff.staff_id ?? staff.id
 
 const SectionAllLeaves = ({
   allLeaveRecords = [],
@@ -252,6 +264,9 @@ const SectionAllLeaves = ({
   onManageEntitlements,
   onAssignLeave,
   onManageWorkflow,
+  staffList = [],
+  entitlements = [],
+  canManageLeaveAdmin = false,
   canRecommendActions = true,
   canApproveActions = true,
   onViewRecord,
@@ -261,6 +276,7 @@ const SectionAllLeaves = ({
   const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const selectedPeriodRange = periodRange || localPeriodRange
   const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
+  const [selectedStaff, setSelectedStaff] = useState(null)
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
@@ -281,15 +297,61 @@ const SectionAllLeaves = ({
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('staff.leaves')
 
-  const typeOptions = useMemo(
-    () => [...new Set(allLeaveRecords.map((r) => r.type).filter(Boolean))].sort(),
+  const typeOptions = useMemo(() => getLeaveRecordTypeOptions(allLeaveRecords), [allLeaveRecords])
+
+  const statusOptions = useMemo(
+    () => getLeaveRecordStatusOptions(allLeaveRecords),
     [allLeaveRecords],
   )
 
-  const statusOptions = useMemo(
-    () => [...new Set(allLeaveRecords.map((r) => r.status).filter(Boolean))].sort(),
-    [allLeaveRecords],
+  const staffOptions = useMemo(() => {
+    const optionsById = new Map()
+
+    const addStaffOption = (staff) => {
+      const staffId = getStaffOptionId(staff)
+      if (staffId === null || typeof staffId === 'undefined' || staffId === '') return
+      const key = String(staffId)
+      if (optionsById.has(key)) return
+      optionsById.set(key, {
+        value: staffId,
+        label: formatStaffLabel(staff),
+      })
+    }
+
+    staffList.forEach(addStaffOption)
+    allLeaveRecords.forEach((record) =>
+      addStaffOption({
+        staff_id: record.staff_id,
+        applicant_name: record.applicant_name,
+        applicant_code: record.applicant_code,
+      }),
+    )
+    entitlements.forEach(addStaffOption)
+
+    return Array.from(optionsById.values()).sort((left, right) =>
+      left.label.localeCompare(right.label),
+    )
+  }, [allLeaveRecords, entitlements, staffList])
+
+  const selectedStaffEntitlements = useMemo(
+    () => filterEntitlementsByStaff(entitlements, selectedStaff?.value),
+    [entitlements, selectedStaff],
   )
+
+  const effectiveBalanceLeaveType = useMemo(() => {
+    if (filterType) return filterType
+    return getDefaultLeaveType(selectedStaffEntitlements)
+  }, [filterType, selectedStaffEntitlements])
+
+  const balanceSummary = useMemo(
+    () =>
+      buildLeaveBalanceSummary(selectedStaffEntitlements, currentYear, effectiveBalanceLeaveType),
+    [effectiveBalanceLeaveType, selectedStaffEntitlements],
+  )
+
+  const handleStaffChange = (option) => {
+    setSelectedStaff(option || null)
+  }
 
   const openActionModal = (leaveId, action) => {
     const label = action[0].toUpperCase() + action.slice(1)
@@ -354,18 +416,20 @@ const SectionAllLeaves = ({
   const activeChips = useMemo(
     () =>
       [
+        selectedStaff ? { key: 'staff', label: `Staff: ${selectedStaff.label}` } : null,
         filterType ? { key: 'type', label: `Type: ${filterType}` } : null,
         filterStatus ? { key: 'status', label: `Status: ${filterStatus}` } : null,
         selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
           ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
           : null,
       ].filter(Boolean),
-    [filterType, filterStatus, selectedPeriodRange],
+    [filterType, filterStatus, selectedPeriodRange, selectedStaff],
   )
 
   const activeFilterCount = getAdvancedFilterCount(activeChips)
 
   const clearChip = (key) => {
+    if (key === 'staff') handleStaffChange(null)
     if (key === 'type') setFilterType('')
     if (key === 'status') setFilterStatus('')
     if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
@@ -374,42 +438,21 @@ const SectionAllLeaves = ({
   const resetFilters = () => {
     setSearchText('')
     handlePeriodRangeChange(getPeriodRangePreset('ytd'))
+    handleStaffChange(null)
     setFilterType('')
     setFilterStatus('')
   }
 
   const filteredRecords = useMemo(
     () =>
-      allLeaveRecords.filter((record) => {
-        const term = searchText.trim().toLowerCase()
-        const searchableText = [
-          record.applicant_name,
-          record.applicant_code,
-          record.type,
-          record.reason,
-          record.status,
-          record.reviewer_name,
-          record.reviewer_code,
-          record.approver_name,
-          record.approver_code,
-          record.canceller_name,
-          record.canceller_code,
-          record.reviewed_status,
-          record.approved_status,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-        const nameMatch = !term || searchableText.includes(term)
-        const periodMatch = isDateInPeriodRange(
-          getLeaveApplicationScopeDate(record),
-          selectedPeriodRange,
-        )
-        const typeMatch = !filterType || record.type === filterType
-        const statusMatch = !filterStatus || record.status === filterStatus
-        return nameMatch && periodMatch && typeMatch && statusMatch
+      filterLeaveRecords(allLeaveRecords, {
+        searchTerm: searchText,
+        leaveType: filterType,
+        status: filterStatus,
+        staffId: selectedStaff?.value,
+        periodRange: selectedPeriodRange,
       }),
-    [allLeaveRecords, searchText, selectedPeriodRange, filterType, filterStatus],
+    [allLeaveRecords, searchText, selectedPeriodRange, selectedStaff, filterType, filterStatus],
   )
 
   const normalizedRecords = useMemo(
@@ -511,6 +554,33 @@ const SectionAllLeaves = ({
       },
     ]
   }, [getModuleCount, normalizedRecords, handlePeriodRangeChange])
+
+  const renderBalanceCard = (card) => (
+    <div key={card.key} className="leave-balance-card leave-record-balance-card">
+      <div className="leave-balance-card-title">{card.title}</div>
+      <CBadge color="secondary" className="leave-balance-card-badge">
+        {card.badge}
+      </CBadge>
+      <div className="leave-record-balance-metrics">
+        {card.metrics.map((metric) => (
+          <div key={metric.key} className="leave-record-balance-metric">
+            <div className="leave-record-balance-metric-value">{metric.value}</div>
+            <div className="leave-record-balance-metric-label">{metric.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  const renderStaffBalancePanel = () =>
+    statsVisible &&
+    selectedStaff && (
+      <div className="leave-record-balance-section mb-3">
+        <div className="leave-balance-grid leave-record-balance-grid">
+          {balanceSummary.map(renderBalanceCard)}
+        </div>
+      </div>
+    )
 
   const getActions = (record) => {
     const isPending = record.status === 'Pending'
@@ -724,12 +794,14 @@ const SectionAllLeaves = ({
           )}
         </DataTableCardHeader>
         <CCardBody>
-          {statsVisible && <StatsStrip items={statsItems} />}
+          {canManageLeaveAdmin
+            ? renderStaffBalancePanel()
+            : statsVisible && <StatsStrip items={statsItems} />}
           <DataTableRecordControls
             visible={controlsVisible}
             searchValue={searchText}
             onSearchChange={setSearchText}
-            searchPlaceholder="Search by staff name or code..."
+            searchPlaceholder="Search leave type, reason, status, reviewer..."
             searchAriaLabel="Search leave records"
             showAdvancedFilters={showAdvancedFilters}
             setShowAdvancedFilters={setShowAdvancedFilters}
@@ -740,10 +812,27 @@ const SectionAllLeaves = ({
             desktopToolsId="all-leaves-table-tools"
             mobileToolsId="all-leaves-mobile-table-tools"
           >
+            {canManageLeaveAdmin && (
+              <CCol xs={12} md={6} lg={4}>
+                <CFormLabel htmlFor="all-leaves-filter-staff">Staff</CFormLabel>
+                <Select
+                  inputId="all-leaves-filter-staff"
+                  aria-label="Select staff"
+                  className="leave-record-balance-staff-select"
+                  options={staffOptions}
+                  value={selectedStaff}
+                  onChange={handleStaffChange}
+                  placeholder="Select staff"
+                  isClearable
+                />
+              </CCol>
+            )}
             <CCol xs={6} md={3} lg={2}>
               <CFormLabel htmlFor="leaves-filter-type">Leave Type</CFormLabel>
               <CFormSelect
                 id="leaves-filter-type"
+                aria-label="Filter leave type"
+                className="leave-record-balance-type-select"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
               >
@@ -820,7 +909,21 @@ const SectionAllLeaves = ({
             initialSortDir="asc"
             initialSortDirByField={{ appliedAt: 'desc', duration: 'desc', status: 'asc' }}
             sortComparators={sortComparators}
-            resetDeps={[filteredRecords, searchText, selectedPeriodRange, filterType, filterStatus]}
+            getRowGroupKey={
+              shouldGroupLeaveRecordsByYear(selectedPeriodRange)
+                ? getLeaveRecordYearGroupKey
+                : undefined
+            }
+            getRowGroupLabel={(year) => year}
+            rowGroupSortComparator={compareLeaveRecordYearGroupsDesc}
+            resetDeps={[
+              filteredRecords,
+              searchText,
+              selectedPeriodRange,
+              selectedStaff?.value,
+              filterType,
+              filterStatus,
+            ]}
             desktopUtilityPlacement="portal"
             desktopUtilityPortalId="all-leaves-table-tools"
             mobileUtilityPlacement="portal"

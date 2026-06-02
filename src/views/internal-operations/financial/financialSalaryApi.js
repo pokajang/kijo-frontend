@@ -8,6 +8,12 @@ const normalizeSalaryStatus = (status) => {
   return status
 }
 
+const nullableMoney = (value) => {
+  if (value === null || value === undefined || value === '') return null
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : null
+}
+
 const pdfExportErrorMessage = async (response, fallback) => {
   const contentType = response.headers.get('content-type') || ''
   if (!contentType.includes('application/json')) return response.statusText || fallback
@@ -27,11 +33,13 @@ const normalizeFinancialSalaryRecord = (record = {}) => ({
   staffCode: record.staffCode || '',
   salaryMonth: record.salaryMonth || '',
   salaryMonthValue: record.salaryMonthValue || '',
-  basicSalary: Number(record.basicSalary || 0),
-  claimsTotal: Number(record.claimsTotal || 0),
-  employeeDeductions: Number(record.employeeDeductions || 0),
-  employerContributions: Number(record.employerContributions || 0),
-  payableSalary: Number(record.payableSalary || 0),
+  basicSalary: nullableMoney(record.basicSalary),
+  claimsTotal: nullableMoney(record.claimsTotal),
+  employeeDeductions: nullableMoney(record.employeeDeductions),
+  employerContributions: nullableMoney(record.employerContributions),
+  payableSalary: nullableMoney(record.payableSalary),
+  canViewSalaryDetails: record.canViewSalaryDetails !== false,
+  salaryRestricted: Boolean(record.salaryRestricted || record.canViewSalaryDetails === false),
   status: normalizeSalaryStatus(record.status || 'Submitted'),
   submittedAt: record.submittedAt || '',
   checkedBy: record.checkedBy || null,

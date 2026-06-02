@@ -7,7 +7,6 @@ import { formatCount, formatCurrency } from '../formatters'
 import { WORKLOAD_PROJECT_ACTIVITY_PREVIEW } from '../constants'
 import ActiveTaskActivityRow, { getTaskActivityDate } from './ActiveTaskActivityRow'
 import ProgressEvidenceRow from './ProgressEvidenceRow'
-import TaskEvidenceRow from './TaskEvidenceRow'
 import { WorkloadCompactListGroup } from './WorkloadCompactList'
 
 // Date sort relies on YYYY-MM-DD lexicographic ordering. Any change to date
@@ -24,11 +23,18 @@ const activityKey = (item, fallbackIndex) => {
   return `progress-${update.id ?? `${activityDate(item)}-${update.progressText || ''}-${fallbackIndex}`}`
 }
 
+const isTaskLinkedProgress = (update = {}) =>
+  String(update.sourceType || '')
+    .trim()
+    .toLowerCase() === 'task' || update.sourceTaskId != null
+
 const buildActivityItems = (group) => {
-  const progressItems = (group.progressUpdates || []).map((update) => ({
-    type: 'progress',
-    update,
-  }))
+  const progressItems = (group.progressUpdates || [])
+    .filter((update) => !isTaskLinkedProgress(update))
+    .map((update) => ({
+      type: 'progress',
+      update,
+    }))
   const activeTaskItems = (group.activeTasks || []).map((task) => ({ type: 'activeTask', task }))
   return [...progressItems, ...activeTaskItems].sort((a, b) =>
     String(activityDate(b)).localeCompare(String(activityDate(a))),
@@ -67,7 +73,6 @@ const ProjectEvidenceGroup = ({ group, groupIndex, todayStr, printMode = false }
   const [showAllActivity, setShowAllActivity] = useState(false)
   const titleParts = getGroupTitleParts(group, groupIndex)
 
-  const completedTasks = group.completedTasks || []
   const visibleItems =
     printMode || showAllActivity
       ? activityItems
@@ -115,30 +120,6 @@ const ProjectEvidenceGroup = ({ group, groupIndex, todayStr, printMode = false }
           </CButton>
         ) : null}
       </div>
-
-      {printMode ? (
-        <div className="mt-3">
-          <div className="small text-muted text-uppercase mb-2">Completed 5MM Tasks</div>
-          {completedTasks.length ? (
-            <WorkloadCompactListGroup>
-              {completedTasks.map((task, index) => (
-                <TaskEvidenceRow
-                  key={task.id ?? `completed-${index}-${task.title || ''}`}
-                  task={task}
-                  todayStr={todayStr}
-                  showProject={false}
-                  showDateMeta
-                  className="bg-light"
-                />
-              ))}
-            </WorkloadCompactListGroup>
-          ) : (
-            <div className="small text-muted fst-italic">
-              No completed project tasks in this period.
-            </div>
-          )}
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -151,7 +132,6 @@ ProjectEvidenceGroup.propTypes = {
     projectValue: PropTypes.number,
     activeTasks: PropTypes.array,
     progressUpdates: PropTypes.array,
-    completedTasks: PropTypes.array,
   }).isRequired,
   groupIndex: PropTypes.number.isRequired,
   todayStr: PropTypes.string.isRequired,

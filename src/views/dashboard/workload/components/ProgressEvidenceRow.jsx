@@ -6,7 +6,9 @@ import { formatDaysLapsed } from '../formatters'
 import { WorkloadCompactListItem } from './WorkloadCompactList'
 
 export const isTaskProgressUpdate = (update) =>
-  update?.sourceType === 'task' || update?.sourceTaskId != null
+  String(update?.sourceType || '')
+    .trim()
+    .toLowerCase() === 'task' || update?.sourceTaskId != null
 
 const getProgressDisplayText = (update) => {
   const text = update?.progressText || '-'

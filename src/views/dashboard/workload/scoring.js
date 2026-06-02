@@ -57,6 +57,12 @@ export const getBackendScoreBreakdownLines = (row = {}) =>
   Array.isArray(row.scoreBreakdown)
     ? row.scoreBreakdown
         .filter((line) => String(line?.label || '').trim())
+        .filter(
+          (line) =>
+            String(line?.label || '')
+              .trim()
+              .toLowerCase() !== 'completed work',
+        )
         .map((line) => ({
           label: String(line.label),
           points: Number(line.points || 0),
