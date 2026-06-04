@@ -234,6 +234,22 @@ export function useEquipmentForm(
       dialog.alert('Please select at least one client contact (PIC) before saving.')
       return
     }
+    const hasValidSelectedItems =
+      formData.items.length > 0 &&
+      formData.items.every(({ value: item }) => Number(item?.id || 0) > 0)
+    if (!hasValidSelectedItems) {
+      dialog.alert('Please select at least one valid equipment item before saving.')
+      return
+    }
+    const hasValidItemPricing = formData.items.every(({ value: item }) => {
+      const quantity = Number(formData.quantities[item.id] || 0)
+      const markedUpPrice = Number(formData.markedUp[item.id] || 0)
+      return quantity > 0 && markedUpPrice >= 0
+    })
+    if (!hasValidItemPricing) {
+      dialog.alert('Please enter a valid quantity for each equipment item before saving.')
+      return
+    }
     const itemsPayload = formData.items.map(({ value: item }) => {
       const qty = formData.quantities[item.id] || 0
       const price = parseFloat(formData.markedUp[item.id] || 0)

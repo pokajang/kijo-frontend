@@ -30,64 +30,69 @@ export default function PricingInput({
         <strong>Pricing Details</strong>
       </CCardHeader>
       <CCardBody>
-        {selectedItems.map(({ value: item }) => (
-          <CRow key={item.id} className="align-items-center g-3 mb-3">
-            <CCol md={6}>
-              <small className="text-muted">Category: {item.category_id}</small>
-              <br />
-              <strong>{item.item_name}</strong>
-              <br />
-              {item.description.length > 50
-                ? `${item.description.slice(0, 50)}...`
-                : item.description}
-              <br />
-              <small>
-                <strong>
-                  <i>Notes:</i>
-                </strong>{' '}
-                {item.supplier_name} Price ({item.price_date}) - RM {item.supplier_price}/
-                {item.unit || 'N/A'}
-              </small>
-            </CCol>
+        {selectedItems.map(({ value: item }) => {
+          const description = String(item.description || '')
+          const itemName = item.item_name || item.itemName || 'Selected item'
 
-            <CCol md={2}>
-              <CFormLabel>Quantity</CFormLabel>
-              <CFormInput
-                type="number"
-                min="0"
-                value={quantities[item.id] || 0}
-                onChange={(e) => handleQtyChange(item.id, e.target.value)}
-              />
-            </CCol>
+          return (
+            <CRow key={item.id || item.item_id || itemName} className="align-items-center g-3 mb-3">
+              <CCol md={6}>
+                <small className="text-muted">Category: {item.category_id || '-'}</small>
+                <br />
+                <strong>{itemName}</strong>
+                <br />
+                {description.length > 50 ? `${description.slice(0, 50)}...` : description}
+                <br />
+                <small>
+                  <strong>
+                    <i>Notes:</i>
+                  </strong>{' '}
+                  {item.supplier_name || '-'} Price ({item.price_date || '-'}) - RM{' '}
+                  {item.supplier_price || 0}/{item.unit || 'N/A'}
+                </small>
+              </CCol>
 
-            <CCol md={2}>
-              <CFormLabel>Marked Up Price (RM)</CFormLabel>
-              <CFormInput
-                type="number"
-                step="0.01"
-                min="0"
-                value={
-                  markedUp[item.id] != null
-                    ? markedUp[item.id]
-                    : ((unitPrices[item.id] || 0) * 1.5).toFixed(2)
-                }
-                onChange={(e) => handleMarkedUpChange(item.id, e.target.value)}
-              />
-            </CCol>
+              <CCol md={2}>
+                <CFormLabel>Quantity</CFormLabel>
+                <CFormInput
+                  type="number"
+                  min="0"
+                  value={quantities[item.id] || 0}
+                  onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                />
+              </CCol>
 
-            <CCol md={2}>
-              <CFormLabel>Line Total (RM)</CFormLabel>
-              <CFormInput
-                type="number"
-                readOnly
-                value={(
-                  (quantities[item.id] || 0) *
-                  (markedUp[item.id] != null ? markedUp[item.id] : (unitPrices[item.id] || 0) * 1.5)
-                ).toFixed(2)}
-              />
-            </CCol>
-          </CRow>
-        ))}
+              <CCol md={2}>
+                <CFormLabel>Marked Up Price (RM)</CFormLabel>
+                <CFormInput
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={
+                    markedUp[item.id] != null
+                      ? markedUp[item.id]
+                      : ((unitPrices[item.id] || 0) * 1.5).toFixed(2)
+                  }
+                  onChange={(e) => handleMarkedUpChange(item.id, e.target.value)}
+                />
+              </CCol>
+
+              <CCol md={2}>
+                <CFormLabel>Line Total (RM)</CFormLabel>
+                <CFormInput
+                  type="number"
+                  readOnly
+                  value={(
+                    (quantities[item.id] || 0) *
+                    (markedUp[item.id] != null
+                      ? markedUp[item.id]
+                      : (unitPrices[item.id] || 0) * 1.5)
+                  ).toFixed(2)}
+                />
+              </CCol>
+            </CRow>
+          )
+        })}
 
         {/* Summary Charges */}
         <CRow className="align-items-end g-3 mt-4">

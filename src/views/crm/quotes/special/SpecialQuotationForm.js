@@ -164,6 +164,17 @@ export default function SpecialQuotationForm({
       dialog.alert('Please choose a Special Service type.')
       return
     }
+    if (!Array.isArray(formData.lineItems) || formData.lineItems.length === 0) {
+      dialog.alert('Please add at least one special service line item.')
+      return
+    }
+    const invalidLineItem = formData.lineItems.find(
+      (item) => !String(item.title || '').trim() || Number(item.quantity || 0) <= 0,
+    )
+    if (invalidLineItem) {
+      dialog.alert('Please complete each special service line item title and quantity.')
+      return
+    }
 
     const subTotal = parseFloat(formData.subTotal || 0)
     const sstAmount = parseFloat(formData.sstAmount || 0)
@@ -232,7 +243,7 @@ export default function SpecialQuotationForm({
 
   // Determine render gates
   const showPricing =
-    isEditMode || (selectedClient && formData.specialId != null && formData.lineItems.length > 0)
+    isEditMode || (selectedClient && formData.specialId && formData.lineItems.length > 0)
   const showReview = isEditMode || parseFloat(formData.subTotal || 0) > 0
 
   return (

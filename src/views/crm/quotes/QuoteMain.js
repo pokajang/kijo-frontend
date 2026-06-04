@@ -166,14 +166,39 @@ const QuoteMain = () => {
   }, [])
 
   const handleServiceChange = (e) => {
-    setSelectedService(normalizeQuoteServiceKey(e.target.value))
+    const nextService = normalizeQuoteServiceKey(e.target.value)
+    setSelectedService(nextService)
+
+    if (!isEditMode && !isNegotiationApply) {
+      const params = new URLSearchParams(location.search)
+      if (nextService) {
+        params.set('service', nextService)
+      } else {
+        params.delete('service')
+      }
+
+      const search = params.toString()
+      navigate(
+        {
+          pathname: location.pathname,
+          search: search ? `?${search}` : '',
+        },
+        {
+          replace: true,
+          state: {
+            ...(location.state || {}),
+            initialService: nextService || undefined,
+          },
+        },
+      )
+    }
   }
 
   useEffect(() => {
-    if (!isEditMode && explicitServiceKey && selectedService !== explicitServiceKey) {
+    if (isNegotiationApply && explicitServiceKey && selectedService !== explicitServiceKey) {
       setSelectedService(explicitServiceKey)
     }
-  }, [explicitServiceKey, isEditMode, selectedService])
+  }, [explicitServiceKey, isNegotiationApply, selectedService])
 
   useEffect(() => {
     if (!isEditMode && selectedService === 'equipment' && proposalLanguage !== 'en') {

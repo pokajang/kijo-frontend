@@ -100,6 +100,10 @@ const TrainingQuotationForm = ({
     hydratedDraft.customPaymentMethod = hydratedDraft.paymentMethod
   }
 
+  if (!hydratedDraft.trainingId && hydratedDraft.proposal_id) {
+    hydratedDraft.trainingId = hydratedDraft.proposal_id
+  }
+
   const [formData, setFormData] = useState({
     ...hydratedDraft,
   })
@@ -242,6 +246,34 @@ const TrainingQuotationForm = ({
     }))
   }, [proposalLanguage, isEditMode])
 
+  useEffect(() => {
+    if (
+      isEditMode ||
+      formData.trainingId ||
+      !formData.trainingTitle ||
+      trainingOptions.length === 0
+    ) {
+      return
+    }
+
+    const matchingOptions = trainingOptions.filter(
+      (option) => option.trainingTitle === formData.trainingTitle,
+    )
+    if (matchingOptions.length !== 1) return
+
+    const [matchingOption] = matchingOptions
+    setFormData((prev) => {
+      if (prev.trainingId || prev.trainingTitle !== matchingOption.trainingTitle) return prev
+
+      return {
+        ...prev,
+        trainingId: matchingOption.value,
+        proposal_id: matchingOption.proposal_id || matchingOption.value,
+        ...getPricingDurationDefaults(matchingOption.duration),
+      }
+    })
+  }, [formData.trainingId, formData.trainingTitle, isEditMode, trainingOptions])
+
   const [templateContent, setTemplateContent] = useState(null)
 
   const activeTemplate = formData.template
@@ -262,7 +294,10 @@ const TrainingQuotationForm = ({
   const hasPaymentMethod = String(formData.paymentMethod || '').trim() !== ''
 
   const isTrainingDetailsComplete =
-    !!formData.trainingTitle && !!formData.trainingVenue && hasPaymentMethod
+    !!formData.trainingId &&
+    !!formData.trainingTitle &&
+    !!formData.trainingVenue &&
+    hasPaymentMethod
 
   const isDiscountValid =
     (formData.discountType || 'No Discount') &&

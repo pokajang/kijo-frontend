@@ -24,6 +24,48 @@ export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposa
       .catch((e) => console.error('Failed to load templates', e))
   }, [proposalLanguage])
 
+  useEffect(() => {
+    if (isEditMode || formData.specialId || templates.length === 0) {
+      return
+    }
+
+    const draftTitle = String(formData.serviceTitle || '').trim()
+    const draftCode = String(formData.serviceCode || '').trim()
+    if (!draftTitle && !draftCode) return
+
+    const matchingTemplates = templates.filter((template) => {
+      const sameTitle = !draftTitle || template.serviceTitle === draftTitle
+      const sameCode = !draftCode || template.serviceCode === draftCode
+      return sameTitle && sameCode
+    })
+    if (matchingTemplates.length !== 1) return
+
+    const [matchingTemplate] = matchingTemplates
+    setFormData((prev) => {
+      if (prev.specialId) return prev
+
+      const currentTitle = String(prev.serviceTitle || '').trim()
+      const currentCode = String(prev.serviceCode || '').trim()
+      if ((draftTitle && currentTitle !== draftTitle) || (draftCode && currentCode !== draftCode)) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        specialId: matchingTemplate.id,
+        serviceTitle: matchingTemplate.serviceTitle,
+        serviceCode: matchingTemplate.serviceCode,
+      }
+    })
+  }, [
+    formData.serviceCode,
+    formData.serviceTitle,
+    formData.specialId,
+    isEditMode,
+    setFormData,
+    templates,
+  ])
+
   // 2) when template changes, fetch previously used line items, sort, and auto-load them
   useEffect(() => {
     if (!formData.specialId) {

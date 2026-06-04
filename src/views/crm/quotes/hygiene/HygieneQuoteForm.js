@@ -176,6 +176,11 @@ export default function HygieneQuotationForm({
       return
     }
 
+    if (!formData.serviceId || !formData.serviceTitle || !formData.serviceCode) {
+      dialog.alert('Please select a valid IH service type before saving.')
+      return
+    }
+
     const normalizedSampleCounts = Math.max(0, toInteger(formData.sampleCounts, 0))
     const hasWorkUnitsInput = String(formData.numWorkUnits ?? '').trim() !== ''
     const normalizedNumWorkUnits = hasWorkUnitsInput
@@ -240,7 +245,7 @@ export default function HygieneQuotationForm({
         <>
           <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
 
-          {selectedClient && formData.serviceCode && (
+          {selectedClient && formData.serviceId && formData.serviceCode && (
             <ReviewHygieneQuotationCard
               selectedClient={selectedClient}
               formData={formData}

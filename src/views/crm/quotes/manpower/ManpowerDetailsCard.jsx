@@ -58,6 +58,66 @@ export default function ManpowerDetailsCard({
     serviceCode: t.serviceCode,
   }))
 
+  useEffect(() => {
+    if (
+      isEditMode ||
+      formData.mpId ||
+      !formData.serviceTitle ||
+      !formData.serviceCode ||
+      templates.length === 0
+    ) {
+      return
+    }
+
+    const matchingTemplates = templates.filter(
+      (template) =>
+        template.serviceTitle === formData.serviceTitle &&
+        template.serviceCode === formData.serviceCode,
+    )
+    if (matchingTemplates.length !== 1) return
+
+    const [matchingTemplate] = matchingTemplates
+    const manpowerRateType = inferManpowerRateType({
+      serviceTitle: matchingTemplate.serviceTitle,
+      serviceCode: matchingTemplate.serviceCode,
+    })
+    const rate = getManpowerRate({
+      rateType: manpowerRateType,
+      durationMonths: formData.durationMonths,
+    })
+
+    setFormData((prev) => {
+      if (
+        prev.mpId ||
+        prev.serviceTitle !== matchingTemplate.serviceTitle ||
+        prev.serviceCode !== matchingTemplate.serviceCode
+      ) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        mpId: matchingTemplate.id,
+        serviceCode: matchingTemplate.serviceCode,
+        serviceTitle: matchingTemplate.serviceTitle,
+        manpowerRateType,
+        billingUnit: rate.billingUnit,
+        unitCost: rate.unitCost || prev.unitCost,
+        requiresManagementApproval: !!rate.requiresManagementApproval,
+        durationMonths: rate.billingUnit === 'hour' ? 0 : prev.durationMonths,
+        durationHours: rate.billingUnit === 'hour' ? prev.durationHours : 0,
+      }
+    })
+  }, [
+    formData.durationMonths,
+    formData.mpId,
+    formData.serviceCode,
+    formData.serviceTitle,
+    isEditMode,
+    setFormData,
+    templates,
+  ])
+
   const handleTemplateSelect = (selected) => {
     if (!selected) {
       setFormData((prev) => ({

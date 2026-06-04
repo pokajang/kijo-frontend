@@ -248,6 +248,11 @@ export default function ManpowerQuotationForm({
 
   // Save or update the quote
   const handleSaveQuote = async () => {
+    if (!formData.mpId || !formData.serviceTitle || !formData.serviceCode) {
+      dialog.alert('Please select a valid manpower service type before saving.')
+      return
+    }
+
     const { primaryPIC, pic_name, pic_email, pic_phone, pic_position } =
       buildPicPayload(selectedClient)
     if (!primaryPIC) {
@@ -367,7 +372,7 @@ export default function ManpowerQuotationForm({
         }}
       />
 
-      {selectedClient && formData.mpId != null && (
+      {selectedClient && formData.mpId && (
         <ReviewManpowerQuoteCard
           selectedClient={selectedClient}
           formData={formData}

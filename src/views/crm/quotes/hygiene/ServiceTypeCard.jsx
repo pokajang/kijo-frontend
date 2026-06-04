@@ -41,7 +41,45 @@ const ServiceTypeCard = ({
     label: `${opt.serviceTitle} (${opt.serviceCode.toUpperCase()})${opt.proposalLanguage === 'ms-MY' ? ' [BM]' : ''}`,
     id: opt.id,
     serviceTitle: opt.serviceTitle,
+    serviceCode: opt.serviceCode,
   }))
+
+  useEffect(() => {
+    if (isEditMode || formData.serviceId || !formData.serviceCode || options.length === 0) {
+      return
+    }
+
+    const matchingOptions = options.filter((option) => {
+      const sameCode = String(option.serviceCode || '') === String(formData.serviceCode || '')
+      const sameTitle = !formData.serviceTitle || option.serviceTitle === formData.serviceTitle
+      return sameCode && sameTitle
+    })
+    if (matchingOptions.length !== 1) return
+
+    const [matchingOption] = matchingOptions
+    setFormData((prev) => {
+      if (
+        prev.serviceId ||
+        String(prev.serviceCode || '') !== String(matchingOption.serviceCode || '')
+      ) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        serviceId: matchingOption.id,
+        serviceCode: matchingOption.serviceCode,
+        serviceTitle: matchingOption.serviceTitle,
+      }
+    })
+  }, [
+    formData.serviceCode,
+    formData.serviceId,
+    formData.serviceTitle,
+    isEditMode,
+    options,
+    setFormData,
+  ])
 
   const handleSelect = (selected) => {
     if (!selected) {
@@ -77,7 +115,11 @@ const ServiceTypeCard = ({
           ) : (
             <Select
               options={reactSelectOptions}
-              value={reactSelectOptions.find((opt) => opt.value === formData.serviceCode) || null}
+              value={
+                reactSelectOptions.find((opt) => String(opt.id) === String(formData.serviceId)) ||
+                reactSelectOptions.find((opt) => opt.value === formData.serviceCode) ||
+                null
+              }
               onChange={handleSelect}
               placeholder="Select IH service type..."
               isClearable

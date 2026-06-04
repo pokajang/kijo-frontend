@@ -119,8 +119,8 @@ const ReviewQuotationCard = ({
   const grandTotal = calculateGrandTotal(subtotal, sstAmount, hrdAmount)
 
   const handleSaveQuote = async () => {
-    if (!clientDetails || !formData.trainingTitle) {
-      dialog.alert('Client or topic missing')
+    if (!clientDetails || !formData.trainingId || !formData.trainingTitle) {
+      dialog.alert('Please select a valid training topic before saving.')
       return
     }
 
