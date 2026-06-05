@@ -298,6 +298,10 @@ const Dashboard = () => {
       }
 
       if (phase === 'end') {
+        if (!pendingDashboardRequestsRef.current.has(requestId)) {
+          return
+        }
+
         pendingDashboardRequestsRef.current.delete(requestId)
         if (pendingDashboardRequestsRef.current.size === 0) {
           scheduleSettledState()

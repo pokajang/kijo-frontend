@@ -1,6 +1,6 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import Dashboard from './Dashboard'
@@ -108,5 +108,55 @@ describe('Dashboard workload tab', () => {
 
     expect(await screen.findByText('Sales dashboard mock')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /monthly report/i })).not.toBeInTheDocument()
+  })
+
+  it('ignores stale dashboard request end events after switching tabs', async () => {
+    vi.useFakeTimers()
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard/sales']}>
+        <Routes>
+          <Route path="/dashboard/:dashboardTab" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(700)
+    })
+
+    expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument()
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('kijo:dashboard-fetch', {
+          detail: { phase: 'start', requestId: 'old-sales-request' },
+        }),
+      )
+    })
+
+    fireEvent.click(screen.getByRole('tab', { name: /crm tracking/i }))
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('kijo:dashboard-fetch', {
+          detail: { phase: 'end', requestId: 'old-sales-request' },
+        }),
+      )
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(660)
+    })
+
+    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(40)
+    })
+
+    expect(screen.queryByText('Loading dashboard...')).not.toBeInTheDocument()
   })
 })
