@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Select from '../../../components/forms/ThemedSelect'
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilTrash } from '@coreui/icons'
@@ -21,7 +21,7 @@ import {
   CModalTitle,
   CRow,
 } from '@coreui/react'
-import { fetchJson } from '../../dashboard/shared/fetchUtils'
+import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
 import PipelineEntriesShell from './PipelineEntriesShell'
 import {
   API_BASE,
@@ -169,7 +169,13 @@ const createNextDraft = (currentDraft) => ({
 
 const PipelineEntriesBulkAdd = () => {
   const navigate = useNavigate()
-  const [initialBulkDraft] = useState(() => readStoredBulkDraft())
+  const { id } = useParams()
+  const isEditMode = Boolean(id)
+  const [loadedEntry, setLoadedEntry] = useState(null)
+  const [initialEditDraft, setInitialEditDraft] = useState(null)
+  const [loadingEntry, setLoadingEntry] = useState(isEditMode)
+  const [loadError, setLoadError] = useState('')
+  const [initialBulkDraft] = useState(() => (isEditMode ? null : readStoredBulkDraft()))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [savedCount, setSavedCount] = useState(0)
@@ -179,7 +185,7 @@ const PipelineEntriesBulkAdd = () => {
   const [batchRows, setBatchRows] = useState(() => initialBulkDraft?.batchRows || [])
 
   const draftHasProspect = draft.prospect_name.trim() !== ''
-  const hasUnsavedDraft =
+  const hasUnsavedBulkDraft =
     draftHasProspect ||
     draft.notes.trim() !== '' ||
     String(draft.estimated_rm ?? '').trim() !== '' ||
@@ -187,18 +193,100 @@ const PipelineEntriesBulkAdd = () => {
     Boolean(draft.service_category) ||
     Boolean(draft.photoFile) ||
     batchRows.length > 0
+  const serializedEditDraft = JSON.stringify(serializeBulkRow(draft))
+  const serializedInitialEditDraft = initialEditDraft
+    ? JSON.stringify(serializeBulkRow(initialEditDraft))
+    : ''
+  const hasUnsavedEditDraft =
+    isEditMode &&
+    Boolean(initialEditDraft) &&
+    (serializedEditDraft !== serializedInitialEditDraft || Boolean(draft.photoFile))
+  const hasUnsavedDraft = isEditMode ? hasUnsavedEditDraft : hasUnsavedBulkDraft
   const readyBulkRows = batchRows.length
   const selectedSourceOption =
     entrySourceOptions.find((source) => source.value === draft.source) || null
   const showEstimatedRm = entryTypeAllowsEstimatedRm(draft.entry_type)
 
   useEffect(() => {
+    if (!isEditMode) return undefined
+
+    const controller = new AbortController()
+
+    const loadEntry = async () => {
+      setLoadingEntry(true)
+      setLoadError('')
+      setLoadedEntry(null)
+      setInitialEditDraft(null)
+
+      try {
+        const response = await fetchJsonGet(
+          `${API_BASE}stats/monitoring-manual-pipeline-entry/${encodeURIComponent(id || '')}`,
+          {},
+          { silentError: true },
+          controller.signal,
+        )
+
+        if (controller.signal.aborted) return
+
+        if (response?.status !== 'success' || !response.entry) {
+          setLoadError(response?.message || 'Unable to load pipeline entry.')
+          return
+        }
+
+        const entry = response.entry
+        if (entry.recordSource && entry.recordSource !== 'manual') {
+          setLoadError('Only manual pipeline entries can be edited from this form.')
+          return
+        }
+        if (!entry.canUpdate) {
+          setLoadError('You are not allowed to update this pipeline entry.')
+          return
+        }
+
+        setLoadedEntry(entry)
+        const editDraft = {
+          ...createBlankEntryRow(),
+          entry_type: entry.entryType || 'lead',
+          entry_date: entry.entryDate || '',
+          source: entry.source || '',
+          segment_type: entry.segmentType || '',
+          service_category: entry.serviceCategory || '',
+          estimated_rm:
+            entry.estimatedRm === null || entry.estimatedRm === undefined
+              ? ''
+              : String(entry.estimatedRm),
+          prospect_name: entry.prospectName || '',
+          notes: entry.notes || '',
+          photoFile: null,
+          photoPreviewUrl: null,
+          photoInputKey: Date.now(),
+        }
+        setDraft(editDraft)
+        setInitialEditDraft(editDraft)
+        setBatchRows([])
+      } catch (err) {
+        if (isAbortError(err)) return
+        setLoadError(err?.message || 'Unable to load pipeline entry.')
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoadingEntry(false)
+        }
+      }
+    }
+
+    loadEntry()
+
+    return () => controller.abort()
+  }, [id, isEditMode])
+
+  useEffect(() => {
+    if (isEditMode) return
     if (hasUnsavedDraft) {
       writeStoredBulkDraft(draft, batchRows)
     } else {
       clearStoredBulkDraft()
     }
-  }, [batchRows, draft, hasUnsavedDraft])
+  }, [batchRows, draft, hasUnsavedDraft, isEditMode])
 
   useEffect(() => {
     if (!hasUnsavedDraft) return undefined
@@ -287,7 +375,73 @@ const PipelineEntriesBulkAdd = () => {
   const getRowsForSave = () =>
     batchRows.map(normalizeBulkRow).filter((row) => row.prospect_name !== '')
 
+  const saveEditEntry = async () => {
+    if (!loadedEntry?.id || loadError) return
+    if (proofCompressing) {
+      setError('Please wait for screenshot proof processing to finish.')
+      return
+    }
+
+    const normalizedDraft = normalizeBulkRow(draft)
+    const validationError = getPipelineEntryValidationError(normalizedDraft, {
+      prospectLabel: 'Prospect',
+    })
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    try {
+      const formData = new FormData()
+      formData.append('entry_type', normalizedDraft.entry_type)
+      formData.append('entry_date', normalizedDraft.entry_date)
+      formData.append('source', normalizedDraft.source)
+      formData.append('segment_type', normalizedDraft.segment_type || '')
+      formData.append('service_category', normalizedDraft.service_category || '')
+      formData.append(
+        'estimated_rm',
+        entryTypeAllowsEstimatedRm(normalizedDraft.entry_type) &&
+          normalizedDraft.estimated_rm !== ''
+          ? normalizedDraft.estimated_rm
+          : '',
+      )
+      formData.append('prospect_name', normalizedDraft.prospect_name)
+      formData.append('notes', normalizedDraft.notes)
+      if (normalizedDraft.photoFile) {
+        formData.append('photos[0]', normalizedDraft.photoFile)
+      }
+
+      const response = await fetchJson(
+        `${API_BASE}stats/monitoring-manual-pipeline-entry/${loadedEntry.id}`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+      )
+
+      if (response?.status !== 'success') {
+        throw new Error(response?.message || 'Unable to update pipeline entry.')
+      }
+
+      navigate('/pipeline/entries', {
+        state: { pipelineMessage: 'Pipeline entry updated.' },
+      })
+    } catch (err) {
+      setError(err?.message || 'Unable to update pipeline entry.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const saveBulkEntries = async () => {
+    if (isEditMode) {
+      await saveEditEntry()
+      return
+    }
+
     if (proofCompressing) {
       setError('Please wait for screenshot proof processing to finish.')
       return
@@ -374,7 +528,11 @@ const PipelineEntriesBulkAdd = () => {
   const navigateWithUnsavedCheck = (path) => {
     if (
       hasUnsavedDraft &&
-      !window.confirm('Discard unsaved pipeline entries and leave this page?')
+      !window.confirm(
+        isEditMode
+          ? 'Discard unsaved changes and leave this page?'
+          : 'Discard unsaved pipeline entries and leave this page?',
+      )
     ) {
       return
     }
@@ -392,7 +550,7 @@ const PipelineEntriesBulkAdd = () => {
 
       <CCard>
         <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-          <strong>Bulk Add</strong>
+          <strong>{isEditMode ? 'Edit Pipeline Entry' : 'Bulk Add'}</strong>
           <CButton
             size="sm"
             color="secondary"
@@ -404,239 +562,261 @@ const PipelineEntriesBulkAdd = () => {
           </CButton>
         </CCardHeader>
         <CCardBody>
-          <div className="d-grid gap-3">
-            <div>
-              <CRow className="g-3 align-items-end">
-                <CCol xs={12} md={4} xl>
-                  <CFormSelect
-                    label="Type"
-                    value={draft.entry_type}
-                    onChange={(event) => updateDraft({ entry_type: event.target.value })}
-                  >
-                    {entryTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </CFormSelect>
-                </CCol>
-                <CCol xs={12} md={4} xl>
-                  <CFormInput
-                    type="date"
-                    label="Date"
-                    value={draft.entry_date}
-                    onChange={(event) => updateDraft({ entry_date: event.target.value })}
-                  />
-                </CCol>
-                <CCol xs={12} md={4} xl>
-                  <label className="form-label" htmlFor="bulk-pipeline-entry-source">
-                    Source
-                  </label>
-                  <Select
-                    inputId="bulk-pipeline-entry-source"
-                    classNamePrefix="react-select"
-                    options={entrySourceOptions}
-                    value={selectedSourceOption}
-                    placeholder="Select Source..."
-                    isClearable
-                    menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
-                    menuPosition="fixed"
-                    styles={sourceSelectStyles}
-                    onChange={(option) => updateDraft({ source: option?.value || '' })}
-                  />
-                </CCol>
-                <CCol xs={12} md={4} xl>
-                  <CFormSelect
-                    label="Classification"
-                    value={draft.segment_type}
-                    onChange={(event) => updateDraft({ segment_type: event.target.value })}
-                  >
-                    {classificationTypes.map((classification) => (
-                      <option key={classification.value || 'none'} value={classification.value}>
-                        {classification.label}
-                      </option>
-                    ))}
-                  </CFormSelect>
-                </CCol>
-                <CCol xs={12} md={4} xl>
-                  <CFormSelect
-                    label="Service"
-                    value={draft.service_category}
-                    onChange={(event) => updateDraft({ service_category: event.target.value })}
-                  >
-                    {serviceCategories.map((service) => (
-                      <option key={service.value || 'none'} value={service.value}>
-                        {service.label}
-                      </option>
-                    ))}
-                  </CFormSelect>
-                </CCol>
-                {showEstimatedRm && (
+          {loadError && (
+            <CAlert color="danger" className="mb-3">
+              {loadError}
+            </CAlert>
+          )}
+          {loadingEntry ? (
+            <div className="py-4 text-center text-muted">Loading pipeline entry...</div>
+          ) : (
+            <div className="d-grid gap-3">
+              <div>
+                <CRow className="g-3 align-items-end">
+                  <CCol xs={12} md={4} xl>
+                    <CFormSelect
+                      label="Type"
+                      value={draft.entry_type}
+                      onChange={(event) => updateDraft({ entry_type: event.target.value })}
+                    >
+                      {entryTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </CFormSelect>
+                  </CCol>
                   <CCol xs={12} md={4} xl>
                     <CFormInput
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      label="Estimated RM"
-                      value={draft.estimated_rm}
-                      placeholder="0.00"
-                      onChange={(event) => updateDraft({ estimated_rm: event.target.value })}
+                      type="date"
+                      label="Date"
+                      value={draft.entry_date}
+                      onChange={(event) => updateDraft({ entry_date: event.target.value })}
                     />
                   </CCol>
-                )}
-                <CCol xs={12} md={4} xl={4}>
-                  <CFormInput
-                    label="Company / Prospect"
-                    value={draft.prospect_name}
-                    placeholder="Example: ABC Manufacturing Sdn Bhd"
-                    onChange={(event) => updateDraft({ prospect_name: event.target.value })}
-                  />
-                </CCol>
-                <CCol xs={12} md={5} xl={5}>
-                  <CFormInput
-                    label="Notes"
-                    value={draft.notes}
-                    placeholder="Optional context, requested service, or next action"
-                    onChange={(event) => updateDraft({ notes: event.target.value })}
-                  />
-                </CCol>
-                <CCol xs={12} md={3} xl={3}>
-                  <div className="d-flex align-items-center gap-2 flex-wrap">
-                    <label className="form-label" htmlFor={`proof-${draft.rowId}`}>
-                      Screenshot Proof (Optional)
+                  <CCol xs={12} md={4} xl>
+                    <label className="form-label" htmlFor="bulk-pipeline-entry-source">
+                      Source
                     </label>
-                    {(proofCompressing || draft.photoFile?.name) && (
-                      <span className="text-muted mb-2">
-                        {proofCompressing ? 'Processing screenshot...' : draft.photoFile.name}
-                      </span>
-                    )}
-                  </div>
-                  <CFormInput
-                    id={`proof-${draft.rowId}`}
-                    key={draft.photoInputKey}
-                    type="file"
-                    accept="image/*"
-                    disabled={proofCompressing}
-                    onChange={(event) => handleProofFileChange(event.target.files?.[0] || null)}
-                  />
-                  <div className="text-muted mt-1">
-                    Proof files are not restored after refresh; reattach before saving.
-                  </div>
-                </CCol>
-                <CCol xs={12}>
-                  <div className="d-flex justify-content-end gap-2 flex-wrap">
-                    <CButton size="sm" color="secondary" variant="outline" onClick={clearDraft}>
-                      Clear
-                    </CButton>
-                    <CButton
-                      size="sm"
-                      color="primary"
-                      onClick={addDraftToBatch}
-                      disabled={!draftHasProspect || proofCompressing}
+                    <Select
+                      inputId="bulk-pipeline-entry-source"
+                      classNamePrefix="react-select"
+                      options={entrySourceOptions}
+                      value={selectedSourceOption}
+                      placeholder="Select Source..."
+                      isClearable
+                      menuPortalTarget={typeof document !== 'undefined' ? document.body : undefined}
+                      menuPosition="fixed"
+                      styles={sourceSelectStyles}
+                      onChange={(option) => updateDraft({ source: option?.value || '' })}
+                    />
+                  </CCol>
+                  <CCol xs={12} md={4} xl>
+                    <CFormSelect
+                      label="Classification"
+                      value={draft.segment_type}
+                      onChange={(event) => updateDraft({ segment_type: event.target.value })}
                     >
-                      <CIcon icon={cilPlus} className="me-1" />
-                      Add to Batch
-                    </CButton>
-                  </div>
-                </CCol>
-              </CRow>
-            </div>
-
-            <div>
-              <div className="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
-                <strong>Batch Review</strong>
-                <span className="text-muted">{readyBulkRows} ready</span>
-              </div>
-              {batchRows.length === 0 ? (
-                <div className="rounded-4 app-surface-panel text-muted px-3 py-3">
-                  No batch entries yet. Fill the row above, then add it to the batch.
-                </div>
-              ) : (
-                <CRow className="g-2">
-                  {batchRows.map((entry, index) => (
-                    <CCol
-                      xs={12}
-                      lg={6}
-                      key={`${entry.prospect_name}-${entry.entry_date}-${index}`}
+                      {classificationTypes.map((classification) => (
+                        <option key={classification.value || 'none'} value={classification.value}>
+                          {classification.label}
+                        </option>
+                      ))}
+                    </CFormSelect>
+                  </CCol>
+                  <CCol xs={12} md={4} xl>
+                    <CFormSelect
+                      label="Service"
+                      value={draft.service_category}
+                      onChange={(event) => updateDraft({ service_category: event.target.value })}
                     >
-                      <div className="h-100 rounded-4 border app-surface-panel p-3">
-                        <div className="d-flex align-items-start justify-content-between gap-3">
-                          <div className="min-w-0">
-                            <div className="d-flex align-items-center gap-2 flex-wrap">
-                              <span className="fw-semibold">
-                                {index + 1}. {entry.prospect_name}
-                              </span>
-                              <CBadge className={typeBadgeClass(entry.entry_type)}>
-                                {typeLabel(entry.entry_type)}
-                              </CBadge>
-                            </div>
-                            <div className="text-muted">
-                              {formatDate(entry.entry_date)} | {entry.source || '-'}
-                            </div>
-                            <div className="text-muted">
-                              Classification: {classificationLabel(entry.segment_type)}
-                            </div>
-                            <div className="text-muted">
-                              Service: {serviceCategoryLabel(entry.service_category)} | RM:{' '}
-                              {entry.estimated_rm === '' || entry.estimated_rm === null
-                                ? '-'
-                                : Number(entry.estimated_rm || 0).toLocaleString()}
-                            </div>
-                            {entry.notes && (
-                              <div className="text-muted text-truncate">{entry.notes}</div>
-                            )}
-                          </div>
-                          <CButton
-                            size="sm"
-                            color="danger"
-                            variant="ghost"
-                            className="px-2 flex-shrink-0"
-                            aria-label={`Remove ${entry.prospect_name}`}
-                            onClick={() => removeBatchRow(index)}
-                          >
-                            <CIcon icon={cilTrash} size="sm" />
-                          </CButton>
-                        </div>
-                        {entry.photoFile && (
-                          <div className="mt-2 d-flex align-items-center gap-2">
-                            <LoadingImage
-                              src={entry.photoPreviewUrl}
-                              alt={`Screenshot proof for ${entry.prospect_name}`}
-                              className="rounded border app-proof-image"
-                              style={{ width: 72, height: 48, objectFit: 'cover' }}
-                              placeholderStyle={{ width: 72, minHeight: 48, height: 48 }}
-                            />
-                            <span className="text-muted text-truncate">{entry.photoFile.name}</span>
-                          </div>
-                        )}
+                      {serviceCategories.map((service) => (
+                        <option key={service.value || 'none'} value={service.value}>
+                          {service.label}
+                        </option>
+                      ))}
+                    </CFormSelect>
+                  </CCol>
+                  {showEstimatedRm && (
+                    <CCol xs={12} md={4} xl>
+                      <CFormInput
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        label="Estimated RM"
+                        value={draft.estimated_rm}
+                        placeholder="0.00"
+                        onChange={(event) => updateDraft({ estimated_rm: event.target.value })}
+                      />
+                    </CCol>
+                  )}
+                  <CCol xs={12} md={4} xl={4}>
+                    <CFormInput
+                      label="Company / Prospect"
+                      value={draft.prospect_name}
+                      placeholder="Example: ABC Manufacturing Sdn Bhd"
+                      onChange={(event) => updateDraft({ prospect_name: event.target.value })}
+                    />
+                  </CCol>
+                  <CCol xs={12} md={5} xl={5}>
+                    <CFormInput
+                      label="Notes"
+                      value={draft.notes}
+                      placeholder="Optional context, requested service, or next action"
+                      onChange={(event) => updateDraft({ notes: event.target.value })}
+                    />
+                  </CCol>
+                  <CCol xs={12} md={3} xl={3}>
+                    <div className="d-flex align-items-center gap-2 flex-wrap">
+                      <label className="form-label" htmlFor={`proof-${draft.rowId}`}>
+                        {isEditMode ? 'Replace Screenshot Proof' : 'Screenshot Proof (Optional)'}
+                      </label>
+                      {(proofCompressing || draft.photoFile?.name) && (
+                        <span className="text-muted mb-2">
+                          {proofCompressing ? 'Processing screenshot...' : draft.photoFile.name}
+                        </span>
+                      )}
+                    </div>
+                    <CFormInput
+                      id={`proof-${draft.rowId}`}
+                      key={draft.photoInputKey}
+                      type="file"
+                      accept="image/*"
+                      disabled={proofCompressing}
+                      onChange={(event) => handleProofFileChange(event.target.files?.[0] || null)}
+                    />
+                    <div className="text-muted mt-1">
+                      {isEditMode && loadedEntry?.photoUrl
+                        ? 'Leave empty to keep the current screenshot.'
+                        : 'Proof files are not restored after refresh; reattach before saving.'}
+                    </div>
+                  </CCol>
+                  {!isEditMode && (
+                    <CCol xs={12}>
+                      <div className="d-flex justify-content-end gap-2 flex-wrap">
+                        <CButton size="sm" color="secondary" variant="outline" onClick={clearDraft}>
+                          Clear
+                        </CButton>
+                        <CButton
+                          size="sm"
+                          color="primary"
+                          onClick={addDraftToBatch}
+                          disabled={!draftHasProspect || proofCompressing}
+                        >
+                          <CIcon icon={cilPlus} className="me-1" />
+                          Add to Batch
+                        </CButton>
                       </div>
                     </CCol>
-                  ))}
+                  )}
                 </CRow>
-              )}
-            </div>
+              </div>
 
-            <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-              <span className="text-muted me-1">{readyBulkRows} ready</span>
-              <CButton
-                size="sm"
-                color="secondary"
-                variant="outline"
-                disabled={saving}
-                onClick={() => navigateWithUnsavedCheck('/pipeline/entries')}
-              >
-                Cancel
-              </CButton>
-              <CButton
-                size="sm"
-                color="primary"
-                onClick={saveBulkEntries}
-                disabled={saving || proofCompressing || readyBulkRows === 0}
-              >
-                {saving ? 'Saving...' : 'Save Entries'}
-              </CButton>
+              {!isEditMode && (
+                <div>
+                  <div className="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                    <strong>Batch Review</strong>
+                    <span className="text-muted">{readyBulkRows} ready</span>
+                  </div>
+                  {batchRows.length === 0 ? (
+                    <div className="rounded-4 app-surface-panel text-muted px-3 py-3">
+                      No batch entries yet. Fill the row above, then add it to the batch.
+                    </div>
+                  ) : (
+                    <CRow className="g-2">
+                      {batchRows.map((entry, index) => (
+                        <CCol
+                          xs={12}
+                          lg={6}
+                          key={`${entry.prospect_name}-${entry.entry_date}-${index}`}
+                        >
+                          <div className="h-100 rounded-4 border app-surface-panel p-3">
+                            <div className="d-flex align-items-start justify-content-between gap-3">
+                              <div className="min-w-0">
+                                <div className="d-flex align-items-center gap-2 flex-wrap">
+                                  <span className="fw-semibold">
+                                    {index + 1}. {entry.prospect_name}
+                                  </span>
+                                  <CBadge className={typeBadgeClass(entry.entry_type)}>
+                                    {typeLabel(entry.entry_type)}
+                                  </CBadge>
+                                </div>
+                                <div className="text-muted">
+                                  {formatDate(entry.entry_date)} | {entry.source || '-'}
+                                </div>
+                                <div className="text-muted">
+                                  Classification: {classificationLabel(entry.segment_type)}
+                                </div>
+                                <div className="text-muted">
+                                  Service: {serviceCategoryLabel(entry.service_category)} | RM:{' '}
+                                  {entry.estimated_rm === '' || entry.estimated_rm === null
+                                    ? '-'
+                                    : Number(entry.estimated_rm || 0).toLocaleString()}
+                                </div>
+                                {entry.notes && (
+                                  <div className="text-muted text-truncate">{entry.notes}</div>
+                                )}
+                              </div>
+                              <CButton
+                                size="sm"
+                                color="danger"
+                                variant="ghost"
+                                className="px-2 flex-shrink-0"
+                                aria-label={`Remove ${entry.prospect_name}`}
+                                onClick={() => removeBatchRow(index)}
+                              >
+                                <CIcon icon={cilTrash} size="sm" />
+                              </CButton>
+                            </div>
+                            {entry.photoFile && (
+                              <div className="mt-2 d-flex align-items-center gap-2">
+                                <LoadingImage
+                                  src={entry.photoPreviewUrl}
+                                  alt={`Screenshot proof for ${entry.prospect_name}`}
+                                  className="rounded border app-proof-image"
+                                  style={{ width: 72, height: 48, objectFit: 'cover' }}
+                                  placeholderStyle={{ width: 72, minHeight: 48, height: 48 }}
+                                />
+                                <span className="text-muted text-truncate">
+                                  {entry.photoFile.name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </CCol>
+                      ))}
+                    </CRow>
+                  )}
+                </div>
+              )}
+
+              <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                {!isEditMode && <span className="text-muted me-1">{readyBulkRows} ready</span>}
+                <CButton
+                  size="sm"
+                  color="secondary"
+                  variant="outline"
+                  disabled={saving}
+                  onClick={() => navigateWithUnsavedCheck('/pipeline/entries')}
+                >
+                  Cancel
+                </CButton>
+                <CButton
+                  size="sm"
+                  color="primary"
+                  onClick={saveBulkEntries}
+                  disabled={
+                    saving ||
+                    proofCompressing ||
+                    Boolean(loadError) ||
+                    (isEditMode ? !draftHasProspect : readyBulkRows === 0)
+                  }
+                >
+                  {saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Save Entries'}
+                </CButton>
+              </div>
             </div>
-          </div>
+          )}
         </CCardBody>
       </CCard>
 

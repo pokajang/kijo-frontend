@@ -20,6 +20,7 @@ import {
 } from '@coreui/react'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { getPricingDurationDefaults } from './trainingDuration'
+import { getTrainingUnitPriceForDurationUnit } from './trainingRates'
 
 const toInputDateValue = (value) => {
   if (!value) return ''
@@ -220,12 +221,16 @@ const TrainingDetailsCard = ({
                         setFormData((prev) => {
                           const nextTrainingType = e.target.value
                           const isOnline = nextTrainingType === 'Online'
-                          const isHourly = prev.durationUnit === 'hour(s)'
 
                           return {
                             ...prev,
                             trainingTypeOption: nextTrainingType,
-                            unitPrice: isOnline ? 3500 : isHourly ? prev.unitPrice : 4500,
+                            unitPrice: getTrainingUnitPriceForDurationUnit({
+                              durationUnit: prev.durationUnit || 'day(s)',
+                              trainingRateType: prev.trainingRateType,
+                              trainingTypeOption: nextTrainingType,
+                              fallbackUnitPrice: prev.unitPrice,
+                            }),
                             travelCharge: isOnline ? 0 : prev.travelCharge,
                             travelRegion: isOnline ? 'none' : prev.travelRegion,
                             mealsProvided: isOnline ? 'No' : prev.mealsProvided,

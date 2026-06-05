@@ -11,6 +11,7 @@ import {
   CDropdownMenu,
   CDropdownToggle,
   CFormLabel,
+  CFormCheck,
   CFormSelect,
   CFormTextarea,
   CModal,
@@ -55,6 +56,10 @@ import {
   getLeaveStatusSortPriority as getSharedLeaveStatusSortPriority,
   shouldGroupLeaveRecordsByYear,
 } from '../../../components/leave/leaveRecordFilters'
+import {
+  filterActiveStaffRecords,
+  isActiveStaffRecord,
+} from '../../../components/leave/staffActivity'
 import * as AH from './actionHandlers'
 
 const currentYear = new Date().getFullYear()
@@ -270,6 +275,7 @@ const SectionAllLeaves = ({
   canRecommendActions = true,
   canApproveActions = true,
   onViewRecord,
+  loading = false,
 }) => {
   const { getModuleCount } = useAppNotifications()
   const [searchText, setSearchText] = useState('')
@@ -279,6 +285,7 @@ const SectionAllLeaves = ({
   const [selectedStaff, setSelectedStaff] = useState(null)
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [includeInactiveStaff, setIncludeInactiveStaff] = useState(false)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [actionModal, setActionModal] = useState({
     visible: false,
@@ -297,11 +304,19 @@ const SectionAllLeaves = ({
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('staff.leaves')
 
-  const typeOptions = useMemo(() => getLeaveRecordTypeOptions(allLeaveRecords), [allLeaveRecords])
+  const activeScopedLeaveRecords = useMemo(
+    () => filterActiveStaffRecords(allLeaveRecords, includeInactiveStaff),
+    [allLeaveRecords, includeInactiveStaff],
+  )
+
+  const typeOptions = useMemo(
+    () => getLeaveRecordTypeOptions(activeScopedLeaveRecords),
+    [activeScopedLeaveRecords],
+  )
 
   const statusOptions = useMemo(
-    () => getLeaveRecordStatusOptions(allLeaveRecords),
-    [allLeaveRecords],
+    () => getLeaveRecordStatusOptions(activeScopedLeaveRecords),
+    [activeScopedLeaveRecords],
   )
 
   const staffOptions = useMemo(() => {
@@ -310,6 +325,7 @@ const SectionAllLeaves = ({
     const addStaffOption = (staff) => {
       const staffId = getStaffOptionId(staff)
       if (staffId === null || typeof staffId === 'undefined' || staffId === '') return
+      if (!includeInactiveStaff && !isActiveStaffRecord(staff)) return
       const key = String(staffId)
       if (optionsById.has(key)) return
       optionsById.set(key, {
@@ -324,6 +340,8 @@ const SectionAllLeaves = ({
         staff_id: record.staff_id,
         applicant_name: record.applicant_name,
         applicant_code: record.applicant_code,
+        applicant_status: record.applicant_status,
+        applicant_terminated_at: record.applicant_terminated_at,
       }),
     )
     entitlements.forEach(addStaffOption)
@@ -331,7 +349,7 @@ const SectionAllLeaves = ({
     return Array.from(optionsById.values()).sort((left, right) =>
       left.label.localeCompare(right.label),
     )
-  }, [allLeaveRecords, entitlements, staffList])
+  }, [allLeaveRecords, entitlements, includeInactiveStaff, staffList])
 
   const selectedStaffEntitlements = useMemo(
     () => filterEntitlementsByStaff(entitlements, selectedStaff?.value),
@@ -417,19 +435,26 @@ const SectionAllLeaves = ({
     () =>
       [
         selectedStaff ? { key: 'staff', label: `Staff: ${selectedStaff.label}` } : null,
+        includeInactiveStaff
+          ? { key: 'includeInactiveStaff', label: 'Staff: Including inactive' }
+          : null,
         filterType ? { key: 'type', label: `Type: ${filterType}` } : null,
         filterStatus ? { key: 'status', label: `Status: ${filterStatus}` } : null,
         selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
           ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
           : null,
       ].filter(Boolean),
-    [filterType, filterStatus, selectedPeriodRange, selectedStaff],
+    [filterType, filterStatus, includeInactiveStaff, selectedPeriodRange, selectedStaff],
   )
 
   const activeFilterCount = getAdvancedFilterCount(activeChips)
 
   const clearChip = (key) => {
     if (key === 'staff') handleStaffChange(null)
+    if (key === 'includeInactiveStaff') {
+      setIncludeInactiveStaff(false)
+      handleStaffChange(null)
+    }
     if (key === 'type') setFilterType('')
     if (key === 'status') setFilterStatus('')
     if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
@@ -441,18 +466,26 @@ const SectionAllLeaves = ({
     handleStaffChange(null)
     setFilterType('')
     setFilterStatus('')
+    setIncludeInactiveStaff(false)
   }
 
   const filteredRecords = useMemo(
     () =>
-      filterLeaveRecords(allLeaveRecords, {
+      filterLeaveRecords(activeScopedLeaveRecords, {
         searchTerm: searchText,
         leaveType: filterType,
         status: filterStatus,
         staffId: selectedStaff?.value,
         periodRange: selectedPeriodRange,
       }),
-    [allLeaveRecords, searchText, selectedPeriodRange, selectedStaff, filterType, filterStatus],
+    [
+      activeScopedLeaveRecords,
+      searchText,
+      selectedPeriodRange,
+      selectedStaff,
+      filterType,
+      filterStatus,
+    ],
   )
 
   const normalizedRecords = useMemo(
@@ -811,6 +844,7 @@ const SectionAllLeaves = ({
             resetFilters={resetFilters}
             desktopToolsId="all-leaves-table-tools"
             mobileToolsId="all-leaves-mobile-table-tools"
+            loading={loading}
           >
             {canManageLeaveAdmin && (
               <CCol xs={12} md={6} lg={4}>
@@ -859,10 +893,26 @@ const SectionAllLeaves = ({
                 ))}
               </CFormSelect>
             </CCol>
+            {canManageLeaveAdmin && (
+              <CCol xs={12} md={6} lg={4} className="d-flex align-items-end">
+                <CFormCheck
+                  id="all-leaves-include-inactive"
+                  label="Include inactive/terminated staff"
+                  checked={includeInactiveStaff}
+                  onChange={(event) => {
+                    const checked = event.target.checked
+                    setIncludeInactiveStaff(checked)
+                    if (!checked && selectedStaff) handleStaffChange(null)
+                  }}
+                />
+              </CCol>
+            )}
           </DataTableRecordControls>
 
           <DataTableRecordList
             rows={normalizedRecords}
+            loading={loading}
+            loadingMessage="Loading leave records..."
             dataColumns={dataColumns}
             defaultVisibleColumns={defaultVisibleColumns}
             requiredColumns={requiredColumns}

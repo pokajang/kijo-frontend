@@ -38,8 +38,15 @@ vi.mock('../../../components/forms/ThemedSelect', () => ({
 const currentYear = new Date().getFullYear()
 
 const hrStaffList = [
-  { staff_id: 7, full_name: 'Azam Bin Husain', name_code: 'AZM' },
-  { staff_id: 8, full_name: 'Bina Noor', name_code: 'BIN' },
+  { staff_id: 7, full_name: 'Azam Bin Husain', name_code: 'AZM', status: 'Active' },
+  { staff_id: 8, full_name: 'Bina Noor', name_code: 'BIN', status: 'Active' },
+  {
+    staff_id: 9,
+    full_name: 'Ceri Terminated',
+    name_code: 'CER',
+    status: 'Terminated',
+    terminated_at: '2025-12-31 00:00:00',
+  },
 ]
 
 const hrLeaveRecords = [
@@ -103,6 +110,23 @@ const hrLeaveRecords = [
     end_date: '2025-07-25',
     end_time: '17:30',
   },
+  {
+    id: 90,
+    staff_id: 9,
+    applicant_name: 'Ceri Terminated',
+    applicant_code: 'CER',
+    applicant_status: 'Terminated',
+    applicant_terminated_at: '2025-12-31 00:00:00',
+    status: 'Approved',
+    type: 'Frozen Leave',
+    duration_days: 6,
+    reason: 'Ceri inactive annual 2025',
+    applied_at: '2025-08-20 09:15:00',
+    start_date: '2025-08-21',
+    start_time: '08:30',
+    end_date: '2025-08-26',
+    end_time: '17:30',
+  },
 ]
 
 const hrEntitlements = [
@@ -149,6 +173,19 @@ const hrEntitlements = [
     total_days: 18,
     used_days: 5,
     remaining: 13,
+  },
+  {
+    id: 900,
+    staff_id: 9,
+    full_name: 'Ceri Terminated',
+    name_code: 'CER',
+    staff_status: 'Terminated',
+    staff_terminated_at: '2025-12-31 00:00:00',
+    leave_type: 'Annual',
+    year: currentYear,
+    total_days: 20,
+    used_days: 6,
+    remaining: 14,
   },
 ]
 
@@ -316,6 +353,57 @@ describe('SectionAllLeaves', () => {
     const leaveTypeSelect = screen.getByLabelText('Filter leave type')
     expect(leaveTypeSelect).not.toBeDisabled()
     expect(leaveTypeSelect).toHaveValue('')
+    expect(
+      within(screen.getByLabelText('Select staff')).queryByRole('option', {
+        name: 'Ceri Terminated (CER)',
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides inactive HR leave records by default and shows them when requested', () => {
+    renderHrSection()
+
+    expect(screen.queryByText('Ceri inactive annual 2025')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Toggle advanced filters'))
+    expect(
+      within(screen.getByLabelText('Filter leave type')).queryByRole('option', {
+        name: 'Frozen Leave',
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Select staff')).queryByRole('option', {
+        name: 'Ceri Terminated (CER)',
+      }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Include inactive/terminated staff'))
+
+    expect(screen.getByText('Ceri inactive annual 2025')).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Select staff')).getByRole('option', {
+        name: 'Ceri Terminated (CER)',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Filter leave type')).getByRole('option', {
+        name: 'Frozen Leave',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Staff: Including inactive')).toBeInTheDocument()
+  })
+
+  it('resets the inactive staff HR records filter', () => {
+    renderHrSection()
+
+    fireEvent.click(screen.getByLabelText('Toggle advanced filters'))
+    fireEvent.click(screen.getByLabelText('Include inactive/terminated staff'))
+    expect(screen.getByText('Ceri inactive annual 2025')).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByLabelText('Reset filters')[0])
+
+    expect(screen.getByLabelText('Include inactive/terminated staff')).not.toBeChecked()
+    expect(screen.queryByText('Ceri inactive annual 2025')).not.toBeInTheDocument()
   })
 
   it('filters HR leave records by exact selected staff id', () => {

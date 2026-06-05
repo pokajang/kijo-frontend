@@ -93,11 +93,12 @@ describe('leaveRecordFilters', () => {
   it('builds sorted type and status options', () => {
     const records = [
       { leaveType: 'Medical', status: 'Rejected' },
+      { leaveType: 'Frozen Leave', status: 'Approved' },
       { leaveType: 'Annual', status: 'Pending' },
       { leaveType: 'Annual', status: 'Approved' },
     ]
 
-    expect(getLeaveRecordTypeOptions(records)).toEqual(['Annual', 'Medical'])
+    expect(getLeaveRecordTypeOptions(records)).toEqual(['Annual', 'Frozen Leave', 'Medical'])
     expect(getLeaveRecordStatusOptions(records)).toEqual(['Pending', 'Approved', 'Rejected'])
   })
 

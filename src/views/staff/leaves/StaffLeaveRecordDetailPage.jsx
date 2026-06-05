@@ -99,7 +99,7 @@ const StaffLeaveRecordDetailPage = () => {
     setLoading(true)
     setError('')
     try {
-      const records = await AH.getAllLeaves()
+      const records = await AH.getAllLeaves({ preset: 'all', startDate: '', endDate: '' })
       const found = findRecordById(records, leaveId)
       setRecord(normalizeLeave(found))
       if (!found) setError('Leave record not found.')

@@ -71,6 +71,9 @@ const ManageLeaves = React.lazy(() => import('./views/staff/leaves/ManageLeaves'
 const StaffLeaveRecordDetailPage = React.lazy(
   () => import('./views/staff/leaves/StaffLeaveRecordDetailPage'),
 )
+const StaffLeaveEntitlementDetailPage = React.lazy(
+  () => import('./views/staff/leaves/StaffLeaveEntitlementDetailPage'),
+)
 const ManageKpi = React.lazy(() => import('./features/kpi/staff/ManageKpi'))
 const AccountWorkspace = React.lazy(() => import('./features/account/self/AccountWorkspace'))
 const KpiWorkspace = React.lazy(() => import('./features/kpi/self/KpiWorkspace'))
@@ -254,6 +257,11 @@ const routes = [
   {
     path: '/pipeline/entries/bulk-add',
     name: 'Bulk Pipeline Entries',
+    element: PipelineEntriesBulkAdd,
+  },
+  {
+    path: '/pipeline/entries/:id/edit',
+    name: 'Edit Pipeline Entry',
     element: PipelineEntriesBulkAdd,
   },
   {
@@ -644,6 +652,14 @@ const routes = [
     element: (
       <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
         <ManageLeaves routeSection="assign" />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/staff/leaves/entitlements/staff/:staffId',
+    element: (
+      <ProtectedRoute allowedRoles={leaveAdminAllowedRoles}>
+        <StaffLeaveEntitlementDetailPage />
       </ProtectedRoute>
     ),
   },

@@ -4,7 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import LoadingImage from '../../../components/LoadingImage'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
 import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
-import PipelineEntryEditModal from './PipelineEntryEditModal'
 import {
   API_BASE,
   classificationLabel,
@@ -105,9 +104,6 @@ const PipelineEntryDetailPage = () => {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
-  const [info, setInfo] = useState('')
-  const [editEntry, setEditEntry] = useState(null)
-  const [reloadKey, setReloadKey] = useState(0)
 
   const loadEntry = useCallback(
     async (signal) => {
@@ -146,12 +142,7 @@ const PipelineEntryDetailPage = () => {
     const controller = new AbortController()
     loadEntry(controller.signal)
     return () => controller.abort()
-  }, [loadEntry, reloadKey])
-
-  const showInfo = (message) => {
-    setInfo(message)
-    setTimeout(() => setInfo(''), 10000)
-  }
+  }, [loadEntry])
 
   const showError = (message) => {
     setActionError(message)
@@ -172,21 +163,15 @@ const PipelineEntryDetailPage = () => {
       )
 
       if (response?.status === 'success') {
-        showInfo('Pipeline entry deleted.')
-        navigate('/pipeline/entries')
+        navigate('/pipeline/entries', {
+          state: { pipelineMessage: 'Pipeline entry deleted.' },
+        })
       } else {
         showError(response?.message || 'Unable to delete pipeline entry.')
       }
     } catch (err) {
       showError(err?.message || 'Unable to delete pipeline entry.')
     }
-  }
-
-  const handleEditSaved = () => {
-    setEditEntry(null)
-    setActionError('')
-    showInfo('Pipeline entry updated.')
-    setReloadKey((key) => key + 1)
   }
 
   const actions = entry
@@ -204,11 +189,11 @@ const PipelineEntryDetailPage = () => {
           },
         ]
       : [
-          entry.canUpdate || entry.canDelete
+          entry.canUpdate
             ? {
                 key: 'edit',
                 label: 'Edit',
-                onClick: () => setEditEntry(entry),
+                onClick: () => navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}/edit`),
               }
             : null,
           entry.canDelete
@@ -224,11 +209,6 @@ const PipelineEntryDetailPage = () => {
 
   return (
     <>
-      {info && (
-        <CAlert color="success" dismissible onClose={() => setInfo('')} className="mb-3">
-          {info}
-        </CAlert>
-      )}
       {actionError && (
         <CAlert color="danger" dismissible onClose={() => setActionError('')} className="mb-3">
           {actionError}
@@ -272,13 +252,6 @@ const PipelineEntryDetailPage = () => {
           </CCol>
         </CRow>
       </DataTableDetailShell>
-
-      <PipelineEntryEditModal
-        visible={Boolean(editEntry)}
-        entry={editEntry}
-        onClose={() => setEditEntry(null)}
-        onSaved={handleEditSaved}
-      />
     </>
   )
 }

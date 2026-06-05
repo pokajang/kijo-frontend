@@ -1,71 +1,89 @@
 // src/views/SectionAssignLeaves.js
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
+  CAlert,
+  CButton,
   CCard,
-  CCardHeader,
   CCardBody,
+  CCardHeader,
+  CCol,
   CForm,
+  CFormInput,
   CFormLabel,
   CFormSelect,
-  CFormInput,
-  CButton,
   CRow,
-  CCol,
-  CAlert,
 } from '@coreui/react'
 import Select from '../../../components/forms/ThemedSelect'
+import { ASSIGNABLE_LEAVE_TYPES } from '../../../components/leave/leaveTypes'
+import {
+  filterActiveStaffRecords,
+  isActiveStaffRecord,
+} from '../../../components/leave/staffActivity'
 import * as AH from './actionHandlers'
 import dialog from '../../../components/dialog/dialogService'
-/**
- * Props:
- *   - staffList: array of staff objects
- *   - onAssigned: fn to re-fetch entitlements after create/update
- *   - editEntitlement: object|null — when non-null, form enters edit mode
- *   - onCancelEdit: fn to exit edit mode
- */
+
+const currentYear = new Date().getFullYear()
+
+const formatStaffOption = (staff = {}) => {
+  const name = staff.full_name || staff.name || 'Unknown Staff'
+  const code = staff.name_code || staff.staff_code
+  const roleParts = [staff.position, staff.department].filter(Boolean)
+  const base = code ? `${name} (${code})` : name
+
+  return roleParts.length ? `${base} - ${roleParts.join(', ')}` : base
+}
+
 const SectionAssignLeaves = ({
   staffList = [],
   onAssigned,
   editEntitlement = null,
   onCancelEdit,
 }) => {
+  const location = useLocation()
+  const assignLeavePrefill = location.state?.assignLeavePrefill || null
   const [selectedStaff, setSelectedStaff] = useState(null)
-  const [assignYear, setAssignYear] = useState(new Date().getFullYear())
+  const [assignYear, setAssignYear] = useState(currentYear)
   const [leaveType, setLeaveType] = useState('')
   const [noOfDays, setNoOfDays] = useState('')
   const [isEdit, setIsEdit] = useState(false)
 
-  // build your dropdown options from staffList
-  const staffOptions = staffList.map((s) => ({
-    value: s.staff_id,
-    label: `${s.full_name} (${s.name_code}) — ${s.position}, ${s.department}`,
+  const selectableStaffList = editEntitlement ? staffList : filterActiveStaffRecords(staffList)
+  const staffOptions = selectableStaffList.map((staff) => ({
+    value: staff.staff_id,
+    label: formatStaffOption(staff),
   }))
 
   useEffect(() => {
     if (editEntitlement) {
+      const staff = staffList.find(
+        (item) => String(item.staff_id) === String(editEntitlement.staff_id),
+      )
       setIsEdit(true)
-      // find the matching staff record
-      const st = staffList.find((s) => s.staff_id === editEntitlement.staff_id)
-      if (st) {
-        setSelectedStaff({
-          value: st.staff_id,
-          label: `${st.full_name} (${st.name_code}) — ${st.position}, ${st.department}`,
-        })
-      }
-      // populate the rest
+      setSelectedStaff(staff ? { value: staff.staff_id, label: formatStaffOption(staff) } : null)
       setAssignYear(editEntitlement.year)
       setLeaveType(editEntitlement.leave_type)
       setNoOfDays(editEntitlement.total_days)
-    } else {
-      // reset to “new” mode
-      setIsEdit(false)
-      setSelectedStaff(null)
-      setAssignYear(new Date().getFullYear())
-      setLeaveType('')
-      setNoOfDays('')
+      return
     }
-  }, [editEntitlement, staffList])
+
+    const prefillStaff = assignLeavePrefill?.staff_id
+      ? staffList.find((staff) => String(staff.staff_id) === String(assignLeavePrefill.staff_id))
+      : null
+    const activePrefillStaff =
+      prefillStaff && isActiveStaffRecord(prefillStaff) ? prefillStaff : null
+
+    setIsEdit(false)
+    setSelectedStaff(
+      activePrefillStaff
+        ? { value: activePrefillStaff.staff_id, label: formatStaffOption(activePrefillStaff) }
+        : null,
+    )
+    setAssignYear(assignLeavePrefill?.year || currentYear)
+    setLeaveType(assignLeavePrefill?.leave_type || '')
+    setNoOfDays('')
+  }, [assignLeavePrefill, editEntitlement, staffList])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -121,17 +139,19 @@ const SectionAssignLeaves = ({
             <CCol md={5}>
               <CFormLabel>Staff Name</CFormLabel>
               <Select
+                aria-label="Staff Name"
                 options={staffOptions}
                 value={selectedStaff}
                 onChange={setSelectedStaff}
                 placeholder="Select staff..."
                 isSearchable
-                isDisabled={isEdit} // lock down when editing
+                isDisabled={isEdit}
               />
             </CCol>
             <CCol md={2}>
               <CFormLabel>For the Year</CFormLabel>
               <CFormInput
+                aria-label="For the Year"
                 type="number"
                 value={assignYear}
                 onChange={(e) => setAssignYear(e.target.value)}
@@ -142,22 +162,23 @@ const SectionAssignLeaves = ({
             </CCol>
             <CCol md={3}>
               <CFormLabel>Type of Leave</CFormLabel>
-              <CFormSelect value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
+              <CFormSelect
+                aria-label="Type of Leave"
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value)}
+              >
                 <option value="">Select type</option>
-                <option value="Annual">Annual</option>
-                <option value="Sick">Sick</option>
-                <option value="Hospitalization">Hospitalization</option>
-                <option value="Maternity">Maternity</option>
-                <option value="Emergency">Emergency</option>
-                <option value="Paternity">Paternity</option>
-                <option value="Unrecorded">Unrecorded</option>
-                <option value="Special">Special</option>
-                <option value="Not Specified">Not Specified</option>
+                {ASSIGNABLE_LEAVE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
               </CFormSelect>
             </CCol>
             <CCol md={2}>
               <CFormLabel>Entitlement (Days)</CFormLabel>
               <CFormInput
+                aria-label="Entitlement (Days)"
                 type="number"
                 value={noOfDays}
                 onChange={(e) => setNoOfDays(e.target.value)}

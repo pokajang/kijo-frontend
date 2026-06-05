@@ -35,6 +35,7 @@ const DataTableDesktop = ({
   onSort,
   className = '',
   rowProps,
+  resetRowIndexOnGroup = false,
 }) => (
   <CTable className={`align-middle mb-0 records-table-compact ${className}`.trim()} hover>
     <CTableHead>
@@ -81,9 +82,11 @@ const DataTableDesktop = ({
       ) : (
         (() => {
           let recordIndex = -1
+          let groupRecordIndex = -1
 
           return rows.map((row, rowIndex) => {
             if (isGroupRow(row)) {
+              groupRecordIndex = -1
               return (
                 <CTableRow
                   key={row.key || `group-${rowIndex}`}
@@ -98,6 +101,8 @@ const DataTableDesktop = ({
             }
 
             recordIndex += 1
+            groupRecordIndex += 1
+            const displayRowIndex = resetRowIndexOnGroup ? groupRecordIndex : recordIndex
             return (
               <CTableRow
                 key={getRowKey(row, recordIndex)}
@@ -117,7 +122,9 @@ const DataTableDesktop = ({
                       )}
                       style={getColumnStyle(column, column.cellStyle)}
                     >
-                      {renderCell ? renderCell(row, column, recordIndex) : row?.[column.key]}
+                      {renderCell
+                        ? renderCell(row, column, displayRowIndex, recordIndex)
+                        : row?.[column.key]}
                     </CTableDataCell>
                   )
                 })}

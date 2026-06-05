@@ -23,6 +23,7 @@ const DataTableActionMenu = ({
   const isControlled =
     typeof openActionKey !== 'undefined' && typeof setOpenActionKey === 'function'
   const isVisible = isControlled ? openActionKey === actionKey : localVisible
+  const visibleActions = actions.filter((action) => action && !action.hidden)
 
   const handleClose = () => {
     if (isControlled) {
@@ -42,8 +43,6 @@ const DataTableActionMenu = ({
   }
 
   const renderAction = (action) => {
-    if (!action || action.hidden) return null
-
     const {
       key,
       label,
@@ -85,6 +84,10 @@ const DataTableActionMenu = ({
     )
   }
 
+  if (visibleActions.length === 0) {
+    return null
+  }
+
   return (
     <CDropdown
       portal
@@ -120,7 +123,7 @@ const DataTableActionMenu = ({
         onMouseDown={(event) => event.stopPropagation()}
         onClick={(event) => event.stopPropagation()}
       >
-        {actions.map(renderAction)}
+        {visibleActions.map(renderAction)}
       </CDropdownMenu>
     </CDropdown>
   )

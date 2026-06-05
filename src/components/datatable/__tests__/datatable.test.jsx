@@ -710,6 +710,32 @@ describe('datatable shared components', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+  it('can reset visible row numbers inside each group', () => {
+    const { container } = render(
+      <DataTableRecordList
+        rows={[
+          { id: 1, name: 'Alpha', year: '2026' },
+          { id: 2, name: 'Beta', year: '2026' },
+          { id: 3, name: 'Bravo', year: '2025' },
+        ]}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        getRowGroupKey={(row) => row.year}
+        getRowGroupLabel={(year) => year}
+        rowGroupSortComparator={(left, right) => Number(right) - Number(left)}
+        resetRowIndexOnGroup
+      />,
+    )
+
+    const recordRows = Array.from(container.querySelectorAll('tbody tr:not(.data-table-group-row)'))
+
+    expect(recordRows).toHaveLength(3)
+    expect(recordRows[0].querySelector('.data-table-row-index-cell')).toHaveTextContent('1')
+    expect(recordRows[1].querySelector('.data-table-row-index-cell')).toHaveTextContent('2')
+    expect(recordRows[2].querySelector('.data-table-row-index-cell')).toHaveTextContent('1')
+  })
+
   it('applies group ordering before pagination for grouped record rows', () => {
     const { container } = render(
       <DataTableRecordList

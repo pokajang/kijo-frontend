@@ -13,6 +13,7 @@ import {
 } from '@coreui/react'
 import { DataTableLoadingState } from '../datatable'
 import { getMyEntitlements, useApplyLeaveHandlers } from './actionHandlers'
+import { formatLeaveBalanceDays, normalizeLeaveType } from './leaveBalanceSummary'
 
 const colorByType = {
   success: 'success',
@@ -21,12 +22,17 @@ const colorByType = {
   info: 'info',
 }
 
-const normalizeLeaveType = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase()
 const isUnpaidLeave = (value) => ['unpaid', 'unpaid leave'].includes(normalizeLeaveType(value))
-const hasPositiveBalance = (entitlement) => Number(entitlement.remaining) > 0
+const hasValue = (value) => value !== null && typeof value !== 'undefined' && value !== ''
+const toNumber = (value) => {
+  const number = Number(value || 0)
+  return Number.isFinite(number) ? number : 0
+}
+const getEntitlementRemaining = (entitlement = {}) =>
+  hasValue(entitlement.remaining)
+    ? toNumber(entitlement.remaining)
+    : toNumber(entitlement.total_days) - toNumber(entitlement.used_days)
+const hasPositiveBalance = (entitlement) => getEntitlementRemaining(entitlement) > 0
 
 const ApplyLeave = ({ onViewRecords }) => {
   const [entitlements, setEntitlements] = useState([])
@@ -107,13 +113,16 @@ const ApplyLeave = ({ onViewRecords }) => {
           (entitlement) =>
             !isUnpaidLeave(entitlement.leave_type) && hasPositiveBalance(entitlement),
         )
-        .map((entitlement) => ({
-          key: `${entitlement.id ?? entitlement.leave_type}-${entitlement.year}`,
-          value: entitlement.leave_type,
-          label: `${entitlement.leave_type} - Balance: ${entitlement.remaining} day${
-            Number(entitlement.remaining) === 1 ? '' : 's'
-          }`,
-        })),
+        .map((entitlement) => {
+          const remaining = getEntitlementRemaining(entitlement)
+          return {
+            key: `${entitlement.id ?? entitlement.leave_type}-${entitlement.year}`,
+            value: entitlement.leave_type,
+            label: `${entitlement.leave_type} - Balance: ${formatLeaveBalanceDays(remaining)} day${
+              remaining === 1 ? '' : 's'
+            }`,
+          }
+        }),
       { key: `unpaid-${currentYear}`, value: 'Unpaid', label: 'Unpaid Leave' },
     ],
     [currentYear, currentYearEntitlements],
@@ -150,7 +159,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                   >
                     <div className="leave-balance-card-title">{entitlement.leave_type}</div>
                     <div className="leave-balance-card-value">
-                      {entitlement.remaining}
+                      {formatLeaveBalanceDays(getEntitlementRemaining(entitlement))}
                       <span> days</span>
                     </div>
                     {entitlement.year && (

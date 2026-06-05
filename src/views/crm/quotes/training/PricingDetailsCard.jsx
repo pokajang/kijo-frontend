@@ -20,6 +20,7 @@ import {
 import {
   getTrainingRateOption,
   getTrainingTravelRegion,
+  getTrainingUnitPriceForDurationUnit,
   shouldApplyTrainingRateFloors,
   trainingRateOptions,
   trainingTravelRegionOptions,
@@ -37,8 +38,11 @@ const labels = {
     pricingCategory: 'Pricing Category',
     travelRegion: 'Travel Region',
     travelMinimum: 'Mob. & accom. minimum',
-    floorExemption: 'Configured minimums are not applied for online or hourly training.',
-    requestOverride: 'Request Override',
+    floorExemption:
+      'Configured minimums are not applied for this pricing category, online training, or hourly training.',
+    approvalRequired: 'Approval Required',
+    managementApprovalBody:
+      'This category needs an approved quote negotiation before it can be saved.',
     negotiationTitle: 'Approved negotiation applied.',
     negotiationBody:
       'Training base rates remain locked at the configured unit, travel/accommodation, and meal rates.',
@@ -82,8 +86,10 @@ const labels = {
     travelRegion: 'Wilayah Perjalanan',
     travelMinimum: 'Minimum mob. & penginapan',
     floorExemption:
-      'Minimum yang ditetapkan tidak digunakan untuk latihan dalam talian atau mengikut jam.',
-    requestOverride: 'Mohon Pengecualian',
+      'Minimum yang ditetapkan tidak digunakan untuk kategori harga ini, latihan dalam talian, atau latihan mengikut jam.',
+    approvalRequired: 'Kelulusan Diperlukan',
+    managementApprovalBody:
+      'Kategori ini memerlukan rundingan sebut harga yang diluluskan sebelum boleh disimpan.',
     negotiationTitle: 'Rundingan diluluskan.',
     negotiationBody:
       'Kadar asas latihan kekal mengikut unit, perjalanan/penginapan dan makanan yang ditetapkan.',
@@ -149,6 +155,10 @@ const PricingDetailsCard = ({
   const unitPriceSuffix =
     formData.pricingBasis === 'per_pax' ? text.perPaxSuffix : `${text.per} ${unitLabel}`
   const hasAppliedNegotiation = Boolean(appliedPriceException)
+  const hasAppliedApproval =
+    hasAppliedNegotiation || Number(formData.priceExceptionRequestId || 0) > 0
+  const needsManagementApproval = selectedRate.requiresManagementApproval && !hasAppliedApproval
+  const showRateNotice = selectedRate.enforceRateFloors !== false || needsManagementApproval
   const travelRateLabel = (() => {
     if (!appliesRateFloors) return text.floorExemption
     if (selectedTravelRegion.amount > 0) {
@@ -202,7 +212,10 @@ const PricingDetailsCard = ({
                     const appliesRateFloors = shouldApplyTrainingRateFloors({
                       ...prev,
                       pricingBasis: nextPricingBasis,
+                      trainingRateType: rate.value,
                     })
+                    const travelRegion = getTrainingTravelRegion(prev.travelRegion)
+                    const hasMealFloor = appliesRateFloors && rate.mealUnitCost > 0
 
                     return {
                       ...prev,
@@ -213,12 +226,17 @@ const PricingDetailsCard = ({
                       durationUnit: prev.durationUnit || 'day(s)',
                       noOfPax: nextPricingBasis === 'per_pax' ? 1 : prev.noOfPax || 25,
                       unitPrice: appliesRateFloors ? rate.unitCost : prev.unitPrice,
-                      mealsProvided:
-                        appliesRateFloors && rate.mealUnitCost > 0 ? 'Yes' : prev.mealsProvided,
-                      mealPrice:
-                        appliesRateFloors && rate.mealUnitCost > 0
+                      travelCharge: appliesRateFloors ? travelRegion.amount : prev.travelCharge,
+                      mealsProvided: appliesRateFloors
+                        ? hasMealFloor
+                          ? 'Yes'
+                          : 'No'
+                        : prev.mealsProvided,
+                      mealPrice: appliesRateFloors
+                        ? hasMealFloor
                           ? rate.mealUnitCost
-                          : prev.mealPrice,
+                          : ''
+                        : prev.mealPrice,
                     }
                   })
                 }}
@@ -255,23 +273,28 @@ const PricingDetailsCard = ({
               </CFormSelect>
             </CCol>
 
-            <CCol xs={12}>
-              <CAlert
-                color={selectedRate.requiresManagementApproval ? 'warning' : 'info'}
-                className="d-flex align-items-center justify-content-between gap-2 mb-0"
-              >
-                <span>
-                  <strong>{selectedRate.label}</strong>
-                  {selectedRate.rateLabel ? `: ${selectedRate.rateLabel}` : ''}
-                  <span className="d-block">{travelRateLabel}</span>
-                </span>
-                {selectedRate.requiresManagementApproval && (
-                  <CButton color="warning" size="sm" onClick={onRequestOverride}>
-                    {text.requestOverride}
-                  </CButton>
-                )}
-              </CAlert>
-            </CCol>
+            {showRateNotice && (
+              <CCol xs={12}>
+                <CAlert
+                  color={needsManagementApproval ? 'warning' : 'info'}
+                  className="d-flex align-items-center justify-content-between gap-2 mb-0"
+                >
+                  <span>
+                    <strong>{selectedRate.label}</strong>
+                    {selectedRate.rateLabel ? `: ${selectedRate.rateLabel}` : ''}
+                    {needsManagementApproval && (
+                      <span className="d-block">{text.managementApprovalBody}</span>
+                    )}
+                    <span className="d-block">{travelRateLabel}</span>
+                  </span>
+                  {needsManagementApproval && (
+                    <CButton color="warning" size="sm" onClick={onRequestOverride}>
+                      {text.approvalRequired}
+                    </CButton>
+                  )}
+                </CAlert>
+              </CCol>
+            )}
 
             {hasAppliedNegotiation && (
               <CCol xs={12}>
@@ -300,7 +323,12 @@ const PricingDetailsCard = ({
                       trainingDuration: 1,
                       durationUnit: 'day(s)',
                       noOfPax: 25,
-                      unitPrice: prev.trainingTypeOption === 'Online' ? 3500 : 4500,
+                      unitPrice: getTrainingUnitPriceForDurationUnit({
+                        durationUnit: 'day(s)',
+                        trainingRateType: prev.trainingRateType,
+                        trainingTypeOption: prev.trainingTypeOption,
+                        fallbackUnitPrice: prev.unitPrice,
+                      }),
                     }))
                   }
                 />
@@ -370,6 +398,12 @@ const PricingDetailsCard = ({
                       setFormData((prev) => ({
                         ...prev,
                         durationUnit: e.target.value,
+                        unitPrice: getTrainingUnitPriceForDurationUnit({
+                          durationUnit: e.target.value,
+                          trainingRateType: prev.trainingRateType,
+                          trainingTypeOption: prev.trainingTypeOption,
+                          fallbackUnitPrice: prev.unitPrice,
+                        }),
                       }))
                     }
                   >

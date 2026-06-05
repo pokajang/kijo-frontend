@@ -6,6 +6,36 @@ import { appendQueryParams } from '../../../utils/detailPages'
 
 const API_BASE = `${import.meta.env.VITE_API_BASE}`.replace(/\/+$/, '')
 
+const readJsonPayload = async (res) => {
+  try {
+    return await res.json()
+  } catch {
+    return null
+  }
+}
+
+const fetchLeaveJson = async (url, options = {}) => {
+  const res = await fetch(url, {
+    credentials: 'include',
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    },
+  })
+  const result = await readJsonPayload(res)
+
+  if (!res.ok) {
+    throw new Error(result?.message || `Request failed with HTTP ${res.status}`)
+  }
+
+  if (result?.status !== 'success') {
+    throw new Error(result?.message || 'Request failed')
+  }
+
+  return result
+}
+
 // VIEW ALL LEAVES SECTION - 1ST SECTION
 const normalizeLeavePayload = (result) => {
   const leaves = Array.isArray(result.leaves)
@@ -32,12 +62,8 @@ export async function getAllLeavesPayload(periodRange) {
   const paramSets = getYearScopedParamSets(periodRange)
   const payloads = await Promise.all(
     paramSets.map(async (params) => {
-      const res = await fetch(appendQueryParams(`${API_BASE}/hr/leaves`, params), {
-        credentials: 'include',
-      })
-      const result = await res.json()
-      if (result.status === 'success') return normalizeLeavePayload(result)
-      throw new Error(result.message || 'Failed to fetch leave records')
+      const result = await fetchLeaveJson(appendQueryParams(`${API_BASE}/hr/leaves`, params))
+      return normalizeLeavePayload(result)
     }),
   )
 
@@ -55,104 +81,64 @@ export async function getAllLeaves(periodRange) {
 
 // workflow action: recommend, approve, reject, or revoke
 export async function leaveAction(id, action, remarks) {
-  const res = await fetch(`${API_BASE}/hr/leaves/${encodeURIComponent(id)}/action`, {
+  const result = await fetchLeaveJson(`${API_BASE}/hr/leaves/${encodeURIComponent(id)}/action`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ id, action, remarks }),
   })
-  const result = await res.json()
-  if (result.status === 'success') {
-    dispatchAppNotificationsChanged()
-    return result
-  }
-  throw new Error(result.message || 'Leave action failed')
+  dispatchAppNotificationsChanged()
+  return result
 }
 
 export async function cancelLeave(id) {
-  const res = await fetch(`${API_BASE}/hr/leaves/${encodeURIComponent(id)}/cancel`, {
+  const result = await fetchLeaveJson(`${API_BASE}/hr/leaves/${encodeURIComponent(id)}/cancel`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ id }),
   })
-  const result = await res.json()
-  if (result.status === 'success') {
-    dispatchAppNotificationsChanged()
-    return result
-  }
-  throw new Error(result.message || 'Leave cancellation failed')
+  dispatchAppNotificationsChanged()
+  return result
 }
 
 // LEAVE ENTITLEMENT SECTION
 export async function getStaffList() {
-  const res = await fetch(`${API_BASE}/staff/list`, {
-    credentials: 'include',
-  })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return Array.isArray(result.staff)
-      ? result.staff
-      : Array.isArray(result.data)
-        ? result.data
-        : []
-  }
-  throw new Error(result.message || 'Failed to fetch staff list')
+  const result = await fetchLeaveJson(`${API_BASE}/staff/list`)
+  return Array.isArray(result.staff) ? result.staff : Array.isArray(result.data) ? result.data : []
 }
 
 export async function getAllEntitlements() {
-  const res = await fetch(`${API_BASE}/hr/leaves/entitlements`, {
-    credentials: 'include',
-  })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return Array.isArray(result.allocations)
-      ? result.allocations
-      : Array.isArray(result.data)
-        ? result.data
-        : []
-  }
-  throw new Error(result.message || 'Failed to fetch entitlements')
+  const result = await fetchLeaveJson(`${API_BASE}/hr/leaves/entitlements`)
+  return Array.isArray(result.allocations)
+    ? result.allocations
+    : Array.isArray(result.data)
+      ? result.data
+      : []
+}
+
+export async function getLeaveEntitlementHistory() {
+  const result = await fetchLeaveJson(`${API_BASE}/hr/leaves/entitlements/history`)
+  return Array.isArray(result.history)
+    ? result.history
+    : Array.isArray(result.data)
+      ? result.data
+      : []
 }
 
 export async function assignLeaveEntitlement(payload) {
-  const res = await fetch(`${API_BASE}/hr/leaves/entitlements`, {
+  return fetchLeaveJson(`${API_BASE}/hr/leaves/entitlements`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(payload),
   })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return result
-  }
-  throw new Error(result.message || 'Assignment failed')
 }
 
 export async function deleteEntitlement(id) {
-  const res = await fetch(`${API_BASE}/hr/leaves/entitlements/${encodeURIComponent(id)}`, {
+  return fetchLeaveJson(`${API_BASE}/hr/leaves/entitlements/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ id }),
   })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return result
-  }
-  throw new Error(result.message || 'Failed to delete entitlement')
 }
 
 export async function updateEntitlement(payload) {
-  const res = await fetch(`${API_BASE}/hr/leaves/entitlements/${encodeURIComponent(payload.id)}`, {
+  return fetchLeaveJson(`${API_BASE}/hr/leaves/entitlements/${encodeURIComponent(payload.id)}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(payload),
   })
-  const result = await res.json()
-  if (result.status === 'success') {
-    return result
-  }
-  throw new Error(result.message || 'Failed to update entitlement')
 }

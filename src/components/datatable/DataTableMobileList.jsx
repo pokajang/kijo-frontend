@@ -24,6 +24,7 @@ const DataTableMobileList = ({
   desktopBreakpoint = 'lg',
   rowProps,
   mobileRecord,
+  resetRowIndexOnGroup = false,
 }) => (
   <div className={`d-${desktopBreakpoint}-none data-table-mobile-list records-mobile-list`}>
     {rows.length === 0 ? (
@@ -31,9 +32,11 @@ const DataTableMobileList = ({
     ) : (
       (() => {
         let recordIndex = -1
+        let groupRecordIndex = -1
 
         return rows.map((row, index) => {
           if (isGroupRow(row)) {
+            groupRecordIndex = -1
             return (
               <div
                 key={row.key || `group-${index}`}
@@ -46,11 +49,13 @@ const DataTableMobileList = ({
           }
 
           recordIndex += 1
+          groupRecordIndex += 1
+          const displayRowIndex = resetRowIndexOnGroup ? groupRecordIndex : recordIndex
           if (typeof renderItem === 'function') {
             const itemRowProps = rowProps?.(row, recordIndex) || {}
             return (
               <React.Fragment key={getRowKey(row, recordIndex)}>
-                {renderItem(row, recordIndex, {
+                {renderItem(row, displayRowIndex, {
                   pageStart,
                   showTitle,
                   showSubtitle,
@@ -105,7 +110,7 @@ const DataTableMobileList = ({
                   {eyebrow && <div className="small text-muted text-truncate">{eyebrow}</div>}
                   <div className="d-flex align-items-center gap-2 min-w-0">
                     <span className="records-mobile-row-index text-muted">
-                      #{pageStart + recordIndex + 1}
+                      #{resetRowIndexOnGroup ? displayRowIndex + 1 : pageStart + recordIndex + 1}
                     </span>
                     {showTitle && (structured || getTitle) && (
                       <span className="records-mobile-quote-id text-truncate">{title || '-'}</span>

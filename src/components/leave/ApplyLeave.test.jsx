@@ -119,4 +119,43 @@ describe('ApplyLeave', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Unpaid Leave' })).toBeInTheDocument()
   })
+
+  it('shows Frozen Leave as an apply option when entitlement has balance', async () => {
+    const currentYear = new Date().getFullYear()
+    const fetchMock = vi.fn(async (url) => {
+      if (String(url).includes('hr/leaves/entitlements/mine')) {
+        return new Response(
+          JSON.stringify({
+            status: 'success',
+            entitlements: [
+              {
+                id: 2,
+                leave_type: 'Frozen Leave',
+                year: currentYear,
+                total_days: 3,
+                used_days: 1,
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ApplyLeave />)
+
+    expect(await screen.findByText('Frozen Leave')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByLabelText('Type of Leave')).toHaveValue('Frozen Leave')
+    })
+    expect(
+      screen.getByRole('option', { name: /Frozen Leave - Balance: 2 days/i }),
+    ).toBeInTheDocument()
+  })
 })

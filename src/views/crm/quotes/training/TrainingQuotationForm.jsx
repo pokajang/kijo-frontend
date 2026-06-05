@@ -17,6 +17,7 @@ import { formatTrainingDurationLabel } from './trainingDuration'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchPriceException } from '../priceException'
+import { getTrainingRateOption } from './trainingRates'
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
@@ -307,6 +308,18 @@ const TrainingQuotationForm = ({
     (formData.discountType === 'percent' ? parseFloat(formData.discountValue) <= 100 : true)
 
   const isPerPaxMode = formData.pricingBasis === 'per_pax'
+  const selectedRate = getTrainingRateOption(formData.trainingRateType)
+  const allowsZeroPricing = selectedRate.enforceRateFloors === false
+  const unitPriceNumber = Number(formData.unitPrice)
+  const mealPriceNumber = Number(formData.mealPrice)
+  const hasValidUnitPrice = allowsZeroPricing
+    ? formData.unitPrice !== '' && !Number.isNaN(unitPriceNumber) && unitPriceNumber >= 0
+    : unitPriceNumber > 0
+  const hasValidMealPrice =
+    formData.mealsProvided === 'No' ||
+    (allowsZeroPricing
+      ? formData.mealPrice !== '' && !Number.isNaN(mealPriceNumber) && mealPriceNumber >= 0
+      : mealPriceNumber > 0)
   const hasValidSessionInputs = isPerPaxMode
     ? true
     : formData.trainingQty > 0 && formData.trainingDuration > 0
@@ -314,13 +327,13 @@ const TrainingQuotationForm = ({
   const isPricingDetailsComplete =
     hasValidSessionInputs &&
     formData.noOfPax > 0 &&
-    formData.unitPrice > 0 &&
-    (formData.mealsProvided === 'No' || (formData.mealPrice && formData.mealPrice > 0)) &&
+    hasValidUnitPrice &&
+    hasValidMealPrice &&
     isDiscountValid
 
   const handleRequestOverride = () => {
     dialog.alert(
-      'Pre-quote override requests are disabled. Save the quotation first, then request negotiation from the quote records page.',
+      'This pricing category can be saved with the configured reference rates. Negotiation requests remain available from quote records when a saved quote needs a discount approval.',
     )
   }
 

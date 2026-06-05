@@ -23,7 +23,6 @@ import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
 import PipelineEntryProofModal from './components/PipelineEntryProofModal'
-import PipelineEntryEditModal from './PipelineEntryEditModal'
 import PipelineEntriesShell from './PipelineEntriesShell'
 import {
   API_BASE,
@@ -61,7 +60,6 @@ const PipelineEntriesRecords = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [proofPreviewEntry, setProofPreviewEntry] = useState(null)
-  const [editEntry, setEditEntry] = useState(null)
   const baselineFilters = useMemo(() => getDefaultPipelineRecordFilters(), [])
   const [filters, setFilters] = useState(() => baselineFilters)
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
@@ -209,13 +207,6 @@ const PipelineEntriesRecords = () => {
     }
   }
 
-  const handleEditSaved = () => {
-    setEditEntry(null)
-    setInfo('Pipeline entry updated.')
-    setError('')
-    setReloadKey((key) => key + 1)
-  }
-
   const getActions = (entry) =>
     entry.recordSource === 'legal_compliance'
       ? [
@@ -231,11 +222,11 @@ const PipelineEntriesRecords = () => {
           },
         ]
       : [
-          entry.canUpdate || entry.canDelete
+          entry.canUpdate
             ? {
                 key: 'edit',
                 label: 'Edit',
-                onClick: () => setEditEntry(entry),
+                onClick: () => navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}/edit`),
               }
             : null,
           entry.photoUrl
@@ -539,12 +530,6 @@ const PipelineEntriesRecords = () => {
       <PipelineEntryProofModal
         entry={proofPreviewEntry}
         onClose={() => setProofPreviewEntry(null)}
-      />
-      <PipelineEntryEditModal
-        visible={Boolean(editEntry)}
-        entry={editEntry}
-        onClose={() => setEditEntry(null)}
-        onSaved={handleEditSaved}
       />
     </PipelineEntriesShell>
   )

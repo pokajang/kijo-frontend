@@ -115,6 +115,7 @@ const DataTableRecordList = ({
   getRowGroupKey,
   getRowGroupLabel,
   rowGroupSortComparator,
+  resetRowIndexOnGroup = false,
   showDesktopSummary = true,
   desktopUtilityPlacement = 'inside',
   desktopUtilityPortalId,
@@ -487,10 +488,12 @@ const DataTableRecordList = ({
     }
   }
 
-  const renderTableCell = (row, column, rowIndex) => {
-    if (column.key === '__rowIndex') return pageStart + rowIndex + 1
+  const renderTableCell = (row, column, rowIndex, absoluteRowIndex = rowIndex) => {
+    if (column.key === '__rowIndex') {
+      return resetRowIndexOnGroup ? rowIndex + 1 : pageStart + rowIndex + 1
+    }
     if (column.key === '__actions') {
-      return renderActionMenu(row, `${idPrefix}-${getRowKey(row, rowIndex)}-desktop`)
+      return renderActionMenu(row, `${idPrefix}-${getRowKey(row, absoluteRowIndex)}-desktop`)
     }
     const sourceColumn = column.sourceColumn || column
     const renderPrimitiveTextCell = (content) => {
@@ -606,6 +609,7 @@ const DataTableRecordList = ({
             sortDir={sortDir}
             onSort={toggleSort}
             rowProps={getMergedRowProps}
+            resetRowIndexOnGroup={resetRowIndexOnGroup}
           />
         </DataTableViewport>
 
@@ -629,6 +633,7 @@ const DataTableRecordList = ({
           rowProps={getMergedRowProps}
           mobileRecord={mobileRecord}
           desktopBreakpoint={desktopBreakpoint}
+          resetRowIndexOnGroup={resetRowIndexOnGroup}
         />
 
         {showFooter && (

@@ -58,4 +58,34 @@ describe('leave actionHandlers period loading', () => {
       expect.stringContaining('year=2026'),
     ])
   })
+
+  it('surfaces API error messages for failed leave record requests', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 403,
+        json: async () => ({ status: 'error', message: 'Not allowed' }),
+      })),
+    )
+
+    await expect(getAllLeavesPayload({ preset: 'all' })).rejects.toThrow('Not allowed')
+  })
+
+  it('surfaces HTTP status when failed leave responses are not JSON', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('Invalid JSON')
+        },
+      })),
+    )
+
+    await expect(getAllLeavesPayload({ preset: 'all' })).rejects.toThrow(
+      'Request failed with HTTP 500',
+    )
+  })
 })
