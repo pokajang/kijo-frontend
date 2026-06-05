@@ -245,7 +245,7 @@ const LeaveRecordTable = ({
     {
       key: 'cancel',
       label: 'Cancel',
-      disabled: ['Cancelled', 'Rejected'].includes(record.status),
+      disabled: record.status === 'Cancelled',
       onClick: () => handleCancel(record.id),
     },
   ]

@@ -11,6 +11,7 @@ import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs
 import { useAuth } from '../../../auth/AuthProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
 import { getPeriodRangePreset } from '../../../components/filters'
+import { APP_NOTIFICATIONS_CHANGED_EVENT } from '../../../notifications/appNotificationEvents'
 
 const LEAVE_ADMIN_ALLOWED_ROLES = ['System Admin', 'HR']
 
@@ -82,6 +83,29 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
     fetchStaffList()
     fetchEntitlements()
   }, [canManageLeaveAdmin, fetchAllLeaveRecords, routeSection])
+
+  useEffect(() => {
+    if (routeSection !== 'records') return undefined
+
+    const refreshRecords = () => {
+      fetchAllLeaveRecords()
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'hidden') return
+      refreshRecords()
+    }
+
+    window.addEventListener(APP_NOTIFICATIONS_CHANGED_EVENT, refreshRecords)
+    window.addEventListener('focus', refreshRecords)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+
+    return () => {
+      window.removeEventListener(APP_NOTIFICATIONS_CHANGED_EVENT, refreshRecords)
+      window.removeEventListener('focus', refreshRecords)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [fetchAllLeaveRecords, routeSection])
 
   const editEntitlement = useMemo(
     () =>

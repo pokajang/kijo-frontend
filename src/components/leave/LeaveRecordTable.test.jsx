@@ -129,4 +129,48 @@ describe('LeaveRecordTable', () => {
     expect(groupRows[0]).toHaveTextContent('2026')
     expect(groupRows[1]).toHaveTextContent('2025')
   })
+
+  it('allows cancelling rejected personal leave records but not already-cancelled records', async () => {
+    const handleCancel = vi.fn()
+    renderTable({
+      periodRange: getPeriodRangePreset('all'),
+      handleCancel,
+      leaveRecords: [
+        {
+          id: 1,
+          status: 'Rejected',
+          leaveType: 'Annual',
+          duration: 1,
+          reason: 'Rejected leave',
+          appliedAt: '2026-01-05 09:15:00',
+          startDate: '2026-01-10',
+          startTime: '08:30',
+          endDate: '2026-01-10',
+          endTime: '17:30',
+        },
+        {
+          id: 2,
+          status: 'Cancelled',
+          leaveType: 'Medical',
+          duration: 1,
+          reason: 'Cancelled leave',
+          appliedAt: '2026-01-06 09:15:00',
+          startDate: '2026-01-12',
+          startTime: '08:30',
+          endDate: '2026-01-12',
+          endTime: '17:30',
+        },
+      ],
+    })
+
+    const cancelItems = document.querySelectorAll('.record-action-menu .dropdown-item')
+    expect(cancelItems[0]).not.toHaveAttribute('aria-disabled', 'true')
+    expect(cancelItems[1]).toHaveAttribute('aria-disabled', 'true')
+
+    fireEvent.click(cancelItems[0])
+    expect(handleCancel).toHaveBeenCalledWith(1)
+
+    fireEvent.click(cancelItems[1])
+    expect(handleCancel).toHaveBeenCalledTimes(1)
+  })
 })

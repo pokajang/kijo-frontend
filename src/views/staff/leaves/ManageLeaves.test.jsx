@@ -1,10 +1,11 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 
 import ManageLeaves from './ManageLeaves'
 import * as AH from './actionHandlers'
+import { APP_NOTIFICATIONS_CHANGED_EVENT } from '../../../notifications/appNotificationEvents'
 
 const authState = vi.hoisted(() => ({
   user: { roles: ['Manager'] },
@@ -175,6 +176,24 @@ describe('ManageLeaves permissions', () => {
     await waitFor(() => {
       expect(screen.getByTestId('can-recommend')).toHaveTextContent('false')
       expect(screen.getByTestId('can-approve')).toHaveTextContent('true')
+    })
+  })
+
+  it('refreshes HR-facing leave records when leave notifications change', async () => {
+    render(
+      <MemoryRouter>
+        <ManageLeaves />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(AH.getAllLeavesPayload).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent(window, new Event(APP_NOTIFICATIONS_CHANGED_EVENT))
+
+    await waitFor(() => {
+      expect(AH.getAllLeavesPayload).toHaveBeenCalledTimes(2)
     })
   })
 })
