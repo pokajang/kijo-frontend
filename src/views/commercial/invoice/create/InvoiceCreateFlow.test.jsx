@@ -8,6 +8,15 @@ import { submitInvoicePayload } from './invoiceCreateApi'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const submitInvoicePayloadMock = vi.hoisted(() => vi.fn())
+const commercialDocsMock = vi.hoisted(() => ({
+  docs: {
+    invoices: [],
+  },
+  groups: [],
+  loading: false,
+  error: '',
+  hasExistingDocs: false,
+}))
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -62,12 +71,7 @@ vi.mock('../../../project/manage/commercialDocsWarning', () => ({
   confirmExistingCommercialDocs: vi.fn(() => Promise.resolve(true)),
   hasProjectCommercialDocGroups: vi.fn(() => false),
   ProjectCommercialDocsNotice: () => null,
-  useProjectCommercialDocs: () => ({
-    groups: [],
-    loading: false,
-    error: '',
-    hasExistingDocs: false,
-  }),
+  useProjectCommercialDocs: () => commercialDocsMock,
 }))
 
 vi.mock('./invoiceCreateApi', () => ({
@@ -86,9 +90,11 @@ const project = {
   project_type: 'Manpower Supply',
   client_name: 'Client A',
   client_pics: [{ full_name: 'PIC A' }],
+  quote_value: 200,
+  status: 'Active',
 }
 
-const renderFlow = (props = {}) => {
+const renderFlow = ({ project: projectOverride, ...props } = {}) => {
   localStorage.setItem(
     'invoiceDraft:44',
     JSON.stringify({
@@ -111,7 +117,11 @@ const renderFlow = (props = {}) => {
 
   return render(
     <MemoryRouter>
-      <InvoiceCreateFlow project={project} onBack={vi.fn()} {...props} />
+      <InvoiceCreateFlow
+        project={{ ...project, ...(projectOverride || {}) }}
+        onBack={vi.fn()}
+        {...props}
+      />
     </MemoryRouter>,
   )
 }
@@ -127,6 +137,11 @@ describe('InvoiceCreateFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    commercialDocsMock.docs = { invoices: [] }
+    commercialDocsMock.groups = []
+    commercialDocsMock.loading = false
+    commercialDocsMock.error = ''
+    commercialDocsMock.hasExistingDocs = false
     submitInvoicePayload.mockResolvedValue({
       success: true,
       invoiceId: 123,
@@ -154,6 +169,9 @@ describe('InvoiceCreateFlow', () => {
     expect(await screen.findByText(/Review the invoice details below/i)).toBeInTheDocument()
     expect(submitInvoicePayload).not.toHaveBeenCalled()
     expect(screen.getByText('Manpower Deployment')).toBeInTheDocument()
+    expect(screen.getByText('Project Billing')).toBeInTheDocument()
+    expect(screen.getByText('Already invoiced')).toBeInTheDocument()
+    expect(screen.getByText('Yet to be invoiced after this invoice')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /back to edit/i }))
 
@@ -166,6 +184,7 @@ describe('InvoiceCreateFlow', () => {
 
     await clickReviewInvoice()
     await screen.findByText(/Review the invoice details below/i)
+    expect(screen.queryByRole('checkbox', { name: /close project/i })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /^create invoice$/i }))
 
     await waitFor(() => expect(submitInvoicePayload).toHaveBeenCalledTimes(1))
@@ -175,6 +194,7 @@ describe('InvoiceCreateFlow', () => {
         service_type: 'Manpower Supply',
         invoice_purpose: 'Manpower Deployment',
         amount: 100,
+        close_project: false,
         breakdown: expect.any(Array),
       }),
     )
@@ -206,5 +226,110 @@ describe('InvoiceCreateFlow', () => {
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/commercial/invoice/123'))
     expect(screen.queryByText(/INV-123 was created successfully/i)).not.toBeInTheDocument()
+  })
+
+  it('can request project closure when this invoice leaves no uninvoiced value', async () => {
+    commercialDocsMock.docs = {
+      invoices: [{ id: 1, invoice_ref_no: 'INV-001', status: 'Pending', grand_total: 100 }],
+    }
+    submitInvoicePayload.mockResolvedValue({
+      success: true,
+      invoiceId: 123,
+      invoiceRefNo: 'INV-123',
+      projectClosed: true,
+    })
+    renderFlow({ origin: 'invoice-list' })
+
+    await clickReviewInvoice()
+    await screen.findByText(/Review the invoice details below/i)
+    expect(screen.getByText('RM 200.00')).toBeInTheDocument()
+    expect(screen.getAllByText('RM 100.00').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('RM 0.00').length).toBeGreaterThanOrEqual(1)
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /close project/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^create invoice$/i }))
+
+    await waitFor(() => expect(submitInvoicePayload).toHaveBeenCalledTimes(1))
+    expect(submitInvoicePayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        close_project: true,
+      }),
+    )
+    expect(await screen.findByText('Project status was marked Completed.')).toBeInTheDocument()
+  })
+
+  it('displays tolerance-sized remaining value as zero when project can close', async () => {
+    commercialDocsMock.docs = {
+      invoices: [{ id: 1, invoice_ref_no: 'INV-001', status: 'Pending', grand_total: 100 }],
+    }
+    renderFlow({
+      project: {
+        quote_value: 200.009,
+        status: 'Active',
+      },
+    })
+
+    await clickReviewInvoice()
+    await screen.findByText(/Review the invoice details below/i)
+
+    expect(screen.getByRole('checkbox', { name: /close project/i })).toBeInTheDocument()
+    const remainingLabel = screen.getByText('Yet to be invoiced after this invoice')
+    expect(remainingLabel.nextElementSibling).toHaveTextContent('RM 0.00')
+  })
+
+  it('does not offer project closure when only cancelled invoices would cover project value', async () => {
+    commercialDocsMock.docs = {
+      invoices: [
+        { id: 1, invoice_ref_no: 'INV-001', status: 'Pending', grand_total: 100 },
+        { id: 2, invoice_ref_no: 'INV-002', status: 'Cancelled', grand_total: 800 },
+      ],
+    }
+    renderFlow({
+      project: {
+        quote_value: 1000,
+        status: 'Active',
+      },
+    })
+
+    await clickReviewInvoice()
+    await screen.findByText(/Review the invoice details below/i)
+
+    expect(screen.getByText('RM 1,000.00')).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /close project/i })).not.toBeInTheDocument()
+  })
+
+  it('does not offer project closure for non-active projects', async () => {
+    commercialDocsMock.docs = {
+      invoices: [{ id: 1, invoice_ref_no: 'INV-001', status: 'Pending', grand_total: 100 }],
+    }
+    renderFlow({
+      project: {
+        status: 'Terminated',
+      },
+    })
+
+    await clickReviewInvoice()
+    await screen.findByText(/Review the invoice details below/i)
+
+    expect(screen.queryByRole('checkbox', { name: /close project/i })).not.toBeInTheDocument()
+  })
+
+  it('does not offer project closure when closure details already exist', async () => {
+    commercialDocsMock.docs = {
+      invoices: [{ id: 1, invoice_ref_no: 'INV-001', status: 'Pending', grand_total: 100 }],
+    }
+    renderFlow({
+      project: {
+        status: 'Active',
+        closing_details: {
+          close_date: '2026-06-01',
+        },
+      },
+    })
+
+    await clickReviewInvoice()
+    await screen.findByText(/Review the invoice details below/i)
+
+    expect(screen.queryByRole('checkbox', { name: /close project/i })).not.toBeInTheDocument()
   })
 })

@@ -70,6 +70,12 @@ describe('projectFilters', () => {
     expect(
       applyProjectFilters({ projects, filters: { ...defaultFilters, statusFilter: 'Completed' } }),
     ).toEqual([projects[1]])
+    expect(
+      applyProjectFilters({
+        projects: [{ ...projects[1], status: ' completed ' }],
+        filters: { ...defaultFilters, statusFilter: 'Completed' },
+      }),
+    ).toEqual([{ ...projects[1], status: ' completed ' }])
 
     expect(
       applyProjectFilters({

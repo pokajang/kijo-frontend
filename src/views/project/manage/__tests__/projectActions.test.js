@@ -50,12 +50,21 @@ describe('projectActions', () => {
   })
 
   it.each(['Completed', 'Terminated', 'Closed'])(
-    'disables close actions for %s projects',
+    'disables close and commercial document actions for %s projects',
     (status) => {
       const actions = buildProjectActions({
         project: { ...activeSupplyProject, status },
       })
+      const commercialActionKeys = ['invoice', 'delivery-order', 'vendor-loa', 'supplier-po']
 
+      commercialActionKeys.forEach((key) => {
+        expect(getAction(actions, key)).toEqual(
+          expect.objectContaining({
+            disabled: true,
+            tooltip: 'Project is already closed.',
+          }),
+        )
+      })
       expect(getAction(actions, 'complete')).toEqual(
         expect.objectContaining({
           disabled: true,

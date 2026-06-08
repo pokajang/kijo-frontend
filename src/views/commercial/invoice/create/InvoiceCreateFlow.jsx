@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
 
@@ -9,6 +9,7 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../../../project/manage/commercialDocsWarning'
+import { isProjectActive } from '../../../project/manage/projectStatus'
 import InvoiceFormShell from '../../../../shared/invoice/InvoiceFormShell'
 import { normalizePaymentTermsDays } from '../../../../shared/paymentTerms'
 import { buildInvoiceCreatePayload } from './invoiceCreatePayload'
@@ -43,6 +44,51 @@ const getProjectPaymentTerms = (project = {}) => {
     paymentTermsSource: source,
     paymentTermsBaseSource: source,
     overridePaymentTerms: false,
+  }
+}
+
+const MONEY_TOLERANCE = 0.01
+
+const toMoneyNumber = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+const toNullableMoneyNumber = (value) => {
+  if (value === undefined || value === null || value === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+const isCancelledInvoice = (invoice = {}) => {
+  const status = String(invoice.status || '').toLowerCase()
+  return status.includes('void') || status.includes('cancel')
+}
+
+const buildProjectInvoiceSummary = ({ project, payload, docs }) => {
+  const projectValue = toNullableMoneyNumber(project?.quote_value ?? project?.quoteValue)
+  const invoices = Array.isArray(docs?.invoices) ? docs.invoices : []
+  const alreadyInvoiced = invoices
+    .filter((invoice) => !isCancelledInvoice(invoice))
+    .reduce((total, invoice) => total + toMoneyNumber(invoice.grand_total), 0)
+  const thisInvoice = toMoneyNumber(payload?.grand_total)
+  const hasProjectValue = projectValue !== null && projectValue > 0
+  const remainingBefore = hasProjectValue ? projectValue - alreadyInvoiced : null
+  const remainingAfter = hasProjectValue ? projectValue - alreadyInvoiced - thisInvoice : null
+  const activeProject = isProjectActive({
+    ...project,
+    closed: project?.closed || project?.closing_details?.close_date || '',
+  })
+  const canCloseProject = hasProjectValue && remainingAfter <= MONEY_TOLERANCE && activeProject
+
+  return {
+    projectValue,
+    alreadyInvoiced,
+    thisInvoice,
+    remainingBefore,
+    remainingAfter,
+    hasProjectValue,
+    canCloseProject,
   }
 }
 
@@ -167,6 +213,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const [submitting, setSubmitting] = useState(false)
   const [createdInvoice, setCreatedInvoice] = useState(null)
   const [reviewPayload, setReviewPayload] = useState(null)
+  const [closeProject, setCloseProject] = useState(false)
   const effectivePaymentMethod =
     paymentMethodOverride || (quoteDetails?.payment_method || '').trim().toLowerCase()
   const missingTrainingDates =
@@ -190,6 +237,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     setGrantApprovalNo('')
     setCreatedInvoice(null)
     setReviewPayload(null)
+    setCloseProject(false)
     setLoaNo(project?.po_loa_number || project?.client_award_ref_no || '')
     setClientOverrides({
       clientName: project?.client_name || '',
@@ -388,14 +436,28 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     }
 
     setReviewPayload(built.payload)
+    setCloseProject(false)
     setStep('review')
   }
+
+  const projectInvoiceSummary = useMemo(
+    () =>
+      buildProjectInvoiceSummary({
+        project,
+        payload: reviewPayload,
+        docs: commercialDocs.docs,
+      }),
+    [commercialDocs.docs, project, reviewPayload],
+  )
 
   const handleConfirmCreateInvoice = async () => {
     if (submitting) return
     setSubmitting(true)
     try {
-      const result = await submitInvoicePayload(reviewPayload)
+      const result = await submitInvoicePayload({
+        ...reviewPayload,
+        close_project: Boolean(closeProject && projectInvoiceSummary.canCloseProject),
+      })
       if (result?.openExisting && result.invoiceId) {
         navigate(`/commercial/invoice/${result.invoiceId}`)
         return
@@ -406,6 +468,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
           setCreatedInvoice({
             invoiceId: result.invoiceId,
             invoiceRefNo: result.invoiceRefNo,
+            projectClosed: result.projectClosed,
             projectId: project.id,
           })
           setStep('success')
@@ -534,6 +597,9 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
         <InvoiceReviewStep
           payload={reviewPayload}
           project={project}
+          projectInvoiceSummary={projectInvoiceSummary}
+          closeProject={closeProject && projectInvoiceSummary.canCloseProject}
+          onCloseProjectChange={setCloseProject}
           submitting={submitting}
           onBack={() => setStep('edit')}
           onConfirm={handleConfirmCreateInvoice}

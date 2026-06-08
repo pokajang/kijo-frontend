@@ -10,6 +10,11 @@ export const PROJECT_COMMERCIAL_DOCUMENT_TYPES = Object.freeze({
 
 const closedProjectTooltip = 'Project is already closed.'
 
+const commercialDocumentActionProps = (closedProject) => ({
+  disabled: closedProject,
+  tooltip: closedProject ? closedProjectTooltip : undefined,
+})
+
 export const buildProjectActions = ({
   project,
   deleting = false,
@@ -28,6 +33,7 @@ export const buildProjectActions = ({
       ? {
           key: 'jd14',
           label: 'Generate JD14',
+          ...commercialDocumentActionProps(closedProject),
           onClick: () =>
             onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.JD14, project),
         }
@@ -35,24 +41,28 @@ export const buildProjectActions = ({
     {
       key: 'invoice',
       label: 'Generate Invoice',
+      ...commercialDocumentActionProps(closedProject),
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.INVOICE, project),
     },
     {
       key: 'delivery-order',
       label: 'Generate DO',
+      ...commercialDocumentActionProps(closedProject),
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.DELIVERY_ORDER, project),
     },
     {
       key: 'vendor-loa',
       label: 'Create Vendor LOA',
+      ...commercialDocumentActionProps(closedProject),
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.VENDOR_LOA, project),
     },
     {
       key: 'supplier-po',
       label: 'Create Supplier PO',
+      ...commercialDocumentActionProps(closedProject),
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.SUPPLIER_PO, project),
     },

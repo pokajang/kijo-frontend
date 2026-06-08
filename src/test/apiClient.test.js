@@ -185,6 +185,7 @@ describe('apiClient', () => {
 
     vi.stubGlobal('fetch', fetchMock)
 
+    const apiBase = import.meta.env.VITE_API_BASE || '/'
     const response = await apiFetch('/stats/monthly-sales', {
       method: 'POST',
       credentials: 'include',
@@ -194,7 +195,7 @@ describe('apiClient', () => {
 
     expect(response.ok).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(3)
-    expect(fetchMock.mock.calls[1][0]).toBe('/proxy/auth/session')
+    expect(fetchMock.mock.calls[1][0]).toBe(`${apiBase}auth/session`)
     expect(getCsrfToken()).toBe('fresh-csrf')
 
     const [, firstInit] = fetchMock.mock.calls[0]

@@ -1,3 +1,5 @@
+import { normalizeProjectStatus } from './projectStatus'
+
 const toDateOnly = (value) => {
   if (!value) return ''
   const text = String(value)
@@ -126,7 +128,12 @@ export const applyProjectFilters = ({ projects = [], filters = {} }) => {
     const awardYear = toDateOnly(project?.award_date).slice(0, 4)
     if (filters?.yearFilter !== 'all' && awardYear !== filters?.yearFilter) return false
 
-    if (filters?.statusFilter !== 'all' && project?.status !== filters?.statusFilter) return false
+    if (
+      filters?.statusFilter !== 'all' &&
+      normalizeProjectStatus(project?.status) !== normalizeProjectStatus(filters?.statusFilter)
+    ) {
+      return false
+    }
     if (
       filters?.projectTypeFilter !== 'all' &&
       project?.project_type !== filters?.projectTypeFilter

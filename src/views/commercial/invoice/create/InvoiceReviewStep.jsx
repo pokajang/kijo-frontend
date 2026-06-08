@@ -4,6 +4,7 @@ import {
   CButton,
   CCardBody,
   CCardFooter,
+  CFormCheck,
   CTable,
   CTableBody,
   CTableDataCell,
@@ -22,6 +23,15 @@ const formatMoney = (value) => {
   })}`
 }
 
+const formatOptionalMoney = (value) => (value === null ? emptyValue : formatMoney(value))
+
+const displayRemainingMoney = (value) => {
+  if (value === undefined || value === null) return null
+  const number = Number(value)
+  if (!Number.isFinite(number)) return null
+  return Math.abs(number) <= 0.01 ? 0 : number
+}
+
 const formatNumber = (value) => {
   const number = Number(value || 0)
   return Number.isInteger(number) ? String(number) : number.toFixed(2)
@@ -29,8 +39,22 @@ const formatNumber = (value) => {
 
 const getLineTotal = (item = {}) => Number(item.quantity || 0) * Number(item.unit_price || 0)
 
-const InvoiceReviewStep = ({ payload, project, submitting, onBack, onConfirm }) => {
+const InvoiceReviewStep = ({
+  payload,
+  project,
+  projectInvoiceSummary,
+  closeProject,
+  onCloseProjectChange,
+  submitting,
+  onBack,
+  onConfirm,
+}) => {
   const lineItems = Array.isArray(payload?.breakdown) ? payload.breakdown : []
+  const remainingAfter = displayRemainingMoney(projectInvoiceSummary?.remainingAfter)
+  const remainingAfterLabel =
+    remainingAfter !== null && remainingAfter < 0
+      ? 'Amount over project value'
+      : 'Yet to be invoiced after this invoice'
   const billedAddress = [
     payload?.invoice_client_address,
     payload?.invoice_client_city,
@@ -46,6 +70,48 @@ const InvoiceReviewStep = ({ payload, project, submitting, onBack, onConfirm }) 
         <CAlert color="info">
           Review the invoice details below. The invoice will only be created after you confirm.
         </CAlert>
+
+        <div className="border rounded-2 p-3 mb-3">
+          <div className="fw-semibold mb-2">Project Billing</div>
+          <div className="row g-2">
+            <div className="col-sm-6 col-lg-3">
+              <div className="small text-body-secondary">Project value</div>
+              <div className="fw-semibold">
+                {formatOptionalMoney(projectInvoiceSummary?.projectValue ?? null)}
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-3">
+              <div className="small text-body-secondary">Already invoiced</div>
+              <div className="fw-semibold">
+                {formatMoney(projectInvoiceSummary?.alreadyInvoiced)}
+              </div>
+            </div>
+            <div className="col-sm-6 col-lg-3">
+              <div className="small text-body-secondary">This invoice</div>
+              <div className="fw-semibold">{formatMoney(projectInvoiceSummary?.thisInvoice)}</div>
+            </div>
+            <div className="col-sm-6 col-lg-3">
+              <div className="small text-body-secondary">{remainingAfterLabel}</div>
+              <div className="fw-semibold">
+                {remainingAfter === null ? emptyValue : formatMoney(Math.abs(remainingAfter))}
+              </div>
+            </div>
+          </div>
+          {projectInvoiceSummary?.canCloseProject ? (
+            <div className="border-top mt-3 pt-3">
+              <CFormCheck
+                id="close-project-after-invoice"
+                label="Close Project"
+                checked={Boolean(closeProject)}
+                disabled={submitting}
+                onChange={(event) => onCloseProjectChange?.(event.target.checked)}
+              />
+              <div className="small text-body-secondary mt-1">
+                Project status will be marked Completed after this invoice is created.
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         <div className="row g-3 mb-3">
           <div className="col-md-6">

@@ -205,7 +205,12 @@ export const submitInvoicePayload = async (payload) => {
     const data = await res.json()
 
     if (data.status === 'success') {
-      return { success: true, invoiceId: data.invoice_id, invoiceRefNo: data.invoice_ref_no }
+      return {
+        success: true,
+        invoiceId: data.invoice_id,
+        invoiceRefNo: data.invoice_ref_no,
+        projectClosed: Boolean(data.project_closed),
+      }
     }
     if (data.status === 'exists') {
       const openExisting = await dialog.confirm(

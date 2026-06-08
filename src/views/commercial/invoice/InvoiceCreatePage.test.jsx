@@ -29,6 +29,15 @@ const renderCreatePage = (entry) =>
     </MemoryRouter>,
   )
 
+const createDeferred = () => {
+  let resolve
+  const promise = new Promise((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
+}
+
 describe('InvoiceCreatePage origin handling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -68,7 +77,10 @@ describe('InvoiceCreatePage origin handling', () => {
     expect(screen.getByText('Quote: 77')).toBeInTheDocument()
   })
 
-  it('keeps project-origin fast path by using route state when available', async () => {
+  it('renders project-origin route state immediately while refreshing project details', async () => {
+    const detailRequest = createDeferred()
+    getProjectDetails.mockReturnValue(detailRequest.promise)
+
     renderCreatePage({
       pathname: '/commercial/invoice/create/12',
       state: {
@@ -83,6 +95,20 @@ describe('InvoiceCreatePage origin handling', () => {
 
     expect(await screen.findByText('Origin: project')).toBeInTheDocument()
     expect(screen.getByText('Project: State Project')).toBeInTheDocument()
-    expect(getProjectDetails).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(getProjectDetails).toHaveBeenCalledWith('12', {
+        signal: expect.any(AbortSignal),
+      }),
+    )
+
+    detailRequest.resolve({
+      id: 12,
+      project_name: 'Fresh Project',
+      project_type: 'Training',
+      quote_id: 99,
+    })
+
+    expect(await screen.findByText('Project: Fresh Project')).toBeInTheDocument()
+    expect(screen.getByText('Quote: 99')).toBeInTheDocument()
   })
 })
