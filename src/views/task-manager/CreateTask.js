@@ -22,6 +22,7 @@ const TASK_PLACEHOLDER = 'E.g. Prepare gantt chart...'
 const PROJECT_TAG_HINT = 'New: type @ in the task field to tag an active project linked to you.'
 const PROJECT_PROGRESS_NOTE =
   'Tagged tasks will be inserted as project progress tracking in Manage Project as "Ongoing" tasks.'
+const PROJECT_META_SEPARATOR = ' \u00b7 '
 
 const taskTypeDisplayMode = (task) =>
   task.taskCategory === 'unclear_unrated'
@@ -45,6 +46,35 @@ const taskTypeEffortScore = (task) => {
 }
 
 const getProjectMention = (project) => (project?.label ? `@${project.label}` : '')
+
+const getProjectValue = (project) => String(project?.value || '').trim()
+
+const formatProjectIdentity = (project) => {
+  const projectId = getProjectValue(project)
+  const clientName = String(project?.clientName || '').trim()
+
+  if (clientName && projectId) return `${clientName}${PROJECT_META_SEPARATOR}#${projectId}`
+  if (clientName) return clientName
+  return projectId ? `Project #${projectId}` : ''
+}
+
+const projectSearchText = (project) =>
+  [
+    project?.label,
+    project?.clientName,
+    project?.value,
+    getProjectValue(project) ? `#${getProjectValue(project)}` : '',
+  ]
+    .map((value) =>
+      String(value || '')
+        .trim()
+        .toLowerCase(),
+    )
+    .filter(Boolean)
+    .join(' ')
+
+const projectOptionAccessibleName = (project) =>
+  [project?.label, formatProjectIdentity(project)].filter(Boolean).join(' ')
 
 const splitTitleByMention = (title, mention) => {
   if (!mention) return { before: title, after: '', hasMention: false }
@@ -70,6 +100,7 @@ const InlineProjectTaskInput = ({
   title,
   projectId,
   projectLabel,
+  projectClientName,
   options = [],
   disabled,
   onTitleChange,
@@ -84,14 +115,18 @@ const InlineProjectTaskInput = ({
     if (option) return option
 
     const fallbackLabel = String(projectLabel || '').trim()
-    return projectId && fallbackLabel ? { value: String(projectId), label: fallbackLabel } : null
-  }, [options, projectId, projectLabel])
+    const fallbackClientName = String(projectClientName || '').trim()
+    return projectId && fallbackLabel
+      ? { value: String(projectId), label: fallbackLabel, clientName: fallbackClientName }
+      : null
+  }, [options, projectId, projectLabel, projectClientName])
   const [isOpen, setIsOpen] = useState(false)
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const [cursorIndex, setCursorIndex] = useState(String(title || '').length)
   const [beforeInputWidth, setBeforeInputWidth] = useState(16)
   const mention = getProjectMention(selectedProject)
   const titleParts = splitTitleByMention(String(title || ''), mention)
+  const selectedProjectIdentity = formatProjectIdentity(selectedProject)
 
   useLayoutEffect(() => {
     if (!selectedProject) return
@@ -131,11 +166,7 @@ const InlineProjectTaskInput = ({
     if (!triggerInfo) return []
 
     return options
-      .filter((project) =>
-        String(project.label || '')
-          .toLowerCase()
-          .includes(triggerInfo.query),
-      )
+      .filter((project) => projectSearchText(project).includes(triggerInfo.query))
       .slice(0, 8)
   }, [options, triggerInfo])
 
@@ -169,12 +200,12 @@ const InlineProjectTaskInput = ({
     setIsOpen(false)
     setHighlightedIndex(0)
     onTitleChange(nextTitle)
-    onProjectChange(project.value, project.label)
+    onProjectChange(project.value, project.label, project.clientName || '')
   }
 
   const clearProject = () => {
     onTitleChange(removeMentionFromTitle(String(title || ''), mention))
-    onProjectChange('', '')
+    onProjectChange('', '', '')
     setIsOpen(false)
     setHighlightedIndex(0)
   }
@@ -275,6 +306,15 @@ const InlineProjectTaskInput = ({
               </button>
             ) : null}
           </CBadge>
+          {selectedProjectIdentity ? (
+            <span
+              className="small text-body-secondary d-inline-block text-truncate"
+              style={{ maxWidth: '18rem' }}
+              title={selectedProjectIdentity}
+            >
+              {selectedProjectIdentity}
+            </span>
+          ) : null}
           <input
             className="flex-grow-1 bg-transparent"
             value={titleParts.hasMention ? titleParts.after : ''}
@@ -311,31 +351,45 @@ const InlineProjectTaskInput = ({
           className="position-absolute start-0 end-0 mt-1 bg-body border rounded shadow-sm overflow-auto"
           style={{ zIndex: 1080, maxHeight: '220px' }}
         >
-          {filteredOptions.map((project, index) => (
-            <button
-              ref={(element) => {
-                optionRefs.current[index] = element
-              }}
-              id={`${id}-project-option-${index}`}
-              key={project.value}
-              type="button"
-              role="option"
-              aria-selected={index === highlightedIndex}
-              className={`dropdown-item text-wrap py-2 ${
-                index === highlightedIndex ? 'active' : ''
-              }`}
-              style={
-                index === highlightedIndex
-                  ? { backgroundColor: 'var(--cui-primary)', color: 'var(--cui-white)' }
-                  : undefined
-              }
-              onMouseEnter={() => setHighlightedIndex(index)}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => selectProject(project)}
-            >
-              {project.label}
-            </button>
-          ))}
+          {filteredOptions.map((project, index) => {
+            const projectIdentity = formatProjectIdentity(project)
+
+            return (
+              <button
+                ref={(element) => {
+                  optionRefs.current[index] = element
+                }}
+                id={`${id}-project-option-${index}`}
+                key={project.value}
+                type="button"
+                role="option"
+                aria-label={projectOptionAccessibleName(project)}
+                aria-selected={index === highlightedIndex}
+                className={`dropdown-item text-wrap py-2 ${
+                  index === highlightedIndex ? 'active' : ''
+                }`}
+                style={
+                  index === highlightedIndex
+                    ? { backgroundColor: 'var(--cui-primary)', color: 'var(--cui-white)' }
+                    : undefined
+                }
+                onMouseEnter={() => setHighlightedIndex(index)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectProject(project)}
+              >
+                <span className="d-block fw-semibold">{project.label}</span>
+                {projectIdentity ? (
+                  <span
+                    className={`d-block small ${
+                      index === highlightedIndex ? 'text-white-50' : 'text-body-secondary'
+                    }`}
+                  >
+                    {projectIdentity}
+                  </span>
+                ) : null}
+              </button>
+            )
+          })}
         </div>
       ) : null}
     </div>
@@ -403,12 +457,14 @@ const CreateTask = ({
                   title={task.title}
                   projectId={task.projectId || ''}
                   projectLabel={task.projectLabel || ''}
+                  projectClientName={task.projectClientName || ''}
                   options={projectOptions}
                   disabled={saving}
                   onTitleChange={(title) => onDraftChange(task.id, 'title', title)}
-                  onProjectChange={(projectId, projectLabel = '') => {
+                  onProjectChange={(projectId, projectLabel = '', projectClientName = '') => {
                     onDraftChange(task.id, 'projectId', projectId)
                     onDraftChange(task.id, 'projectLabel', projectId ? projectLabel : '')
+                    onDraftChange(task.id, 'projectClientName', projectId ? projectClientName : '')
                   }}
                 />
                 {task.title.trim() && task.classificationStatus === 'pending' ? (

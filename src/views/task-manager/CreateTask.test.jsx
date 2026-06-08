@@ -5,13 +5,15 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import CreateTask from './CreateTask'
 
 const projectOptions = [
-  { value: '100', label: 'Active Project' },
-  { value: '101', label: 'Second Project' },
+  { value: '100', label: 'Active Project', clientName: 'Alpha Client' },
+  { value: '101', label: 'Second Project', clientName: 'Beta Client' },
 ]
 const projectProgressNote =
   'Tagged tasks will be inserted as project progress tracking in Manage Project as "Ongoing" tasks.'
 const projectTagHint = 'New: type @ in the task field to tag an active project linked to you.'
 const taskPlaceholder = 'E.g. Prepare gantt chart...'
+const projectIdentity = (clientName, projectId) =>
+  `${clientName} ${String.fromCharCode(183)} #${projectId}`
 
 afterEach(() => {
   cleanup()
@@ -70,9 +72,10 @@ describe('CreateTask', () => {
 
     const taskInput = screen.getByPlaceholderText(taskPlaceholder)
     fireEvent.change(taskInput, { target: { value: 'Prepare gantt chart for @sec' } })
-    fireEvent.click(screen.getByRole('option', { name: 'Second Project' }))
+    fireEvent.click(screen.getByRole('option', { name: /Second Project/i }))
 
     expect(screen.getByText('@Second Project')).toBeInTheDocument()
+    expect(screen.getByText(projectIdentity('Beta Client', '101'))).toBeInTheDocument()
     expect(onDraftChange).toHaveBeenCalledWith(
       'a',
       'title',
@@ -80,6 +83,7 @@ describe('CreateTask', () => {
     )
     expect(onDraftChange).toHaveBeenCalledWith('a', 'projectId', '101')
     expect(onDraftChange).toHaveBeenCalledWith('a', 'projectLabel', 'Second Project')
+    expect(onDraftChange).toHaveBeenCalledWith('a', 'projectClientName', 'Beta Client')
   })
 
   it('opens project suggestions from / search', () => {
@@ -89,7 +93,76 @@ describe('CreateTask', () => {
       target: { value: 'Prepare gantt chart for /active project' },
     })
 
-    expect(screen.getByRole('option', { name: 'Active Project' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Active Project/i })).toBeInTheDocument()
+    expect(screen.getByText(projectIdentity('Alpha Client', '100'))).toBeInTheDocument()
+  })
+
+  it('disambiguates duplicate project names with client and project id', () => {
+    const onDraftChange = vi.fn()
+    const duplicateProjectOptions = [
+      {
+        value: '200',
+        label: 'Effectiveness Of Safety Health Committee',
+        clientName: 'ABC Sdn Bhd',
+      },
+      {
+        value: '201',
+        label: 'Effectiveness Of Safety Health Committee',
+        clientName: 'XYZ Sdn Bhd',
+      },
+    ]
+    renderCreateTask({ onDraftChange, projectOptionsOverride: duplicateProjectOptions })
+
+    fireEvent.change(screen.getByPlaceholderText(taskPlaceholder), {
+      target: { value: 'Prepare notes for @effectiveness' },
+    })
+
+    expect(screen.getByText(projectIdentity('ABC Sdn Bhd', '200'))).toBeInTheDocument()
+    expect(screen.getByText(projectIdentity('XYZ Sdn Bhd', '201'))).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('option', { name: /XYZ Sdn Bhd.*#201/i }))
+
+    expect(screen.getByText('@Effectiveness Of Safety Health Committee')).toBeInTheDocument()
+    expect(screen.getByText(projectIdentity('XYZ Sdn Bhd', '201'))).toBeInTheDocument()
+    expect(onDraftChange).toHaveBeenCalledWith('a', 'projectId', '201')
+    expect(onDraftChange).toHaveBeenCalledWith(
+      'a',
+      'projectLabel',
+      'Effectiveness Of Safety Health Committee',
+    )
+    expect(onDraftChange).toHaveBeenCalledWith('a', 'projectClientName', 'XYZ Sdn Bhd')
+  })
+
+  it('searches project suggestions by client name and project id', () => {
+    const duplicateProjectOptions = [
+      {
+        value: '200',
+        label: 'Effectiveness Of Safety Health Committee',
+        clientName: 'ABC Sdn Bhd',
+      },
+      {
+        value: '201',
+        label: 'Effectiveness Of Safety Health Committee',
+        clientName: 'XYZ Sdn Bhd',
+      },
+    ]
+    renderCreateTask({ projectOptionsOverride: duplicateProjectOptions })
+
+    const taskInput = screen.getByPlaceholderText(taskPlaceholder)
+    fireEvent.change(taskInput, { target: { value: 'Prepare notes for @xyz' } })
+
+    expect(screen.getByRole('option', { name: /XYZ Sdn Bhd.*#201/i })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /ABC Sdn Bhd.*#200/i })).not.toBeInTheDocument()
+
+    fireEvent.change(taskInput, { target: { value: 'Prepare notes for @200' } })
+
+    expect(screen.getByRole('option', { name: /ABC Sdn Bhd.*#200/i })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /XYZ Sdn Bhd.*#201/i })).not.toBeInTheDocument()
+
+    fireEvent.change(taskInput, { target: { value: 'Prepare notes for @#201' } })
+
+    expect(screen.getByRole('option', { name: /XYZ Sdn Bhd.*#201/i })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /ABC Sdn Bhd.*#200/i })).not.toBeInTheDocument()
   })
 
   it('selects project suggestions with arrow keys and enter', () => {
@@ -102,6 +175,7 @@ describe('CreateTask', () => {
     fireEvent.keyDown(taskInput, { key: 'Enter' })
 
     expect(screen.getByText('@Second Project')).toBeInTheDocument()
+    expect(screen.getByText(projectIdentity('Beta Client', '101'))).toBeInTheDocument()
     expect(onDraftChange).toHaveBeenCalledWith(
       'a',
       'title',
@@ -109,6 +183,7 @@ describe('CreateTask', () => {
     )
     expect(onDraftChange).toHaveBeenCalledWith('a', 'projectId', '101')
     expect(onDraftChange).toHaveBeenCalledWith('a', 'projectLabel', 'Second Project')
+    expect(onDraftChange).toHaveBeenCalledWith('a', 'projectClientName', 'Beta Client')
   })
 
   it('removes the project badge and clears project id', () => {
@@ -129,6 +204,7 @@ describe('CreateTask', () => {
     expect(onDraftChange).toHaveBeenCalledWith('a', 'title', 'Prepare gantt chart for')
     expect(onDraftChange).toHaveBeenCalledWith('a', 'projectId', '')
     expect(onDraftChange).toHaveBeenCalledWith('a', 'projectLabel', '')
+    expect(onDraftChange).toHaveBeenCalledWith('a', 'projectClientName', '')
   })
 
   it('renders the stored project badge before project options reload', () => {
@@ -140,6 +216,7 @@ describe('CreateTask', () => {
         dueDate: '2026-05-14',
         projectId: '777',
         projectLabel: 'Saved Project',
+        projectClientName: 'Saved Client',
         taskCategory: 'real_effort',
         taskCategoryLabel: 'Real Effort',
         effortScore: 3,
@@ -152,6 +229,7 @@ describe('CreateTask', () => {
     })
 
     expect(screen.getByText('@Saved Project')).toBeInTheDocument()
+    expect(screen.getByText(projectIdentity('Saved Client', '777'))).toBeInTheDocument()
   })
 
   it('does not render a separate project input', () => {
@@ -172,7 +250,7 @@ describe('CreateTask', () => {
     fireEvent.change(screen.getByPlaceholderText(taskPlaceholder), {
       target: { value: 'Prepare gantt chart for @active' },
     })
-    fireEvent.click(screen.getByRole('option', { name: 'Active Project' }))
+    fireEvent.click(screen.getByRole('option', { name: /Active Project/i }))
 
     expect(screen.getByDisplayValue('Prepare gantt chart for')).toHaveAttribute(
       'spellcheck',
@@ -328,7 +406,7 @@ describe('CreateTask', () => {
     fireEvent.change(screen.getByPlaceholderText(taskPlaceholder), {
       target: { value: 'Prepare gantt chart for @active' },
     })
-    fireEvent.click(screen.getByRole('option', { name: 'Active Project' }))
+    fireEvent.click(screen.getByRole('option', { name: /Active Project/i }))
 
     expect(screen.getByText(projectProgressNote)).toBeInTheDocument()
   })
@@ -354,7 +432,7 @@ describe('CreateTask', () => {
     fireEvent.change(screen.getByPlaceholderText(taskPlaceholder), {
       target: { value: '@sec' },
     })
-    fireEvent.click(screen.getByRole('option', { name: 'Second Project' }))
+    fireEvent.click(screen.getByRole('option', { name: /Second Project/i }))
 
     expect(screen.getByRole('button', { name: /Save\s+Tasks/i })).toBeDisabled()
   })

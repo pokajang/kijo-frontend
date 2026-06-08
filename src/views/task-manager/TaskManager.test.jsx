@@ -27,8 +27,10 @@ vi.mock('./CreateTask', () => ({
   default: ({ taskDrafts, projectOptions, onCancel, onDraftChange, onSaveTasks }) => (
     <>
       <div data-testid="project-option-count">{projectOptions.length}</div>
+      <div data-testid="project-option-client">{projectOptions[0]?.clientName || ''}</div>
       <div data-testid="draft-task-category">{taskDrafts[0]?.taskCategory}</div>
       <div data-testid="draft-classification-status">{taskDrafts[0]?.classificationStatus}</div>
+      <div data-testid="draft-project-client">{taskDrafts[0]?.projectClientName || ''}</div>
       <button type="button" onClick={onCancel}>
         Cancel Task
       </button>
@@ -49,6 +51,7 @@ vi.mock('./CreateTask', () => ({
           onDraftChange(draftId, 'title', 'Prepare gantt chart for @Saved Project')
           onDraftChange(draftId, 'projectId', '100')
           onDraftChange(draftId, 'projectLabel', 'Saved Project')
+          onDraftChange(draftId, 'projectClientName', 'Saved Client')
         }}
       >
         Set Saved Project Task
@@ -138,7 +141,7 @@ describe('TaskManager route actions', () => {
     window.localStorage.clear()
     projectApiMocks.listActiveProjectOptions.mockReset()
     projectApiMocks.listActiveProjectOptions.mockResolvedValue([
-      { id: 100, projectName: 'Active Project', status: 'Active' },
+      { id: 100, projectName: 'Active Project', clientName: 'Alpha Client', status: 'Active' },
     ])
     vi.stubGlobal(
       'fetch',
@@ -202,6 +205,7 @@ describe('TaskManager route actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
     await waitFor(() => {
       expect(screen.getByTestId('project-option-count')).toHaveTextContent('1')
+      expect(screen.getByTestId('project-option-client')).toHaveTextContent('Alpha Client')
     })
     fireEvent.click(await screen.findByRole('button', { name: 'Set Project Task' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save Task' }))
@@ -230,6 +234,11 @@ describe('TaskManager route actions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Saved Project Task' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('draft-project-client')).toHaveTextContent('Saved Client')
+    })
+
     fireEvent.click(screen.getByRole('button', { name: 'Save Task' }))
 
     await waitFor(() => {
@@ -395,6 +404,29 @@ describe('TaskManager route actions', () => {
         true,
       )
       expect(screen.getByTestId('draft-task-category')).toHaveTextContent('real_effort')
+    })
+  })
+
+  it('restores project client metadata from saved task drafts', async () => {
+    window.localStorage.setItem(
+      'task-manager.create-task-drafts.v3',
+      JSON.stringify([
+        {
+          id: 'saved-project-draft',
+          title: 'Prepare gantt chart for @Saved Project',
+          dueDate: '2026-05-30',
+          projectId: '777',
+          projectLabel: 'Saved Project',
+          projectClientName: 'Saved Client',
+        },
+      ]),
+    )
+
+    renderTaskManager('/task-manager')
+    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('draft-project-client')).toHaveTextContent('Saved Client')
     })
   })
 

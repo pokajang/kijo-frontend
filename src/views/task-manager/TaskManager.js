@@ -63,6 +63,34 @@ const firstErrorMessage = (errors) => {
   return ''
 }
 
+const normalizeProjectOption = (project = {}) => {
+  const value = String(
+    project.id ?? project.value ?? project.projectId ?? project.project_id ?? '',
+  ).trim()
+  const label = String(project.projectName ?? project.project_name ?? project.label ?? '').trim()
+  const clientName = String(project.clientName ?? project.client_name ?? '').trim()
+  const projectType = String(project.projectType ?? project.project_type ?? '').trim()
+  const startDate = String(
+    project.startDate ?? project.start_date ?? project.service_start_date ?? '',
+  ).trim()
+  const endDate = String(
+    project.endDate ?? project.end_date ?? project.service_end_date ?? '',
+  ).trim()
+  const status = String(project.status ?? '').trim()
+
+  if (!value || !label) return null
+
+  return {
+    value,
+    label,
+    clientName,
+    projectType,
+    startDate,
+    endDate,
+    status,
+  }
+}
+
 const TaskManager = () => {
   const todayStr = formatDateLocal(new Date())
   const createTaskDraft = () => ({
@@ -71,6 +99,7 @@ const TaskManager = () => {
     dueDate: todayStr,
     projectId: '',
     projectLabel: '',
+    projectClientName: '',
     ...defaultTaskPreview(),
   })
   const normalizeTaskDrafts = (drafts) => {
@@ -86,6 +115,7 @@ const TaskManager = () => {
             : todayStr,
           projectId: String(task?.projectId || task?.project_id || ''),
           projectLabel: String(task?.projectLabel || task?.project_label || ''),
+          projectClientName: String(task?.projectClientName || task?.project_client_name || ''),
           ...defaultTaskPreview(title.trim() ? 'pending' : 'idle'),
         }
       })
@@ -233,6 +263,9 @@ const TaskManager = () => {
             (project) => String(project.value) === String(value || ''),
           )
           nextTask.projectLabel = value ? selectedProject?.label || nextTask.projectLabel || '' : ''
+          nextTask.projectClientName = value
+            ? selectedProject?.clientName || nextTask.projectClientName || ''
+            : ''
         }
         if (field === 'title' || field === 'projectId') {
           return {
@@ -328,12 +361,14 @@ const TaskManager = () => {
         if (!active) return
         setProjectOptions(
           projects
-            .map((project) => ({
-              value: String(project.id),
-              label: String(project.projectName || project.project_name || '').trim(),
-            }))
-            .filter((project) => project.value && project.label)
-            .sort((a, b) => a.label.localeCompare(b.label)),
+            .map(normalizeProjectOption)
+            .filter(Boolean)
+            .sort(
+              (a, b) =>
+                a.label.localeCompare(b.label) ||
+                a.clientName.localeCompare(b.clientName) ||
+                a.value.localeCompare(b.value),
+            ),
         )
       })
       .catch((err) => {
