@@ -203,7 +203,11 @@ const AppHeader = () => {
     try {
       const result = await submitFeedback(text)
       if (result.status === 'success') {
-        dialog.alert('Ticket submitted successfully.')
+        dialog.alert(
+          result.mail_sent === false
+            ? result.message || 'Ticket submitted, but the email notification could not be sent.'
+            : 'Ticket submitted successfully.',
+        )
         closeTicketModal()
       } else {
         dialog.alert(result.message || 'Failed to submit ticket.')
