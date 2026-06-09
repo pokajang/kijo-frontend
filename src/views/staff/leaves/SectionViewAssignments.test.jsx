@@ -168,6 +168,7 @@ vi.mock('../../../components/datatable', async () => {
                     <button
                       key={action.key}
                       type="button"
+                      disabled={action.disabled}
                       onClick={(event) => {
                         event.stopPropagation()
                         action.onClick?.(row)
@@ -223,6 +224,7 @@ const entitlements = [
     total_days: 12,
     used_days: 4,
     remaining: 9,
+    remarks: 'Probation prorated entitlement',
   },
   {
     id: 20,
@@ -334,14 +336,18 @@ describe('SectionViewAssignments', () => {
     expect(within(aliRow).getByTestId('cell-10-totalDays')).toHaveTextContent('12')
     expect(within(aliRow).getByTestId('cell-10-usedDays')).toHaveTextContent('4')
     expect(within(aliRow).getByTestId('cell-10-remaining')).toHaveTextContent('9')
+    expect(within(aliRow).getByTestId('cell-10-remarks')).toHaveTextContent(
+      'Probation prorated entitlement',
+    )
     expect(within(aliRow).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
-    expect(within(aliRow).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(within(aliRow).getByRole('button', { name: 'Delete' })).toBeDisabled()
 
     const sitiRow = screen.getByTestId('entitlement-row-20')
     expect(sitiRow).toHaveAttribute('data-row-index', '1')
     expect(within(sitiRow).queryByText('Siti Aminah (SIT)')).not.toBeInTheDocument()
     expect(within(sitiRow).getAllByText('0').length).toBeGreaterThan(0)
     expect(within(sitiRow).getByText('Assigned')).toBeInTheDocument()
+    expect(within(sitiRow).getByRole('button', { name: 'Delete' })).not.toBeDisabled()
 
     const missingRow = screen.getByTestId(`entitlement-row-missing-3-${currentYear}-annual`)
     expect(missingRow).toHaveAttribute('data-row-index', '1')
@@ -356,6 +362,9 @@ describe('SectionViewAssignments', () => {
     ).toHaveTextContent('-')
     expect(
       within(missingRow).getByTestId(`cell-missing-3-${currentYear}-annual-remaining`),
+    ).toHaveTextContent('-')
+    expect(
+      within(missingRow).getByTestId(`cell-missing-3-${currentYear}-annual-remarks`),
     ).toHaveTextContent('-')
     expect(within(missingRow).getByRole('button', { name: 'Assign' })).toBeInTheDocument()
     expect(within(missingRow).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
@@ -469,6 +478,17 @@ describe('SectionViewAssignments', () => {
     expect(
       screen.getByTestId(`entitlement-row-missing-3-${currentYear}-annual`),
     ).toBeInTheDocument()
+  })
+
+  it('filters by entitlement remarks text', () => {
+    renderSection()
+
+    fireEvent.change(screen.getByLabelText('Search entitlements'), {
+      target: { value: 'probation prorated' },
+    })
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('1')
+    expect(screen.getByTestId('entitlement-row-10')).toBeInTheDocument()
   })
 
   it('filters missing rows by Frozen Leave search text', () => {

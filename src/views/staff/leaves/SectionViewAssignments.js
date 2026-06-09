@@ -86,6 +86,14 @@ const dataColumns = [
     shrinkToFit: true,
     getExportValue: (record) => record.remainingDisplay,
   },
+  {
+    key: 'remarks',
+    label: 'Remarks',
+    width: '260px',
+    sortable: true,
+    sortType: 'string',
+    getExportValue: (record) => record.remarksDisplay,
+  },
 ]
 
 const historyColumns = [
@@ -171,6 +179,7 @@ const defaultVisibleColumns = {
   totalDays: true,
   usedDays: true,
   remaining: true,
+  remarks: true,
 }
 
 const defaultHistoryVisibleColumns = {
@@ -224,9 +233,11 @@ const buildAssignedRow = (record, staffById) => {
     totalDays,
     usedDays,
     remaining,
+    deleteLocked: usedDays > 0,
     totalDaysDisplay: formatLeaveBalanceDays(totalDays),
     usedDaysDisplay: formatLeaveBalanceDays(usedDays),
     remainingDisplay: formatLeaveBalanceDays(remaining),
+    remarksDisplay: hasValue(record.remarks) ? record.remarks : '-',
   }
 }
 
@@ -247,6 +258,7 @@ const buildMissingRow = (staff, year, leaveType) => ({
   totalDaysDisplay: '-',
   usedDaysDisplay: '-',
   remainingDisplay: '-',
+  remarksDisplay: '-',
 })
 
 const buildHistoryRow = (record = {}) => ({
@@ -398,6 +410,8 @@ const SectionViewAssignments = ({
             record.leave_type,
             record.leaveType,
             record.coverage,
+            record.remarks,
+            record.remarksDisplay,
           ]
             .filter(Boolean)
             .some((value) => String(value).toLowerCase().includes(term))
@@ -449,6 +463,11 @@ const SectionViewAssignments = ({
   )
 
   const handleDeleteEntitlement = async (record) => {
+    if (record.deleteLocked) {
+      dialog.alert('Used leave entitlements cannot be deleted.')
+      return
+    }
+
     const confirmed = await dialog.confirm(
       `Are you sure you want to delete the ${record.leave_type} entitlement for ${record.year}?`,
       {
@@ -487,6 +506,7 @@ const SectionViewAssignments = ({
             key: 'delete',
             label: 'Delete',
             danger: true,
+            disabled: record.deleteLocked,
             dividerBefore: true,
             onClick: () => handleDeleteEntitlement(record),
           }
@@ -505,6 +525,7 @@ const SectionViewAssignments = ({
     if (column.key === 'totalDays') return record.totalDaysDisplay
     if (column.key === 'usedDays') return record.usedDaysDisplay
     if (column.key === 'remaining') return record.remainingDisplay
+    if (column.key === 'remarks') return record.remarksDisplay
     return record[column.key] ?? '-'
   }
 
@@ -623,7 +644,7 @@ const SectionViewAssignments = ({
             dataColumns={dataColumns}
             defaultVisibleColumns={defaultVisibleColumns}
             requiredColumns={requiredColumns}
-            storageKey="staff.leaves.entitlements.visible-columns.v5"
+            storageKey="staff.leaves.entitlements.visible-columns.v6"
             idPrefix="staff-leave-entitlement"
             emptyMessage="No leave entitlement records match these filters."
             exportFilename={`leave-entitlements-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -636,13 +657,17 @@ const SectionViewAssignments = ({
             actionColumnWidth="56px"
             getMobileTitle={(record) => record.staff}
             getMobileSubtitle={(record) => `${record.leaveType} | ${record.coverage}`}
-            getMobileMeta={(record) => `Remaining: ${record.remainingDisplay}`}
+            getMobileMeta={(record) =>
+              record.remarksDisplay && record.remarksDisplay !== '-'
+                ? `Remaining: ${record.remainingDisplay} | Remarks: ${record.remarksDisplay}`
+                : `Remaining: ${record.remainingDisplay}`
+            }
             getMobileStatus={(record) => record.coverage}
             getMobileStatusTone={(record) => getCoverageTone(record.coverage)}
             mobileFieldKeys={{
               title: 'staff',
               subtitle: ['leaveType', 'coverage'],
-              meta: 'remaining',
+              meta: ['remaining', 'remarks'],
               status: 'coverage',
             }}
             initialSortField="entitlementOrder"

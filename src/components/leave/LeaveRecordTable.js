@@ -241,14 +241,18 @@ const LeaveRecordTable = ({
     [],
   )
 
-  const getActions = (record) => [
-    {
-      key: 'cancel',
-      label: 'Cancel',
-      disabled: record.status === 'Cancelled',
-      onClick: () => handleCancel(record.id),
-    },
-  ]
+  const getActions = (record) => {
+    if (!['Pending', 'Approved'].includes(record.status)) return []
+
+    return [
+      {
+        key: 'cancel',
+        label: record.status === 'Approved' ? 'Revoke Leave' : 'Cancel',
+        danger: record.status === 'Approved',
+        onClick: () => handleCancel(record.id, record.status),
+      },
+    ]
+  }
 
   const renderCell = (record, column) => {
     if (column.key === 'duration') {

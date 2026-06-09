@@ -215,3 +215,13 @@ export async function getMyEntitlements() {
   const result = await fetchLeaveJson(`${import.meta.env.VITE_API_BASE}hr/leaves/entitlements/mine`)
   return result.entitlements || []
 }
+
+/**
+ * Fetch logged-in staff leave allocation history.
+ */
+export async function getMyEntitlementHistory() {
+  const result = await fetchLeaveJson(
+    `${import.meta.env.VITE_API_BASE}hr/leaves/entitlements/history/mine`,
+  )
+  return result.history || []
+}

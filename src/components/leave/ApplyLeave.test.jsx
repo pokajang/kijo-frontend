@@ -7,6 +7,12 @@ vi.mock('../../notifications/appNotificationEvents', () => ({
   dispatchAppNotificationsChanged: vi.fn(),
 }))
 
+const addDaysToDateValue = (value, days) => {
+  const [year, month, day] = String(value).split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day + days))
+  return date.toISOString().slice(0, 10)
+}
+
 describe('ApplyLeave', () => {
   afterEach(() => {
     cleanup()
@@ -134,6 +140,7 @@ describe('ApplyLeave', () => {
                 year: currentYear,
                 total_days: 3,
                 used_days: 1,
+                remarks: 'Carried forward from last year',
               },
             ],
           }),
@@ -151,11 +158,74 @@ describe('ApplyLeave', () => {
     render(<ApplyLeave />)
 
     expect(await screen.findByText('Frozen Leave')).toBeInTheDocument()
+    expect(screen.getByText('Remarks: Carried forward from last year')).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByLabelText('Type of Leave')).toHaveValue('Frozen Leave')
     })
     expect(
       screen.getByRole('option', { name: /Frozen Leave - Balance: 2 days/i }),
     ).toBeInTheDocument()
+  })
+
+  it('blocks paid leave submission when requested duration exceeds the current balance', async () => {
+    const currentYear = new Date().getFullYear()
+    const fetchMock = vi.fn(async (url, options = {}) => {
+      if (String(url).includes('hr/leaves/entitlements/mine')) {
+        return new Response(
+          JSON.stringify({
+            status: 'success',
+            entitlements: [
+              {
+                id: 3,
+                leave_type: 'Annual',
+                year: currentYear,
+                total_days: 1,
+                used_days: 0,
+                remaining: 1,
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        )
+      }
+
+      if (String(url).includes('hr/leaves') && options.method === 'POST') {
+        return new Response(JSON.stringify({ status: 'success' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ApplyLeave />)
+
+    const leaveTypeSelect = await screen.findByLabelText('Type of Leave')
+    await waitFor(() => {
+      expect(leaveTypeSelect).toHaveValue('Annual')
+    })
+
+    const endDateInput = screen.getByLabelText('End Date')
+    fireEvent.change(endDateInput, {
+      target: { value: addDaysToDateValue(screen.getByLabelText('Start Date').value, 1) },
+    })
+
+    expect(
+      await screen.findByText(/exceeds your remaining Annual balance of 1 day\(s\)/i),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled()
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Submit' }).closest('form'))
+
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, options]) => String(url).includes('hr/leaves') && options?.method === 'POST',
+      ),
+    ).toBe(false)
   })
 })

@@ -6,7 +6,7 @@ import StaffLeaveRecordDetailPage from './StaffLeaveRecordDetailPage'
 import * as AH from './actionHandlers'
 
 vi.mock('./actionHandlers', () => ({
-  getAllLeaves: vi.fn(),
+  getAllLeavesPayload: vi.fn(),
   leaveAction: vi.fn(),
 }))
 
@@ -60,12 +60,15 @@ describe('StaffLeaveRecordDetailPage', () => {
   })
 
   it('reloads HR leave detail using all-time records so past-year records remain visible', async () => {
-    AH.getAllLeaves.mockResolvedValueOnce([pastLeaveRecord])
+    AH.getAllLeavesPayload.mockResolvedValueOnce({
+      leaves: [pastLeaveRecord],
+      actionPermissions: { canRecommend: false, canApprove: true },
+    })
 
     renderDetail({ record: pastLeaveRecord })
 
     await waitFor(() => {
-      expect(AH.getAllLeaves).toHaveBeenCalledWith({
+      expect(AH.getAllLeavesPayload).toHaveBeenCalledWith({
         preset: 'all',
         startDate: '',
         endDate: '',
@@ -74,5 +77,26 @@ describe('StaffLeaveRecordDetailPage', () => {
 
     expect(await screen.findByText('Past annual leave')).toBeInTheDocument()
     expect(screen.queryByText('Leave record not found.')).not.toBeInTheDocument()
+  })
+
+  it('disables HR action buttons when loaded permissions do not allow the current stage', async () => {
+    AH.getAllLeavesPayload.mockResolvedValueOnce({
+      leaves: [
+        {
+          ...pastLeaveRecord,
+          status: 'Pending',
+          approved_status: null,
+          approved_at: null,
+        },
+      ],
+      actionPermissions: { canRecommend: false, canApprove: false },
+    })
+
+    renderDetail()
+
+    expect(await screen.findByText('Past annual leave')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recommend' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reject' })).toBeDisabled()
   })
 })

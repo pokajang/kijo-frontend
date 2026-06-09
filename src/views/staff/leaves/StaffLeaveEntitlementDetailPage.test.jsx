@@ -67,6 +67,7 @@ const entitlements = [
     total_days: 14,
     used_days: 3,
     remaining: 11,
+    remarks: 'Probation prorated entitlement',
   },
   {
     id: 71,
@@ -139,12 +140,18 @@ describe('StaffLeaveEntitlementDetailPage', () => {
     expect(screen.getByTestId(`detail-cell-annual-${currentYear}-assigned`)).toHaveTextContent('14')
     expect(screen.getByTestId(`detail-cell-annual-${currentYear}-used`)).toHaveTextContent('3')
     expect(screen.getByTestId(`detail-cell-annual-${currentYear}-balance`)).toHaveTextContent('11')
+    expect(screen.getByTestId(`detail-cell-annual-${currentYear}-remarks`)).toHaveTextContent(
+      'Probation prorated entitlement',
+    )
 
     const frozenRow = screen.getByTestId(`detail-row-frozen-leave-${currentYear}`)
     expect(within(frozenRow).getByText('Frozen Leave')).toBeInTheDocument()
     expect(within(frozenRow).getByText('Missing')).toBeInTheDocument()
     expect(screen.getByTestId(`detail-cell-frozen-leave-${currentYear}-balance`)).toHaveTextContent(
       '0',
+    )
+    expect(screen.getByTestId(`detail-cell-frozen-leave-${currentYear}-remarks`)).toHaveTextContent(
+      '-',
     )
   })
 

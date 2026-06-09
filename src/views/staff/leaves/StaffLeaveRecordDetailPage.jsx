@@ -94,14 +94,28 @@ const StaffLeaveRecordDetailPage = () => {
   const [actionModal, setActionModal] = useState({ visible: false, action: '', label: '' })
   const [remarks, setRemarks] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [actionPermissions, setActionPermissions] = useState({
+    canRecommend: false,
+    canApprove: false,
+  })
 
   const loadRecord = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const records = await AH.getAllLeaves({ preset: 'all', startDate: '', endDate: '' })
+      const { leaves: records, actionPermissions: permissions } = await AH.getAllLeavesPayload({
+        preset: 'all',
+        startDate: '',
+        endDate: '',
+      })
       const found = findRecordById(records, leaveId)
       setRecord(normalizeLeave(found))
+      setActionPermissions(
+        permissions || {
+          canRecommend: false,
+          canApprove: false,
+        },
+      )
       if (!found) setError('Leave record not found.')
     } catch (err) {
       setError(err?.message || 'Unable to load leave details.')
@@ -145,30 +159,32 @@ const StaffLeaveRecordDetailPage = () => {
   const actions = useMemo(() => {
     const isPending = record?.status === 'Pending'
     const hasReviewed = Boolean(record?.reviewed_by)
+    const canRecommend = Boolean(actionPermissions?.canRecommend)
+    const canApprove = Boolean(actionPermissions?.canApprove)
     return [
       {
         key: 'recommend',
         label: 'Recommend',
         buttonColor: 'info',
-        disabled: !isPending || hasReviewed,
+        disabled: !isPending || hasReviewed || !canRecommend,
         onClick: () => openActionModal('recommend'),
       },
       {
         key: 'approve',
         label: 'Approve',
         buttonColor: 'success',
-        disabled: !isPending || !hasReviewed,
+        disabled: !isPending || !hasReviewed || !canApprove,
         onClick: () => openActionModal('approve'),
       },
       {
         key: 'reject',
         label: 'Reject',
         danger: true,
-        disabled: !isPending,
+        disabled: !isPending || (hasReviewed ? !canApprove : !canRecommend),
         onClick: () => openActionModal('reject'),
       },
     ]
-  }, [record])
+  }, [actionPermissions, record])
 
   return (
     <>

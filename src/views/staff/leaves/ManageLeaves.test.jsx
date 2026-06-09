@@ -93,10 +93,12 @@ vi.mock('./SectionViewAssignments', () => ({
 }))
 
 vi.mock('./SectionAssignLeaves', () => ({
-  default: ({ editEntitlement }) => (
+  default: ({ editEntitlement, entitlements, entitlementsLoading }) => (
     <div>
       <span>Assign Leave Entitlement</span>
       <span data-testid="edit-entitlement-id">{editEntitlement?.id || 'none'}</span>
+      <span data-testid="assign-entitlement-count">{String(entitlements?.length || 0)}</span>
+      <span data-testid="assign-entitlements-loading">{String(entitlementsLoading)}</span>
     </div>
   ),
 }))
@@ -283,6 +285,8 @@ describe('ManageLeaves permissions', () => {
     await waitFor(() => {
       expect(screen.getByText('Assign Leave Entitlement')).toBeInTheDocument()
       expect(screen.getByTestId('edit-entitlement-id')).toHaveTextContent('44')
+      expect(screen.getByTestId('assign-entitlement-count')).toHaveTextContent('1')
+      expect(screen.getByTestId('assign-entitlements-loading')).toHaveTextContent('false')
     })
   })
 

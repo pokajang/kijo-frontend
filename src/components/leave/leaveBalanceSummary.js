@@ -51,6 +51,18 @@ const getEntitlementTotals = (entitlements = []) =>
 const getEntitlementsForYear = (entitlements = [], year = currentYear) =>
   entitlements.filter((entitlement) => Number(entitlement.year) === year)
 
+const getSingleYearEntitlementRemarks = (
+  entitlements = [],
+  year = currentYear,
+  enabled = false,
+) => {
+  if (!enabled) return ''
+  const yearEntitlements = getEntitlementsForYear(entitlements, year)
+  return yearEntitlements.length === 1 && hasValue(yearEntitlements[0].remarks)
+    ? yearEntitlements[0].remarks
+    : ''
+}
+
 const buildBalanceMetrics = (totals) => [
   { key: 'assigned', label: 'Assigned', value: formatLeaveBalanceDays(totals.assigned) },
   { key: 'used', label: 'Used', value: formatLeaveBalanceDays(totals.used) },
@@ -77,6 +89,17 @@ export const buildLeaveBalanceSummary = (
 ) => {
   const previousYear = year - 1
   const scopedEntitlements = filterEntitlementsByType(entitlements, leaveType)
+  const includeYearRemarks = Boolean(leaveType && leaveType !== allLeaveTypesValue)
+  const thisYearRemarks = getSingleYearEntitlementRemarks(
+    scopedEntitlements,
+    year,
+    includeYearRemarks,
+  )
+  const previousYearRemarks = getSingleYearEntitlementRemarks(
+    scopedEntitlements,
+    previousYear,
+    includeYearRemarks,
+  )
   return [
     {
       key: 'this-year',
@@ -85,6 +108,7 @@ export const buildLeaveBalanceSummary = (
       metrics: buildBalanceMetrics(
         getEntitlementTotals(getEntitlementsForYear(scopedEntitlements, year)),
       ),
+      ...(thisYearRemarks ? { remarks: thisYearRemarks } : {}),
     },
     {
       key: 'last-year',
@@ -93,6 +117,7 @@ export const buildLeaveBalanceSummary = (
       metrics: buildBalanceMetrics(
         getEntitlementTotals(getEntitlementsForYear(scopedEntitlements, previousYear)),
       ),
+      ...(previousYearRemarks ? { remarks: previousYearRemarks } : {}),
     },
     {
       key: 'all-time',

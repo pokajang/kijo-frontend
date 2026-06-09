@@ -548,6 +548,66 @@ describe('SectionAllLeaves', () => {
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument()
   })
 
+  it('hides unauthorized workflow actions from the row action menu', async () => {
+    render(
+      <SectionAllLeaves
+        allLeaveRecords={[
+          {
+            id: 1,
+            status: 'Pending',
+            type: 'Annual',
+            duration_days: 1,
+            applied_at: '2026-05-20 09:15:00',
+            start_date: '2026-06-01',
+            start_time: '08:30',
+            end_date: '2026-06-01',
+            end_time: '17:30',
+            reviewed_by: 20,
+            reviewed_status: 'Recommended',
+          },
+        ]}
+        fetchAllLeaveRecords={vi.fn()}
+        canRecommendActions
+        canApproveActions={false}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Actions' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Approve')).not.toBeInTheDocument()
+    expect(screen.queryByText('Reject')).not.toBeInTheDocument()
+  })
+
+  it('shows only current-stage workflow actions in the row action menu', async () => {
+    render(
+      <SectionAllLeaves
+        allLeaveRecords={[
+          {
+            id: 1,
+            status: 'Pending',
+            type: 'Annual',
+            duration_days: 1,
+            applied_at: '2026-05-20 09:15:00',
+            start_date: '2026-06-01',
+            start_time: '08:30',
+            end_date: '2026-06-01',
+            end_time: '17:30',
+            reviewed_by: 20,
+            reviewed_status: 'Recommended',
+          },
+        ]}
+        fetchAllLeaveRecords={vi.fn()}
+        canRecommendActions={false}
+        canApproveActions
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Actions' })[0])
+
+    expect((await screen.findAllByText('Approve')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Reject').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Recommend')).not.toBeInTheDocument()
+  })
+
   it('uses info for first-stage workflow actions and success for final approval', () => {
     render(
       <SectionAllLeaves

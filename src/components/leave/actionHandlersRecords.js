@@ -76,12 +76,18 @@ export const useLeaveRecordHandlers = () => {
   }, [])
 
   const handleCancel = useCallback(
-    async (leaveId) => {
+    async (leaveId, status) => {
+      const isApproved = status === 'Approved'
       if (
-        !(await dialog.confirm('Are you sure you want to cancel this leave application?', {
-          confirmText: 'Cancel Application',
-          confirmColor: 'danger',
-        }))
+        !(await dialog.confirm(
+          isApproved
+            ? 'Are you sure you want to revoke this approved leave?'
+            : 'Are you sure you want to cancel this leave application?',
+          {
+            confirmText: isApproved ? 'Revoke Leave' : 'Cancel Application',
+            confirmColor: 'danger',
+          },
+        ))
       )
         return
 
@@ -95,7 +101,9 @@ export const useLeaveRecordHandlers = () => {
         )
 
         dispatchAppNotificationsChanged()
-        dialog.alert('Leave application cancelled successfully.')
+        dialog.alert(
+          isApproved ? 'Leave revoked successfully.' : 'Leave application cancelled successfully.',
+        )
         fetchLeaveRecords()
       } catch (err) {
         console.error('Cancel error:', err)

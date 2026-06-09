@@ -1,9 +1,10 @@
 // src/views/SectionAssignLeaves.js
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   CAlert,
+  CBadge,
   CButton,
   CCard,
   CCardBody,
@@ -13,10 +14,15 @@ import {
   CFormInput,
   CFormLabel,
   CFormSelect,
+  CFormTextarea,
   CRow,
 } from '@coreui/react'
 import Select from '../../../components/forms/ThemedSelect'
 import { ASSIGNABLE_LEAVE_TYPES } from '../../../components/leave/leaveTypes'
+import {
+  formatLeaveBalanceDays,
+  normalizeLeaveType,
+} from '../../../components/leave/leaveBalanceSummary'
 import {
   filterActiveStaffRecords,
   isActiveStaffRecord,
@@ -40,6 +46,8 @@ const SectionAssignLeaves = ({
   onAssigned,
   editEntitlement = null,
   onCancelEdit,
+  entitlements = [],
+  entitlementsLoading = false,
 }) => {
   const location = useLocation()
   const assignLeavePrefill = location.state?.assignLeavePrefill || null
@@ -47,6 +55,7 @@ const SectionAssignLeaves = ({
   const [assignYear, setAssignYear] = useState(currentYear)
   const [leaveType, setLeaveType] = useState('')
   const [noOfDays, setNoOfDays] = useState('')
+  const [remarks, setRemarks] = useState('')
   const [isEdit, setIsEdit] = useState(false)
 
   const selectableStaffList = editEntitlement ? staffList : filterActiveStaffRecords(staffList)
@@ -54,6 +63,85 @@ const SectionAssignLeaves = ({
     value: staff.staff_id,
     label: formatStaffOption(staff),
   }))
+
+  const selectedStaffId = selectedStaff?.value
+  const selectedYear = assignYear
+  const editUsedDays = Number(editEntitlement?.used_days || 0)
+  const editEntitlementLocked = isEdit && editUsedDays > 0
+
+  const assignedEntitlements = useMemo(
+    () =>
+      selectedStaffId && selectedYear
+        ? entitlements.filter(
+            (entitlement) =>
+              String(entitlement.staff_id) === String(selectedStaffId) &&
+              String(entitlement.year) === String(selectedYear),
+          )
+        : [],
+    [entitlements, selectedStaffId, selectedYear],
+  )
+
+  const assignedByType = useMemo(() => {
+    const map = new Map()
+    assignedEntitlements.forEach((entitlement) => {
+      const key = normalizeLeaveType(entitlement.leave_type)
+      if (key && !map.has(key)) map.set(key, entitlement)
+    })
+    return map
+  }, [assignedEntitlements])
+
+  const isCurrentEditType = useCallback(
+    (entitlement, type) => {
+      if (!isEdit || !editEntitlement) return false
+      if (entitlement?.id && editEntitlement.id) {
+        return String(entitlement.id) === String(editEntitlement.id)
+      }
+      return (
+        String(entitlement?.staff_id) === String(editEntitlement.staff_id) &&
+        String(entitlement?.year) === String(editEntitlement.year) &&
+        normalizeLeaveType(type) === normalizeLeaveType(editEntitlement.leave_type)
+      )
+    },
+    [editEntitlement, isEdit],
+  )
+
+  const leaveTypeOptions = useMemo(
+    () =>
+      ASSIGNABLE_LEAVE_TYPES.map((type) => {
+        const assignedEntitlement = assignedByType.get(normalizeLeaveType(type))
+        const isCurrent = isCurrentEditType(assignedEntitlement, type)
+        const isAssigned = Boolean(assignedEntitlement)
+
+        return {
+          type,
+          disabled: isAssigned && !isCurrent,
+          label: isCurrent ? `${type} - Current` : isAssigned ? `${type} - Assigned` : type,
+        }
+      }),
+    [assignedByType, isCurrentEditType],
+  )
+
+  const selectedLeaveTypeOption = leaveTypeOptions.find(
+    (option) => normalizeLeaveType(option.type) === normalizeLeaveType(leaveType),
+  )
+
+  const assignedLeaveTypes = useMemo(
+    () =>
+      ASSIGNABLE_LEAVE_TYPES.map((type) => {
+        const entitlement = assignedByType.get(normalizeLeaveType(type))
+        if (!entitlement) return null
+        return {
+          type,
+          label: `${type} (${formatLeaveBalanceDays(entitlement.total_days)}d)`,
+        }
+      }).filter(Boolean),
+    [assignedByType],
+  )
+
+  const unassignedLeaveTypes = useMemo(
+    () => ASSIGNABLE_LEAVE_TYPES.filter((type) => !assignedByType.has(normalizeLeaveType(type))),
+    [assignedByType],
+  )
 
   useEffect(() => {
     if (editEntitlement) {
@@ -65,6 +153,7 @@ const SectionAssignLeaves = ({
       setAssignYear(editEntitlement.year)
       setLeaveType(editEntitlement.leave_type)
       setNoOfDays(editEntitlement.total_days)
+      setRemarks(editEntitlement.remarks || '')
       return
     }
 
@@ -83,12 +172,22 @@ const SectionAssignLeaves = ({
     setAssignYear(assignLeavePrefill?.year || currentYear)
     setLeaveType(assignLeavePrefill?.leave_type || '')
     setNoOfDays('')
+    setRemarks('')
   }, [assignLeavePrefill, editEntitlement, staffList])
+
+  useEffect(() => {
+    if (leaveType && selectedLeaveTypeOption?.disabled) {
+      setLeaveType('')
+    }
+  }, [leaveType, selectedLeaveTypeOption])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedStaff || !leaveType || !noOfDays) {
+    if (!selectedStaff || !leaveType || noOfDays === '') {
       return dialog.alert('Please select staff, leave type, and entitlement days.')
+    }
+    if (editEntitlementLocked && Number(noOfDays) < editUsedDays) {
+      return dialog.alert('Entitlement days cannot be lower than used days.')
     }
 
     try {
@@ -99,6 +198,7 @@ const SectionAssignLeaves = ({
           year: assignYear,
           type: leaveType,
           days: Number(noOfDays),
+          remarks,
         })
         dialog.alert('Entitlement updated successfully.')
       } else {
@@ -107,6 +207,7 @@ const SectionAssignLeaves = ({
           year: assignYear,
           type: leaveType,
           days: Number(noOfDays),
+          remarks,
         })
         dialog.alert('Leave entitlement assigned successfully.')
       }
@@ -133,6 +234,12 @@ const SectionAssignLeaves = ({
           {isEdit && (
             <CAlert color="primary">
               <strong>Editing entitlement for {selectedStaff?.label}</strong>
+            </CAlert>
+          )}
+          {editEntitlementLocked && (
+            <CAlert color="warning" className="py-2">
+              This entitlement has used days. Staff, year, and leave type are locked; remarks remain
+              editable and total days cannot be lower than used days.
             </CAlert>
           )}
           <CRow className="mb-3">
@@ -166,11 +273,12 @@ const SectionAssignLeaves = ({
                 aria-label="Type of Leave"
                 value={leaveType}
                 onChange={(e) => setLeaveType(e.target.value)}
+                disabled={editEntitlementLocked}
               >
                 <option value="">Select type</option>
-                {ASSIGNABLE_LEAVE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+                {leaveTypeOptions.map((option) => (
+                  <option key={option.type} value={option.type} disabled={option.disabled}>
+                    {option.label}
                   </option>
                 ))}
               </CFormSelect>
@@ -182,7 +290,58 @@ const SectionAssignLeaves = ({
                 type="number"
                 value={noOfDays}
                 onChange={(e) => setNoOfDays(e.target.value)}
-                min="0"
+                min={editEntitlementLocked ? String(editUsedDays) : '0'}
+                step="0.01"
+                inputMode="decimal"
+              />
+            </CCol>
+          </CRow>
+
+          {selectedStaffId && selectedYear && (
+            <div className="leave-entitlement-assignment-summary mb-3">
+              {entitlementsLoading ? (
+                <span className="small text-muted">Loading entitlement status...</span>
+              ) : (
+                <>
+                  <div className="leave-entitlement-assignment-summary-group">
+                    <span className="small text-muted">Assigned:</span>
+                    {assignedLeaveTypes.length > 0 ? (
+                      assignedLeaveTypes.map((item) => (
+                        <CBadge key={item.type} color="success" className="fw-normal">
+                          {item.label}
+                        </CBadge>
+                      ))
+                    ) : (
+                      <span className="small text-muted">None</span>
+                    )}
+                  </div>
+                  <div className="leave-entitlement-assignment-summary-group">
+                    <span className="small text-muted">Yet to assign:</span>
+                    {unassignedLeaveTypes.length > 0 ? (
+                      unassignedLeaveTypes.map((type) => (
+                        <CBadge key={type} color="warning" textColor="dark" className="fw-normal">
+                          {type}
+                        </CBadge>
+                      ))
+                    ) : (
+                      <span className="small text-muted">None</span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <CRow className="mb-3">
+            <CCol xs={12}>
+              <CFormLabel>Remarks</CFormLabel>
+              <CFormTextarea
+                aria-label="Remarks"
+                rows={3}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Optional entitlement remarks"
+                maxLength={5000}
               />
             </CCol>
           </CRow>

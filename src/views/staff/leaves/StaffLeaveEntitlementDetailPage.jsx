@@ -65,6 +65,14 @@ const dataColumns = [
     shrinkToFit: true,
     getExportValue: (record) => record.balanceDisplay,
   },
+  {
+    key: 'remarks',
+    label: 'Remarks',
+    width: '260px',
+    sortable: true,
+    sortType: 'string',
+    getExportValue: (record) => record.remarksDisplay,
+  },
 ]
 
 const defaultVisibleColumns = {
@@ -73,6 +81,7 @@ const defaultVisibleColumns = {
   assigned: true,
   used: true,
   balance: true,
+  remarks: true,
 }
 
 const requiredColumns = new Set(['leaveType'])
@@ -130,6 +139,12 @@ const buildEntitlementRows = (entitlements = [], periodValue = String(currentYea
     const coverage = typeEntitlements.length > 0 ? 'Assigned' : 'Missing'
     const entitlementId =
       periodValue === allTimeValue || typeEntitlements.length !== 1 ? null : typeEntitlements[0].id
+    const remarksDisplay =
+      periodValue !== allTimeValue &&
+      typeEntitlements.length === 1 &&
+      hasValue(typeEntitlements[0].remarks)
+        ? typeEntitlements[0].remarks
+        : '-'
 
     return {
       id: `${normalizeLeaveType(leaveType).replace(/\s+/g, '-')}-${periodValue}`,
@@ -142,6 +157,7 @@ const buildEntitlementRows = (entitlements = [], periodValue = String(currentYea
       assignedDisplay: formatLeaveBalanceDays(assigned),
       usedDisplay: formatLeaveBalanceDays(used),
       balanceDisplay: formatLeaveBalanceDays(balance),
+      remarksDisplay,
     }
   })
 }
@@ -230,6 +246,7 @@ const StaffLeaveEntitlementDetailPage = () => {
     if (column.key === 'assigned') return record.assignedDisplay
     if (column.key === 'used') return record.usedDisplay
     if (column.key === 'balance') return record.balanceDisplay
+    if (column.key === 'remarks') return record.remarksDisplay
     return record[column.key] ?? '-'
   }
 
@@ -298,7 +315,7 @@ const StaffLeaveEntitlementDetailPage = () => {
         dataColumns={dataColumns}
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
-        storageKey="staff.leaves.entitlement-detail.visible-columns.v1"
+        storageKey="staff.leaves.entitlement-detail.visible-columns.v2"
         idPrefix="staff-leave-entitlement-detail"
         emptyMessage="No entitlement balances found."
         exportFilename={`leave-entitlement-${staffId}-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -308,13 +325,17 @@ const StaffLeaveEntitlementDetailPage = () => {
         actionColumnWidth="56px"
         getMobileTitle={(record) => record.leaveType}
         getMobileSubtitle={(record) => record.coverage}
-        getMobileMeta={(record) => `Balance: ${record.balanceDisplay}`}
+        getMobileMeta={(record) =>
+          record.remarksDisplay && record.remarksDisplay !== '-'
+            ? `Balance: ${record.balanceDisplay} | Remarks: ${record.remarksDisplay}`
+            : `Balance: ${record.balanceDisplay}`
+        }
         getMobileStatus={(record) => record.coverage}
         getMobileStatusTone={(record) => getCoverageTone(record.coverage)}
         mobileFieldKeys={{
           title: 'leaveType',
           subtitle: 'coverage',
-          meta: 'balance',
+          meta: ['balance', 'remarks'],
           status: 'coverage',
         }}
         initialSortField="leaveType"

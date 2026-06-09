@@ -130,6 +130,36 @@ const ApplyLeave = ({ onViewRecords }) => {
 
   const hasCurrentYearEntitlements = currentYearEntitlements.length > 0
   const canApplyLeave = leaveOptions.length > 0
+  const selectedEntitlement = useMemo(() => {
+    const selectedType = normalizeLeaveType(leaveFormData.typeOfLeave)
+    if (!selectedType || isUnpaidLeave(selectedType)) return null
+
+    return currentYearEntitlements.find(
+      (entitlement) => normalizeLeaveType(entitlement.leave_type) === selectedType,
+    )
+  }, [currentYearEntitlements, leaveFormData.typeOfLeave])
+  const selectedRemaining = selectedEntitlement ? getEntitlementRemaining(selectedEntitlement) : 0
+  const selectedPaidLeaveMissing =
+    leaveFormData.typeOfLeave && !isUnpaidLeave(leaveFormData.typeOfLeave) && !selectedEntitlement
+  const selectedPaidLeaveInsufficient =
+    !selectedPaidLeaveMissing && selectedEntitlement && duration > 0 && duration > selectedRemaining
+  const balanceValidationMessage = selectedPaidLeaveMissing
+    ? 'No current-year entitlement is assigned for this leave type.'
+    : selectedPaidLeaveInsufficient
+      ? `This request exceeds your remaining ${leaveFormData.typeOfLeave} balance of ${formatLeaveBalanceDays(
+          selectedRemaining,
+        )} day(s).`
+      : ''
+
+  const handleValidatedSubmit = (event) => {
+    if (balanceValidationMessage) {
+      event.preventDefault()
+      showNotice('warning', balanceValidationMessage, { scope: 'validation' })
+      return
+    }
+
+    handleSubmit(event)
+  }
 
   useEffect(() => {
     if (loadingEntitlements || !canApplyLeave) return
@@ -166,6 +196,11 @@ const ApplyLeave = ({ onViewRecords }) => {
                       <CBadge color="secondary" className="leave-balance-card-badge">
                         {entitlement.year}
                       </CBadge>
+                    )}
+                    {entitlement.remarks && (
+                      <div className="leave-balance-card-remarks">
+                        Remarks: {entitlement.remarks}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -209,7 +244,7 @@ const ApplyLeave = ({ onViewRecords }) => {
               )}
             </>
           ) : (
-            <CForm onSubmit={handleSubmit}>
+            <CForm onSubmit={handleValidatedSubmit}>
               <CRow>
                 <CCol xs={12} className="mb-3">
                   <CFormLabel htmlFor="typeOfLeave" className="mb-1">
@@ -316,6 +351,16 @@ const ApplyLeave = ({ onViewRecords }) => {
                 </CRow>
               )}
 
+              {balanceValidationMessage && (
+                <CRow>
+                  <CCol>
+                    <CAlert color="warning" className="py-2">
+                      {balanceValidationMessage}
+                    </CAlert>
+                  </CCol>
+                </CRow>
+              )}
+
               {notice.visible && notice.scope !== 'submission' && (
                 <CRow>
                   <CCol>
@@ -326,7 +371,12 @@ const ApplyLeave = ({ onViewRecords }) => {
                 </CRow>
               )}
 
-              <CButton type="submit" color="primary" size="sm" disabled={isSubmitting}>
+              <CButton
+                type="submit"
+                color="primary"
+                size="sm"
+                disabled={isSubmitting || Boolean(balanceValidationMessage)}
+              >
                 Submit
               </CButton>
             </CForm>

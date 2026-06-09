@@ -92,9 +92,11 @@ const LeaveRecordDetailPage = () => {
   }, [consumeEntity, leaveId])
 
   const cancelLeave = useCallback(async () => {
+    const isApproved = record?.status === 'Approved'
+    const actionLabel = isApproved ? 'revoke this approved leave' : 'cancel this leave application'
     if (
-      !(await dialog.confirm('Are you sure you want to cancel this leave application?', {
-        confirmText: 'Cancel Application',
+      !(await dialog.confirm(`Are you sure you want to ${actionLabel}?`, {
+        confirmText: isApproved ? 'Revoke Leave' : 'Cancel Application',
         confirmColor: 'danger',
       }))
     )
@@ -106,24 +108,27 @@ const LeaveRecordDetailPage = () => {
       })
       if (data.status !== 'success') throw new Error(data.message || 'Unable to cancel leave')
       dispatchAppNotificationsChanged()
-      dialog.alert('Leave application cancelled successfully.')
+      dialog.alert(
+        isApproved ? 'Leave revoked successfully.' : 'Leave application cancelled successfully.',
+      )
       await loadRecord()
     } catch (err) {
       dialog.alert(err?.message || 'Server error. Please try again later.')
     }
-  }, [leaveId, loadRecord])
+  }, [leaveId, loadRecord, record?.status])
 
-  const actions = useMemo(
-    () => [
+  const actions = useMemo(() => {
+    if (!['Pending', 'Approved'].includes(record?.status)) return []
+
+    return [
       {
         key: 'cancel',
-        label: 'Cancel',
-        disabled: record?.status === 'Cancelled',
+        label: record?.status === 'Approved' ? 'Revoke Leave' : 'Cancel',
+        danger: record?.status === 'Approved',
         onClick: cancelLeave,
       },
-    ],
-    [cancelLeave, record],
-  )
+    ]
+  }, [cancelLeave, record?.status])
 
   return (
     <DataTableDetailShell

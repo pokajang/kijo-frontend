@@ -619,36 +619,49 @@ const SectionAllLeaves = ({
     const isPending = record.status === 'Pending'
     const isApproved = record.status === 'Approved'
     const hasReviewed = Boolean(record.reviewed_by)
-    return [
-      {
+    const actions = []
+
+    if (isPending && !hasReviewed && canRecommendActions) {
+      actions.push({
         key: 'recommend',
         label: 'Recommend',
-        disabled: !isPending || hasReviewed || !canRecommendActions,
         onClick: () => openActionModal(record.id, 'recommend'),
-      },
-      {
-        key: 'approve',
-        label: 'Approve',
-        disabled: !isPending || !hasReviewed || !canApproveActions,
-        onClick: () => openActionModal(record.id, 'approve'),
-      },
-      {
+      })
+      actions.push({
         key: 'reject',
         label: 'Reject',
         danger: true,
-        disabled: !isPending || (hasReviewed ? !canApproveActions : !canRecommendActions),
         dividerBefore: true,
         onClick: () => openActionModal(record.id, 'reject'),
-      },
-      {
+      })
+    }
+
+    if (isPending && hasReviewed && canApproveActions) {
+      actions.push({
+        key: 'approve',
+        label: 'Approve',
+        onClick: () => openActionModal(record.id, 'approve'),
+      })
+      actions.push({
+        key: 'reject',
+        label: 'Reject',
+        danger: true,
+        dividerBefore: true,
+        onClick: () => openActionModal(record.id, 'reject'),
+      })
+    }
+
+    if (isApproved && canApproveActions) {
+      actions.push({
         key: 'revoke',
         label: 'Revoke Leave',
         danger: true,
-        disabled: !isApproved,
         dividerBefore: true,
         onClick: () => openActionModal(record.id, 'revoke'),
-      },
-    ]
+      })
+    }
+
+    return actions
   }
 
   const sortComparators = useMemo(

@@ -230,6 +230,8 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
           onAssigned={fetchEntitlements}
           editEntitlement={editEntitlement}
           onCancelEdit={() => navigate(assignReturnTo)}
+          entitlements={entitlements}
+          entitlementsLoading={entitlementsLoading}
         />
       )
     }

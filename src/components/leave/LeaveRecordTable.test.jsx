@@ -130,7 +130,7 @@ describe('LeaveRecordTable', () => {
     expect(groupRows[1]).toHaveTextContent('2025')
   })
 
-  it('allows cancelling rejected personal leave records but not already-cancelled records', async () => {
+  it('offers cancellation only for pending records and revoke for approved records', async () => {
     const handleCancel = vi.fn()
     renderTable({
       periodRange: getPeriodRangePreset('all'),
@@ -160,17 +160,44 @@ describe('LeaveRecordTable', () => {
           endDate: '2026-01-12',
           endTime: '17:30',
         },
+        {
+          id: 3,
+          status: 'Pending',
+          leaveType: 'Frozen Leave',
+          duration: 1,
+          reason: 'Pending leave',
+          appliedAt: '2026-01-07 09:15:00',
+          startDate: '2026-01-13',
+          startTime: '08:30',
+          endDate: '2026-01-13',
+          endTime: '17:30',
+        },
+        {
+          id: 4,
+          status: 'Approved',
+          leaveType: 'Annual',
+          duration: 1,
+          reason: 'Approved leave',
+          appliedAt: '2026-01-08 09:15:00',
+          startDate: '2026-01-14',
+          startTime: '08:30',
+          endDate: '2026-01-14',
+          endTime: '17:30',
+        },
       ],
     })
 
-    const cancelItems = document.querySelectorAll('.record-action-menu .dropdown-item')
-    expect(cancelItems[0]).not.toHaveAttribute('aria-disabled', 'true')
-    expect(cancelItems[1]).toHaveAttribute('aria-disabled', 'true')
+    const actionItems = Array.from(document.querySelectorAll('.record-action-menu .dropdown-item'))
+    expect([...new Set(actionItems.map((item) => item.textContent))].sort()).toEqual([
+      'Cancel',
+      'Revoke Leave',
+    ])
 
-    fireEvent.click(cancelItems[0])
-    expect(handleCancel).toHaveBeenCalledWith(1)
+    fireEvent.click(actionItems.find((item) => item.textContent === 'Cancel'))
+    expect(handleCancel).toHaveBeenCalledWith(3, 'Pending')
 
-    fireEvent.click(cancelItems[1])
-    expect(handleCancel).toHaveBeenCalledTimes(1)
+    fireEvent.click(actionItems.find((item) => item.textContent === 'Revoke Leave'))
+    expect(handleCancel).toHaveBeenCalledWith(4, 'Approved')
+    expect(handleCancel).toHaveBeenCalledTimes(2)
   })
 })
