@@ -24,9 +24,18 @@ vi.mock('../../../components/datatable', async () => {
         ))}
       </div>
     ),
-    DataTableRecordList: ({ rows = [], dataColumns = [], renderCell, getActions }) => (
+    DataTableRecordList: ({
+      rows = [],
+      dataColumns = [],
+      renderCell,
+      getActions,
+      showDesktopSummary,
+      className,
+    }) => (
       <div>
         <div data-testid="detail-row-count">{rows.length}</div>
+        <div data-testid="detail-table-summary-visible">{String(showDesktopSummary)}</div>
+        <div data-testid="detail-table-class">{className || ''}</div>
         {rows.map((row) => (
           <div key={row.id} data-testid={`detail-row-${row.id}`}>
             {dataColumns.map((column) => (
@@ -134,6 +143,10 @@ describe('StaffLeaveEntitlementDetailPage', () => {
     })
 
     expect(screen.getByTestId('detail-row-count')).toHaveTextContent('11')
+    expect(screen.getByTestId('detail-table-summary-visible')).toHaveTextContent('false')
+    expect(screen.getByTestId('detail-table-class')).toHaveTextContent(
+      'leave-entitlement-detail-table',
+    )
     const annualRow = screen.getByTestId(`detail-row-annual-${currentYear}`)
     expect(within(annualRow).getByText('Annual')).toBeInTheDocument()
     expect(within(annualRow).getByText('Assigned')).toBeInTheDocument()

@@ -39,10 +39,18 @@ describe('leaveRecordFilters', () => {
     })
   })
 
-  it('uses leave start date as the scope date', () => {
+  it('uses applied date as the scope date', () => {
     expect(
       getLeaveRecordScopeDate({
         appliedAt: '2026-05-20 09:15:00',
+        startDate: '2026-08-01',
+      }),
+    ).toBe('2026-05-20 09:15:00')
+  })
+
+  it('falls back to leave start date when applied date is missing', () => {
+    expect(
+      getLeaveRecordScopeDate({
         startDate: '2026-08-01',
       }),
     ).toBe('2026-08-01')
@@ -55,7 +63,7 @@ describe('leaveRecordFilters', () => {
         staff_id: 7,
         type: 'Annual',
         status: 'Approved',
-        applied_at: '2025-12-20',
+        applied_at: '2026-01-20',
         start_date: '2026-01-02',
       },
       {

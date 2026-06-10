@@ -221,7 +221,9 @@ describe('ManageLeaves permissions', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('location')).toHaveTextContent('/staff/leaves/assign')
-      expect(screen.getByTestId('location-state')).toHaveTextContent('{}')
+      expect(screen.getByTestId('location-state')).toHaveTextContent(
+        JSON.stringify({ returnTo: '/staff/leaves' }),
+      )
     })
   })
 
@@ -251,6 +253,7 @@ describe('ManageLeaves permissions', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/staff/leaves/assign')
       expect(screen.getByTestId('location-state')).toHaveTextContent(
         JSON.stringify({
+          returnTo: '/staff/leaves/entitlements',
           assignLeavePrefill: {
             staff_id: 7,
             year: 2026,

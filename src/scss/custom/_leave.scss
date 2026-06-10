@@ -252,6 +252,27 @@
   gap: 0.35rem;
 }
 
+.leave-entitlement-detail-table.data-table-shell {
+  border: 0;
+  border-radius: 0;
+}
+
+.leave-entitlement-detail-table .data-table-utility-row {
+  margin-bottom: 0.5rem !important;
+}
+
+.leave-entitlement-detail-table .table-scroll-viewport {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-bottom: 0;
+}
+
+.leave-entitlement-detail-table .records-table-footer {
+  border: 1px solid var(--cui-border-color, var(--app-border-card));
+  border-top: 0;
+  border-bottom-right-radius: var(--app-radius-lg);
+  border-bottom-left-radius: var(--app-radius-lg);
+}
+
 @media (max-width: 991.98px) {
   .leave-balance-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

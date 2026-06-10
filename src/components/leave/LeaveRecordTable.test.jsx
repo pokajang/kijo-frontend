@@ -48,13 +48,13 @@ afterEach(() => {
 })
 
 describe('LeaveRecordTable', () => {
-  it('filters personal leave records by leave start date', () => {
+  it('filters personal leave records by applied date', () => {
     expect(
       getLeaveRecordScopeDate({
         appliedAt: '2026-05-20 09:15:00',
         startDate: '2026-08-01',
       }),
-    ).toBe('2026-08-01')
+    ).toBe('2026-05-20 09:15:00')
   })
 
   it('prioritizes pending personal leave records before completed statuses', () => {
@@ -108,7 +108,7 @@ describe('LeaveRecordTable', () => {
     expect(screen.queryByText('Annual 2026 leave')).not.toBeInTheDocument()
   })
 
-  it('uses leave start date for personal period filtering', () => {
+  it('uses applied date for personal period filtering', () => {
     renderTable({
       periodRange: {
         preset: 'custom',
@@ -117,8 +117,8 @@ describe('LeaveRecordTable', () => {
       },
     })
 
-    expect(screen.getAllByText('Annual 2026 leave').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Medical 2025 leave')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Medical 2025 leave').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Annual 2026 leave')).not.toBeInTheDocument()
   })
 
   it('renders all-time year separators for personal records', () => {

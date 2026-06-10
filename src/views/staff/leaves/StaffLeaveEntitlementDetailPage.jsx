@@ -341,8 +341,10 @@ const StaffLeaveEntitlementDetailPage = () => {
         initialSortField="leaveType"
         initialSortDir="asc"
         initialSortDirByField={{ assigned: 'desc', used: 'desc', balance: 'desc' }}
+        showDesktopSummary={false}
         showColumnMenu={false}
         showMobileUtilityRow={false}
+        className="leave-entitlement-detail-table"
       />
     </DataTableDetailShell>
   )

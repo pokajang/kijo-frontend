@@ -149,11 +149,13 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
   )
 
   const assignReturnTo = location.state?.returnTo || '/staff/leaves/entitlements'
+  const currentReturnTo = `${location.pathname}${location.search}`
 
   const openAssignLeave = (record) => {
     if (record?.rowKind === 'missing') {
       navigate('/staff/leaves/assign', {
         state: {
+          returnTo: currentReturnTo,
           assignLeavePrefill: {
             staff_id: record.staff_id,
             year: record.year,
@@ -164,7 +166,11 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
       return
     }
 
-    navigate('/staff/leaves/assign')
+    navigate('/staff/leaves/assign', {
+      state: {
+        returnTo: currentReturnTo,
+      },
+    })
   }
 
   const openEntitlementDetails = (record) => {
@@ -200,7 +206,11 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         loading={staffListLoading || entitlementsLoading}
         historyLoading={entitlementHistoryLoading}
         onDelete={fetchEntitlements}
-        onEdit={(record) => navigate(`/staff/leaves/entitlements/${record.id}/edit`)}
+        onEdit={(record) =>
+          navigate(`/staff/leaves/entitlements/${record.id}/edit`, {
+            state: { returnTo: currentReturnTo },
+          })
+        }
         onAssign={openAssignLeave}
         onViewAssignment={openEntitlementDetails}
         onViewRecords={() => navigate('/staff/leaves')}

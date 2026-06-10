@@ -209,13 +209,13 @@ afterEach(() => {
 })
 
 describe('SectionAllLeaves', () => {
-  it('filters leave applications by leave start date', () => {
+  it('filters leave applications by applied date', () => {
     expect(
       getLeaveApplicationScopeDate({
         applied_at: '2026-05-20 09:15:00',
         start_date: '2026-08-01',
       }),
-    ).toBe('2026-08-01')
+    ).toBe('2026-05-20 09:15:00')
   })
 
   it('prioritizes pending leave records before completed statuses', () => {
@@ -430,7 +430,7 @@ describe('SectionAllLeaves', () => {
 
     expect(screen.getByText('Azam annual 2025')).toBeInTheDocument()
     expect(screen.queryByText('Azam medical 2026')).not.toBeInTheDocument()
-    expect(screen.queryByText('Azam applied 2025 start 2026')).not.toBeInTheDocument()
+    expect(screen.getByText('Azam applied 2025 start 2026')).toBeInTheDocument()
     expect(screen.queryByText('Bina annual 2025')).not.toBeInTheDocument()
   })
 
