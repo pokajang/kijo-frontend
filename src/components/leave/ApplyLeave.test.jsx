@@ -58,6 +58,7 @@ describe('ApplyLeave', () => {
       expect(leaveTypeSelect).toHaveValue('Unpaid')
     })
     expect(screen.getByRole('option', { name: 'Unpaid Leave' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Others' })).toBeInTheDocument()
 
     fireEvent.submit(screen.getByRole('button', { name: 'Submit' }).closest('form'))
 
@@ -77,6 +78,72 @@ describe('ApplyLeave', () => {
     expect(JSON.parse(postCall[1].body)).toEqual(
       expect.objectContaining({
         type: 'Unpaid',
+        status: 'Pending',
+      }),
+    )
+  })
+
+  it('allows Others leave applications without an entitlement balance', async () => {
+    const fetchMock = vi.fn(async (url, options = {}) => {
+      if (String(url).includes('hr/leaves/entitlements/mine')) {
+        return new Response(JSON.stringify({ status: 'success', entitlements: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      if (String(url).includes('hr/leaves') && options.method === 'POST') {
+        return new Response(
+          JSON.stringify({
+            status: 'success',
+            mail_sent: true,
+            message: 'Leave application submitted successfully.',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ApplyLeave />)
+
+    const leaveTypeSelect = await screen.findByLabelText('Type of Leave')
+    await waitFor(() => {
+      expect(leaveTypeSelect).toHaveValue('Unpaid')
+    })
+
+    fireEvent.change(leaveTypeSelect, { target: { value: 'Others' } })
+    expect(leaveTypeSelect).toHaveValue('Others')
+    expect(screen.getByLabelText('Reason')).toHaveAttribute(
+      'placeholder',
+      'eg. Compassionate leave, replacement leave, or other leave not preset by HR',
+    )
+    expect(screen.queryByText(/No current-year entitlement is assigned/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).not.toBeDisabled()
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Submit' }).closest('form'))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('hr/leaves'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(String),
+        }),
+      )
+    })
+
+    const postCall = fetchMock.mock.calls.find(
+      ([url, options]) => String(url).includes('hr/leaves') && options?.method === 'POST',
+    )
+    expect(JSON.parse(postCall[1].body)).toEqual(
+      expect.objectContaining({
+        type: 'Others',
         status: 'Pending',
       }),
     )
@@ -124,6 +191,7 @@ describe('ApplyLeave', () => {
       screen.queryByRole('option', { name: /Annual - Balance: 0 days/i }),
     ).not.toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Unpaid Leave' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Others' })).toBeInTheDocument()
   })
 
   it('shows Frozen Leave as an apply option when entitlement has balance', async () => {

@@ -19,6 +19,9 @@ export const normalizeLeaveType = (value) =>
     .trim()
     .toLowerCase()
 
+export const isNonEntitlementLeaveType = (value) =>
+  ['unpaid', 'unpaid leave', 'other', 'others'].includes(normalizeLeaveType(value))
+
 export const getLeaveTypeOptions = (entitlements = []) =>
   Array.from(new Set(entitlements.map((entitlement) => entitlement.leave_type).filter(Boolean)))
     .sort((left, right) => left.localeCompare(right))

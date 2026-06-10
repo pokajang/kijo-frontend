@@ -13,7 +13,11 @@ import {
 } from '@coreui/react'
 import { DataTableLoadingState } from '../datatable'
 import { getMyEntitlements, useApplyLeaveHandlers } from './actionHandlers'
-import { formatLeaveBalanceDays, normalizeLeaveType } from './leaveBalanceSummary'
+import {
+  formatLeaveBalanceDays,
+  isNonEntitlementLeaveType,
+  normalizeLeaveType,
+} from './leaveBalanceSummary'
 
 const colorByType = {
   success: 'success',
@@ -22,8 +26,11 @@ const colorByType = {
   info: 'info',
 }
 
-const isUnpaidLeave = (value) => ['unpaid', 'unpaid leave'].includes(normalizeLeaveType(value))
 const hasValue = (value) => value !== null && typeof value !== 'undefined' && value !== ''
+const getReasonPlaceholder = (typeOfLeave) =>
+  normalizeLeaveType(typeOfLeave) === 'others'
+    ? 'eg. Compassionate leave, replacement leave, or other leave not preset by HR'
+    : 'eg. Resting'
 const toNumber = (value) => {
   const number = Number(value || 0)
   return Number.isFinite(number) ? number : 0
@@ -111,7 +118,7 @@ const ApplyLeave = ({ onViewRecords }) => {
       ...currentYearEntitlements
         .filter(
           (entitlement) =>
-            !isUnpaidLeave(entitlement.leave_type) && hasPositiveBalance(entitlement),
+            !isNonEntitlementLeaveType(entitlement.leave_type) && hasPositiveBalance(entitlement),
         )
         .map((entitlement) => {
           const remaining = getEntitlementRemaining(entitlement)
@@ -124,6 +131,7 @@ const ApplyLeave = ({ onViewRecords }) => {
           }
         }),
       { key: `unpaid-${currentYear}`, value: 'Unpaid', label: 'Unpaid Leave' },
+      { key: `others-${currentYear}`, value: 'Others', label: 'Others' },
     ],
     [currentYear, currentYearEntitlements],
   )
@@ -132,7 +140,7 @@ const ApplyLeave = ({ onViewRecords }) => {
   const canApplyLeave = leaveOptions.length > 0
   const selectedEntitlement = useMemo(() => {
     const selectedType = normalizeLeaveType(leaveFormData.typeOfLeave)
-    if (!selectedType || isUnpaidLeave(selectedType)) return null
+    if (!selectedType || isNonEntitlementLeaveType(selectedType)) return null
 
     return currentYearEntitlements.find(
       (entitlement) => normalizeLeaveType(entitlement.leave_type) === selectedType,
@@ -140,7 +148,9 @@ const ApplyLeave = ({ onViewRecords }) => {
   }, [currentYearEntitlements, leaveFormData.typeOfLeave])
   const selectedRemaining = selectedEntitlement ? getEntitlementRemaining(selectedEntitlement) : 0
   const selectedPaidLeaveMissing =
-    leaveFormData.typeOfLeave && !isUnpaidLeave(leaveFormData.typeOfLeave) && !selectedEntitlement
+    leaveFormData.typeOfLeave &&
+    !isNonEntitlementLeaveType(leaveFormData.typeOfLeave) &&
+    !selectedEntitlement
   const selectedPaidLeaveInsufficient =
     !selectedPaidLeaveMissing && selectedEntitlement && duration > 0 && duration > selectedRemaining
   const balanceValidationMessage = selectedPaidLeaveMissing
@@ -274,7 +284,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                     name="reason"
                     value={leaveFormData.reason}
                     onChange={handleChange}
-                    placeholder="eg. Resting"
+                    placeholder={getReasonPlaceholder(leaveFormData.typeOfLeave)}
                   />
                 </CCol>
               </CRow>
