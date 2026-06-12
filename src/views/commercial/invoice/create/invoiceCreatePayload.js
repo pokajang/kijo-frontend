@@ -261,7 +261,11 @@ export const buildInvoiceCreatePayload = (
         pricing.discount_unit_price ??
           (discountQty ? toNumber(pricing.discount) / discountQty : pricing.discount),
       )
-      const hygieneItems = Array.isArray(pricing.hygiene_items) ? pricing.hygiene_items : []
+      const pricingHygieneItems = Array.isArray(pricing.hygiene_items) ? pricing.hygiene_items : []
+      const quoteHygieneItems = Array.isArray(quoteDetails?.hygiene_items)
+        ? quoteDetails.hygiene_items
+        : []
+      const hygieneItems = pricingHygieneItems.length > 0 ? pricingHygieneItems : quoteHygieneItems
 
       payload.breakdown = [
         {

@@ -1,13 +1,21 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   CCard,
   CCardBody,
   CCardHeader,
+  CButton,
   CForm,
   CRow,
   CCol,
   CFormLabel,
   CFormInput,
+  CFormTextarea,
+  CTable,
+  CTableHead,
+  CTableRow,
+  CTableHeaderCell,
+  CTableBody,
+  CTableDataCell,
   CTooltip,
 } from '@coreui/react'
 
@@ -24,12 +32,24 @@ const PricingCard = ({ formData, setFormData }) => {
     discount = 0,
     sstPercent = 0,
   } = formData
+  const hygieneItems = useMemo(
+    () => (Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []),
+    [formData.hygieneItems],
+  )
+  const [newItem, setNewItem] = useState({
+    item_description: '',
+    description: '',
+    quantity: 1,
+    unit: 'Lot',
+    unit_price: '',
+  })
 
   const totals = calculateHygieneTotals({
     sampleCounts,
     numWorkUnits,
     unitPrice,
     travelCharge,
+    customItems: hygieneItems,
     discount,
     sstPercent,
   })
@@ -44,6 +64,7 @@ const PricingCard = ({ formData, setFormData }) => {
   }, [
     unitPrice,
     travelCharge,
+    hygieneItems,
     numWorkUnits,
     sampleCounts,
     discount,
@@ -53,6 +74,55 @@ const PricingCard = ({ formData, setFormData }) => {
     totals.grandTotal,
     setFormData,
   ])
+
+  const handleItemChange = (index, field) => (event) => {
+    const { value } = event.target
+    setFormData((prev) => {
+      const nextItems = Array.isArray(prev.hygieneItems) ? [...prev.hygieneItems] : []
+      const current = nextItems[index] || {}
+      nextItems[index] = { ...current, [field]: value }
+      return { ...prev, hygieneItems: nextItems }
+    })
+  }
+
+  const handleRemoveItem = (index) => () => {
+    setFormData((prev) => {
+      const nextItems = Array.isArray(prev.hygieneItems) ? [...prev.hygieneItems] : []
+      nextItems.splice(index, 1)
+      return { ...prev, hygieneItems: nextItems }
+    })
+  }
+
+  const canAddItem =
+    String(newItem.item_description || '').trim() !== '' &&
+    Number(newItem.quantity) > 0 &&
+    Number(newItem.unit_price) > 0
+
+  const handleAddItem = () => {
+    if (!canAddItem) return
+
+    setFormData((prev) => ({
+      ...prev,
+      hygieneItems: [
+        ...(Array.isArray(prev.hygieneItems) ? prev.hygieneItems : []),
+        {
+          id: `additional-${Date.now()}`,
+          item_description: newItem.item_description.trim(),
+          description: newItem.description.trim(),
+          quantity: Number(newItem.quantity) || 0,
+          unit: newItem.unit.trim() || 'Lot',
+          unit_price: Number(newItem.unit_price) || 0,
+        },
+      ],
+    }))
+    setNewItem({
+      item_description: '',
+      description: '',
+      quantity: 1,
+      unit: 'Lot',
+      unit_price: '',
+    })
+  }
 
   return (
     <CCol>
@@ -153,6 +223,159 @@ const PricingCard = ({ formData, setFormData }) => {
                 />
               </CCol>
             </CRow>
+
+            <div className="mt-4">
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <strong>Additional Fees</strong>
+              </div>
+
+              {/* datatable-exempt: existing embedded/layout table */}
+              <CTable responsive striped className="data-table-compact embedded-data-table">
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell style={{ width: '48px' }}>#</CTableHeaderCell>
+                    <CTableHeaderCell>Item</CTableHeaderCell>
+                    <CTableHeaderCell>Notes</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
+                    <CTableHeaderCell className="text-end" style={{ width: '120px' }}>
+                      Total
+                    </CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '90px' }}>Action</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {hygieneItems.map((item, index) => {
+                    const quantity = Number(item.quantity) || 0
+                    const unitPrice = Number(item.unit_price) || 0
+                    return (
+                      <CTableRow key={item.id || index}>
+                        <CTableDataCell>{index + 1}</CTableDataCell>
+                        <CTableDataCell>
+                          <CFormInput
+                            value={item.item_description || ''}
+                            onChange={handleItemChange(index, 'item_description')}
+                          />
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CFormTextarea
+                            rows={1}
+                            value={item.description || ''}
+                            onChange={handleItemChange(index, 'description')}
+                          />
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CFormInput
+                            type="number"
+                            min="0"
+                            value={item.quantity ?? ''}
+                            onChange={handleItemChange(index, 'quantity')}
+                          />
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CFormInput
+                            value={item.unit || ''}
+                            onChange={handleItemChange(index, 'unit')}
+                          />
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CFormInput
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unit_price ?? ''}
+                            onChange={handleItemChange(index, 'unit_price')}
+                          />
+                        </CTableDataCell>
+                        <CTableDataCell className="text-end">
+                          {(quantity * unitPrice).toFixed(2)}
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <CButton
+                            color="danger"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRemoveItem(index)}
+                          >
+                            Remove
+                          </CButton>
+                        </CTableDataCell>
+                      </CTableRow>
+                    )
+                  })}
+                  <CTableRow>
+                    <CTableDataCell>New</CTableDataCell>
+                    <CTableDataCell>
+                      <CFormInput
+                        value={newItem.item_description}
+                        onChange={(event) =>
+                          setNewItem((prev) => ({
+                            ...prev,
+                            item_description: event.target.value,
+                          }))
+                        }
+                        placeholder="Blank sample"
+                      />
+                    </CTableDataCell>
+                    <CTableDataCell>
+                      <CFormTextarea
+                        rows={1}
+                        value={newItem.description}
+                        onChange={(event) =>
+                          setNewItem((prev) => ({ ...prev, description: event.target.value }))
+                        }
+                        placeholder="Optional notes"
+                      />
+                    </CTableDataCell>
+                    <CTableDataCell>
+                      <CFormInput
+                        type="number"
+                        min="0"
+                        value={newItem.quantity}
+                        onChange={(event) =>
+                          setNewItem((prev) => ({ ...prev, quantity: event.target.value }))
+                        }
+                      />
+                    </CTableDataCell>
+                    <CTableDataCell>
+                      <CFormInput
+                        value={newItem.unit}
+                        onChange={(event) =>
+                          setNewItem((prev) => ({ ...prev, unit: event.target.value }))
+                        }
+                      />
+                    </CTableDataCell>
+                    <CTableDataCell>
+                      <CFormInput
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newItem.unit_price}
+                        onChange={(event) =>
+                          setNewItem((prev) => ({ ...prev, unit_price: event.target.value }))
+                        }
+                      />
+                    </CTableDataCell>
+                    <CTableDataCell className="text-end">
+                      {(
+                        (Number(newItem.quantity) || 0) * (Number(newItem.unit_price) || 0)
+                      ).toFixed(2)}
+                    </CTableDataCell>
+                    <CTableDataCell>
+                      <CButton
+                        color="primary"
+                        size="sm"
+                        disabled={!canAddItem}
+                        onClick={handleAddItem}
+                      >
+                        Add
+                      </CButton>
+                    </CTableDataCell>
+                  </CTableRow>
+                </CTableBody>
+              </CTable>
+            </div>
           </CForm>
         </CCardBody>
       </CCard>

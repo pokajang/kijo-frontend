@@ -28,7 +28,7 @@ export const calculateHygieneTotals = ({
     : 0
   const subtotalBeforeDiscount = serviceTotal + toNumber(travelCharge) + customTotal
   const discountTotal = Math.abs(toNumber(discount))
-  const taxableTotal = subtotalBeforeDiscount - discountTotal
+  const taxableTotal = Math.max(0, subtotalBeforeDiscount - discountTotal)
   const sstAmount = taxableTotal * (toNumber(sstPercent) / 100)
   const grandTotal = taxableTotal + sstAmount
 

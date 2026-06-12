@@ -45,11 +45,13 @@ const ReviewHygieneQuotationCard = ({
   const sampleCounts = toNumber(formData.sampleCounts, 0)
   const hasWorkUnitsInput = Number(formData.numWorkUnits) > 0
   const workUnits = hasWorkUnitsInput ? toNumber(formData.numWorkUnits, 1) : 1
+  const hygieneItems = Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []
   const totals = calculateHygieneTotals({
     sampleCounts,
     numWorkUnits: formData.numWorkUnits,
     unitPrice: formData.unitPrice,
     travelCharge: formData.travelCharge,
+    customItems: hygieneItems,
     discount: formData.discount,
     sstPercent: formData.sstPercent,
   })
@@ -110,6 +112,33 @@ const ReviewHygieneQuotationCard = ({
             <CTableHeaderCell className="text-end">Mob & Accom (RM)</CTableHeaderCell>
             <CTableDataCell>{toNumber(formData.travelCharge, 0).toFixed(2)}</CTableDataCell>
           </CTableRow>
+
+          {hygieneItems.length > 0 && (
+            <CTableRow>
+              <CTableHeaderCell className="text-end">Additional Fees (RM)</CTableHeaderCell>
+              <CTableDataCell>
+                {hygieneItems.map((item, index) => {
+                  const quantity = toNumber(item.quantity, 0)
+                  const unitPrice = toNumber(item.unit_price, 0)
+                  return (
+                    <div key={item.id || index} className={index > 0 ? 'mt-2' : undefined}>
+                      <strong>{item.item_description}</strong>{' '}
+                      <small className="text-muted">
+                        {quantity} {item.unit || 'Lot'} x {unitPrice.toFixed(2)}
+                      </small>
+                      <span className="ms-2">{(quantity * unitPrice).toFixed(2)}</span>
+                      {item.description ? (
+                        <>
+                          <br />
+                          <small className="text-muted">{item.description}</small>
+                        </>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </CTableDataCell>
+            </CTableRow>
+          )}
 
           <CTableRow>
             <CTableHeaderCell className="text-end">Discount (RM)</CTableHeaderCell>

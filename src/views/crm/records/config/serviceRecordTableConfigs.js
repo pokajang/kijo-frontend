@@ -9,6 +9,9 @@ const formatEquipmentLineItem = (item) =>
 
 const formatSpecialLineItem = (item) => `${item?.title || ''} ${item?.description || ''}`.trim()
 
+const formatHygieneLineItem = (item) =>
+  `${item?.itemName || item?.item_description || ''} ${item?.description || ''}`.trim()
+
 const getManpowerDurationMeta = (formData = {}) => {
   const isHourly = formData.billingUnit === 'hour'
   const durationValue = Number(isHourly ? formData.durationHours : formData.durationMonths)
@@ -45,9 +48,17 @@ export const serviceRecordTableConfigs = {
   },
   ih: {
     getSearchText: (record) =>
-      [record?.formData?.serviceTitle, record?.formData?.inquiryRemarks].filter(Boolean).join(' '),
+      joinParts([
+        record?.formData?.serviceTitle,
+        record?.formData?.inquiryRemarks,
+        ...(Array.isArray(record?.lineItems) ? record.lineItems.map(formatHygieneLineItem) : []),
+      ]),
     getSubjectText: (record) => record?.formData?.serviceTitle || '-',
-    getSubjectTooltip: (record) => record?.formData?.serviceTitle || '-',
+    getSubjectTooltip: (record) =>
+      joinParts([
+        record?.formData?.serviceTitle || '-',
+        ...(Array.isArray(record?.lineItems) ? record.lineItems.map(formatHygieneLineItem) : []),
+      ]),
     getAmountValue: (record) => record?.amount,
   },
   special: {

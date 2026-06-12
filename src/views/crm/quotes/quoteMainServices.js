@@ -107,6 +107,33 @@ const normalizeEquipmentItems = (row) => {
   })
 }
 
+const normalizeHygieneItems = (row) => {
+  const sourceItems = Array.isArray(row?.hygiene_items)
+    ? row.hygiene_items
+    : Array.isArray(row?.hygieneItems)
+      ? row.hygieneItems
+      : Array.isArray(row?.line_items)
+        ? row.line_items
+        : Array.isArray(row?.lineItems)
+          ? row.lineItems
+          : []
+
+  return sourceItems.map((item, index) => {
+    const quantity = toFloat(pick(item, 'quantity'), 0)
+    const unitPrice = toFloat(pick(item, 'unit_price', 'unitPrice'), 0)
+    return {
+      id: pick(item, 'id', 'itemId') || `hygiene-${index}`,
+      item_description:
+        pick(item, 'item_description', 'itemName', 'line_item_title', 'title') || '',
+      description: pick(item, 'description') || '',
+      quantity,
+      unit: pick(item, 'unit') || 'Lot',
+      unit_price: unitPrice,
+      line_total: toFloat(pick(item, 'line_total', 'lineTotal', 'amount'), quantity * unitPrice),
+    }
+  })
+}
+
 // Centralized service configuration
 export const serviceConfig = {
   training: {
@@ -193,6 +220,7 @@ export const serviceConfig = {
       sstAmount: toFloat(pick(row, 'sst_amount', 'sstAmount'), 0),
       subTotal: toFloat(pick(row, 'sub_total', 'subTotal'), 0),
       grandTotal: toFloat(pick(row, 'grand_total', 'grandTotal'), 0),
+      hygieneItems: normalizeHygieneItems(row),
       attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
       proposalLanguage: pick(row, 'proposal_language', 'proposalLanguage') || 'en',
     }),

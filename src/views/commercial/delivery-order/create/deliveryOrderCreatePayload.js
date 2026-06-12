@@ -1,4 +1,4 @@
-const excludedInvoiceItemKeywords = ['discount', 'delivery charge', 'misc charge', 'sst', 'hrd']
+const excludedInvoiceItemKeywords = ['discount', 'sst', 'hrd']
 
 export const shouldIncludeInvoiceItem = (item) => {
   const label = String(item?.item_description || '')
@@ -17,7 +17,7 @@ export const buildDeliveryOrderCreatePayload = ({
 }) => {
   const mappedItems = (Array.isArray(items) ? items : []).map((item) => ({
     item_name: item.name,
-    description: item.description,
+    description: item.description || item.name || '',
     quantity: item.quantity,
     unit: item.unit,
   }))

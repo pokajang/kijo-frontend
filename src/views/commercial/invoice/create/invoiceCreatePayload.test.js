@@ -108,4 +108,103 @@ describe('buildInvoiceCreatePayload', () => {
       }),
     )
   })
+
+  it('uses equipment marked-up price, not supplier unit price, in invoice breakdown', () => {
+    const result = buildInvoiceCreatePayload('Equipment Supply', {
+      ...baseArgs,
+      project: {
+        id: 12,
+        quote_id: 44,
+        project_name: 'Equipment Project',
+        project_type: 'Equipment Supply',
+      },
+      quoteDetails: {
+        id: 44,
+        equipment_items: [
+          {
+            item_name: 'Gas detector',
+            description: 'Portable detector',
+            unit: 'unit',
+            quantity: 2,
+            unit_price: 100,
+            marked_up_price: 150,
+          },
+        ],
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        sub_total: 300,
+        grand_total: 300,
+        sst_amount: 0,
+        equipment_items: [],
+        discount: 0,
+        delivery_charge: 0,
+        misc_charge: 0,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: 'Gas detector',
+          quantity: 2,
+          unit_price: 150,
+        }),
+      ]),
+    )
+  })
+
+  it('includes Industrial Hygiene additional fees in invoice breakdown', () => {
+    const result = buildInvoiceCreatePayload('Industrial Hygiene', {
+      ...baseArgs,
+      project: {
+        id: 18,
+        quote_id: 55,
+        project_name: 'IH Project',
+        project_type: 'Industrial Hygiene',
+      },
+      quoteDetails: {
+        id: 55,
+        service_title: 'CEM Monitoring',
+        sample_unit: 'sample(s)',
+        hygiene_items: [
+          {
+            item_description: 'Sample analysis',
+            description: 'Lab analysis',
+            quantity: 2,
+            unit: 'sample',
+            unit_price: 120,
+          },
+        ],
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        service_title: 'CEM Monitoring at Site A',
+        sub_total: 1240,
+        grand_total: 1240,
+        sst_amount: 0,
+        sample_counts: 2,
+        sample_unit: 'sample(s)',
+        num_work_units: 1,
+        unit_price: 500,
+        travel_charge: 0,
+        discount: 0,
+        hygiene_items: [],
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: 'Sample analysis',
+          description: 'Lab analysis',
+          quantity: 2,
+          unit: 'sample',
+          unit_price: 120,
+        }),
+      ]),
+    )
+  })
 })

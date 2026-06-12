@@ -1,6 +1,7 @@
+import { waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { submitInvoicePayload } from './invoiceCreateApi'
+import { submitInvoicePayload, useHygieneQuoteData } from './invoiceCreateApi'
 
 vi.mock('../../../../components/dialog/dialogService', () => ({
   default: {
@@ -54,6 +55,54 @@ describe('invoiceCreateApi', () => {
       invoiceId: 13,
       invoiceRefNo: 'INV-13',
       projectClosed: false,
+    })
+  })
+
+  it('hydrates Industrial Hygiene quote additional fees into pricing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            status: 'success',
+            data: {
+              sub_total: '1240',
+              discount: '0',
+              sst_percent: '8',
+              sst_amount: '99.20',
+              grand_total: '1339.20',
+              hygiene_items: [
+                {
+                  id: 1,
+                  item_description: 'Sample analysis',
+                  description: 'Lab analysis',
+                  quantity: '2',
+                  unit: 'sample',
+                  unit_price: '120',
+                },
+              ],
+            },
+          }),
+      }),
+    )
+    const setQuoteDetails = vi.fn()
+    const setPricing = vi.fn()
+
+    useHygieneQuoteData(9, setQuoteDetails, setPricing)
+
+    await waitFor(() => expect(setPricing).toHaveBeenCalledTimes(1))
+    const nextPricing = setPricing.mock.calls[0][0]({})
+
+    expect(setQuoteDetails).toHaveBeenCalledWith(
+      expect.objectContaining({ grand_total: '1339.20' }),
+    )
+    expect(nextPricing.hygiene_items[0]).toMatchObject({
+      item_description: 'Sample analysis',
+      description: 'Lab analysis',
+      quantity: 2,
+      unit: 'sample',
+      unit_price: 120,
     })
   })
 })

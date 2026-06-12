@@ -74,6 +74,16 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
       discount_unit: prev.discount_unit ?? 'Lot',
       discount_unit_price: discountUnitPrice,
       discount: (prev.discount_qty ?? 1) * discountUnitPrice,
+      hygiene_items: Array.isArray(quoteDetails.hygiene_items)
+        ? quoteDetails.hygiene_items.map((item) => ({
+            id: item.id,
+            item_description: item.item_description || '',
+            description: item.description || '',
+            unit: item.unit || 'Lot',
+            quantity: parseFloat(item.quantity || 0),
+            unit_price: parseFloat(item.unit_price || 0),
+          }))
+        : prev.hygiene_items || [],
       sst_percent: quoteDetails.sst_percent ?? 0,
       remarks: quoteDetails.inquiry_remarks ?? '',
     }))

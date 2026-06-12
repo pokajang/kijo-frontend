@@ -140,6 +140,16 @@ export const useHygieneQuoteData = (quoteId, setQuoteDetails, setPricing) => {
         sst_percent: parseFloat(data.sst_percent || 0),
         sst_amount: parseFloat(data.sst_amount || 0),
         grand_total: parseFloat(data.grand_total || 0),
+        hygiene_items: Array.isArray(data.hygiene_items)
+          ? data.hygiene_items.map((item) => ({
+              id: item.id,
+              item_description: item.item_description || '',
+              description: item.description || '',
+              quantity: parseFloat(item.quantity || 0),
+              unit: item.unit || 'Lot',
+              unit_price: parseFloat(item.unit_price || 0),
+            }))
+          : [],
       }))
     })
     .catch((err) => {

@@ -128,6 +128,118 @@ describe('invoice edit utilities', () => {
     })
   })
 
+  it('maps Industrial Hygiene additional fee rows without relying on breakdown order', () => {
+    const { pricing } = buildPricingFromInvoice({
+      service_type: 'Industrial Hygiene',
+      invoice_purpose: 'Industrial Hygiene invoice',
+      amount: '1540',
+      sst_amount: '0',
+      grand_total: '1240',
+      breakdown: [
+        {
+          id: 22,
+          item_description: 'Smoke sample analysis',
+          description: 'Smoke lab analysis row',
+          quantity: '2',
+          unit: 'sample',
+          unit_price: '120',
+        },
+        {
+          id: 20,
+          item_description: 'Chemical Exposure Monitoring',
+          description: '2 sample(s) x 1 work units',
+          quantity: '2',
+          unit: 'sample(s)',
+          unit_price: '500',
+        },
+        {
+          id: 21,
+          item_description: 'Travel Charge',
+          description: '',
+          quantity: '1',
+          unit: 'Lot',
+          unit_price: '0',
+        },
+        {
+          id: 23,
+          item_description: 'Smoke professional fee',
+          description: 'Smoke report writing',
+          quantity: '1',
+          unit: 'Lot',
+          unit_price: '300',
+        },
+        {
+          id: 24,
+          item_description: 'Discount',
+          description: '',
+          quantity: '1',
+          unit: 'Lot',
+          unit_price: '-300',
+        },
+      ],
+    })
+
+    expect(pricing.service_title).toBe('Industrial Hygiene invoice')
+    expect(pricing.sample_counts).toBe(2)
+    expect(pricing.num_work_units).toBe(1)
+    expect(pricing.unit_price).toBe(500)
+    expect(pricing.discount).toBe(300)
+    expect(pricing.hygiene_items).toEqual([
+      {
+        id: 22,
+        item_description: 'Smoke sample analysis',
+        description: 'Smoke lab analysis row',
+        unit: 'sample',
+        quantity: 2,
+        unit_price: 120,
+      },
+      {
+        id: 23,
+        item_description: 'Smoke professional fee',
+        description: 'Smoke report writing',
+        unit: 'Lot',
+        quantity: 1,
+        unit_price: 300,
+      },
+    ])
+  })
+
+  it('builds Industrial Hygiene breakdown with additional fee rows before discount', () => {
+    const breakdown = buildBreakdownFromPricing('Industrial Hygiene', {
+      service_title: 'Chemical Exposure Monitoring at Site A',
+      sample_counts: 2,
+      sample_unit: 'sample(s)',
+      num_work_units: 1,
+      unit_price: 500,
+      travel_qty: 1,
+      travel_unit_price: 0,
+      discount_qty: 1,
+      discount_unit_price: 300,
+      hygiene_items: [
+        {
+          id: '55',
+          item_description: 'Smoke sample analysis',
+          description: 'Smoke lab analysis row',
+          quantity: 2,
+          unit: 'sample',
+          unit_price: 120,
+        },
+      ],
+    })
+
+    expect(breakdown.map((line) => line.item_description)).toEqual([
+      'Chemical Exposure Monitoring',
+      'Travel Charge',
+      'Smoke sample analysis',
+      'Discount',
+    ])
+    expect(breakdown[2]).toMatchObject({
+      id: 55,
+      quantity: 2,
+      unit_price: 120,
+    })
+  })
+
   it('normalizes payment method from service type and grant approval number', () => {
     expect(normalizePaymentMethod('Training', 'HRD-123')).toBe('HRD Grant')
     expect(normalizePaymentMethod('Training', '')).toBe('Direct Payment')

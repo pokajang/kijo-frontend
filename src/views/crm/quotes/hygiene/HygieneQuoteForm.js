@@ -71,6 +71,7 @@ export default function HygieneQuotationForm({
       inquiryRemarks: '',
       unitPrice: 500,
       discount: 300,
+      hygieneItems: [],
       priceExceptionRequestId: '',
       sstPercent: 0,
       sstAmount: '0.00',
@@ -119,6 +120,9 @@ export default function HygieneQuotationForm({
             ? initialFormData.numWorkUnits
             : defaultForm.numWorkUnits,
         discount: initialFormData.discount ?? defaultForm.discount,
+        hygieneItems: Array.isArray(initialFormData.hygieneItems)
+          ? initialFormData.hygieneItems
+          : defaultForm.hygieneItems,
         priceExceptionRequestId: '',
         sstPercent: initialFormData.sstPercent ?? defaultForm.sstPercent,
         sstAmount: initialFormData.sstAmount ?? defaultForm.sstAmount,
@@ -161,6 +165,7 @@ export default function HygieneQuotationForm({
       travelCharge: 0,
       unitPrice: defaultForm.unitPrice,
       discount: defaultForm.discount,
+      hygieneItems: [],
       sstPercent: defaultForm.sstPercent,
       sstAmount: defaultForm.sstAmount,
       subTotal: defaultForm.subTotal,
@@ -191,9 +196,28 @@ export default function HygieneQuotationForm({
       numWorkUnits: normalizedNumWorkUnits,
       unitPrice: formData.unitPrice,
       travelCharge: formData.travelCharge,
+      customItems: formData.hygieneItems,
       discount: formData.discount,
       sstPercent: formData.sstPercent,
     })
+    const hygieneItems = Array.isArray(formData.hygieneItems)
+      ? formData.hygieneItems
+          .map((item, index) => {
+            const quantity = toNumber(item.quantity, 0)
+            const unitPrice = toNumber(item.unit_price, 0)
+            return {
+              id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+              item_description: String(item.item_description || '').trim(),
+              description: String(item.description || '').trim(),
+              quantity,
+              unit: String(item.unit || 'Lot').trim() || 'Lot',
+              unit_price: unitPrice,
+              line_total: Number((quantity * unitPrice).toFixed(2)),
+              sort_order: index,
+            }
+          })
+          .filter((item) => item.item_description && item.quantity > 0)
+      : []
     const payload = {
       ...(isEditMode && { id: quoteId }),
       isRevision,
@@ -219,6 +243,7 @@ export default function HygieneQuotationForm({
       inquiry_remarks: formData.inquiryRemarks,
       unit_price: toNumber(formData.unitPrice, 0),
       discount: toNumber(formData.discount, 0),
+      hygiene_items: hygieneItems,
       price_exception_request_id: null,
       sst_percent: toNumber(formData.sstPercent, 0),
       sst_amount: totals.sstAmount,

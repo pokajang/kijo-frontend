@@ -244,6 +244,13 @@ export const buildPricingFromInvoice = (invoice) => {
       const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
       const isTravelLine = (line) =>
         isExactLabel(line, ['travel charge', 'mobilization charge', 'mobilization cost'])
+      const isGeneratedBaseLine = (line) => {
+        const detail = String(line?.description || '')
+        return (
+          /[\d.]+\s+.+?\s+x\s+[\d.]+\s*work units?/i.test(detail) ||
+          /[\d.]+\s+.+?\s*-\s*Lump Sum Work Unit/i.test(detail)
+        )
+      }
 
       const discountLine = lines.find((line) => isDiscountLine(line))
       const travelLine = lines.find((line) => isTravelLine(line))
@@ -251,6 +258,7 @@ export const buildPricingFromInvoice = (invoice) => {
       const purposeKey = normalizeDesc(invoice?.invoice_purpose)
       const mainLine =
         nonMetaLines.find((line) => normalizeDesc(line?.item_description) === purposeKey) ||
+        nonMetaLines.find((line) => isGeneratedBaseLine(line)) ||
         nonMetaLines[0]
       const customLines = nonMetaLines.filter((line) => line !== mainLine)
 

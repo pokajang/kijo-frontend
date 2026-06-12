@@ -52,6 +52,36 @@ const toPositiveInt = (value) => {
   return Number.isFinite(id) && id > 0 ? id : null
 }
 
+const normalizeHygieneItems = (row = {}) => {
+  const source = Array.isArray(row.hygiene_items)
+    ? row.hygiene_items
+    : Array.isArray(row.hygieneItems)
+      ? row.hygieneItems
+      : Array.isArray(row.line_items)
+        ? row.line_items
+        : Array.isArray(row.lineItems)
+          ? row.lineItems
+          : []
+
+  return source.map((item, index) => {
+    const quantity = Number(item.quantity || 0)
+    const unitPrice = Number(item.unit_price ?? item.unitPrice ?? 0)
+    return {
+      id: item.id ?? `hygiene-${index}`,
+      itemName: item.item_description || item.itemName || item.line_item_title || item.title || '',
+      item_description:
+        item.item_description || item.itemName || item.line_item_title || item.title || '',
+      description: item.description || '',
+      quantity,
+      unit: item.unit || 'Lot',
+      unitPrice,
+      unit_price: unitPrice,
+      lineTotal: Number(item.line_total ?? item.lineTotal ?? quantity * unitPrice),
+      line_total: Number(item.line_total ?? item.lineTotal ?? quantity * unitPrice),
+    }
+  })
+}
+
 const normalizeProposalPayload = (row = {}, fallback = {}) => {
   const proposal = row.proposal || {}
 
@@ -299,6 +329,7 @@ export async function fetchIHQuotes() {
       const followUps = fuMap[id] || []
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
+      const lineItems = normalizeHygieneItems(row)
 
       return {
         // core fields
@@ -368,6 +399,15 @@ export async function fetchIHQuotes() {
 
           unitPrice: parseFloat(row.unit_price ?? 0),
           travelCharge: parseFloat(row.travel_charge ?? 0),
+          hygieneItems: lineItems.map((item) => ({
+            id: item.id,
+            item_description: item.item_description,
+            description: item.description,
+            quantity: item.quantity,
+            unit: item.unit,
+            unit_price: item.unit_price,
+            line_total: item.line_total,
+          })),
 
           discountValue: parseFloat(row.discount ?? 0),
           sstPercent: parseFloat(row.sst_percent ?? 0),
@@ -381,6 +421,7 @@ export async function fetchIHQuotes() {
 
         // PIC in table
         personInCharge: row.pic_name,
+        lineItems,
 
         // attach ALL follow-ups (array, newest first)
         followUps,

@@ -59,4 +59,39 @@ describe('calculateHygieneTotals', () => {
     expect(totals.subtotalBeforeDiscount).toBe(6120)
     expect(totals.grandTotal).toBe(5920)
   })
+
+  it('includes custom additional fee items before discount and SST', () => {
+    const totals = calculateHygieneTotals({
+      sampleCounts: 2,
+      numWorkUnits: 1,
+      unitPrice: 500,
+      travelCharge: 100,
+      customItems: [
+        { quantity: 1, unit_price: 250 },
+        { quantity: 2, unit_price: 75 },
+      ],
+      discount: 50,
+      sstPercent: 8,
+    })
+
+    expect(totals.serviceTotal).toBe(1000)
+    expect(totals.customTotal).toBe(400)
+    expect(totals.subtotalBeforeDiscount).toBe(1500)
+    expect(totals.sstAmount).toBe(116)
+    expect(totals.grandTotal).toBe(1566)
+  })
+
+  it('clamps taxable total at zero when discount exceeds subtotal', () => {
+    const totals = calculateHygieneTotals({
+      sampleCounts: 1,
+      numWorkUnits: 1,
+      unitPrice: 100,
+      discount: 150,
+      sstPercent: 8,
+    })
+
+    expect(totals.taxableTotal).toBe(0)
+    expect(totals.sstAmount).toBe(0)
+    expect(totals.grandTotal).toBe(0)
+  })
 })

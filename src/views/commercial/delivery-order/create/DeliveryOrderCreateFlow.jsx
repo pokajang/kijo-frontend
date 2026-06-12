@@ -102,11 +102,26 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
           unit: item.unit,
         })),
       )
+    } else if (
+      project.project_type === 'Industrial Hygiene' &&
+      Array.isArray(project.hygiene_items)
+    ) {
+      setItems(
+        project.hygiene_items.map((item) => ({
+          id: item.id,
+          name: item.item_description,
+          description: item.description || '',
+          quantity: item.quantity,
+          unit: item.unit || 'Lot',
+        })),
+      )
     } else {
       setItems([])
     }
 
-    if (project.project_type !== 'Equipment Supply' || !project.id) return undefined
+    if (!['Equipment Supply', 'Industrial Hygiene'].includes(project.project_type) || !project.id) {
+      return undefined
+    }
 
     const controller = new AbortController()
     const params = new URLSearchParams({
