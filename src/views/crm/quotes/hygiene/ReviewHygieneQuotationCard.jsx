@@ -120,17 +120,26 @@ const ReviewHygieneQuotationCard = ({
                 {hygieneItems.map((item, index) => {
                   const quantity = toNumber(item.quantity, 0)
                   const unitPrice = toNumber(item.unit_price, 0)
+                  const lineTotal = quantity * unitPrice
+                  const prefix = hygieneItems.length > 1 ? `${index + 1}. ` : ''
                   return (
                     <div key={item.id || index} className={index > 0 ? 'mt-2' : undefined}>
-                      <strong>{item.item_description}</strong>{' '}
-                      <small className="text-muted">
-                        {quantity} {item.unit || 'Lot'} x {unitPrice.toFixed(2)}
-                      </small>
-                      <span className="ms-2">{(quantity * unitPrice).toFixed(2)}</span>
+                      <div className="d-flex justify-content-between gap-3 flex-wrap">
+                        <div>
+                          <strong>
+                            {prefix}
+                            {item.item_description}
+                          </strong>{' '}
+                          <small className="text-muted">
+                            ({quantity} {item.unit || 'Lot'} x {unitPrice.toFixed(2)})
+                          </small>
+                        </div>
+                        <span>{lineTotal.toFixed(2)}</span>
+                      </div>
                       {item.description ? (
                         <>
                           <br />
-                          <small className="text-muted">{item.description}</small>
+                          <small className="text-muted d-block">{item.description}</small>
                         </>
                       ) : null}
                     </div>
@@ -141,13 +150,18 @@ const ReviewHygieneQuotationCard = ({
           )}
 
           <CTableRow>
-            <CTableHeaderCell className="text-end">Discount (RM)</CTableHeaderCell>
-            <CTableDataCell>- {toNumber(formData.discount, 0).toFixed(2)}</CTableDataCell>
+            <CTableHeaderCell className="text-end">Gross Subtotal (RM)</CTableHeaderCell>
+            <CTableDataCell>{totals.subtotalBeforeDiscount.toFixed(2)}</CTableDataCell>
           </CTableRow>
 
           <CTableRow>
-            <CTableHeaderCell className="text-end">Subtotal (RM)</CTableHeaderCell>
-            <CTableDataCell>{totals.subtotalBeforeDiscount.toFixed(2)}</CTableDataCell>
+            <CTableHeaderCell className="text-end">Discount (RM)</CTableHeaderCell>
+            <CTableDataCell>- {totals.discountTotal.toFixed(2)}</CTableDataCell>
+          </CTableRow>
+
+          <CTableRow>
+            <CTableHeaderCell className="text-end">Subtotal after Discount (RM)</CTableHeaderCell>
+            <CTableDataCell>{totals.taxableTotal.toFixed(2)}</CTableDataCell>
           </CTableRow>
 
           <CTableRow>

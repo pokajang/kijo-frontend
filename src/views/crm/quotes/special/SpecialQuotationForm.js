@@ -1,6 +1,7 @@
 // src/views/crm/quotes/special/SpecialQuotationForm.js
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { CCol } from '@coreui/react'
 import SpecialDetailsCard from './SpecialDetailsCard'
 import PricingCard from './PricingCard'
 import ReviewSpecialQuoteCard from './ReviewSpecialQuoteCard'
@@ -247,30 +248,32 @@ export default function SpecialQuotationForm({
   const showReview = isEditMode || parseFloat(formData.subTotal || 0) > 0
 
   return (
-    <>
-      <SpecialDetailsCard
-        formData={formData}
-        setFormData={setFormData}
-        isEditMode={isEditMode}
-        proposalLanguage={proposalLanguage}
-      />
+    <CCol xs={12}>
+      <div className="d-grid gap-3">
+        <SpecialDetailsCard
+          formData={formData}
+          setFormData={setFormData}
+          isEditMode={isEditMode}
+          proposalLanguage={proposalLanguage}
+        />
 
-      {showPricing && (
-        <>
-          <PricingCard formData={formData} setFormData={setFormData} />
+        {showPricing && (
+          <>
+            <PricingCard formData={formData} setFormData={setFormData} />
 
-          {showReview && (
-            <ReviewSpecialQuoteCard
-              selectedClient={selectedClient}
-              formData={formData}
-              setFormData={setFormData}
-              onSave={handleSaveQuote}
-              isEditMode={isEditMode}
-              quoteId={quoteId}
-            />
-          )}
-        </>
-      )}
-    </>
+            {showReview && (
+              <ReviewSpecialQuoteCard
+                selectedClient={selectedClient}
+                formData={formData}
+                setFormData={setFormData}
+                onSave={handleSaveQuote}
+                isEditMode={isEditMode}
+                quoteId={quoteId}
+              />
+            )}
+          </>
+        )}
+      </div>
+    </CCol>
   )
 }

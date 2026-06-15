@@ -37,10 +37,17 @@ export default function ReviewSpecialQuoteCard({
 
   const subtotal = parseFloat(formData.subTotal || 0)
   const sstAmount = parseFloat(formData.sstAmount || 0)
+  const discount = parseFloat(formData.discount || 0)
+  const lineItemsSubtotal = (formData.lineItems || []).reduce(
+    (sum, item) => sum + (parseFloat(item.amount || 0) || 0),
+    0,
+  )
   const grandTotal = (subtotal + sstAmount).toFixed(2)
 
   return (
     <QuoteReviewCard
+      wrapInCol={false}
+      cardClassName="mb-0"
       attachProposal={!!formData.attachProposal}
       attachProposalLabel="Attach Proposal PDF"
       onAttachProposalChange={(checked) =>
@@ -102,9 +109,9 @@ export default function ReviewSpecialQuoteCard({
           {(formData.lineItems || []).map((it, i) => (
             <CTableRow key={i}>
               <CTableHeaderCell>{i + 1}</CTableHeaderCell>
-              <CTableDataCell>{it.title}</CTableDataCell>
-              <CTableDataCell>{it.description}</CTableDataCell>
-              <CTableDataCell>{it.unit}</CTableDataCell>
+              <CTableDataCell>{it.title || '-'}</CTableDataCell>
+              <CTableDataCell>{it.description || '-'}</CTableDataCell>
+              <CTableDataCell>{it.unit || '-'}</CTableDataCell>
               <CTableDataCell className="text-center">{it.quantity}</CTableDataCell>
               <CTableDataCell className="text-end">
                 {parseFloat(it.unitPrice || 0).toFixed(2)}
@@ -114,6 +121,25 @@ export default function ReviewSpecialQuoteCard({
               </CTableDataCell>
             </CTableRow>
           ))}
+
+          {discount > 0 && (
+            <>
+              <CTableRow>
+                <CTableHeaderCell colSpan={6} className="text-end">
+                  Line Items Subtotal (RM)
+                </CTableHeaderCell>
+                <CTableDataCell className="text-end">
+                  RM {lineItemsSubtotal.toFixed(2)}
+                </CTableDataCell>
+              </CTableRow>
+              <CTableRow>
+                <CTableHeaderCell colSpan={6} className="text-end">
+                  Discount (RM)
+                </CTableHeaderCell>
+                <CTableDataCell className="text-end">- RM {discount.toFixed(2)}</CTableDataCell>
+              </CTableRow>
+            </>
+          )}
 
           <CTableRow>
             <CTableHeaderCell colSpan={6} className="text-end">

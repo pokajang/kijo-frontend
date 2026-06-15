@@ -28,6 +28,10 @@
   white-space: nowrap;
 }
 
+.quote-line-items-table-shell .records-table-compact tbody:last-child tr:last-child > * {
+  border-bottom: 0;
+}
+
 .records-table-sort-btn {
   display: inline-flex;
   align-items: center;

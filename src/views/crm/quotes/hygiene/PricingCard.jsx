@@ -16,12 +16,34 @@ import {
   CTableHeaderCell,
   CTableBody,
   CTableDataCell,
-  CTooltip,
 } from '@coreui/react'
 
-import CIcon from '@coreui/icons-react'
-import { cilInfo } from '@coreui/icons'
+import DataTableActionMenu from '../../../../components/datatable/DataTableActionMenu'
 import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+
+const createDefaultItem = () => ({
+  item_description: '',
+  description: '',
+  quantity: 1,
+  unit: 'Lot',
+  unit_price: '',
+})
+
+const getItemLineTotal = (item) => (Number(item.quantity) || 0) * (Number(item.unit_price) || 0)
+
+const normalizeItem = (item) => ({
+  ...item,
+  item_description: String(item.item_description || '').trim(),
+  description: String(item.description || '').trim(),
+  quantity: Number(item.quantity) || 0,
+  unit: String(item.unit || '').trim() || 'Lot',
+  unit_price: Number(item.unit_price) || 0,
+})
+
+const isValidItem = (item) =>
+  String(item.item_description || '').trim() !== '' &&
+  Number(item.quantity) > 0 &&
+  Number(item.unit_price) > 0
 
 const PricingCard = ({ formData, setFormData }) => {
   const {
@@ -36,13 +58,10 @@ const PricingCard = ({ formData, setFormData }) => {
     () => (Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []),
     [formData.hygieneItems],
   )
-  const [newItem, setNewItem] = useState({
-    item_description: '',
-    description: '',
-    quantity: 1,
-    unit: 'Lot',
-    unit_price: '',
-  })
+  const [isAddingFee, setIsAddingFee] = useState(false)
+  const [newItem, setNewItem] = useState(createDefaultItem)
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editItem, setEditItem] = useState(createDefaultItem)
 
   const totals = calculateHygieneTotals({
     sampleCounts,
@@ -75,16 +94,6 @@ const PricingCard = ({ formData, setFormData }) => {
     setFormData,
   ])
 
-  const handleItemChange = (index, field) => (event) => {
-    const { value } = event.target
-    setFormData((prev) => {
-      const nextItems = Array.isArray(prev.hygieneItems) ? [...prev.hygieneItems] : []
-      const current = nextItems[index] || {}
-      nextItems[index] = { ...current, [field]: value }
-      return { ...prev, hygieneItems: nextItems }
-    })
-  }
-
   const handleRemoveItem = (index) => () => {
     setFormData((prev) => {
       const nextItems = Array.isArray(prev.hygieneItems) ? [...prev.hygieneItems] : []
@@ -93,10 +102,49 @@ const PricingCard = ({ formData, setFormData }) => {
     })
   }
 
-  const canAddItem =
-    String(newItem.item_description || '').trim() !== '' &&
-    Number(newItem.quantity) > 0 &&
-    Number(newItem.unit_price) > 0
+  const resetNewItem = () => {
+    setNewItem(createDefaultItem())
+  }
+
+  const handleStartAddItem = () => {
+    resetNewItem()
+    setEditingIndex(null)
+    setIsAddingFee(true)
+  }
+
+  const handleCancelNewItem = () => {
+    resetNewItem()
+    setIsAddingFee(false)
+  }
+
+  const handleStartEditItem = (index) => () => {
+    setIsAddingFee(false)
+    setEditingIndex(index)
+    setEditItem({
+      ...createDefaultItem(),
+      ...(hygieneItems[index] || {}),
+    })
+  }
+
+  const handleCancelEditItem = () => {
+    setEditingIndex(null)
+    setEditItem(createDefaultItem())
+  }
+
+  const handleSaveEditItem = () => {
+    if (!isValidItem(editItem) || editingIndex === null) return
+
+    setFormData((prev) => {
+      const nextItems = Array.isArray(prev.hygieneItems) ? [...prev.hygieneItems] : []
+      const existing = nextItems[editingIndex] || {}
+      nextItems[editingIndex] = normalizeItem({ ...existing, ...editItem })
+      return { ...prev, hygieneItems: nextItems }
+    })
+    handleCancelEditItem()
+  }
+
+  const canAddItem = isValidItem(newItem)
+  const canSaveEditItem = isValidItem(editItem)
 
   const handleAddItem = () => {
     if (!canAddItem) return
@@ -105,24 +153,88 @@ const PricingCard = ({ formData, setFormData }) => {
       ...prev,
       hygieneItems: [
         ...(Array.isArray(prev.hygieneItems) ? prev.hygieneItems : []),
-        {
+        normalizeItem({
           id: `additional-${Date.now()}`,
-          item_description: newItem.item_description.trim(),
-          description: newItem.description.trim(),
-          quantity: Number(newItem.quantity) || 0,
-          unit: newItem.unit.trim() || 'Lot',
-          unit_price: Number(newItem.unit_price) || 0,
-        },
+          ...newItem,
+        }),
       ],
     }))
-    setNewItem({
-      item_description: '',
-      description: '',
-      quantity: 1,
-      unit: 'Lot',
-      unit_price: '',
-    })
+    resetNewItem()
+    setIsAddingFee(false)
   }
+
+  const renderItemFormRows = ({
+    label,
+    item,
+    setItem,
+    primaryLabel,
+    primaryDisabled,
+    onPrimary,
+    onCancel,
+  }) => (
+    <React.Fragment>
+      <CTableRow>
+        <CTableDataCell>{label}</CTableDataCell>
+        <CTableDataCell>
+          <CFormInput
+            value={item.item_description}
+            onChange={(event) =>
+              setItem((prev) => ({
+                ...prev,
+                item_description: event.target.value,
+              }))
+            }
+            placeholder="Blank sample"
+          />
+        </CTableDataCell>
+        <CTableDataCell>
+          <CFormTextarea
+            rows={1}
+            value={item.description}
+            onChange={(event) => setItem((prev) => ({ ...prev, description: event.target.value }))}
+            placeholder="Optional notes"
+          />
+        </CTableDataCell>
+        <CTableDataCell>
+          <CFormInput
+            type="number"
+            min="0"
+            value={item.quantity}
+            onChange={(event) => setItem((prev) => ({ ...prev, quantity: event.target.value }))}
+          />
+        </CTableDataCell>
+        <CTableDataCell>
+          <CFormInput
+            value={item.unit}
+            onChange={(event) => setItem((prev) => ({ ...prev, unit: event.target.value }))}
+          />
+        </CTableDataCell>
+        <CTableDataCell>
+          <CFormInput
+            type="number"
+            min="0"
+            step="0.01"
+            value={item.unit_price}
+            onChange={(event) => setItem((prev) => ({ ...prev, unit_price: event.target.value }))}
+          />
+        </CTableDataCell>
+        <CTableDataCell className="text-end">{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
+        <CTableDataCell className="record-action-cell text-center" />
+      </CTableRow>
+      <CTableRow>
+        <CTableDataCell colSpan={8}>
+          <div className="d-flex justify-content-end gap-2 flex-wrap">
+            <CButton color="primary" size="sm" disabled={primaryDisabled} onClick={onPrimary}>
+              {primaryLabel}
+            </CButton>
+            <CButton color="secondary" variant="outline" size="sm" onClick={onCancel}>
+              Cancel
+            </CButton>
+          </div>
+        </CTableDataCell>
+      </CTableRow>
+    </React.Fragment>
+  )
 
   return (
     <CCol>
@@ -166,32 +278,6 @@ const PricingCard = ({ formData, setFormData }) => {
               </CCol>
 
               <CCol md={3}>
-                <CFormLabel>
-                  Subtotal
-                  <CTooltip
-                    content={
-                      <>
-                        Subtotal = (Samples x Work Units x Unit Price) + Travel. If Work Units is
-                        left blank, 1 is assumed. Discount is applied before Grand Total.
-                      </>
-                    }
-                    placement="left"
-                  >
-                    <span className="ms-2" tabIndex={0} role="button">
-                      <CIcon icon={cilInfo} size="sm" />
-                    </span>
-                  </CTooltip>
-                </CFormLabel>
-                <CFormInput
-                  name="subTotal"
-                  type="number"
-                  value={totals.subtotalBeforeDiscount.toFixed(2)}
-                  readOnly
-                  disabled
-                />
-              </CCol>
-
-              <CCol md={3}>
                 <CFormLabel>SST (%)</CFormLabel>
                 <CFormInput
                   name="sstPercent"
@@ -200,181 +286,117 @@ const PricingCard = ({ formData, setFormData }) => {
                   onChange={(e) => setFormData((prev) => ({ ...prev, sstPercent: e.target.value }))}
                 />
               </CCol>
-
-              <CCol md={3}>
-                <CFormLabel>SST Amount</CFormLabel>
-                <CFormInput
-                  name="sstAmount"
-                  type="number"
-                  value={totals.sstAmount.toFixed(2)}
-                  readOnly
-                  disabled
-                />
-              </CCol>
-
-              <CCol md={3}>
-                <CFormLabel>Grand Total</CFormLabel>
-                <CFormInput
-                  name="grandTotal"
-                  type="number"
-                  value={totals.grandTotal.toFixed(2)}
-                  readOnly
-                  disabled
-                />
-              </CCol>
             </CRow>
 
             <div className="mt-4">
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <strong>Additional Fees</strong>
+                {!isAddingFee && (
+                  <CButton color="primary" size="sm" onClick={handleStartAddItem}>
+                    Add Miscellaneous Fee
+                  </CButton>
+                )}
               </div>
 
-              {/* datatable-exempt: existing embedded/layout table */}
-              <CTable responsive striped className="data-table-compact embedded-data-table">
-                <CTableHead>
-                  <CTableRow>
-                    <CTableHeaderCell style={{ width: '48px' }}>#</CTableHeaderCell>
-                    <CTableHeaderCell>Item</CTableHeaderCell>
-                    <CTableHeaderCell>Notes</CTableHeaderCell>
-                    <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
-                    <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
-                    <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
-                    <CTableHeaderCell className="text-end" style={{ width: '120px' }}>
-                      Total
-                    </CTableHeaderCell>
-                    <CTableHeaderCell style={{ width: '90px' }}>Action</CTableHeaderCell>
-                  </CTableRow>
-                </CTableHead>
-                <CTableBody>
-                  {hygieneItems.map((item, index) => {
-                    const quantity = Number(item.quantity) || 0
-                    const unitPrice = Number(item.unit_price) || 0
-                    return (
-                      <CTableRow key={item.id || index}>
-                        <CTableDataCell>{index + 1}</CTableDataCell>
-                        <CTableDataCell>
-                          <CFormInput
-                            value={item.item_description || ''}
-                            onChange={handleItemChange(index, 'item_description')}
-                          />
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CFormTextarea
-                            rows={1}
-                            value={item.description || ''}
-                            onChange={handleItemChange(index, 'description')}
-                          />
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CFormInput
-                            type="number"
-                            min="0"
-                            value={item.quantity ?? ''}
-                            onChange={handleItemChange(index, 'quantity')}
-                          />
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CFormInput
-                            value={item.unit || ''}
-                            onChange={handleItemChange(index, 'unit')}
-                          />
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CFormInput
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.unit_price ?? ''}
-                            onChange={handleItemChange(index, 'unit_price')}
-                          />
-                        </CTableDataCell>
-                        <CTableDataCell className="text-end">
-                          {(quantity * unitPrice).toFixed(2)}
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CButton
-                            color="danger"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleRemoveItem(index)}
+              <div className="records-table-shell quote-line-items-table-shell overflow-hidden">
+                {/* datatable-exempt: compact embedded quotation line-item table */}
+                <CTable hover className="align-middle mb-0 records-table-compact">
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell style={{ width: '48px' }}>#</CTableHeaderCell>
+                      <CTableHeaderCell>Item</CTableHeaderCell>
+                      <CTableHeaderCell>Notes</CTableHeaderCell>
+                      <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
+                      <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
+                      <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
+                      <CTableHeaderCell className="text-end" style={{ width: '120px' }}>
+                        Total
+                      </CTableHeaderCell>
+                      <CTableHeaderCell
+                        className="text-end"
+                        style={{ width: '48px' }}
+                        aria-label="Row actions"
+                      >
+                        <span className="visually-hidden">Actions</span>
+                      </CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {hygieneItems.map((item, index) => {
+                      if (editingIndex === index) {
+                        return (
+                          <React.Fragment key={item.id || index}>
+                            {renderItemFormRows({
+                              label: index + 1,
+                              item: editItem,
+                              setItem: setEditItem,
+                              primaryLabel: 'Save',
+                              primaryDisabled: !canSaveEditItem,
+                              onPrimary: handleSaveEditItem,
+                              onCancel: handleCancelEditItem,
+                            })}
+                          </React.Fragment>
+                        )
+                      }
+
+                      return (
+                        <CTableRow key={item.id || index}>
+                          <CTableDataCell>{index + 1}</CTableDataCell>
+                          <CTableDataCell>{item.item_description || '-'}</CTableDataCell>
+                          <CTableDataCell>{item.description || '-'}</CTableDataCell>
+                          <CTableDataCell>{Number(item.quantity) || 0}</CTableDataCell>
+                          <CTableDataCell>{item.unit || '-'}</CTableDataCell>
+                          <CTableDataCell>{Number(item.unit_price || 0).toFixed(2)}</CTableDataCell>
+                          <CTableDataCell className="text-end">
+                            {getItemLineTotal(item).toFixed(2)}
+                          </CTableDataCell>
+                          <CTableDataCell
+                            className="record-action-cell text-center"
+                            data-no-row-open="true"
+                            onClick={(event) => event.stopPropagation()}
                           >
-                            Remove
-                          </CButton>
+                            <DataTableActionMenu
+                              record={item}
+                              actionKey={`hygiene-fee-${item.id || index}`}
+                              ariaLabel={`Additional fee actions for ${item.item_description || index + 1}`}
+                              actions={[
+                                {
+                                  key: 'edit',
+                                  label: 'Edit',
+                                  onClick: handleStartEditItem(index),
+                                },
+                                {
+                                  key: 'delete',
+                                  label: 'Delete',
+                                  danger: true,
+                                  onClick: handleRemoveItem(index),
+                                },
+                              ]}
+                            />
+                          </CTableDataCell>
+                        </CTableRow>
+                      )
+                    })}
+                    {hygieneItems.length === 0 && !isAddingFee && (
+                      <CTableRow>
+                        <CTableDataCell colSpan={8} className="text-muted">
+                          No miscellaneous fees added.
                         </CTableDataCell>
                       </CTableRow>
-                    )
-                  })}
-                  <CTableRow>
-                    <CTableDataCell>New</CTableDataCell>
-                    <CTableDataCell>
-                      <CFormInput
-                        value={newItem.item_description}
-                        onChange={(event) =>
-                          setNewItem((prev) => ({
-                            ...prev,
-                            item_description: event.target.value,
-                          }))
-                        }
-                        placeholder="Blank sample"
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <CFormTextarea
-                        rows={1}
-                        value={newItem.description}
-                        onChange={(event) =>
-                          setNewItem((prev) => ({ ...prev, description: event.target.value }))
-                        }
-                        placeholder="Optional notes"
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <CFormInput
-                        type="number"
-                        min="0"
-                        value={newItem.quantity}
-                        onChange={(event) =>
-                          setNewItem((prev) => ({ ...prev, quantity: event.target.value }))
-                        }
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <CFormInput
-                        value={newItem.unit}
-                        onChange={(event) =>
-                          setNewItem((prev) => ({ ...prev, unit: event.target.value }))
-                        }
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <CFormInput
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={newItem.unit_price}
-                        onChange={(event) =>
-                          setNewItem((prev) => ({ ...prev, unit_price: event.target.value }))
-                        }
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell className="text-end">
-                      {(
-                        (Number(newItem.quantity) || 0) * (Number(newItem.unit_price) || 0)
-                      ).toFixed(2)}
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <CButton
-                        color="primary"
-                        size="sm"
-                        disabled={!canAddItem}
-                        onClick={handleAddItem}
-                      >
-                        Add
-                      </CButton>
-                    </CTableDataCell>
-                  </CTableRow>
-                </CTableBody>
-              </CTable>
+                    )}
+                    {isAddingFee &&
+                      renderItemFormRows({
+                        label: 'New',
+                        item: newItem,
+                        setItem: setNewItem,
+                        primaryLabel: 'Add',
+                        primaryDisabled: !canAddItem,
+                        onPrimary: handleAddItem,
+                        onCancel: handleCancelNewItem,
+                      })}
+                  </CTableBody>
+                </CTable>
+              </div>
             </div>
           </CForm>
         </CCardBody>

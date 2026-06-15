@@ -191,15 +191,6 @@ export default function HygieneQuotationForm({
     const normalizedNumWorkUnits = hasWorkUnitsInput
       ? Math.max(1, toInteger(formData.numWorkUnits, 1))
       : 0
-    const totals = calculateHygieneTotals({
-      sampleCounts: normalizedSampleCounts,
-      numWorkUnits: normalizedNumWorkUnits,
-      unitPrice: formData.unitPrice,
-      travelCharge: formData.travelCharge,
-      customItems: formData.hygieneItems,
-      discount: formData.discount,
-      sstPercent: formData.sstPercent,
-    })
     const hygieneItems = Array.isArray(formData.hygieneItems)
       ? formData.hygieneItems
           .map((item, index) => {
@@ -216,8 +207,17 @@ export default function HygieneQuotationForm({
               sort_order: index,
             }
           })
-          .filter((item) => item.item_description && item.quantity > 0)
+          .filter((item) => item.item_description && item.quantity > 0 && item.unit_price > 0)
       : []
+    const totals = calculateHygieneTotals({
+      sampleCounts: normalizedSampleCounts,
+      numWorkUnits: normalizedNumWorkUnits,
+      unitPrice: formData.unitPrice,
+      travelCharge: formData.travelCharge,
+      customItems: hygieneItems,
+      discount: formData.discount,
+      sstPercent: formData.sstPercent,
+    })
     const payload = {
       ...(isEditMode && { id: quoteId }),
       isRevision,

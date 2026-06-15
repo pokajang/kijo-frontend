@@ -61,100 +61,98 @@ export default function PricingCard({ formData, setFormData }) {
   const grandTotal = parseFloat(((formData.subTotal || 0) + (formData.sstAmount || 0)).toFixed(2))
 
   return (
-    <CCol xs={12}>
-      <CCard className="mb-4">
-        <CCardHeader>
-          <strong>Pricing Details</strong>
-        </CCardHeader>
-        <CCardBody>
-          {/* Header Row */}
-          <CRow className="fw-bold align-items-center g-3 mb-2">
-            <CCol md={6}>Service Item</CCol>
-            <CCol md={2}>Qty</CCol>
-            <CCol md={2}>Unit Price (RM)</CCol>
-            <CCol md={2}>Amount (RM)</CCol>
-          </CRow>
+    <CCard className="mb-0">
+      <CCardHeader>
+        <strong>Pricing Details</strong>
+      </CCardHeader>
+      <CCardBody>
+        {/* Header Row */}
+        <CRow className="fw-bold align-items-center g-3 mb-2">
+          <CCol md={6}>Service Item</CCol>
+          <CCol md={2}>Qty</CCol>
+          <CCol md={2}>Unit Price (RM)</CCol>
+          <CCol md={2}>Amount (RM)</CCol>
+        </CRow>
 
-          {/* Line Items */}
-          {(formData.lineItems || []).map((item, idx) => (
-            <CRow className="align-items-center g-3 mb-2" key={idx}>
-              <CCol md={6}>
-                <div>
-                  <strong>{item.title}</strong>
-                </div>
-                <div className="text-muted">{item.description}</div>
-                <div className="fst-italic">Unit: {item.unit}</div>
-              </CCol>
-
-              <CCol md={2}>
-                <CFormInput
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => handleLineChange(idx, 'quantity', e.target.value)}
-                />
-              </CCol>
-
-              <CCol md={2}>
-                <CFormInput
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={item.unitPrice}
-                  onChange={(e) => handleLineChange(idx, 'unitPrice', e.target.value)}
-                />
-              </CCol>
-
-              <CCol md={2}>
-                <CFormInput type="number" readOnly value={item.amount} />
-              </CCol>
-            </CRow>
-          ))}
-
-          {/* Summary Row */}
-          <CRow className="fw-bold align-items-center g-3 mt-4">
-            <CCol md={4}>
-              <CFormLabel>Line Items Subtotal</CFormLabel>
+        {/* Line Items */}
+        {(formData.lineItems || []).map((item, idx) => (
+          <CRow className="align-items-center g-3 mb-2" key={idx}>
+            <CCol md={6}>
               <div>
-                RM {(formData.lineItems || []).reduce((sum, item) => sum + (item.amount || 0), 0)}
+                <strong>{item.title}</strong>
               </div>
+              <div className="text-muted">{item.description}</div>
+              <div className="fst-italic">Unit: {item.unit || '-'}</div>
             </CCol>
 
             <CCol md={2}>
-              <CFormLabel>Discount (RM)</CFormLabel>
               <CFormInput
                 type="number"
-                step="0.01"
-                min="0"
-                value={formData.discount}
-                onChange={handleDiscountChange}
+                min="1"
+                value={item.quantity}
+                onChange={(e) => handleLineChange(idx, 'quantity', e.target.value)}
               />
             </CCol>
 
             <CCol md={2}>
-              <CFormLabel>SST (%)</CFormLabel>
               <CFormInput
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.sstPercent}
-                onChange={handleSstChange}
-                placeholder="e.g. 6.00"
+                value={item.unitPrice}
+                onChange={(e) => handleLineChange(idx, 'unitPrice', e.target.value)}
               />
             </CCol>
 
             <CCol md={2}>
-              <CFormLabel>SST Amount (RM)</CFormLabel>
-              <CFormInput type="number" readOnly value={formData.sstAmount} />
-            </CCol>
-
-            <CCol md={2}>
-              <CFormLabel>Total (RM)</CFormLabel>
-              <div>RM {grandTotal}</div>
+              <CFormInput type="number" readOnly value={item.amount} />
             </CCol>
           </CRow>
-        </CCardBody>
-      </CCard>
-    </CCol>
+        ))}
+
+        {/* Summary Row */}
+        <CRow className="fw-bold align-items-center g-3 mt-4">
+          <CCol md={4}>
+            <CFormLabel>Line Items Subtotal</CFormLabel>
+            <div>
+              RM {(formData.lineItems || []).reduce((sum, item) => sum + (item.amount || 0), 0)}
+            </div>
+          </CCol>
+
+          <CCol md={2}>
+            <CFormLabel>Discount (RM)</CFormLabel>
+            <CFormInput
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.discount}
+              onChange={handleDiscountChange}
+            />
+          </CCol>
+
+          <CCol md={2}>
+            <CFormLabel>SST (%)</CFormLabel>
+            <CFormInput
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.sstPercent}
+              onChange={handleSstChange}
+              placeholder="e.g. 6.00"
+            />
+          </CCol>
+
+          <CCol md={2}>
+            <CFormLabel>SST Amount (RM)</CFormLabel>
+            <CFormInput type="number" readOnly value={formData.sstAmount} />
+          </CCol>
+
+          <CCol md={2}>
+            <CFormLabel>Total (RM)</CFormLabel>
+            <div>RM {grandTotal}</div>
+          </CCol>
+        </CRow>
+      </CCardBody>
+    </CCard>
   )
 }
