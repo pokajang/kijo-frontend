@@ -67,6 +67,7 @@ export default function ViewModal({ record, onClose }) {
       </CCardHeader>
       <CCardBody>
         <div
+          className="records-detail-rich-text"
           dangerouslySetInnerHTML={{
             __html: sanitizeDisplayHtml(htmlContent) || '<em>No content provided.</em>',
           }}
@@ -113,7 +114,7 @@ export default function ViewModal({ record, onClose }) {
             <CCardBody className="pt-2">
               {Array.isArray(record.history) && record.history.length > 0 ? (
                 /* datatable-exempt: existing embedded/layout table */
-                <CTable responsive bordered className="mb-2 data-table-compact embedded-data-table">
+                <CTable responsive className="mb-2 data-table-compact embedded-data-table">
                   <CTableHead>
                     <CTableRow>
                       <CTableHeaderCell className="text-center" style={{ width: '22%' }}>
@@ -243,7 +244,6 @@ export default function ViewModal({ record, onClose }) {
                           <CTable
                             striped
                             responsive
-                            bordered
                             className="data-table-compact embedded-data-table"
                           >
                             <CTableHead>
@@ -281,12 +281,7 @@ export default function ViewModal({ record, onClose }) {
                   ) : (
                     // Single day/hourly: single table
                     /* datatable-exempt: existing embedded/layout table */
-                    <CTable
-                      striped
-                      responsive
-                      bordered
-                      className="data-table-compact embedded-data-table"
-                    >
+                    <CTable striped responsive className="data-table-compact embedded-data-table">
                       <CTableHead>
                         <CTableRow>
                           <CTableHeaderCell className="text-center" style={{ width: '30%' }}>

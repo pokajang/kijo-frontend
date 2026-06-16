@@ -76,9 +76,9 @@ describe('templateUtils', () => {
     it('allows basic formatting and strips attributes, unsafe blocks, and disallowed tags', () => {
       expect(
         sanitizeDisplayHtml(
-          '<p onclick="x"><strong>Ok</strong><script>bad()</script><a href="/">Link</a></p>',
+          '<h2 style="color:red">Heading</h2><p onclick="x"><strong>Ok</strong><script>bad()</script><a href="/">Link</a></p>',
         ),
-      ).toBe('<p><strong>Ok</strong>Link</p>')
+      ).toBe('<h2>Heading</h2><p><strong>Ok</strong>Link</p>')
     })
 
     it('keeps table structure without attributes because TinyMCE has table support', () => {

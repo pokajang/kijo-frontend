@@ -39,7 +39,7 @@ const HtmlSection = ({ title, value }) => (
   <section className="records-detail-section mt-4">
     <h6 className="mb-2">{title}</h6>
     <div
-      className="records-detail-field"
+      className="records-detail-rich-text"
       dangerouslySetInnerHTML={{
         __html: sanitizeDisplayHtml(value) || '<em>No content provided.</em>',
       }}
@@ -75,7 +75,15 @@ const historyColumns = [
   {
     key: 'remarks',
     label: 'Remarks',
-    render: (row) => (row.remarks || '-').replace(/<\/?p[^>]*>/g, '').replace(/<br\s*\/?>/g, ' '),
+    render: (row) =>
+      (row.remarks || '-')
+        .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+        .replace(/<br\s*\/?>/g, ' ')
+        .replace(/<\/?[^>]+>/g, '')
+        .replace(/\n/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() || '-',
   },
 ]
 
@@ -336,7 +344,14 @@ const TrainingProposalDetailPage = () => {
                   </div>
                   <div className="records-mobile-meta">{row.created_by_code || 'N/A'}</div>
                   <div className="records-mobile-subtitle">
-                    {(row.remarks || '-').replace(/<\/?p[^>]*>/g, '').replace(/<br\s*\/?>/g, ' ')}
+                    {(row.remarks || '-')
+                      .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+                      .replace(/<br\s*\/?>/g, ' ')
+                      .replace(/<\/?[^>]+>/g, '')
+                      .replace(/\n/g, ' ')
+                      .replace(/&nbsp;/g, ' ')
+                      .replace(/\s+/g, ' ')
+                      .trim() || '-'}
                   </div>
                 </div>
               )}

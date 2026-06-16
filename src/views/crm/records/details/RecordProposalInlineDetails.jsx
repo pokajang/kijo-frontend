@@ -64,7 +64,7 @@ const HtmlSection = ({ title, value }) => {
     <section className="records-detail-section mt-4">
       <h6 className="mb-2">{title}</h6>
       <div
-        className="records-detail-field"
+        className="records-detail-rich-text"
         dangerouslySetInnerHTML={{
           __html: sanitizeDisplayHtml(value) || '<em>No content provided.</em>',
         }}

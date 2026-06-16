@@ -45,6 +45,7 @@ export default function ViewModal({ record, onClose }) {
       </CCardHeader>
       <CCardBody>
         <div
+          className="records-detail-rich-text"
           dangerouslySetInnerHTML={{
             __html: sanitizeDisplayHtml(html) || '<em>No content provided.</em>',
           }}
@@ -70,12 +71,7 @@ export default function ViewModal({ record, onClose }) {
               <CCardBody>
                 {Array.isArray(record.history) && record.history.length > 0 ? (
                   /* datatable-exempt: existing embedded/layout table */
-                  <CTable
-                    striped
-                    responsive
-                    bordered
-                    className="data-table-compact embedded-data-table"
-                  >
+                  <CTable striped responsive className="data-table-compact embedded-data-table">
                     <CTableHead>
                       <CTableRow>
                         <CTableHeaderCell style={{ width: '20%' }}>Date Created</CTableHeaderCell>

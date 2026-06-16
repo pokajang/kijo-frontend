@@ -3,6 +3,12 @@ import DOMPurify from 'dompurify'
 const ALLOWED_TEMPLATE_HTML_TAGS = [
   'p',
   'br',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
   'strong',
   'b',
   'em',
