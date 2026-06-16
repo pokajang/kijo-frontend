@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import DataTableActionMenu from './DataTableActionMenu'
 import DataTableDesktop from './DataTableDesktop'
@@ -11,8 +11,10 @@ import DataTableUtilityControls from './DataTableUtilityControls'
 import {
   useColumnPreferences,
   useDataTablePagination,
+  useDataTableScrollMemory,
   useDataTableSort,
   useTableViewportHeight,
+  useWindowScrollMemory,
 } from '../../hooks/datatable'
 import { buildCsv, downloadCsv } from '../../utils/datatable/csv'
 import {
@@ -125,10 +127,13 @@ const DataTableRecordList = ({
   showMobileTopFooter = true,
   showFooter = true,
   className = '',
+  scrollStorageKey,
 }) => {
   const [openActionDropdown, setOpenActionDropdown] = useState(null)
   const [desktopUtilityPortalTarget, setDesktopUtilityPortalTarget] = useState(null)
   const [mobileUtilityPortalTarget, setMobileUtilityPortalTarget] = useState(null)
+  const didMountControlledPageResetRef = useRef(false)
+  const showInitialLoading = loading && rows.length === 0
   const hasControlledColumnVisibility =
     columnVisibilityController && typeof columnVisibilityController.isColumnVisible === 'function'
   const internalColumnVisibility = useColumnPreferences({
@@ -317,6 +322,17 @@ const DataTableRecordList = ({
       ...groupRows,
     ])
   }, [getRowGroupKey, getRowGroupLabel, pagedRows, rowGroupSortComparator])
+  const scrollMemoryKey = scrollStorageKey || storageKey || idPrefix
+  useDataTableScrollMemory(tableViewportRef, scrollMemoryKey, [
+    showInitialLoading,
+    totalRows,
+    tableViewportHeight,
+  ])
+  useWindowScrollMemory(scrollMemoryKey ? `${scrollMemoryKey}.window` : undefined, [
+    showInitialLoading,
+    totalRows,
+    tableViewportHeight,
+  ])
   const setPageSize = hasControlledPagination
     ? (value) => {
         controlledSetPageSize(value)
@@ -331,7 +347,14 @@ const DataTableRecordList = ({
   }, [controlledCurrentPage, controlledSetCurrentPage, hasControlledPagination, totalPages])
 
   useEffect(() => {
-    if (!hasControlledPagination) return
+    if (!hasControlledPagination) {
+      didMountControlledPageResetRef.current = false
+      return
+    }
+    if (!didMountControlledPageResetRef.current) {
+      didMountControlledPageResetRef.current = true
+      return
+    }
     controlledSetCurrentPage(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasControlledPagination, ...resetDeps])
@@ -525,7 +548,7 @@ const DataTableRecordList = ({
     return isPrimitiveTextCell(content) ? renderPrimitiveTextCell(content) : content
   }
 
-  if (loading) {
+  if (showInitialLoading) {
     return <DataTableLoadingState message={loadingMessage} />
   }
 

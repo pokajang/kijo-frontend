@@ -11,6 +11,7 @@ import {
 } from '@coreui/react'
 import InvoiceFormShell from '../../../../../shared/invoice/InvoiceFormShell'
 import dialog from '../../../../../components/dialog/dialogService'
+import { showToast } from '../../../../../components/toast/toastService'
 import { buildPricingFromInvoice } from './utils/invoicePricingMapper'
 import { normalizePaymentMethod } from './utils/paymentUtils'
 import { buildBreakdownFromPricing } from './utils/pricingBreakdownBuilder'
@@ -264,7 +265,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       }
       const result = await res.json()
       if (result.status === 'success') {
-        await dialog.alert('Invoice updated successfully.')
+        showToast('Invoice updated.')
         await Promise.resolve(onSaved?.())
         onClose()
       } else {

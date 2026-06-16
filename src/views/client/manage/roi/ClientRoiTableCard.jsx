@@ -421,6 +421,7 @@ const ClientRoiTableCard = ({
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey={columnStorageKey}
+              scrollStorageKey="client.roi.records.scroll"
               idPrefix="client-roi-record"
               emptyMessage="No client ROI records found."
               exportFilename={`client-roi-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -468,7 +469,7 @@ const ClientRoiTableCard = ({
               renderQuickFilters={() => (
                 <PeriodRangeSelector value={periodRange} onChange={onPeriodRangeChange} />
               )}
-              resetDeps={[normalizedRows, searchTerm, profitabilityFilter, periodRange]}
+              resetDeps={[searchTerm, profitabilityFilter, periodRange]}
             />
           </CCardBody>
         </CCard>

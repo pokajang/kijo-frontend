@@ -29,6 +29,7 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { financialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
+import { showToast } from '../../../components/toast/toastService'
 import { formatMoney, roundMoney } from '../../../components/salary/salaryCalculations'
 import { SalaryRecordTable } from '../../../components/salary/SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from '../../../components/salary/salaryFileUtils'
@@ -339,13 +340,11 @@ const FinancialOtherClaimRecordsPage = () => {
       } else {
         await loadRecords()
       }
+      const successMessage = `Other claim record successfully ${getPastActionLabel(
+        actionModal.action,
+      )}.`
       closeActionModal(true)
-      setResponseModal({
-        visible: true,
-        title: 'Action Completed',
-        message: `Other claim record successfully ${getPastActionLabel(actionModal.action)}.`,
-        color: 'success',
-      })
+      showToast(successMessage)
     } catch (err) {
       closeActionModal(true)
       setResponseModal({
@@ -518,6 +517,7 @@ const FinancialOtherClaimRecordsPage = () => {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey="financial.other-claim-records.visible-columns.v1"
+                scrollStorageKey="financial.other-claim-records.scroll"
                 idPrefix="financial-other-claim-record"
                 emptyMessage="No submitted other claim records found."
                 exportFilename={`other-claim-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -569,7 +569,7 @@ const FinancialOtherClaimRecordsPage = () => {
                   submittedAt: 'desc',
                   claimsTotal: 'desc',
                 }}
-                resetDeps={[records, searchText, statusFilter]}
+                resetDeps={[searchText, statusFilter]}
               />
             </CCardBody>
           </CCard>

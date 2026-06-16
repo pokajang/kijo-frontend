@@ -501,6 +501,7 @@ const ClientVendorRegistrationPage = () => {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey={columnStorageKey}
+                scrollStorageKey="client.vendor-registration.records.scroll"
                 idPrefix="client-vendor-registration-record"
                 emptyMessage="No vendor registration records found."
                 exportFilename={`client-vendor-registrations-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -554,7 +555,7 @@ const ClientVendorRegistrationPage = () => {
                 initialSortField="validUntil"
                 initialSortDir="asc"
                 getSortValue={(row, field) => row[field]}
-                resetDeps={[filteredRows, searchTerm, statusFilter, recipientFilter]}
+                resetDeps={[searchTerm, statusFilter, recipientFilter]}
               />
             </CCardBody>
           </CCard>

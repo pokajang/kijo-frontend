@@ -391,6 +391,7 @@ const PaymentHistoryTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="vendor.payment-history.visible-columns.v4"
+        scrollStorageKey="vendor.payment-history.scroll"
         idPrefix="vendor-payment-history"
         emptyMessage="No payment records found."
         exportFilename={`payment-history-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -442,7 +443,7 @@ const PaymentHistoryTable = ({
         initialSortField="requested"
         initialSortDir="asc"
         initialSortDirByField={{ amount: 'desc' }}
-        resetDeps={[payments, searchText, selectedPeriodRange, statusFilter]}
+        resetDeps={[searchText, selectedPeriodRange, statusFilter]}
       />
       <div className="text-end fw-bold mt-2">
         <div>Total Paid: RM {totalPaid.toFixed(2)}</div>

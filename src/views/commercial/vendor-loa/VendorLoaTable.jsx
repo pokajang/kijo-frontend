@@ -6,6 +6,7 @@ import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../util
 import MarkPaidModal from './MarkPaidModal'
 import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.vendor-loa.visible-columns.v3'
@@ -214,10 +215,10 @@ const VendorLoaTable = ({
       )
       const result = await res.json()
       if (res.ok && result.status === 'success') {
-        dialog.alert('Vendor LOA updated successfully.')
+        showToast('Vendor LOA updated.')
         handleCloseEdit()
         if (typeof onRefresh === 'function') {
-          await onRefresh()
+          await onRefresh({ showLoader: false })
         }
         return true
       }
@@ -264,9 +265,9 @@ const VendorLoaTable = ({
       )
       const result = await res.json()
       if (res.ok && result.status === 'success') {
-        dialog.alert('Vendor LOA deleted successfully.')
+        showToast('Vendor LOA deleted.')
         if (typeof onRefresh === 'function') {
-          await onRefresh()
+          await onRefresh({ showLoader: false })
         }
         return
       }
@@ -301,10 +302,10 @@ const VendorLoaTable = ({
 
       const result = await res.json()
       if (res.ok && (result?.status === 'success' || result?.success === true)) {
-        dialog.alert('Payment marked as Paid.')
+        showToast('Payment marked as paid.')
         handleCloseModal()
         if (typeof onRefresh === 'function') {
-          await onRefresh()
+          await onRefresh({ showLoader: false })
         }
         return true
       }
@@ -469,6 +470,7 @@ const VendorLoaTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={columnStorageKey}
+        scrollStorageKey="commercial.vendor-loa.records.scroll"
         idPrefix="vendor-loa-record"
         emptyMessage="No letter of award records found."
         exportFilename={`vendor-loa-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -503,7 +505,7 @@ const VendorLoaTable = ({
           value: 'desc',
         }}
         getSortValue={(record, field) => record[field]}
-        resetDeps={[records]}
+        resetDeps={[]}
         actionColumnWidth="56px"
       />
 

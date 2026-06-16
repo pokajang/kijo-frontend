@@ -308,7 +308,7 @@ describe('ManageProject project loading', () => {
     expect(dialog.alert).not.toHaveBeenCalled()
   })
 
-  it('alerts and clears projects for real load failures', async () => {
+  it('alerts and keeps existing projects for real refresh failures', async () => {
     fetchProjects
       .mockResolvedValueOnce([{ id: 1, project_name: 'Existing Project' }])
       .mockRejectedValueOnce(new Error('Failed now'))
@@ -322,7 +322,7 @@ describe('ManageProject project loading', () => {
     fireEvent.click(screen.getByRole('button', { name: /change period/i }))
 
     await waitFor(() => expect(dialog.alert).toHaveBeenCalledWith('Failed now'))
-    expect(screen.getByTestId('project-list')).toHaveTextContent('')
+    expect(screen.getByTestId('project-list')).toHaveTextContent('Existing Project')
   })
 
   it('does not let stale project responses overwrite newer results', async () => {

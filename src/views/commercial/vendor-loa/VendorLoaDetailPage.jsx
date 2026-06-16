@@ -6,6 +6,7 @@ import { getCommercialReturnContext } from '../shared/commercialReturnNavigation
 import MarkPaidModal from './MarkPaidModal'
 import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 
 const canManagePaidStatus = (roles = []) => {
@@ -172,7 +173,7 @@ const VendorLoaDetailPage = () => {
       )
       const result = await res.json()
       if (res.ok && result.status === 'success') {
-        dialog.alert('Vendor LOA updated successfully.')
+        showToast('Vendor LOA updated.')
         setEditVisible(false)
         await fetchRecords()
         return true
@@ -220,7 +221,7 @@ const VendorLoaDetailPage = () => {
       )
       const result = await res.json()
       if (res.ok && result.status === 'success') {
-        dialog.alert('Vendor LOA deleted successfully.')
+        showToast('Vendor LOA deleted.')
         navigate('/commercial/vendor-loa')
         return
       }
@@ -255,7 +256,7 @@ const VendorLoaDetailPage = () => {
 
       const result = await res.json()
       if (res.ok && (result?.status === 'success' || result?.success === true)) {
-        dialog.alert('Payment marked as Paid.')
+        showToast('Payment marked as paid.')
         setMarkPaidVisible(false)
         await fetchRecords()
         return true

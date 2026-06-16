@@ -20,6 +20,35 @@ import { normalizeVisibleColumns } from '../../../utils/datatable/columnVisibili
 const columns = [{ key: 'name', label: 'Name', sortable: true }]
 const rows = [{ id: 1, name: 'Alpha' }]
 
+const setWindowScrollPosition = ({ left = 0, top = 0 }) => {
+  Object.defineProperty(window, 'scrollX', { value: left, configurable: true, writable: true })
+  Object.defineProperty(window, 'pageXOffset', { value: left, configurable: true, writable: true })
+  Object.defineProperty(window, 'scrollY', { value: top, configurable: true, writable: true })
+  Object.defineProperty(window, 'pageYOffset', { value: top, configurable: true, writable: true })
+}
+
+const installWindowScrollMock = () => {
+  const scrollTo = vi.fn((optionsOrLeft, maybeTop) => {
+    const nextPosition =
+      typeof optionsOrLeft === 'object'
+        ? {
+            left: optionsOrLeft.left || 0,
+            top: optionsOrLeft.top || 0,
+          }
+        : {
+            left: Number(optionsOrLeft) || 0,
+            top: Number(maybeTop) || 0,
+          }
+    setWindowScrollPosition(nextPosition)
+  })
+  Object.defineProperty(window, 'scrollTo', {
+    value: scrollTo,
+    configurable: true,
+    writable: true,
+  })
+  return scrollTo
+}
+
 const readDataTableScssSource = () => {
   const scssDir = 'src/scss/custom'
   const partialDir = `${scssDir}/data-table`
@@ -33,6 +62,8 @@ const readDataTableScssSource = () => {
 
 afterEach(() => {
   cleanup()
+  window.sessionStorage.clear()
+  setWindowScrollPosition({ left: 0, top: 0 })
   document.querySelectorAll('[data-test-portal-root="true"]').forEach((node) => node.remove())
 })
 
@@ -181,6 +212,140 @@ describe('datatable shared components', () => {
     expect(mobileRow).toHaveTextContent('Alpha')
     expect(within(mobileRow).getByText('Open')).toHaveClass('records-status-badge--success')
     expect(within(mobileRow).getByRole('button', { name: 'Actions' })).toBeInTheDocument()
+  })
+
+  it('keeps existing records visible while a refresh is loading', () => {
+    const { rerender } = render(
+      <DataTableRecordList
+        rows={[]}
+        loading
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+      />,
+    )
+
+    expect(screen.getByText('Loading records...')).toBeInTheDocument()
+
+    rerender(
+      <DataTableRecordList
+        rows={rows}
+        loading
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+      />,
+    )
+
+    expect(screen.queryByText('Loading records...')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Alpha').length).toBeGreaterThan(0)
+  })
+
+  it('restores desktop viewport scroll after remount', async () => {
+    const scrollRows = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      name: `Row ${index + 1}`,
+    }))
+
+    const { unmount } = render(
+      <DataTableRecordList
+        rows={scrollRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        scrollStorageKey="test.scroll-memory"
+      />,
+    )
+
+    const viewport = document.querySelector('.table-scroll-viewport')
+    viewport.scrollTop = 123
+    fireEvent.scroll(viewport)
+    unmount()
+
+    render(
+      <DataTableRecordList
+        rows={scrollRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        scrollStorageKey="test.scroll-memory"
+      />,
+    )
+
+    const restoredViewport = document.querySelector('.table-scroll-viewport')
+    await waitFor(() => expect(restoredViewport.scrollTop).toBe(123))
+  })
+
+  it('restores desktop viewport scroll after in-place row refresh', async () => {
+    const scrollRows = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      name: `Row ${index + 1}`,
+    }))
+    const refreshedRows = scrollRows.slice(1)
+
+    const { rerender } = render(
+      <DataTableRecordList
+        rows={scrollRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        scrollStorageKey="test.scroll-refresh"
+      />,
+    )
+
+    const viewport = document.querySelector('.table-scroll-viewport')
+    viewport.scrollTop = 140
+    fireEvent.scroll(viewport)
+
+    viewport.scrollTop = 0
+    rerender(
+      <DataTableRecordList
+        rows={refreshedRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        scrollStorageKey="test.scroll-refresh"
+      />,
+    )
+
+    await waitFor(() => expect(viewport.scrollTop).toBe(140))
+  })
+
+  it('restores window scroll after mobile record rows refresh', async () => {
+    const scrollTo = installWindowScrollMock()
+    const scrollRows = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      name: `Row ${index + 1}`,
+    }))
+    const refreshedRows = scrollRows.slice(1)
+
+    const { rerender } = render(
+      <DataTableRecordList
+        rows={scrollRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        scrollStorageKey="test.window-scroll-refresh"
+      />,
+    )
+
+    setWindowScrollPosition({ top: 420 })
+    fireEvent.scroll(window)
+
+    setWindowScrollPosition({ top: 0 })
+    rerender(
+      <DataTableRecordList
+        rows={refreshedRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        scrollStorageKey="test.window-scroll-refresh"
+      />,
+    )
+
+    await waitFor(() =>
+      expect(scrollTo).toHaveBeenLastCalledWith({ left: 0, top: 420, behavior: 'auto' }),
+    )
   })
 
   it('merges caller row props with generated row-open props', () => {
@@ -385,6 +550,26 @@ describe('datatable shared components', () => {
     expect(onSearchChange).toHaveBeenCalledWith('beta')
     expect(resetFilters).toHaveBeenCalled()
     expect(clearChip).toHaveBeenCalledWith('status')
+  })
+
+  it('keeps record controls visible during quiet loading by default', () => {
+    render(
+      <DataTableRecordControls loading searchValue="alpha" onSearchChange={vi.fn()}>
+        <div>Advanced content</div>
+      </DataTableRecordControls>,
+    )
+
+    expect(screen.getByPlaceholderText('Type to search...')).toBeInTheDocument()
+  })
+
+  it('can still hide record controls while loading when explicitly requested', () => {
+    render(
+      <DataTableRecordControls loading hideWhileLoading searchValue="alpha">
+        <div>Advanced content</div>
+      </DataTableRecordControls>,
+    )
+
+    expect(screen.queryByPlaceholderText('Type to search...')).not.toBeInTheDocument()
   })
 
   it('renders detail shell loading, details, and action sections', () => {
@@ -679,6 +864,84 @@ describe('datatable shared components', () => {
     expect(screen.getByText('Row 6')).toBeInTheDocument()
     expect(screen.queryByText('Row 1')).not.toBeInTheDocument()
     expect(screen.getAllByText('Page 2/3').length).toBeGreaterThan(0)
+    expect(setCurrentPage).not.toHaveBeenCalled()
+  })
+
+  it('does not reset internal pagination when refreshed row arrays are passed as reset deps', () => {
+    const controlledRows = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      name: `Row ${index + 1}`,
+    }))
+    const refreshedRows = controlledRows.map((row) => ({ ...row }))
+
+    const { rerender } = render(
+      <DataTableRecordList
+        rows={controlledRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        initialPageSize={5}
+        resetDeps={[controlledRows]}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByLabelText('Next page')[0])
+    expect(screen.getByText('Row 6')).toBeInTheDocument()
+
+    rerender(
+      <DataTableRecordList
+        rows={refreshedRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        initialPageSize={5}
+        resetDeps={[refreshedRows]}
+      />,
+    )
+
+    expect(screen.getByText('Row 6')).toBeInTheDocument()
+    expect(screen.queryByText('Row 1')).not.toBeInTheDocument()
+  })
+
+  it('resets controlled pagination only after reset dependencies change', () => {
+    const setPageSize = vi.fn()
+    const setCurrentPage = vi.fn()
+    const controlledRows = Array.from({ length: 12 }, (_, index) => ({
+      id: index + 1,
+      name: `Row ${index + 1}`,
+    }))
+
+    const { rerender } = render(
+      <DataTableRecordList
+        rows={controlledRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        controlledPageSize={5}
+        controlledSetPageSize={setPageSize}
+        controlledCurrentPage={2}
+        controlledSetCurrentPage={setCurrentPage}
+        resetDeps={['open']}
+      />,
+    )
+
+    expect(setCurrentPage).not.toHaveBeenCalled()
+
+    rerender(
+      <DataTableRecordList
+        rows={controlledRows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        controlledPageSize={5}
+        controlledSetPageSize={setPageSize}
+        controlledCurrentPage={2}
+        controlledSetCurrentPage={setCurrentPage}
+        resetDeps={['failed']}
+      />,
+    )
+
+    expect(setCurrentPage).toHaveBeenCalledWith(1)
   })
 
   it('renders grouped record rows without counting group headers as records', () => {

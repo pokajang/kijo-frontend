@@ -105,6 +105,15 @@ describe('projectFilters', () => {
     ).toEqual([projects[0]])
   })
 
+  it('filters amounts by current project value when present', () => {
+    expect(
+      applyProjectFilters({
+        projects: [{ ...projects[0], current_project_value: 3000 }, projects[1]],
+        filters: { ...defaultFilters, minAmount: '2500', maxAmount: '3500' },
+      }),
+    ).toEqual([{ ...projects[0], current_project_value: 3000 }])
+  })
+
   it('detects current user ownership by staff id or name code', () => {
     expect(isProjectOwnedByUser(projects[0], { staff_id: 10 })).toBe(true)
     expect(isProjectOwnedByUser(projects[0], { name_code: 'al' })).toBe(true)

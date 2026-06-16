@@ -16,7 +16,7 @@ import {
   normalizeTaskClassification,
   previewTaskClassification,
 } from './taskApi'
-import { showApiToast } from '../../api/apiClient'
+import { showToast } from '../../components/toast/toastService'
 
 const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v3'
 const AI_CLASSIFICATION_POLL_INTERVAL_MS = 4000
@@ -449,7 +449,7 @@ const TaskManager = () => {
         // reload the full list so filters & sorting reapply
         await loadTasks()
         if (pendingAiTaskIds.length > 0) {
-          showApiToast('Task saved. AI classification is updating in the background.', 'info')
+          showToast('Task saved. AI classification is updating in the background.')
           startAiClassificationPolling(pendingAiTaskIds)
         }
         resetCreateTaskForm()

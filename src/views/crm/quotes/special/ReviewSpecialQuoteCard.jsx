@@ -38,6 +38,10 @@ export default function ReviewSpecialQuoteCard({
   const subtotal = parseFloat(formData.subTotal || 0)
   const sstAmount = parseFloat(formData.sstAmount || 0)
   const discount = parseFloat(formData.discount || 0)
+  const attachProposalDisabled = formData.hasAppendableProposal === false
+  const attachProposalHelpText = attachProposalDisabled
+    ? formData.appendableProposalMessage || 'Selected special proposal cannot be appended.'
+    : formData.appendableProposalMessage || ''
   const lineItemsSubtotal = (formData.lineItems || []).reduce(
     (sum, item) => sum + (parseFloat(item.amount || 0) || 0),
     0,
@@ -50,10 +54,12 @@ export default function ReviewSpecialQuoteCard({
       cardClassName="mb-0"
       attachProposal={!!formData.attachProposal}
       attachProposalLabel="Attach Proposal PDF"
+      attachProposalDisabled={attachProposalDisabled}
+      attachProposalHelpText={attachProposalHelpText}
       onAttachProposalChange={(checked) =>
         setFormData((prev) => ({
           ...prev,
-          attachProposal: checked,
+          attachProposal: attachProposalDisabled ? false : checked,
         }))
       }
       onCancel={handleCancel}

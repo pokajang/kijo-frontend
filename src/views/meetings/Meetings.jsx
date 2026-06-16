@@ -607,6 +607,7 @@ export default function Meetings() {
               requiredColumns={requiredColumns}
               storageKey="meetings.records.visible-columns.v3"
               apiKey="meetings-records-visible-columns-v3"
+              scrollStorageKey="meetings.records.scroll"
               idPrefix="meeting-record"
               emptyMessage="No meeting minutes found."
               exportFilename={`meeting-minutes-${new Date().toISOString().slice(0, 10)}.csv`}

@@ -1,6 +1,7 @@
 import dialog from '../../../../components/dialog/dialogService'
 import { getRecordListPath } from '../config/recordTabs'
 import { fetchJsonCompat, getMessage, isSuccess } from './compatApi'
+import { RECORD_ACTION_TOAST_MESSAGES } from '../utils/recordActionToastMessages'
 // crm/records/services/recordsActions.js
 
 const quoteRecordRoutes = (service) => {
@@ -143,7 +144,8 @@ export const createHandlers = ({
   setDescription,
   setClientLoaRefNo,
   navigate,
-  onRowMoved,
+  onActionSuccess,
+  refreshAfterLocalDelete = false,
 }) => {
   const urls = endpointsByService[serviceKey] || {}
   const toApiDate = async (dateValue) => {
@@ -220,7 +222,13 @@ export const createHandlers = ({
               return !(sameId && sameService)
             }),
           )
-          dialog.alert('Record deleted successfully.')
+          if (refreshAfterLocalDelete) {
+            await fetchQuotes()
+          }
+          onActionSuccess?.({
+            type: 'delete',
+            message: RECORD_ACTION_TOAST_MESSAGES.deleted,
+          })
         } else {
           dialog.alert(getMessage(result, 'Failed to delete.'))
         }
@@ -251,8 +259,7 @@ export const createHandlers = ({
         if (isSuccess(result)) {
           await fetchQuotes()
           setShowFailModal(false)
-          // dialog.alert('Marked as Failed successfully.');
-          onRowMoved && onRowMoved('Failed') // ✅ toast cue
+          onActionSuccess?.({ type: 'status', status: 'Failed' })
         } else {
           dialog.alert(getMessage(result, 'Failed to update status.'))
         }
@@ -277,6 +284,7 @@ export const createHandlers = ({
       clientLoaRefNo,
       selectedRecordIdForSuccess,
       projectCollaborators,
+      projectValueAdjustment = {},
     }) => {
       if (!successReason.trim()) {
         dialog.alert('Please enter a success reason.')
@@ -295,14 +303,15 @@ export const createHandlers = ({
             award_date: awardDateStr,
             client_award_ref_no: clientLoaRefNo || null,
             project_collaborators: projectCollaborators,
+            project_value_decision: projectValueAdjustment.project_value_decision || 'default',
+            current_project_value: projectValueAdjustment.current_project_value,
+            project_value_reason: projectValueAdjustment.project_value_reason,
           }),
         })
         if (isSuccess(result)) {
           await fetchQuotes()
           setShowSuccessModal(false)
-          onRowMoved && onRowMoved('Awarded')
-          // dialog.alert('Marked as Awarded successfully.');
-          // navigate('/project/manage');
+          onActionSuccess?.({ type: 'status', status: 'Awarded' })
           return true
         } else {
           dialog.alert(getMessage(result, 'Failed to update status.'))
@@ -322,6 +331,7 @@ export const createHandlers = ({
       clientLoaRefNo,
       selectedRecordIdForSuccess,
       projectCollaborators,
+      projectValueAdjustment = {},
     }) => {
       if (!urls.reAward) {
         dialog.alert('Re-award is not available for this service yet.')
@@ -344,12 +354,15 @@ export const createHandlers = ({
             award_date: awardDateStr,
             client_award_ref_no: clientLoaRefNo || null,
             project_collaborators: projectCollaborators,
+            project_value_decision: projectValueAdjustment.project_value_decision || 'default',
+            current_project_value: projectValueAdjustment.current_project_value,
+            project_value_reason: projectValueAdjustment.project_value_reason,
           }),
         })
         if (isSuccess(result)) {
           await fetchQuotes()
           setShowSuccessModal(false)
-          onRowMoved && onRowMoved('Awarded')
+          onActionSuccess?.({ type: 'status', status: 'Awarded' })
           return true
         } else {
           dialog.alert(getMessage(result, 'Failed to re-award.'))
@@ -415,7 +428,10 @@ export const createHandlers = ({
 
         if (isSuccess(result)) {
           await fetchQuotes()
-          dialog.alert(getMessage(result, 'Quotation Un-Awarded successfully.'))
+          onActionSuccess?.({
+            type: 'un-award',
+            message: RECORD_ACTION_TOAST_MESSAGES.unAwarded,
+          })
         } else {
           dialog.alert(getMessage(result, 'Failed to Un-Award.'))
         }
@@ -670,7 +686,10 @@ export const createHandlers = ({
         })
         if (isSuccess(result)) {
           await fetchQuotes()
-          dialog.alert(getMessage(result, 'Client details synced successfully.'))
+          onActionSuccess?.({
+            type: 'sync-client',
+            message: RECORD_ACTION_TOAST_MESSAGES.syncedClientDetails,
+          })
         } else {
           dialog.alert(getMessage(result, 'Failed to sync client details.'))
         }

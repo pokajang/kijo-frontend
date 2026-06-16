@@ -155,6 +155,7 @@ const InvoiceReviewStep = ({
         </div>
 
         <div className="data-table-embedded-shell">
+          {/* datatable-exempt: embedded review layout table */}
           <CTable responsive hover className="data-table-compact embedded-data-table">
             <CTableHead>
               <CTableRow>

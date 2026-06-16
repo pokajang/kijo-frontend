@@ -1,4 +1,5 @@
 import { normalizeProjectStatus } from './projectStatus'
+import { getCurrentProjectValue } from './projectApi'
 
 const toDateOnly = (value) => {
   if (!value) return ''
@@ -153,7 +154,7 @@ export const applyProjectFilters = ({ projects = [], filters = {} }) => {
     if (filters?.hasVendorFilter === 'yes' && !hasVendors) return false
     if (filters?.hasVendorFilter === 'no' && hasVendors) return false
 
-    const amount = Number(project?.quote_value ?? 0)
+    const amount = getCurrentProjectValue(project, 0)
     if (parsedMin != null && !Number.isNaN(parsedMin) && amount < parsedMin) return false
     if (parsedMax != null && !Number.isNaN(parsedMax) && amount > parsedMax) return false
 

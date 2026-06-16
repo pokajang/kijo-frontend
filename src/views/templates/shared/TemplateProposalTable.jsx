@@ -456,6 +456,7 @@ const TemplateProposalTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={config.storageKey}
+        scrollStorageKey={`${config.storageKey}.scroll`}
         idPrefix={config.idPrefix}
         emptyMessage={rows.length ? 'No matching records.' : 'No records to display.'}
         exportFilename={`${config.filePrefix}-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -532,7 +533,7 @@ const TemplateProposalTable = ({
         initialSortDir="desc"
         initialSortDirByField={{ dateCreated: 'desc', attachmentsCount: 'desc' }}
         getSortValue={(row, field) => (field === 'dateCreated' ? row.dateCreatedRaw : row[field])}
-        resetDeps={[filteredRows, searchTerm, createdByFilter, yearFilter]}
+        resetDeps={[searchTerm, createdByFilter, yearFilter]}
         actionColumnWidth="56px"
       />
 

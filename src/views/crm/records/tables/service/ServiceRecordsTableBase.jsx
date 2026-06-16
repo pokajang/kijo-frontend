@@ -19,7 +19,11 @@ import {
 import { SERVICE_TABLE_REQUIRED_COLUMNS } from '../../config/serviceTableUiConfig'
 import { DataTableFooter, DataTableLoadingState } from '../../../../../components/datatable'
 import { StatsStrip } from '../../../../../components/stats'
-import { useTableViewportHeight } from '../../../../../hooks/datatable'
+import {
+  useDataTableScrollMemory,
+  useTableViewportHeight,
+  useWindowScrollMemory,
+} from '../../../../../hooks/datatable'
 import ServiceRecordsFilterPanel from './ServiceRecordsFilterPanel'
 import ServiceRecordsMobileList from './ServiceRecordsMobileList'
 
@@ -98,12 +102,14 @@ const ServiceRecordsTableBase = ({
   toggleSort,
   getAriaSort,
   columnWidths,
+  scrollStorageKey,
   renderRow,
 }) => {
   const desktopBreakpoint = recordsDesktopBreakpoint
   const headerCellBaseStyle = createRecordsHeaderCellBaseStyle()
   const stickyActionHeaderStyle = createStickyActionHeaderStyle(columnWidths.action)
   const stickyActionCellStyle = createStickyActionCellStyle(columnWidths.action)
+  const showInitialLoading = loading && totalRows === 0 && filteredRecords.length === 0
   const { tableViewportHeight, tableViewportRef, tableFooterRef } = useTableViewportHeight([
     showAdvancedFilters,
     searchInput,
@@ -117,6 +123,11 @@ const ServiceRecordsTableBase = ({
     minAmount,
     maxAmount,
     filteredRecords.length,
+    totalRows,
+  ])
+  useDataTableScrollMemory(tableViewportRef, scrollStorageKey, [showInitialLoading, totalRows])
+  useWindowScrollMemory(scrollStorageKey ? `${scrollStorageKey}.window` : undefined, [
+    showInitialLoading,
     totalRows,
   ])
 
@@ -139,7 +150,7 @@ const ServiceRecordsTableBase = ({
     />
   )
 
-  if (loading) {
+  if (showInitialLoading) {
     return <DataTableLoadingState />
   }
 

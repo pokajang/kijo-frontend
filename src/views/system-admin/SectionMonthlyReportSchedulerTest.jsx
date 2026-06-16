@@ -13,6 +13,7 @@ import {
   CRow,
 } from '@coreui/react'
 import { DataTableRecordList, DataTableStatusBadge } from '../../components/datatable'
+import { showToast } from '../../components/toast/toastService'
 import { apiJson } from '../../api/apiClient'
 import { apiUrl } from '../../api/apiUrl'
 
@@ -200,7 +201,6 @@ const SectionMonthlyReportSchedulerTest = () => {
   const [sending, setSending] = useState(false)
   const [logRows, setLogRows] = useState([])
   const [loadError, setLoadError] = useState('')
-  const [scheduleMessage, setScheduleMessage] = useState('')
 
   const loadLogs = useCallback(async () => {
     setLoadError('')
@@ -231,7 +231,6 @@ const SectionMonthlyReportSchedulerTest = () => {
   const handleSaveSchedule = useCallback(async () => {
     setSavingSchedule(true)
     setLoadError('')
-    setScheduleMessage('')
 
     try {
       const payload = await apiJson(apiUrl('admin/monthly-dashboard-report-test/schedule'), {
@@ -247,7 +246,7 @@ const SectionMonthlyReportSchedulerTest = () => {
         }),
       })
       setSchedule(normalizeSchedule(payload?.data?.schedule))
-      setScheduleMessage(payload?.message || 'Dashboard report email schedule saved.')
+      showToast(String(payload?.message || 'Dashboard report email schedule saved.'))
     } catch (err) {
       setLoadError(validationMessage(err))
     } finally {
@@ -402,12 +401,6 @@ const SectionMonthlyReportSchedulerTest = () => {
           {schedule.lastStatus ? ` | Last status: ${schedule.lastStatus}` : ''}
         </div>
 
-        {scheduleMessage && (
-          <CAlert color="success" className="mt-3 mb-0">
-            {scheduleMessage}
-          </CAlert>
-        )}
-
         <hr className="my-4" />
 
         <CRow className="g-3 align-items-end">
@@ -446,6 +439,7 @@ const SectionMonthlyReportSchedulerTest = () => {
             rows={logRows}
             dataColumns={logColumns}
             requiredColumns={requiredLogColumns}
+            scrollStorageKey="system-admin.monthly-report-test.scroll"
             idPrefix="system-admin-monthly-report-test"
             emptyMessage="No monthly report test records yet."
             initialSortField="timestamp"

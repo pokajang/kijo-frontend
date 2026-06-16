@@ -216,6 +216,7 @@ const FrozenVendorTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={columnStorageKey}
+        scrollStorageKey="vendor.manage.frozen.scroll"
         idPrefix="frozen-vendor-record"
         emptyMessage="No frozen vendors found."
         exportFilename={`frozen-vendors-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -249,7 +250,7 @@ const FrozenVendorTable = ({
         }}
         initialSortField="vendor"
         getSortValue={(vendor, field) => vendor[field]}
-        resetDeps={[filteredVendors, searchText, categoryFilter]}
+        resetDeps={[searchText, categoryFilter]}
       />
     </>
   )

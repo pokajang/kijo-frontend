@@ -20,6 +20,7 @@ import { cilLockLocked, cilUser } from '@coreui/icons'
 
 import logoUrl from 'src/assets/brand/logo.svg'
 import { useAuth } from 'src/auth/AuthProvider'
+import { showToast } from 'src/components/toast/toastService'
 import PasswordVisibilityButton from './PasswordVisibilityButton'
 
 const PASSWORD_MIN_LENGTH = 12
@@ -125,7 +126,8 @@ const PasswordReset = () => {
       })
 
       if (response.ok) {
-        setMessage('Password reset successfully. You can now sign in with your new password.')
+        setMessage(null)
+        showToast('Password reset successfully. You can now sign in with your new password.')
         setTimeout(() => navigate('/login', { replace: true }), 1200)
         return
       }

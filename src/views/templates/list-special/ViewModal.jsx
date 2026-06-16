@@ -23,6 +23,13 @@ import { sanitizeDisplayHtml } from '../shared/templateUtils'
 export default function ViewModal({ record, onClose }) {
   const [showAttachModal, setShowAttachModal] = useState(false)
   const [attachList, setAttachList] = useState([])
+  const proposalMode = record?.proposalMode || record?.proposal_mode || 'upload'
+  const contentLabel =
+    proposalMode === 'write' ? 'Written Proposal Content' : 'Internal Service Summary'
+  const contentHtml =
+    proposalMode === 'write'
+      ? record?.proposalContent || record?.proposal_content || record?.content
+      : record?.serviceSummary || record?.service_summary || record?.content
 
   // Whenever we open the modal, load the current record's attachments
   useEffect(() => {
@@ -96,7 +103,7 @@ export default function ViewModal({ record, onClose }) {
               </CCardBody>
 
               {/* Content Section */}
-              {renderHtmlSection('Proposal Content', record.content)}
+              {renderHtmlSection(contentLabel, contentHtml)}
 
               {/* Attachments Section */}
               {Array.isArray(record.attachments) && record.attachments.length > 0 && (

@@ -29,6 +29,7 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { financialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
+import { showToast } from '../../../components/toast/toastService'
 import { formatCount, formatMoney, sumBy } from '../../../utils/stats/formatStats'
 import {
   exportFinancialSalaryClaimsPdf,
@@ -511,13 +512,9 @@ const FinancialSalaryRecordsPage = () => {
       } else {
         await loadRecords()
       }
+      const successMessage = `Salary record successfully ${getPastActionLabel(actionModal.action)}.`
       closeActionModal(true)
-      setResponseModal({
-        visible: true,
-        title: 'Action Completed',
-        message: `Salary record successfully ${getPastActionLabel(actionModal.action)}.`,
-        color: 'success',
-      })
+      showToast(successMessage)
     } catch (err) {
       closeActionModal(true)
       setResponseModal({
@@ -846,6 +843,7 @@ const FinancialSalaryRecordsPage = () => {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey="financial.salary-records.visible-columns.v2"
+                scrollStorageKey="financial.salary-records.scroll"
                 idPrefix="financial-salary-record"
                 emptyMessage="No submitted salary records found."
                 exportFilename={`salary-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -935,7 +933,7 @@ const FinancialSalaryRecordsPage = () => {
                   submittedAt: 'desc',
                   payableSalary: 'desc',
                 }}
-                resetDeps={[records, searchText, statusFilter]}
+                resetDeps={[searchText, statusFilter]}
               />
             </CCardBody>
           </CCard>

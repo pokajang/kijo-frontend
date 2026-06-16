@@ -125,6 +125,42 @@ describe('CommercialProjectPickerModal', () => {
     )
   })
 
+  it('prefers current project value for display, search, and normalized commercial payloads', async () => {
+    const onContinue = vi.fn()
+    listActiveProjectOptions.mockResolvedValue([
+      {
+        id: 15,
+        projectName: 'Variation Project',
+        clientName: 'Client C',
+        projectType: 'Industrial Hygiene',
+        quote_value: '1000',
+        current_project_value: '1250',
+        resolved_project_value: '1250',
+      },
+    ])
+
+    renderPicker({ onContinue })
+
+    expect(await screen.findByText('Variation Project for Client C')).toBeInTheDocument()
+    expect(screen.getByText('RM 1,250.00')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Select Project'), { target: { value: '1,250' } })
+    expect(screen.getByText('Variation Project for Client C')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /variation project for client c/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }))
+
+    expect(onContinue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 15,
+        quote_value: '1250',
+        quoteValue: '1250',
+        current_project_value: '1250',
+        resolved_project_value: '1250',
+      }),
+    )
+  })
+
   it('renders loading, empty, and error states', async () => {
     listActiveProjectOptions.mockResolvedValue([])
     const { rerender } = renderPicker()

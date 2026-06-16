@@ -2,6 +2,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import SalarySettings from './SalarySettings'
+import { toastEvents } from '../toast/toastService'
 
 const apiMock = vi.hoisted(() => ({
   apiJson: vi.fn(),
@@ -96,59 +97,77 @@ describe('SalarySettings', () => {
   })
 
   it('saves fixed salary and recurring allowance settings', async () => {
+    const toastHandler = vi.fn()
+    window.addEventListener(toastEvents.name, toastHandler)
     render(<SalarySettings />)
 
-    await screen.findByDisplayValue('3000')
+    try {
+      await screen.findByDisplayValue('3000')
 
-    fireEvent.change(screen.getByLabelText('Basic Salary'), { target: { value: '4800' } })
-    fireEvent.change(screen.getByLabelText('Effective From'), { target: { value: '2026-06' } })
-    fireEvent.change(screen.getByLabelText('Yearly Medical Claim'), { target: { value: '1200' } })
-    expect(screen.getByText('Previous Year Salary Snapshot')).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        'No approved Dec 2025 salary record found. Configure this snapshot for Salary Claim PDF reference.',
-      ),
-    ).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Basic'), { target: { value: '3600' } })
-    fireEvent.change(screen.getByLabelText('Allowance'), { target: { value: '240' } })
-    fireEvent.change(screen.getByLabelText('Increment'), { target: { value: '100' } })
-    expect(screen.getByLabelText('Total')).toHaveValue('3940.00')
-    expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+      fireEvent.change(screen.getByLabelText('Basic Salary'), { target: { value: '4800' } })
+      fireEvent.change(screen.getByLabelText('Effective From'), { target: { value: '2026-06' } })
+      fireEvent.change(screen.getByLabelText('Yearly Medical Claim'), {
+        target: { value: '1200' },
+      })
+      expect(screen.getByText('Previous Year Salary Snapshot')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'No approved Dec 2025 salary record found. Configure this snapshot for Salary Claim PDF reference.',
+        ),
+      ).toBeInTheDocument()
+      fireEvent.change(screen.getByLabelText('Basic'), { target: { value: '3600' } })
+      fireEvent.change(screen.getByLabelText('Allowance'), { target: { value: '240' } })
+      fireEvent.change(screen.getByLabelText('Increment'), { target: { value: '100' } })
+      expect(screen.getByLabelText('Total')).toHaveValue('3940.00')
+      expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Recurring Allowance' }))
-    fireEvent.change(screen.getByLabelText('Description'), {
-      target: { value: 'Phone allowance' },
-    })
-    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '180' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Add Recurring Allowance' }))
+      fireEvent.change(screen.getByLabelText('Description'), {
+        target: { value: 'Phone allowance' },
+      })
+      fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '180' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
-    expect(screen.getAllByText('Phone allowance').length).toBeGreaterThan(0)
-    expect(screen.getByText('Monthly Payable Salary Preview')).toBeInTheDocument()
-    expect(screen.getAllByText('Estimated Payable Salary').length).toBeGreaterThan(0)
+      expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+      expect(screen.getAllByText('Phone allowance').length).toBeGreaterThan(0)
+      expect(screen.getByText('Monthly Payable Salary Preview')).toBeInTheDocument()
+      expect(screen.getAllByText('Estimated Payable Salary').length).toBeGreaterThan(0)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
 
-    expect(await screen.findByText(/Salary settings saved/)).toBeInTheDocument()
-    expect(profile.basicSalary).toBe('4800')
-    expect(profile.effectiveMonth).toBe('2026-06')
-    expect(profile.yearlyMedicalClaim).toBe('1200')
-    expect(profile.previousYearSnapshot).toEqual(
-      expect.objectContaining({
-        year: '2025',
-        basicSalary: '3600',
-        allowanceTotal: '240',
-        incrementAmount: '100',
-      }),
-    )
-    expect(profile.recurringAllowances[0]).toEqual(
-      expect.objectContaining({
-        description: 'Phone allowance',
-        amount: '180',
-        active: true,
-      }),
-    )
+      await waitFor(() =>
+        expect(toastHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            detail: expect.objectContaining({
+              type: 'toast',
+              message:
+                'Salary settings saved. Apply Salary uses these values for new monthly applications.',
+            }),
+          }),
+        ),
+      )
+      expect(profile.basicSalary).toBe('4800')
+      expect(profile.effectiveMonth).toBe('2026-06')
+      expect(profile.yearlyMedicalClaim).toBe('1200')
+      expect(profile.previousYearSnapshot).toEqual(
+        expect.objectContaining({
+          year: '2025',
+          basicSalary: '3600',
+          allowanceTotal: '240',
+          incrementAmount: '100',
+        }),
+      )
+      expect(profile.recurringAllowances[0]).toEqual(
+        expect.objectContaining({
+          description: 'Phone allowance',
+          amount: '180',
+          active: true,
+        }),
+      )
+    } finally {
+      window.removeEventListener(toastEvents.name, toastHandler)
+    }
   })
 
   it('shows validation for invalid fixed salary', async () => {
@@ -210,15 +229,28 @@ describe('SalarySettings', () => {
   })
 
   it('shows a settings-saved notice that distinguishes settings from salary submission', async () => {
+    const toastHandler = vi.fn()
+    window.addEventListener(toastEvents.name, toastHandler)
     render(<SalarySettings />)
-    await screen.findByDisplayValue('3000')
+    try {
+      await screen.findByDisplayValue('3000')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
 
-    await waitFor(() => {
-      expect(screen.getByText(/Apply Salary uses these values/)).toBeInTheDocument()
-    })
-    expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
+      await waitFor(() =>
+        expect(toastHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            detail: expect.objectContaining({
+              type: 'toast',
+              message: expect.stringContaining('Apply Salary uses these values'),
+            }),
+          }),
+        ),
+      )
+      expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
+    } finally {
+      window.removeEventListener(toastEvents.name, toastHandler)
+    }
   })
 
   it('renders approved December previous-year snapshot values as read-only', async () => {

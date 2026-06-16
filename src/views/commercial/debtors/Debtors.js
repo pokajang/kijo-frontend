@@ -20,6 +20,7 @@ import {
   DataTableStatsToggle,
 } from '../../../components/datatable'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
@@ -205,27 +206,30 @@ const Debtors = () => {
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('commercial.debtors')
 
-  const fetchDebtors = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({
-        status: statusFilter,
-        source: sourceFilter,
-        as_of_date: asOfDate,
-      })
-      if (searchTerm.trim()) params.set('q', searchTerm.trim())
-      const payload = await fetchJson(
-        `${import.meta.env.VITE_API_BASE}debtors?${params.toString()}`,
-      )
-      setRows(Array.isArray(payload?.debtors) ? payload.debtors.map(normalizeDebtorRow) : [])
-    } catch (error) {
-      console.error('Debtors fetch error:', error)
-      dialog.alert(error?.message || 'Unable to load debtors.')
-      setRows([])
-    } finally {
-      setLoading(false)
-    }
-  }, [asOfDate, searchTerm, sourceFilter, statusFilter])
+  const fetchDebtors = useCallback(
+    async ({ showLoader = true, preserveRows = true } = {}) => {
+      if (showLoader) setLoading(true)
+      try {
+        const params = new URLSearchParams({
+          status: statusFilter,
+          source: sourceFilter,
+          as_of_date: asOfDate,
+        })
+        if (searchTerm.trim()) params.set('q', searchTerm.trim())
+        const payload = await fetchJson(
+          `${import.meta.env.VITE_API_BASE}debtors?${params.toString()}`,
+        )
+        setRows(Array.isArray(payload?.debtors) ? payload.debtors.map(normalizeDebtorRow) : [])
+      } catch (error) {
+        console.error('Debtors fetch error:', error)
+        dialog.alert(error?.message || 'Unable to load debtors.')
+        if (!preserveRows) setRows([])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [asOfDate, searchTerm, sourceFilter, statusFilter],
+  )
 
   useEffect(() => {
     fetchDebtors()
@@ -324,7 +328,8 @@ const Debtors = () => {
       })
       setMarkPaidVisible(false)
       setSelectedDebtor(null)
-      await fetchDebtors()
+      showToast('Debtor marked as paid.')
+      await fetchDebtors({ showLoader: false })
     } catch (error) {
       dialog.alert(error?.message || 'Unable to mark debtor as paid.')
     } finally {
@@ -339,7 +344,8 @@ const Debtors = () => {
         `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(debtor.sourceId)}/mark-open`,
         { method: 'PATCH', body: JSON.stringify({}) },
       )
-      await fetchDebtors()
+      showToast('Manual debtor reopened.')
+      await fetchDebtors({ showLoader: false })
     } catch (error) {
       dialog.alert(error?.message || 'Unable to reopen manual debtor.')
     }
@@ -360,7 +366,8 @@ const Debtors = () => {
           method: 'DELETE',
         },
       )
-      await fetchDebtors()
+      showToast('Manual debtor deleted.')
+      await fetchDebtors({ showLoader: false })
     } catch (error) {
       dialog.alert(error?.message || 'Unable to delete manual debtor.')
     }
@@ -548,6 +555,7 @@ const Debtors = () => {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey={columnStorageKey}
+                scrollStorageKey="commercial.debtors.records.scroll"
                 idPrefix="debtor-record"
                 emptyMessage="No debtor records found."
                 exportFilename={`debtors-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -613,7 +621,7 @@ const Debtors = () => {
                   if (field === 'source') return debtor.sourceType
                   return debtor[field] || ''
                 }}
-                resetDeps={[rows]}
+                resetDeps={[]}
                 actionColumnWidth="56px"
               />
             </CCardBody>

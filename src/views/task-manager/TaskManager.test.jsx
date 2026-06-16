@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 
 import TaskManager, { buildPersonalTasksUrl } from './TaskManager'
 import dialog from '../../components/dialog/dialogService'
+import { toastEvents } from '../../components/toast/toastService'
 
 const projectApiMocks = vi.hoisted(() => ({
   listActiveProjectOptions: vi.fn(),
@@ -285,7 +286,7 @@ describe('TaskManager route actions', () => {
   it('shows AI pending feedback and polls saved tasks until classification is applied', async () => {
     const apiEvents = []
     const apiEventHandler = (event) => apiEvents.push(event.detail)
-    window.addEventListener('kijo:api', apiEventHandler)
+    window.addEventListener(toastEvents.name, apiEventHandler)
     let personalLoads = 0
 
     global.fetch.mockImplementation(async (url, init = {}) => {
@@ -350,7 +351,6 @@ describe('TaskManager route actions', () => {
         expect.objectContaining({
           type: 'toast',
           message: 'Task saved. AI classification is updating in the background.',
-          color: 'info',
         }),
       )
       expect(screen.getByTestId('task-table-statuses')).toHaveTextContent('501:pending')
@@ -363,7 +363,7 @@ describe('TaskManager route actions', () => {
       { timeout: 6000 },
     )
 
-    window.removeEventListener('kijo:api', apiEventHandler)
+    window.removeEventListener(toastEvents.name, apiEventHandler)
   }, 10000)
 
   it('loads backend classification for legacy saved drafts with missing classification fields', async () => {

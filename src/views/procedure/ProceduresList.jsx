@@ -394,6 +394,7 @@ export default function ProceduresList() {
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey="procedure.records.visible-columns.v3"
+              scrollStorageKey="procedure.records.scroll"
               apiKey="procedure-records-visible-columns-v3"
               idPrefix="procedure-record"
               emptyMessage="No procedures found."
@@ -427,7 +428,7 @@ export default function ProceduresList() {
               renderQuickFilters={() => (
                 <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
               )}
-              resetDeps={[filtered, q, createdByFilter, categoryFilter, periodRange]}
+              resetDeps={[q, createdByFilter, categoryFilter, periodRange]}
             />
           </CCardBody>
         </CCard>

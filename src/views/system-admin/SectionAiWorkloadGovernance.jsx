@@ -16,7 +16,7 @@ import {
   CFormSelect,
   CRow,
 } from '@coreui/react'
-import { apiJson, showApiToast } from '../../api/apiClient'
+import { apiJson } from '../../api/apiClient'
 import { apiUrl } from '../../api/apiUrl'
 import {
   DataTableFooter,
@@ -26,6 +26,7 @@ import {
   DataTableTextCell,
   DataTableToolbar,
 } from '../../components/datatable'
+import { showToast } from '../../components/toast/toastService'
 import { useColumnPreferences } from '../../hooks/datatable'
 import { workloadWorkTypes } from '../dashboard/workload/components/workTypes'
 import SummaryTile from './schema-sync/SummaryTile'
@@ -474,7 +475,7 @@ const SectionAiWorkloadGovernance = () => {
           ...current,
           total: Math.max(0, current.total - 1),
         }))
-        showApiToast('Learned classification deleted.', 'success')
+        showToast('Learned classification deleted.')
         loadHealth()
       } catch (err) {
         setRowsError(err.message || 'Failed to delete learned classification.')
@@ -988,6 +989,7 @@ const SectionAiWorkloadGovernance = () => {
                     toggleColumnVisibility,
                     resetColumnVisibility,
                   }}
+                  scrollStorageKey="system-admin.ai-workload.scroll"
                   idPrefix="system-admin-ai-workload"
                   emptyMessage="No learned workload classifications found."
                   initialSortField="lastSeenAt"

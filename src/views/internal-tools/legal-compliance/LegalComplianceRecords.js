@@ -265,6 +265,7 @@ const LegalComplianceRecords = () => {
               dataColumns={dataColumns}
               defaultVisibleColumns={DEFAULT_VISIBLE_COLUMNS}
               requiredColumns={REQUIRED_COLUMNS}
+              scrollStorageKey="legal-compliance.records.scroll"
               idPrefix="legal-compliance-records"
               getRowKey={(record) => record.id}
               renderCell={renderRecordCell}

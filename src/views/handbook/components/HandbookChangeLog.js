@@ -245,6 +245,7 @@ const HandbookChangeLog = ({ refreshKey = 0 }) => {
             requiredColumns={requiredChangeLogColumns}
             storageKey={changeLogColumnStorageKey}
             apiKey={changeLogColumnPreferenceApiKey}
+            scrollStorageKey="handbook.change-log.scroll"
             idPrefix="handbook-change-log"
             exportFilename={`handbook-change-log-${new Date().toISOString().slice(0, 10)}.csv`}
             getRowKey={(log, index) => log.id || `${log.version}-${log.changedAt}-${index}`}

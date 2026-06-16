@@ -316,6 +316,7 @@ const StaffLeaveEntitlementDetailPage = () => {
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="staff.leaves.entitlement-detail.visible-columns.v2"
+        scrollStorageKey="staff.leaves.entitlement-detail.scroll"
         idPrefix="staff-leave-entitlement-detail"
         emptyMessage="No entitlement balances found."
         exportFilename={`leave-entitlement-${staffId}-${new Date().toISOString().slice(0, 10)}.csv`}

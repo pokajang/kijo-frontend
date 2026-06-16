@@ -153,6 +153,66 @@ describe('saveQuote', () => {
     expect(dialogService.confirm).not.toHaveBeenCalled()
   })
 
+  it('prompts and retries when an awarded quote value decision is required', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            status: 'project_value_decision_required',
+            project_value_decision: {
+              old_quote_total: 1000,
+              new_quote_total: 1200,
+              project_id: 5,
+              project_name: 'Project A',
+              awarded_value: 1000,
+              sync_allowed: true,
+            },
+          },
+          { ok: false },
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse({ status: 'success', quote_id: 55 }))
+    const dialogService = {
+      alert: vi.fn(),
+      confirm: vi
+        .fn()
+        .mockResolvedValueOnce({ confirmed: true, value: 'sync' })
+        .mockResolvedValueOnce(false),
+    }
+
+    const result = await saveQuote({
+      serviceKey: 'ih',
+      quoteId: 55,
+      isEditMode: true,
+      payload: { grand_total: 1200 },
+      fetcher,
+      dialogService,
+      navigate: vi.fn(),
+    })
+
+    expect(result.saved).toBe(true)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(dialogService.confirm).toHaveBeenCalledWith(
+      expect.stringContaining('Project A'),
+      expect.objectContaining({
+        title: 'Awarded Quote Value Changed',
+        select: expect.objectContaining({
+          options: expect.arrayContaining([
+            expect.objectContaining({ value: 'sync' }),
+            expect.objectContaining({ value: 'keep' }),
+          ]),
+        }),
+      }),
+    )
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual(
+      expect.objectContaining({
+        grand_total: 1200,
+        project_value_sync_decision: 'sync',
+      }),
+    )
+  })
+
   it('alerts invalid non-JSON responses', async () => {
     const fetcher = vi.fn().mockResolvedValue({
       ok: false,

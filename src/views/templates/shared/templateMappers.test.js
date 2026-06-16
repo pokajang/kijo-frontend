@@ -100,6 +100,21 @@ describe('templateMappers', () => {
     })
 
     expect(
+      fromApiSpecialTemplate({
+        proposal_mode: 'write',
+        service_summary: 'Internal',
+        proposal_content: 'Written body',
+        attachments: [{ id: 1 }],
+        defaultLineItems: [{ title: 'Audit', quantity: 1 }],
+      }),
+    ).toMatchObject({
+      proposalMode: 'write',
+      serviceSummary: 'Internal',
+      proposalContent: 'Written body',
+      defaultLineItems: [{ title: 'Audit', quantity: 1 }],
+    })
+
+    expect(
       fromApiSpecialTemplate({ service_title: 'Special', service_code: 'sp01' }),
     ).toMatchObject({
       serviceTitle: 'Special',
@@ -116,6 +131,7 @@ describe('templateMappers', () => {
         serviceCode: 'SP01',
         serviceSummary: '<p>Inactive</p>',
         proposalContent: '<p>Active</p>',
+        defaultLineItems: [{ title: 'Audit', quantity: 2, unitPrice: 100 }],
       },
       remarks: 'ok',
     })
@@ -123,5 +139,8 @@ describe('templateMappers', () => {
     expect(formData.get('content')).toBe('<p>Active</p>')
     expect(formData.get('serviceSummary')).toBe('')
     expect(formData.get('proposalContent')).toBe('<p>Active</p>')
+    expect(JSON.parse(formData.get('defaultLineItems'))).toEqual([
+      { title: 'Audit', quantity: 2, unitPrice: 100 },
+    ])
   })
 })

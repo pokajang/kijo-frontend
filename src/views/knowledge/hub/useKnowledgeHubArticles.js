@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { showToast } from '../../../components/toast/toastService'
 import { getKnowledgeArticles, getMyKnowledgeArticles } from '../knowledgeApi'
 import { searchKnowledgeArticles } from '../knowledgeSearch'
 
@@ -7,7 +8,6 @@ const useKnowledgeHubArticles = () => {
   const [meta, setMeta] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [actionId, setActionId] = useState(null)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
@@ -41,10 +41,9 @@ const useKnowledgeHubArticles = () => {
   const runAction = async (article, action) => {
     setActionId(article.id)
     setError('')
-    setSuccess('')
     try {
       const json = await action(article.id)
-      setSuccess(json.message || 'Article updated.')
+      showToast(String(json.message || 'Article updated.'))
       await loadArticles({ showLoader: false })
     } catch (err) {
       setError(err.message || 'Failed to update article.')
@@ -87,7 +86,6 @@ const useKnowledgeHubArticles = () => {
     setStatus,
     setTag,
     status,
-    success,
     tag,
     tags,
   }

@@ -1,8 +1,14 @@
 import React from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ProjectDetailsCard from './ProjectDetailsCard'
+
+const navigateMock = vi.fn()
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => navigateMock,
+}))
 
 vi.mock('../projectApi', () => ({
   reloadProjectPoNumber: vi.fn(),
@@ -13,7 +19,26 @@ vi.mock('../../../../components/dialog/dialogService', () => ({
   default: {
     alert: vi.fn(),
     confirm: vi.fn(),
+    prompt: vi.fn(),
   },
+}))
+
+vi.mock('./ProjectValueUpdateModal', () => ({
+  default: ({ visible, project, onUpdated }) =>
+    visible ? (
+      <button
+        type="button"
+        onClick={() =>
+          onUpdated({
+            ...project,
+            current_project_value: 5500,
+            resolved_project_value: 5500,
+          })
+        }
+      >
+        Mock Confirm Project Value
+      </button>
+    ) : null,
 }))
 
 const baseProject = {
@@ -31,6 +56,8 @@ const baseProject = {
 describe('ProjectDetailsCard', () => {
   afterEach(() => {
     cleanup()
+    vi.clearAllMocks()
+    navigateMock.mockClear()
   })
 
   it('renders read-only dates through shared date formatting and project status as a badge', () => {
@@ -72,5 +99,47 @@ describe('ProjectDetailsCard', () => {
     expect(screen.getByLabelText('Award Date')).toHaveValue('2026-03-13')
     expect(screen.getByLabelText('Service Start Date')).toHaveValue('2026-03-14')
     expect(screen.getByLabelText('Service End Date')).toHaveValue('2026-03-15')
+  })
+
+  it('updates current project value through the dedicated action', async () => {
+    const onValueUpdated = vi.fn()
+
+    render(
+      <ProjectDetailsCard
+        project={{ ...baseProject, quote_value: 4500 }}
+        onSave={vi.fn()}
+        onValueUpdated={onValueUpdated}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update Current Value' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mock Confirm Project Value' }))
+
+    await waitFor(() => {
+      expect(onValueUpdated).toHaveBeenCalledWith(
+        expect.objectContaining({
+          current_project_value: 5500,
+          resolved_project_value: 5500,
+        }),
+      )
+    })
+  })
+
+  it('links back to the source quotation when quote metadata is available', () => {
+    render(
+      <ProjectDetailsCard
+        project={{
+          ...baseProject,
+          quote_id: 88,
+          quote_type: 'special',
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Source Quotation' }))
+
+    expect(navigateMock).toHaveBeenCalledWith('/crm/quotes?service=special&edit=true&quoteId=88', {
+      state: { returnTo: '/project/manage/12' },
+    })
   })
 })

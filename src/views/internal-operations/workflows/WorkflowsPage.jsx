@@ -15,6 +15,7 @@ import {
 } from '@coreui/react'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import Select from '../../../components/forms/ThemedSelect'
+import { showToast } from '../../../components/toast/toastService'
 import { useWorkflowSetupStatus } from '../../../workflows/WorkflowSetupStatusProvider'
 import { fetchWorkflowTemplate, fetchWorkflowTemplates, saveWorkflowTemplate } from './workflowApi'
 
@@ -233,8 +234,9 @@ const WorkflowsPage = () => {
 
     try {
       setLoading(true)
+      setNotice(null)
       const saved = await saveWorkflowTemplate(templateKey, payload)
-      setNotice({ color: 'success', message: saved.message || 'Workflow settings saved.' })
+      showToast(String(saved.message || 'Workflow settings saved.'))
       await loadTemplate(templateKey)
       await refreshWorkflowSetupStatus()
     } catch (err) {

@@ -33,17 +33,23 @@ export const QuoteReviewAttachProposal = ({
   checked,
   onChange,
   className = 'mt-3',
+  disabled = false,
+  helpText = '',
 }) => {
   if (typeof checked === 'undefined' || typeof onChange !== 'function') return null
 
   return (
-    <CFormCheck
-      className={className}
-      id={id}
-      label={label}
-      checked={!!checked}
-      onChange={(event) => onChange(event.target.checked)}
-    />
+    <>
+      <CFormCheck
+        className={className}
+        id={id}
+        label={label}
+        checked={!!checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      {helpText && <div className="small text-muted mt-1">{helpText}</div>}
+    </>
   )
 }
 
@@ -78,6 +84,8 @@ export const QuoteReviewSection = ({
   children,
   attachProposal,
   attachProposalLabel = 'Attach Detail Proposal',
+  attachProposalDisabled = false,
+  attachProposalHelpText = '',
   onAttachProposalChange,
   onCancel,
   onSave,
@@ -92,6 +100,8 @@ export const QuoteReviewSection = ({
       <QuoteReviewAttachProposal
         label={attachProposalLabel}
         checked={attachProposal}
+        disabled={attachProposalDisabled}
+        helpText={attachProposalHelpText}
         onChange={onAttachProposalChange}
       />
       <QuoteReviewActions onCancel={onCancel} onSave={onSave} isEditMode={isEditMode} />

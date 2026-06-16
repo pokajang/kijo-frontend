@@ -355,6 +355,7 @@ const LeaveRecordTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="leave.personal-records.visible-columns.v4"
+        scrollStorageKey="leave.personal-records.scroll"
         idPrefix="leave-record"
         emptyMessage="No leave records found."
         exportFilename={`leave-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -392,7 +393,7 @@ const LeaveRecordTable = ({
           if (field === 'duration') return record.durationValue
           return record[field]
         }}
-        resetDeps={[filteredRecords, selectedPeriodRange, statusFilter]}
+        resetDeps={[selectedPeriodRange, statusFilter]}
         desktopUtilityPlacement="portal"
         desktopUtilityPortalId="leave-record-table-tools"
         mobileUtilityPlacement="portal"

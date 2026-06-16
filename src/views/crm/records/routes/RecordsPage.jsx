@@ -145,6 +145,18 @@ const RecordsPage = () => {
           }
           loaRefNo={modalState.success.clientLoaRefNo}
           onLoaChange={(loa) => dispatchModal({ type: 'SET_SUCCESS_LOA', payload: loa })}
+          onEditQuotation={() => {
+            const serviceKey =
+              successRecord?.serviceTab || modalState.success.serviceKey || activeTab
+            const svc = getQuoteServiceFromRecordTab(serviceKey)
+            if (!svc || !modalState.success.recordId) return
+            navigate(
+              `/crm/quotes?service=${svc}&edit=true&quoteId=${modalState.success.recordId}`,
+              {
+                state: { returnTo: location.pathname + location.search },
+              },
+            )
+          }}
           mode={modalState.success.actionType}
           isSubmitting={isSuccessModalSubmitting}
         />

@@ -2,6 +2,7 @@ import React from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCsrfToken } from '../../api/apiClient'
+import { toastEvents } from '../../components/toast/toastService'
 import SectionMonthlyReportSchedulerTest from './SectionMonthlyReportSchedulerTest'
 
 const jsonResponse = (payload, status = 200) =>
@@ -78,6 +79,8 @@ describe('SectionMonthlyReportSchedulerTest', () => {
   })
 
   it('saves a free-range dashboard report email schedule', async () => {
+    const toastHandler = vi.fn()
+    window.addEventListener(toastEvents.name, toastHandler)
     window.fetch.mockResolvedValueOnce(statusResponse()).mockResolvedValueOnce(
       jsonResponse({
         status: 'success',
@@ -96,31 +99,44 @@ describe('SectionMonthlyReportSchedulerTest', () => {
       }),
     )
 
-    render(<SectionMonthlyReportSchedulerTest />)
+    try {
+      render(<SectionMonthlyReportSchedulerTest />)
 
-    fireEvent.change(await screen.findByLabelText(/every/i), {
-      target: { value: '2' },
-    })
-    fireEvent.change(screen.getByLabelText(/unit/i), {
-      target: { value: 'months' },
-    })
-    fireEvent.change(screen.getByLabelText(/send time/i), {
-      target: { value: '09:15' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /save schedule/i }))
+      fireEvent.change(await screen.findByLabelText(/every/i), {
+        target: { value: '2' },
+      })
+      fireEvent.change(screen.getByLabelText(/unit/i), {
+        target: { value: 'months' },
+      })
+      fireEvent.change(screen.getByLabelText(/send time/i), {
+        target: { value: '09:15' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: /save schedule/i }))
 
-    expect(await screen.findByText('Dashboard report email schedule saved.')).toBeInTheDocument()
+      await waitFor(() =>
+        expect(toastHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            detail: expect.objectContaining({
+              type: 'toast',
+              message: 'Dashboard report email schedule saved.',
+            }),
+          }),
+        ),
+      )
 
-    const [, init] = window.fetch.mock.calls.find(
-      ([, requestInit]) => requestInit?.method === 'PUT',
-    )
-    expect(JSON.parse(init.body)).toEqual({
-      enabled: true,
-      intervalValue: 2,
-      intervalUnit: 'months',
-      startDate: '2026-06-01',
-      sendTime: '09:15',
-    })
+      const [, init] = window.fetch.mock.calls.find(
+        ([, requestInit]) => requestInit?.method === 'PUT',
+      )
+      expect(JSON.parse(init.body)).toEqual({
+        enabled: true,
+        intervalValue: 2,
+        intervalUnit: 'months',
+        startDate: '2026-06-01',
+        sendTime: '09:15',
+      })
+    } finally {
+      window.removeEventListener(toastEvents.name, toastHandler)
+    }
   })
 
   it('posts one recipient with forced generation and uses the backend default report month', async () => {

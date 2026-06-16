@@ -27,13 +27,13 @@ export default function ManageProject() {
   })
 
   const loadProjects = useCallback(
-    ({ signal } = {}) => {
+    ({ signal, showLoader = true, preserveRows = true } = {}) => {
       const requestId = latestLoadRequestRef.current + 1
       latestLoadRequestRef.current = requestId
       const isLatestRequest = () => latestLoadRequestRef.current === requestId
       const isAborted = (err) => signal?.aborted || err?.name === 'AbortError'
 
-      setLoading(true)
+      if (showLoader) setLoading(true)
       return fetchProjects({ periodRange, signal })
         .then((records) => {
           if (!isLatestRequest() || signal?.aborted) return
@@ -43,7 +43,7 @@ export default function ManageProject() {
           if (isAborted(err) || !isLatestRequest()) return
 
           console.error('Failed to fetch projects:', err)
-          setProjects([])
+          if (!preserveRows) setProjects([])
           dialog.alert(err.message || 'Failed to fetch projects.')
         })
         .finally(() => {
@@ -80,7 +80,7 @@ export default function ManageProject() {
     setDeletingProjectId(nextDeletingProjectId)
     try {
       const ok = await handleDeleteProject(proj)
-      if (ok) loadProjects()
+      if (ok) loadProjects({ showLoader: false })
     } finally {
       deletingProjectIdRef.current = null
       setDeletingProjectId(null)
@@ -120,7 +120,7 @@ export default function ManageProject() {
           onClose={() => close('close')}
           onConfirm={() => {
             close('close')
-            loadProjects()
+            loadProjects({ showLoader: false })
           }}
         />
       )}

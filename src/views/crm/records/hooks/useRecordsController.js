@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import dialog from '../../../../components/dialog/dialogService'
+import { showToast } from '../../../../components/toast/toastService'
 import { endpointsByService } from '../services/recordsActions'
 import {
   canRecordTabRequestNegotiation,
@@ -28,6 +29,10 @@ import { useRecordsModalWorkflow } from './useRecordsModalWorkflow'
 import { useRecordsTabRouting } from './useRecordsTabRouting'
 import { quoteApiUrl } from '../../quotes/quoteApi'
 import { dispatchAppNotificationsChanged } from '../../../../notifications/appNotificationEvents'
+import {
+  buildRecordMovedToastMessage,
+  RECORD_ACTION_TOAST_MESSAGES,
+} from '../utils/recordActionToastMessages'
 
 const toNavigationStateValue = (value, seen = new WeakSet()) => {
   if (value == null) return value
@@ -74,6 +79,7 @@ export const useRecordsController = () => {
   const [emailDraftBody, setEmailDraftBody] = useState('')
   const [isEmailSending, setIsEmailSending] = useState(false)
   const [emailSendError, setEmailSendError] = useState('')
+  const [tableFilterContextByTab, setTableFilterContextByTab] = useState({})
   const [negotiationRecord, setNegotiationRecord] = useState(null)
   const [negotiationForm, setNegotiationForm] = useState({
     requestedDiscountAmount: '',
@@ -83,6 +89,10 @@ export const useRecordsController = () => {
   })
   const [isNegotiationSubmitting, setIsNegotiationSubmitting] = useState(false)
   const { quotes, setQuotes, quotesLoading, fetchQuotes } = useRecordsFetch(activeTab)
+  const refreshQuotesInPlace = useCallback(
+    (tabKey = activeTab) => fetchQuotes(tabKey, { showLoader: false }),
+    [activeTab, fetchQuotes],
+  )
   const scopedQuotes = useMemo(
     () =>
       activeTab === 'my-tab' ? quotes.filter((quote) => isQuoteOwnedByUser(quote, user)) : quotes,
@@ -116,9 +126,30 @@ export const useRecordsController = () => {
     openFollowUpModal,
   } = useRecordsModalWorkflow(activeTab)
 
-  const notifyKicked = useCallback(
-    (to) => {
-      if (to === 'Awarded') {
+  const handleFilterContextChange = useCallback(
+    (context = {}) => {
+      setTableFilterContextByTab((prev) => {
+        const prevContext = prev[activeTab]
+        const nextContext = {
+          activeFilterCount: Number(context.activeFilterCount || 0),
+          activeChips: Array.isArray(context.activeChips) ? context.activeChips : [],
+          statusFilter: context.statusFilter || 'all',
+          searchInput: context.searchInput || '',
+        }
+
+        if (JSON.stringify(prevContext) === JSON.stringify(nextContext)) return prev
+        return {
+          ...prev,
+          [activeTab]: nextContext,
+        }
+      })
+    },
+    [activeTab],
+  )
+
+  const handleActionSuccess = useCallback(
+    ({ status, message } = {}) => {
+      if (status === 'Awarded') {
         dialog
           .confirm('Quotation awarded successfully. Go to project list?', {
             title: 'Quotation Awarded',
@@ -131,12 +162,12 @@ export const useRecordsController = () => {
         return
       }
 
-      dialog.alert(
-        `${to} quotation kicked to the bottom of the table. Find it there or use the search bar!`,
-        { title: 'Quotation Updated' },
+      showToast(
+        message ||
+          (status ? buildRecordMovedToastMessage(status, tableFilterContextByTab[activeTab]) : ''),
       )
     },
-    [navigate],
+    [activeTab, navigate, tableFilterContextByTab],
   )
 
   const navigateToRecordDetails = (record) => {
@@ -186,9 +217,9 @@ export const useRecordsController = () => {
       })
       if (!isSuccess(result)) throw new Error(getMessage(result, 'Failed to add follow-up.'))
 
-      dialog.alert('Follow-up added successfully')
+      showToast(RECORD_ACTION_TOAST_MESSAGES.followUpAdded)
       dispatchModal({ type: 'CLOSE_FOLLOWUP' })
-      await fetchQuotes()
+      await refreshQuotesInPlace()
     } catch (err) {
       console.error('Add follow-up error:', err)
       dialog.alert(err.message || 'Failed to add follow-up. Please try again.')
@@ -256,18 +287,20 @@ export const useRecordsController = () => {
   )
 
   const buildHandlers = useRecordsActionBuilder({
-    fetchQuotes,
+    fetchQuotes: refreshQuotesInPlace,
     setQuotes,
     navigate,
-    onRowMoved: notifyKicked,
+    onActionSuccess: handleActionSuccess,
+    refreshAfterLocalDelete: true,
     modalBindings: defaultModalBindings,
   })
 
   const buildStateAwareHandlers = useRecordsActionBuilder({
-    fetchQuotes,
+    fetchQuotes: refreshQuotesInPlace,
     setQuotes,
     navigate,
-    onRowMoved: notifyKicked,
+    onActionSuccess: handleActionSuccess,
+    refreshAfterLocalDelete: true,
     modalBindings: modalStateBindings,
   })
 
@@ -353,7 +386,7 @@ export const useRecordsController = () => {
     }
   }
 
-  const handleSuccessConfirm = async (projectCollaborators = []) => {
+  const handleSuccessConfirm = async (projectCollaborators = [], projectValueAdjustment = {}) => {
     const serviceKey = modalState.success.serviceKey || (!isAggregateTab ? activeTab : null)
     if (!serviceKey || !endpointsByService[serviceKey]) {
       dialog.alert('Award endpoint not configured for this service.')
@@ -374,6 +407,7 @@ export const useRecordsController = () => {
         clientLoaRefNo: modalState.success.clientLoaRefNo,
         selectedRecordIdForSuccess: modalState.success.recordId,
         projectCollaborators,
+        projectValueAdjustment,
       }
 
       const ok =
@@ -464,8 +498,9 @@ export const useRecordsController = () => {
       }
       window.dispatchEvent(new Event('quote-price-exceptions:changed'))
       dispatchAppNotificationsChanged()
-      dialog.alert('Negotiation request submitted for approval.')
+      showToast(RECORD_ACTION_TOAST_MESSAGES.negotiationSubmitted)
       setNegotiationRecord(null)
+      await refreshQuotesInPlace()
     } catch (error) {
       dialog.alert(error?.message || 'Failed to submit negotiation request.')
     } finally {
@@ -477,6 +512,7 @@ export const useRecordsController = () => {
     records: scopedQuotes,
     loading: quotesLoading,
     activeTab,
+    onFilterContextChange: handleFilterContextChange,
     onOpen: isAggregateTab
       ? (record) => {
           const targetTab = record?.serviceTab || null
@@ -603,8 +639,9 @@ export const useRecordsController = () => {
           subject: emailDraftSubject,
           body: emailDraftBody,
         })
-        dialog.alert(result?.message || 'Quotation email sent successfully.')
+        showToast(result?.message || RECORD_ACTION_TOAST_MESSAGES.quotationEmailSent)
         setEmailConfirmRecord(null)
+        await refreshQuotesInPlace()
       } catch (error) {
         setEmailSendError(error?.message || 'System email sending failed.')
       } finally {

@@ -18,8 +18,9 @@ import {
   CTableHeaderCell,
   CTableRow,
 } from '@coreui/react'
-import { apiJson, showApiToast } from '../../api/apiClient'
+import { apiJson } from '../../api/apiClient'
 import { apiUrl } from '../../api/apiUrl'
+import { showToast } from '../../components/toast/toastService'
 import SummaryTile from './schema-sync/SummaryTile'
 
 const views = [
@@ -163,7 +164,7 @@ const SectionAiAssistantGovernance = () => {
       method: 'POST',
       credentials: 'include',
     })
-    showApiToast('Answer signature unblocked.', 'success')
+    showToast('Answer signature unblocked.')
     refreshAll()
   }
 
@@ -179,7 +180,7 @@ const SectionAiAssistantGovernance = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: next, priority, notes }),
     })
-    showApiToast('Source gap updated.', 'success')
+    showToast('Source gap updated.')
     refreshAll()
   }
 
@@ -197,7 +198,7 @@ const SectionAiAssistantGovernance = () => {
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body,
     })
-    showApiToast(payload?.message || 'Source gap action saved.', 'success')
+    showToast(String(payload?.message || 'Source gap action saved.'))
     refreshAll()
   }
 
@@ -648,6 +649,7 @@ const SectionAiAssistantGovernance = () => {
           </div>
         ) : (
           <div className="table-responsive">
+            {/* datatable-exempt: compact admin diagnostics layout table */}
             <CTable hover small align="middle">
               <CTableHead>
                 <CTableRow>

@@ -122,8 +122,8 @@ const VendorLoa = () => {
     return Array.from(picSet).sort((a, b) => a.localeCompare(b))
   }, [records])
 
-  const fetchVendorLoaRecords = useCallback(async () => {
-    setLoading(true)
+  const fetchVendorLoaRecords = useCallback(async ({ showLoader = true } = {}) => {
+    if (showLoader) setLoading(true)
     try {
       const dataUrl = `${import.meta.env.VITE_API_BASE}vendor-loas`
       const result = await fetchJson(`${dataUrl}?per_page=1`, {

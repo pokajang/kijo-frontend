@@ -30,6 +30,30 @@ export const toFiniteNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback
 }
 
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
+
+export const getAwardedProjectValue = (project = {}, fallback = 0) =>
+  hasValue(project?.quote_value ?? project?.quoteValue)
+    ? toFiniteNumber(project?.quote_value ?? project?.quoteValue, fallback)
+    : fallback
+
+export const getCurrentProjectValue = (project = {}, fallback = 0) => {
+  const explicitCurrent = project?.current_project_value ?? project?.currentProjectValue
+  if (hasValue(explicitCurrent)) return toFiniteNumber(explicitCurrent, fallback)
+
+  const resolved = project?.resolved_project_value ?? project?.resolvedProjectValue
+  if (hasValue(resolved)) return toFiniteNumber(resolved, fallback)
+
+  return getAwardedProjectValue(project, fallback)
+}
+
+export const getProjectVariationValue = (project = {}) => {
+  const explicitCurrent = project?.current_project_value ?? project?.currentProjectValue
+  if (!hasValue(explicitCurrent)) return 0
+
+  return getCurrentProjectValue(project, 0) - getAwardedProjectValue(project, 0)
+}
+
 export const asArray = (value) => (Array.isArray(value) ? value : emptyList)
 
 export const normalizeProjectList = (payload) =>
@@ -130,9 +154,10 @@ export const getProjectDetails = (projectId, { signal } = {}) =>
     signal,
   }).then(normalizeProjectDetails)
 
-export const getProjectFinanceData = (projectId, { signal } = {}) =>
+export const getProjectFinanceData = (projectId, { signal, silentError } = {}) =>
   requestJson(`projects/${enc(projectId)}/finance`, {
     signal,
+    silentError,
   }).then(normalizeProjectFinance)
 
 export const getProjectCrmDetails = (projectId, { signal } = {}) =>
@@ -140,9 +165,10 @@ export const getProjectCrmDetails = (projectId, { signal } = {}) =>
     signal,
   })
 
-export const getProjectCommercialDocs = (projectId, { signal } = {}) =>
+export const getProjectCommercialDocs = (projectId, { signal, silentError } = {}) =>
   requestJson(`projects/${enc(projectId)}/commercial-docs`, {
     signal,
+    silentError,
   })
 
 export const reloadProjectPoNumber = (projectId) =>
@@ -153,15 +179,36 @@ export const reloadProjectPoNumber = (projectId) =>
 
 export const updateProjectDetails = (project) => {
   const projectId = project.project_id ?? project.id
+  const {
+    quote_value,
+    quoteValue,
+    current_project_value,
+    currentProjectValue,
+    resolved_project_value,
+    resolvedProjectValue,
+    ...details
+  } = project
 
   return requestJson(`projects/${enc(projectId)}`, {
     method: 'PUT',
     body: {
-      ...project,
+      ...details,
       project_id: projectId,
     },
   })
 }
+
+export const updateProjectCurrentValue = (projectId, payload) =>
+  requestJson(`projects/${enc(projectId)}/value`, {
+    method: 'PATCH',
+    body: payload,
+  })
+
+export const previewProjectValueImpact = (projectId, payload) =>
+  requestJson(`projects/${enc(projectId)}/value/impact-preview`, {
+    method: 'POST',
+    body: payload,
+  })
 
 export const deleteProject = (projectId) =>
   requestJson(`projects/${enc(projectId)}`, {
@@ -213,9 +260,10 @@ export const removeProjectVendor = (payload) =>
     body: payload,
   })
 
-export const listProjectProgress = (projectId, { signal } = {}) =>
+export const listProjectProgress = (projectId, { signal, silentError } = {}) =>
   requestJson(`projects/${enc(projectId)}/progress`, {
     signal,
+    silentError,
   }).then(normalizeProjectProgress)
 
 export const saveProjectProgress = (_endpoint, payload) =>

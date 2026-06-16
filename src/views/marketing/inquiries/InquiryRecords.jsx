@@ -454,6 +454,7 @@ const InquiryRecords = () => {
             loading={loading}
             loadingMessage="Loading inquiries..."
             storageKey="marketing.inquiries.visible-columns.v4"
+            scrollStorageKey="marketing.inquiries.scroll"
             idPrefix="marketing-inquiry"
             emptyMessage="No inquiries found for this scope."
             showMobileTopFooter={!loading}
@@ -503,7 +504,7 @@ const InquiryRecords = () => {
             initialSortDir="desc"
             initialSortDirByField={{ inquiryDate: 'desc' }}
             getSortValue={getInquiryRecordSortValue}
-            resetDeps={[records, filters]}
+            resetDeps={[filters]}
             actionColumnWidth="56px"
             className="inquiry-records-table"
           />

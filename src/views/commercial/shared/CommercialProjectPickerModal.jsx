@@ -27,10 +27,14 @@ const getProjectName = (project = {}) =>
 const getClientName = (project = {}) => project.client_name || project.clientName || ''
 const getProjectType = (project = {}) => project.project_type || project.projectType || ''
 const getProjectValue = (project = {}) =>
-  project.quote_value ??
-  project.quoteValue ??
+  project.resolved_project_value ??
+  project.resolvedProjectValue ??
+  project.current_project_value ??
+  project.currentProjectValue ??
   project.project_value ??
   project.projectValue ??
+  project.quote_value ??
+  project.quoteValue ??
   project.contract_value ??
   project.contractValue ??
   project.value ??
@@ -83,8 +87,8 @@ const normalizeProjectForState = (project = {}) => ({
   project_name: getProjectName(project),
   project_type: getProjectType(project),
   client_name: getClientName(project),
-  quote_value: project.quote_value ?? getProjectValue(project),
-  quoteValue: project.quoteValue ?? getProjectValue(project),
+  quote_value: getProjectValue(project),
+  quoteValue: getProjectValue(project),
 })
 
 const ProjectMetaBadge = ({ children, selected }) => (

@@ -22,6 +22,7 @@ import {
   getProjectReturnState,
   withProjectReturnParams,
 } from '../../../commercial/shared/commercialReturnNavigation'
+import { showToast } from '../../../../components/toast/toastService'
 import { useProjectCommercialDocs } from '../commercialDocsWarning'
 import { deleteProjectCommercialRecord } from '../projectApi'
 import { formatProjectMoney } from '../projectDetailFormatters'
@@ -154,7 +155,7 @@ const CommercialTrailsCard = ({
       try {
         const result = await deleteProjectCommercialRecord({ projectId, record: row })
         if (result?.status === 'success') {
-          dialog.alert(result.message || 'Commercial record deleted.')
+          showToast(result.message || 'Commercial record deleted.')
           refreshCommercialRecords()
 
           if (shouldRefreshProgress(row) && typeof onProgressUpdate === 'function') {

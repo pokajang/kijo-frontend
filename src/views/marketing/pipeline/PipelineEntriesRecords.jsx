@@ -472,6 +472,7 @@ const PipelineEntriesRecords = () => {
             loading={loading}
             loadingMessage="Loading pipeline records..."
             storageKey="marketing.pipeline-entries.visible-columns.v3"
+            scrollStorageKey="marketing.pipeline-entries.scroll"
             apiKey="marketing-pipeline-entries-visible-columns-v3"
             idPrefix="marketing-pipeline-entry"
             emptyMessage="No pipeline entries found for this scope."
@@ -521,7 +522,7 @@ const PipelineEntriesRecords = () => {
             initialSortDir="desc"
             initialSortDirByField={{ entryDate: 'desc' }}
             getSortValue={getPipelineRecordSortValue}
-            resetDeps={[entries, filters, periodRange]}
+            resetDeps={[filters, periodRange]}
             actionColumnWidth="56px"
             className="pipeline-entries-table"
           />

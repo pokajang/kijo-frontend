@@ -9,6 +9,12 @@ import {
   CFormCheck,
   CButton,
   CAlert,
+  CTable,
+  CTableHead,
+  CTableBody,
+  CTableRow,
+  CTableHeaderCell,
+  CTableDataCell,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilInfo } from '@coreui/icons'
@@ -39,6 +45,9 @@ export default function SpecialTemplate({ isEdit, editId }) {
     setSaveError,
     handleInputChange,
     handleEditorChange,
+    handleAddDefaultLineItem,
+    handleDefaultLineItemChange,
+    handleRemoveDefaultLineItem,
     handleNewFileChange,
     handleRenameFile,
     handleRemoveNewAttachment,
@@ -52,6 +61,7 @@ export default function SpecialTemplate({ isEdit, editId }) {
   const [showHelp, setShowHelp] = useState(false)
   const proposalMode = template.proposalMode || 'upload'
   const isUploadMode = proposalMode === 'upload'
+  const defaultLineItems = Array.isArray(template.defaultLineItems) ? template.defaultLineItems : []
 
   // Single-file preview state
   const [showFilePreview, setShowFilePreview] = useState(false)
@@ -144,7 +154,7 @@ export default function SpecialTemplate({ isEdit, editId }) {
         {/* Rich Content Editor */}
         <CRow className="mb-3">
           <CFormLabel>
-            {isUploadMode ? 'Service Summary' : 'Proposal Contents'}
+            {isUploadMode ? 'Internal Service Summary' : 'Proposal Contents'}
             {!isUploadMode && (
               <>
                 &nbsp;
@@ -170,6 +180,111 @@ export default function SpecialTemplate({ isEdit, editId }) {
                 : 'Write the full customer-facing proposal content here. This content will be rendered in the final proposal PDF.',
             }}
           />
+        </CRow>
+
+        <CRow className="mb-3">
+          <CCol>
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <CFormLabel className="mb-0">Default Quotation Line Items</CFormLabel>
+              <CButton
+                color="primary"
+                variant="outline"
+                size="sm"
+                onClick={handleAddDefaultLineItem}
+              >
+                Add Line Item
+              </CButton>
+            </div>
+            <div className="records-table-shell quote-line-items-table-shell overflow-hidden">
+              <CTable hover className="align-middle mb-0 records-table-compact">
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell style={{ width: '48px' }}>#</CTableHeaderCell>
+                    <CTableHeaderCell>Item Title</CTableHeaderCell>
+                    <CTableHeaderCell>Description</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '130px' }}>Unit</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '110px' }}>Qty</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '120px' }}>Amount</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '80px' }} />
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {defaultLineItems.map((item, index) => (
+                    <CTableRow key={index}>
+                      <CTableDataCell>{index + 1}</CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          value={item.title || ''}
+                          onChange={(event) =>
+                            handleDefaultLineItemChange(index, 'title', event.target.value)
+                          }
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          value={item.description || ''}
+                          onChange={(event) =>
+                            handleDefaultLineItemChange(index, 'description', event.target.value)
+                          }
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          value={item.unit || ''}
+                          onChange={(event) =>
+                            handleDefaultLineItemChange(index, 'unit', event.target.value)
+                          }
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={item.quantity ?? 1}
+                          onChange={(event) =>
+                            handleDefaultLineItemChange(index, 'quantity', event.target.value)
+                          }
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unitPrice ?? 0}
+                          onChange={(event) =>
+                            handleDefaultLineItemChange(index, 'unitPrice', event.target.value)
+                          }
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput readOnly value={Number(item.amount || 0).toFixed(2)} />
+                      </CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        <CButton
+                          color="danger"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveDefaultLineItem(index)}
+                        >
+                          Remove
+                        </CButton>
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))}
+                  {defaultLineItems.length === 0 && (
+                    <CTableRow>
+                      <CTableDataCell colSpan={8} className="text-muted">
+                        No default line items. Quotes can still add line items manually.
+                      </CTableDataCell>
+                    </CTableRow>
+                  )}
+                </CTableBody>
+              </CTable>
+            </div>
+          </CCol>
         </CRow>
 
         {/* Attachments */}

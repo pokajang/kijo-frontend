@@ -349,6 +349,7 @@ const CallTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="marketing.call-records.visible-columns.v3"
+        scrollStorageKey="marketing.call-records.scroll"
         idPrefix="marketing-call-record"
         emptyMessage="No contacts found with current filters."
         exportFilename={`call-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -397,7 +398,7 @@ const CallTable = ({
           if (field === 'callCount') return contact.callCount || 0
           return contact[field]
         }}
-        resetDeps={[contacts]}
+        resetDeps={[]}
         actionColumnWidth="56px"
         className="call-records-table"
       />

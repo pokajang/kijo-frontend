@@ -1,14 +1,11 @@
 export const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024
 
-export const ACCEPTED_ATTACHMENT_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
+export const ACCEPTED_ATTACHMENT_TYPES = new Set(['application/pdf'])
 
-export const ACCEPTED_ATTACHMENT_INPUT = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png'
+export const ACCEPTED_ATTACHMENT_INPUT = '.pdf,application/pdf'
 
 const ACCEPTED_EXTENSION_TYPES = {
   pdf: new Set(['application/pdf']),
-  jpg: new Set(['image/jpeg']),
-  jpeg: new Set(['image/jpeg']),
-  png: new Set(['image/png']),
 }
 
 const getExtension = (fileName = '') => fileName.split('.').pop()?.toLowerCase() || ''

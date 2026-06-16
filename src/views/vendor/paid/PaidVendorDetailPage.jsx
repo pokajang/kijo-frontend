@@ -126,6 +126,7 @@ const PaidVendorDetailPage = () => {
           }}
           requiredColumns={new Set(['paid_date', 'project_name', 'paid_amount_display'])}
           storageKey="vendor.paid-detail.visible-columns.v1"
+          scrollStorageKey="vendor.paid-detail.scroll"
           idPrefix="vendor-paid-detail"
           emptyMessage="No paid payments found for this vendor."
           exportFilename={`vendor-${vendorId}-paid-payments-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -158,7 +159,7 @@ const PaidVendorDetailPage = () => {
           getMobileMeta={(row) => row.paid_amount_display}
           initialSortField="paid_date"
           initialSortDir="desc"
-          resetDeps={[normalizedRows]}
+          resetDeps={[]}
         />
       </CCardBody>
     </CCard>

@@ -165,6 +165,7 @@ const PaidByVendorPage = () => {
             }}
             requiredColumns={new Set(['vendor_name', 'total_paid_display'])}
             storageKey="vendor.paid-by-vendor.visible-columns.v1"
+            scrollStorageKey="vendor.paid-by-vendor.scroll"
             idPrefix="vendor-paid-by-vendor"
             emptyMessage="No vendor ledger records found."
             exportFilename={`paid-by-vendor-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -184,7 +185,7 @@ const PaidByVendorPage = () => {
             getMobileMeta={(row) => row.total_paid_display}
             initialSortField="last_paid_date"
             initialSortDir="desc"
-            resetDeps={[filteredRows, searchText]}
+            resetDeps={[searchText]}
           />
         </CCardBody>
       </CCard>

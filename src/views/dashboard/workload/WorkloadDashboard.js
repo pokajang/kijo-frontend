@@ -5,7 +5,7 @@ import {
   RIGHT_DRAWER_IDS,
   useRightDrawer,
 } from '../../../components/right-drawer/RightDrawerContext'
-import { showApiToast } from '../../../api/apiClient'
+import { showToast } from '../../../components/toast/toastService'
 import dialog from '../../../components/dialog/dialogService'
 import { isAbortError } from '../shared/fetchUtils'
 import { createWorkloadShare, fetchWorkload, fetchWorkloadHistory, getWorkloadPdfUrl } from './api'
@@ -261,10 +261,7 @@ const WorkloadDashboard = ({
       try {
         const copied = await copyShareUrl(shareUrl)
         if (copied) {
-          showApiToast(
-            expiryText ? `Share link copied. Expires ${expiryText}` : 'Share link copied.',
-            'success',
-          )
+          showToast(expiryText ? `Share link copied. Expires ${expiryText}` : 'Share link copied.')
           return
         }
       } catch (copyErr) {

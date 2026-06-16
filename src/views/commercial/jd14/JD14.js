@@ -1,6 +1,6 @@
 // src/views/commercial/jd14/JD14.js
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { CButton, CRow, CCol, CCard, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -153,28 +153,28 @@ const JD14 = () => {
     })
   }
 
-  useEffect(() => {
-    const fetchForms = async () => {
-      setLoading(true)
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}jd14-forms`, {
-          credentials: 'include',
-        })
-        const result = await res.json()
-        if (result.status === 'success') {
-          setForms(result.forms || [])
-        } else {
-          console.error('Fetch failed:', result.message)
-        }
-      } catch (err) {
-        console.error('Error fetching JD14 forms:', err)
-      } finally {
-        setLoading(false)
+  const fetchForms = useCallback(async ({ showLoader = true } = {}) => {
+    if (showLoader) setLoading(true)
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE}jd14-forms`, {
+        credentials: 'include',
+      })
+      const result = await res.json()
+      if (result.status === 'success') {
+        setForms(result.forms || [])
+      } else {
+        console.error('Fetch failed:', result.message)
       }
+    } catch (err) {
+      console.error('Error fetching JD14 forms:', err)
+    } finally {
+      setLoading(false)
     }
-
-    fetchForms()
   }, [])
+
+  useEffect(() => {
+    fetchForms()
+  }, [fetchForms])
 
   const filteredForms = forms.filter((form) => {
     const started = parseLocalDate(form?.commenced_date)
@@ -310,6 +310,7 @@ const JD14 = () => {
               }
               desktopUtilityPortalId="jd14-table-tools"
               mobileUtilityPortalId="jd14-mobile-table-tools"
+              onRefresh={() => fetchForms({ showLoader: false })}
               onStatFilter={applyStatFilter}
               renderQuickFilters={() => (
                 <PeriodRangeSelector

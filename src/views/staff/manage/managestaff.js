@@ -322,6 +322,7 @@ export default function ManageStaff() {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey="staff.manage.visible-columns.v3"
+                scrollStorageKey="staff.manage.records.scroll"
                 idPrefix="staff-manage"
                 emptyMessage="No staff records found."
                 exportFilename="staff-records.csv"

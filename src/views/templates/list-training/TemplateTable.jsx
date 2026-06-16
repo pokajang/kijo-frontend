@@ -453,6 +453,7 @@ export default function TemplateTable({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="templates.training.visible-columns.v3"
+        scrollStorageKey="templates.training.scroll"
         idPrefix="training-template"
         emptyMessage={rows.length ? 'No matching records.' : 'No records to display.'}
         exportFilename={`training-templates-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -512,7 +513,7 @@ export default function TemplateTable({
         initialSortDir="desc"
         initialSortDirByField={{ dateCreated: 'desc' }}
         getSortValue={(row, field) => (field === 'dateCreated' ? row.dateCreatedRaw : row[field])}
-        resetDeps={[filtered, searchTerm, durationFilter, hrdFilter, createdByFilter]}
+        resetDeps={[searchTerm, durationFilter, hrdFilter, createdByFilter]}
         actionColumnWidth="56px"
       />
     </>

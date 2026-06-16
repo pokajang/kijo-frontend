@@ -118,13 +118,14 @@ const SchemaScriptsTable = ({ rows, dataFiles }) => {
           toggleColumnVisibility,
           resetColumnVisibility,
         }}
+        scrollStorageKey="system-admin.schema-sync.scripts.scroll"
         idPrefix="system-admin-migration"
         getRowKey={(file, index) => file.name || index}
         renderCell={renderScriptCell}
         emptyMessage={searchInput.trim() ? 'No matching migrations found.' : 'No migrations found.'}
         initialSortField="statusRank"
         getSortValue={(file, field) => file[field]}
-        resetDeps={[dataFiles, searchInput]}
+        resetDeps={[searchInput]}
         showDesktopSummary={false}
         desktopUtilityPlacement="hidden"
         mobileUtilityPlacement="hidden"

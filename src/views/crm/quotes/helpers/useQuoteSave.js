@@ -53,6 +53,71 @@ const readResponseJson = async (response) => {
 const resolveMessage = (message, context, fallback) =>
   typeof message === 'function' ? message(context) : message || fallback
 
+const formatMoney = (value) => {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return 'RM 0.00'
+
+  return `RM ${number.toLocaleString('en-MY', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}
+
+const readConfirmResult = (result) =>
+  typeof result === 'object' && result !== null
+    ? { confirmed: result.confirmed === true, value: result.value }
+    : { confirmed: result === true, value: null }
+
+const resolveProjectValueDecision = async (result, dialogService) => {
+  const decision = result?.project_value_decision
+  if (!decision || typeof dialogService?.confirm !== 'function') return null
+
+  const options = [
+    ...(decision.sync_allowed
+      ? [
+          {
+            value: 'sync',
+            label: 'Update Project Current Value',
+          },
+        ]
+      : []),
+    {
+      value: 'keep',
+      label: 'Keep Project Value',
+    },
+  ]
+
+  const confirmResult = await dialogService.confirm(
+    [
+      `This quotation is already awarded and its total changed from ${formatMoney(
+        decision.old_quote_total,
+      )} to ${formatMoney(decision.new_quote_total)}.`,
+      `Linked project: ${decision.project_name || `#${decision.project_id}`}.`,
+      decision.sync_allowed
+        ? 'Choose whether the project current value should follow the revised quotation total.'
+        : decision.block_reason ||
+          'The linked project already has invoices, so the project value cannot be updated from this quote edit.',
+    ].join('\n\n'),
+    {
+      title: 'Awarded Quote Value Changed',
+      confirmText: 'Continue Save',
+      cancelText: 'Cancel Save',
+      confirmColor: decision.sync_allowed ? 'warning' : 'primary',
+      select: {
+        label: 'Project Value Action',
+        helperText: decision.sync_allowed
+          ? `Awarded value remains ${formatMoney(decision.awarded_value)}.`
+          : 'You can keep the project value and save the quote, or cancel this save.',
+        options,
+        defaultValue: options[0]?.value,
+      },
+    },
+  )
+
+  const { confirmed, value } = readConfirmResult(confirmResult)
+  return confirmed ? value || options[0]?.value || null : null
+}
+
 export const saveQuote = async ({
   serviceKey,
   quoteId = null,
@@ -68,6 +133,7 @@ export const saveQuote = async ({
   failureMessage = 'Failed to save quotation.',
   networkErrorMessage = 'An error occurred while saving the quotation.',
   createAnotherPath = '/crm/quotes',
+  allowProjectValueDecision = true,
 } = {}) => {
   const endpoint = quoteServiceUrl(serviceKey, isEditMode ? quoteId : null)
 
@@ -79,6 +145,44 @@ export const saveQuote = async ({
       body: JSON.stringify(payload),
     })
     const result = normalizeQuoteResult(await readResponseJson(response))
+
+    if (
+      allowProjectValueDecision &&
+      !response?.ok &&
+      result?.status === 'project_value_decision_required'
+    ) {
+      const decision = await resolveProjectValueDecision(result, dialogService)
+      if (!decision) {
+        return { saved: false, cancelled: true, result }
+      }
+
+      return saveQuote({
+        serviceKey,
+        quoteId,
+        isEditMode,
+        recordTabKey,
+        draftContext,
+        payload: {
+          ...payload,
+          project_value_sync_decision: decision,
+          ...(decision === 'sync'
+            ? {
+                project_value_sync_reason:
+                  'Project current value updated from awarded quotation edit.',
+              }
+            : {}),
+        },
+        navigate,
+        fetcher,
+        dialogService,
+        successMessage,
+        successTitle,
+        failureMessage,
+        networkErrorMessage,
+        createAnotherPath,
+        allowProjectValueDecision: false,
+      })
+    }
 
     if (!response?.ok && !isQuoteSaveSuccess(result)) {
       dialogService.alert(getServerMessage(result, failureMessage))

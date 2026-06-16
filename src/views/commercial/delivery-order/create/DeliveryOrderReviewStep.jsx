@@ -45,6 +45,7 @@ const DeliveryOrderReviewStep = ({ payload, submitting, onBack, onCreate }) => {
         </div>
 
         <div className="data-table-embedded-shell">
+          {/* datatable-exempt: embedded review layout table */}
           <CTable hover responsive className="data-table-compact embedded-data-table">
             <CTableHead>
               <CTableRow>

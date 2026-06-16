@@ -25,6 +25,7 @@ import {
 import Select from '../../../../components/forms/ThemedSelect'
 import { DataTableActionMenu, DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
+import { showToast } from '../../../../components/toast/toastService'
 import {
   addProjectCollaborator,
   listProjectCollaborators,
@@ -124,6 +125,7 @@ const CollaboratorsCard = ({ projectId, onProgressUpdate }) => {
         setSelectedRole(null)
         setRoleDescription('')
         setShowAssignModal(false)
+        showToast('Collaborator added.')
 
         if (typeof onProgressUpdate === 'function') {
           onProgressUpdate()
@@ -164,6 +166,7 @@ const CollaboratorsCard = ({ projectId, onProgressUpdate }) => {
       const result = await removeProjectCollaborator({ project_id: projectId, staff_id: staffId })
       if (result.status === 'success') {
         await fetchCollaborators()
+        showToast('Collaborator removed.')
 
         if (typeof onProgressUpdate === 'function') {
           onProgressUpdate()

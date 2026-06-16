@@ -18,6 +18,7 @@ import {
 } from '@coreui/react'
 import { useAuth } from '../../../auth/AuthProvider'
 import { DataTableLoadingState } from '../../../components/datatable'
+import { showToast } from '../../../components/toast/toastService'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
 import { API_BASE } from './constants'
 import { formatDateTime, stripHtml } from './whatsNewFormUtils'
@@ -34,7 +35,6 @@ const WhatsNewRecords = () => {
   const [actionId, setActionId] = useState(null)
   const [openActionId, setOpenActionId] = useState(null)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
 
   const detailBasePath = location.pathname.startsWith('/system-admin')
     ? '/system-admin/whats-new'
@@ -99,7 +99,6 @@ const WhatsNewRecords = () => {
     setOpenActionId(null)
     setActionId(notice.id)
     setError('')
-    setSuccess('')
     try {
       const res = await fetch(
         `${API_BASE}whats-new/${notice.id}/${published ? 'publish' : 'unpublish'}`,
@@ -112,7 +111,7 @@ const WhatsNewRecords = () => {
       if (data?.status !== 'success') {
         throw new Error(data?.message || 'Failed to update publish status.')
       }
-      setSuccess(data.message || 'Publish status updated.')
+      showToast(String(data.message || 'Publish status updated.'))
       await loadNotices()
     } catch (err) {
       setError(err.message || 'Failed to update publish status.')
@@ -127,7 +126,6 @@ const WhatsNewRecords = () => {
 
     setActionId(notice.id)
     setError('')
-    setSuccess('')
     try {
       const res = await fetch(`${API_BASE}whats-new/${notice.id}`, {
         method: 'DELETE',
@@ -137,7 +135,7 @@ const WhatsNewRecords = () => {
       if (data?.status !== 'success') {
         throw new Error(data?.message || 'Failed to delete notice.')
       }
-      setSuccess(data.message || "What's New notice deleted.")
+      showToast(String(data.message || "What's New notice deleted."))
       await loadNotices()
     } catch (err) {
       setError(err.message || 'Failed to delete notice.')
@@ -190,7 +188,6 @@ const WhatsNewRecords = () => {
           </CCardHeader>
           <CCardBody>
             {error && <CAlert color="danger">{error}</CAlert>}
-            {success && <CAlert color="success">{success}</CAlert>}
 
             {loading ? (
               <DataTableLoadingState message="Loading notices..." />

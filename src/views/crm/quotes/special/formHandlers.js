@@ -66,86 +66,82 @@ export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposa
     templates,
   ])
 
-  // 2) when template changes, fetch previously used line items, sort, and auto-load them
   useEffect(() => {
-    if (!formData.specialId) {
+    if (!formData.specialId || templates.length === 0) {
       return
     }
 
-    let isActive = true
-    const serviceId = formData.specialId
-    const endpoint = quoteApiUrl(
-      `quote-records/special/line-items?service_id=${encodeURIComponent(serviceId)}`,
+    const selectedTemplate = templates.find(
+      (template) => Number(template.id) === Number(formData.specialId),
     )
-
-    fetch(endpoint, { credentials: 'include' })
-      .then((r) => r.json())
-      .then((items) => {
-        if (!isActive) return
-        const rows = Array.isArray(items) ? items : Array.isArray(items?.data) ? items.data : []
-        const normalized = rows.map((item, idx) => {
-          const candidateId = Number(item.id ?? item.line_item_id ?? idx)
-          return {
-            ...item,
-            __sortId: Number.isNaN(candidateId) ? idx : candidateId,
-          }
-        })
-
-        normalized.sort((a, b) => a.__sortId - b.__sortId)
-
-        if (!isEditMode && normalized.length > 0) {
-          setFormData((prev) => {
-            if (prev.specialId !== serviceId) {
-              // stale fetch result
-              return prev
-            }
-
-            if (Array.isArray(prev.lineItems) && prev.lineItems.length > 0) {
-              // respect existing draft rows
-              return prev
-            }
-
-            const lineItems = normalized.map((item) => {
-              const quantity = parseFloat(item.quantity ?? 1) || 1
-              const unitPrice = parseFloat(item.unit_price ?? item.unitPrice ?? 0) || 0
-              return {
-                title: item.title || '',
-                description: item.description || '',
-                unit: item.unit || '',
-                quantity,
-                unitPrice,
-                amount: parseFloat((quantity * unitPrice).toFixed(2)),
-              }
-            })
-
-            return {
-              ...prev,
-              lineItems,
-            }
-          })
-        }
-      })
-      .catch((e) => {
-        console.error('Failed to load suggestions', e)
-      })
-
-    return () => {
-      isActive = false
+    if (!selectedTemplate) {
+      return
     }
-  }, [formData.specialId, isEditMode, setFormData])
 
-  // 3) handlers
+    setFormData((prev) => {
+      if (Number(prev.specialId) !== Number(selectedTemplate.id)) {
+        return prev
+      }
+
+      const hasAppendableProposal = Boolean(selectedTemplate.hasAppendableProposal)
+      const next = {
+        ...prev,
+        proposalMode: selectedTemplate.proposalMode || '',
+        hasAppendableProposal,
+        appendablePdfCount: Number(selectedTemplate.appendablePdfCount || 0),
+        hasWrittenProposalContent: Boolean(selectedTemplate.hasWrittenProposalContent),
+        appendableProposalMessage: selectedTemplate.appendableProposalMessage || '',
+        attachProposal: hasAppendableProposal ? prev.attachProposal : false,
+      }
+
+      if (
+        next.proposalMode === prev.proposalMode &&
+        next.hasAppendableProposal === prev.hasAppendableProposal &&
+        next.appendablePdfCount === prev.appendablePdfCount &&
+        next.hasWrittenProposalContent === prev.hasWrittenProposalContent &&
+        next.appendableProposalMessage === prev.appendableProposalMessage &&
+        next.attachProposal === prev.attachProposal
+      ) {
+        return prev
+      }
+
+      return next
+    })
+  }, [formData.specialId, setFormData, templates])
+
+  // 2) handlers
 
   // When user selects a service template
   const handleTemplateSelect = (e) => {
     const id = parseInt(e.target.value, 10) || null
     const sel = templates.find((t) => Number(t.id) === id) || {}
+    const defaultLineItems = Array.isArray(sel.defaultLineItems) ? sel.defaultLineItems : []
+    const lineItems = defaultLineItems.map((item) => {
+      const quantity = Number(item.quantity) || 1
+      const unitPrice = Number(item.unitPrice) || 0
+      return {
+        title: item.title || '',
+        description: item.description || '',
+        unit: item.unit || '',
+        quantity,
+        unitPrice,
+        amount: Number.isFinite(Number(item.amount))
+          ? Number(item.amount)
+          : parseFloat((quantity * unitPrice).toFixed(2)),
+      }
+    })
     setFormData((p) => ({
       ...p,
       specialId: id,
       serviceTitle: sel.serviceTitle || '',
       serviceCode: sel.serviceCode || '',
-      lineItems: [], // reset items when changing template
+      proposalMode: sel.proposalMode || '',
+      hasAppendableProposal: Boolean(sel.hasAppendableProposal),
+      appendablePdfCount: Number(sel.appendablePdfCount || 0),
+      hasWrittenProposalContent: Boolean(sel.hasWrittenProposalContent),
+      appendableProposalMessage: sel.appendableProposalMessage || '',
+      attachProposal: sel.hasAppendableProposal ? p.attachProposal : false,
+      lineItems,
     }))
   }
 

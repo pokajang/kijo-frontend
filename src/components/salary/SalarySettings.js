@@ -12,6 +12,7 @@ import {
   CRow,
 } from '@coreui/react'
 import { DataTableActionMenu, DataTableLoadingState } from '../datatable'
+import { showToast } from '../toast/toastService'
 import { calculateSalarySummary, formatMoney } from './salaryCalculations'
 import {
   fetchSalaryProfile,
@@ -362,11 +363,9 @@ const SalarySettings = () => {
       setIsSavingProfile(true)
       const savedProfile = await saveSalaryProfile(profile)
       setProfile(savedProfile)
-      setNotice({
-        color: 'success',
-        message:
-          'Salary settings saved. Apply Salary uses these values for new monthly applications.',
-      })
+      showToast(
+        'Salary settings saved. Apply Salary uses these values for new monthly applications.',
+      )
     } catch (err) {
       setNotice({
         color: 'danger',

@@ -151,6 +151,7 @@ const AppraisalRecords = () => {
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey="appraisal.personal-records.visible-columns.v3"
+              scrollStorageKey="appraisal.personal-records.scroll"
               apiKey="appraisal-personal-records-visible-columns-v3"
               idPrefix="personal-appraisal-record"
               emptyMessage="No appraisal records found."
@@ -176,7 +177,7 @@ const AppraisalRecords = () => {
               renderQuickFilters={() => (
                 <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
               )}
-              resetDeps={[records, periodRange]}
+              resetDeps={[periodRange]}
             />
           ) : (
             !error && <>No appraisal records found.</>

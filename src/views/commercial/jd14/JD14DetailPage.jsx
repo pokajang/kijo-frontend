@@ -5,6 +5,7 @@ import { DetailField, DetailSection } from '../shared/CommercialDetailFields'
 import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import EditJd14Modal from './EditJd14Modal'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 
 const sameId = (left, right) => String(left ?? '') === String(right ?? '')
 
@@ -79,7 +80,7 @@ const JD14DetailPage = () => {
       )
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('JD14 deleted successfully.')
+        showToast('JD14 record deleted.')
         navigate('/commercial/jd14')
       } else {
         dialog.alert(`Failed to delete: ${result.message}`)

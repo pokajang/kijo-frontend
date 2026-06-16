@@ -49,6 +49,9 @@ vi.mock('./actionHandlers', () => ({
 vi.mock('./projectApi', () => ({
   getProjectDetails: vi.fn(),
   getProjectFinanceData: vi.fn(),
+  getAwardedProjectValue: (project) => project?.quote_value ?? project?.project_value ?? 0,
+  getCurrentProjectValue: (project) => project?.quote_value ?? project?.project_value ?? 0,
+  getProjectVariationValue: (project) => project?.quote_value ?? project?.project_value ?? 0,
 }))
 
 vi.mock('./CloseProjectModal', () => ({
@@ -172,7 +175,7 @@ describe('ManageProjectPage canonical routes', () => {
 
     render(<ManageProjectPage />)
 
-    await waitFor(() => expect(screen.getByText('RM 4,500.00')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('RM 4,500.00').length).toBeGreaterThan(0))
 
     const actionGroups = screen.getAllByTestId('project-actions')
     expect(actionGroups).toHaveLength(3)

@@ -1,32 +1,33 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
+  CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
+  CCol,
+  CForm,
+  CFormInput,
+  CFormLabel,
+  CFormTextarea,
   CModal,
-  CModalHeader,
-  CModalTitle,
   CModalBody,
   CModalFooter,
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CForm,
-  CFormLabel,
-  CFormInput,
-  CFormTextarea,
+  CModalHeader,
+  CModalTitle,
   CRow,
-  CCol,
-  CButton,
 } from '@coreui/react'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 
-const EditJd14Modal = ({ visible, formData, onClose }) => {
+const EditJd14Modal = ({ visible, formData, onClose, onSaved }) => {
   const [form, setForm] = useState({})
 
   useEffect(() => {
     setForm(formData || {})
   }, [formData])
 
-  const handleChange = (field) => (e) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }))
+  const handleChange = (field) => (event) => {
+    setForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
   const handleSubmit = async () => {
@@ -44,14 +45,15 @@ const EditJd14Modal = ({ visible, formData, onClose }) => {
       const result = await res.json()
 
       if (result.status === 'success') {
-        dialog.alert('✅ JD14 form updated successfully.')
+        showToast('JD14 record updated.')
+        await onSaved?.()
         onClose()
       } else {
-        dialog.alert(result.message || '❌ Failed to update JD14 form.')
+        dialog.alert(result.message || 'Failed to update JD14 form.')
       }
     } catch (err) {
       console.error('Update JD14 Error:', err)
-      dialog.alert('❌ Error while updating JD14 form.')
+      dialog.alert('Error while updating JD14 form.')
     }
   }
 

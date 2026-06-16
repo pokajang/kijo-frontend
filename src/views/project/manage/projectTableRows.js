@@ -1,11 +1,12 @@
 import { getDateOnly, getLatestProgressUpdate, getProjectLeaderCode } from './projectFilters'
+import { getCurrentProjectValue } from './projectApi'
 
 export const emptyProjectTableValue = '-'
 
-const getValueNumber = (project = {}) =>
-  project?.quote_value != null && String(project.quote_value).trim() !== ''
-    ? Number(project.quote_value)
-    : null
+const getValueNumber = (project = {}) => {
+  const value = getCurrentProjectValue(project, NaN)
+  return Number.isFinite(value) ? value : null
+}
 
 const formatProjectValue = (valueNumber) =>
   valueNumber !== null && Number.isFinite(valueNumber)

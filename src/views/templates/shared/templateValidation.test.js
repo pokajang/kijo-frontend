@@ -119,11 +119,20 @@ describe('templateValidation', () => {
         }),
       ),
     ).toEqual(
-      expect.arrayContaining([
-        'Service summary is required.',
-        'At least one proposal attachment is required in upload mode.',
-      ]),
+      expect.arrayContaining(['At least one PDF proposal attachment is required in upload mode.']),
     )
+
+    expect(
+      messages(
+        validateSpecialTemplate({
+          template: { proposalMode: 'upload', serviceTitle: 'A', serviceCode: 'B' },
+          remarks: '<p>remark</p>',
+          isEdit: true,
+          newAttachments: [],
+          existingAttachments: [{ fileName: 'legacy.jpg', mimeType: 'image/jpeg' }],
+        }),
+      ),
+    ).toContain('At least one PDF proposal attachment is required in upload mode.')
 
     expect(
       messages(
@@ -133,6 +142,27 @@ describe('templateValidation', () => {
         }),
       ),
     ).toContain('Proposal content is required.')
+  })
+
+  it('validates special default line items', () => {
+    const errors = validateSpecialTemplate({
+      template: {
+        proposalMode: 'write',
+        serviceTitle: 'A',
+        serviceCode: 'B',
+        proposalContent: '<p>Content</p>',
+        defaultLineItems: [{ title: '', quantity: 0, unitPrice: -1 }],
+      },
+      remarks: '<p>remark</p>',
+    })
+
+    expect(messages(errors)).toEqual(
+      expect.arrayContaining([
+        'Default line item 1 title is required.',
+        'Default line item 1 quantity must be greater than 0.',
+        'Default line item 1 unit price cannot be negative.',
+      ]),
+    )
   })
 
   it('maps validation errors by field for inline display', () => {

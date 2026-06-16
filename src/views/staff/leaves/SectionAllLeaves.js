@@ -930,6 +930,7 @@ const SectionAllLeaves = ({
             defaultVisibleColumns={defaultVisibleColumns}
             requiredColumns={requiredColumns}
             storageKey="staff.leaves.all.visible-columns.v6"
+            scrollStorageKey="staff.leaves.all.scroll"
             idPrefix="staff-leave-all"
             emptyMessage="No matching leave records found."
             exportFilename={`all-leave-records-${new Date().toISOString().slice(0, 10)}.csv`}

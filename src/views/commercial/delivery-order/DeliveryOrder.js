@@ -6,6 +6,7 @@ import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '
 import DoViewModal from './DoModal/DoViewModal'
 import DoEditModalMain from './DoModal/DoEditModalMain'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import {
   DataTableCardHeader,
   DataTableRecordControls,
@@ -189,8 +190,8 @@ const DeliveryOrder = () => {
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [projectPickerVisible, setProjectPickerVisible] = useState(false)
 
-  const fetchAllDos = useCallback(async () => {
-    setLoading(true)
+  const fetchAllDos = useCallback(async ({ showLoader = true } = {}) => {
+    if (showLoader) setLoading(true)
     try {
       const rows = await fetchAllPagedRecords({
         url: `${import.meta.env.VITE_API_BASE}delivery-orders`,
@@ -321,9 +322,9 @@ const DeliveryOrder = () => {
       })
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('Delivery Order updated successfully.')
+        showToast('Delivery Order updated.')
         setEditModalVisible(false)
-        fetchAllDos()
+        fetchAllDos({ showLoader: false })
       } else {
         dialog.alert(`Failed to update: ${result.message}`)
       }
@@ -348,8 +349,8 @@ const DeliveryOrder = () => {
       })
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('Delivery Order deleted successfully.')
-        fetchAllDos()
+        showToast('Delivery Order deleted.')
+        fetchAllDos({ showLoader: false })
       } else {
         dialog.alert('Failed to delete delivery order.')
       }
@@ -659,6 +660,7 @@ const DeliveryOrder = () => {
                   defaultVisibleColumns={defaultVisibleColumns}
                   requiredColumns={requiredColumns}
                   storageKey={columnStorageKey}
+                  scrollStorageKey="commercial.delivery-order.records.scroll"
                   idPrefix="delivery-order-record"
                   emptyMessage="No delivery order records found."
                   exportFilename={`delivery-orders-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -695,7 +697,6 @@ const DeliveryOrder = () => {
                   initialSortDirByField={{ issued: 'desc' }}
                   getSortValue={(doItem, field) => doItem[field]}
                   resetDeps={[
-                    filteredDos,
                     searchTerm,
                     periodRange,
                     personInChargeFilter,

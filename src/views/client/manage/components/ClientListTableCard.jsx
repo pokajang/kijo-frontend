@@ -517,6 +517,7 @@ const ClientListTableCard = ({
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey={columnStorageKey}
+              scrollStorageKey="client.manage.records.scroll"
               idPrefix="client-manage-record"
               emptyMessage="No clients found."
               exportFilename={`clients-${new Date().toISOString().slice(0, 10)}.csv`}

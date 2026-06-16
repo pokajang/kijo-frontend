@@ -107,4 +107,13 @@ describe('projectTableRows', () => {
     expect(valueColumn).toEqual(expect.objectContaining({ label: 'Value (RM)' }))
     expect(row.valueDisplay).toBe('1,234.50')
   })
+
+  it('uses current project value when a project value revision exists', () => {
+    const [row] = normalizeProjectTableRows([
+      { id: 4, quote_value: '1000', current_project_value: '1250' },
+    ])
+
+    expect(row.value).toBe(1250)
+    expect(row.valueDisplay).toBe('1,250.00')
+  })
 })

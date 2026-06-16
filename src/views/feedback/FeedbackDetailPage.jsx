@@ -24,6 +24,7 @@ import {
   updateFeedback,
 } from './actionHandlers'
 import { useAuth } from '../../auth/AuthProvider'
+import { showToast } from '../../components/toast/toastService'
 
 const ADMIN_STATUS_OPTIONS = ['Pending', 'Fixed Pending Pushed', 'In Progress', 'Fixed Completed']
 
@@ -121,6 +122,7 @@ const FeedbackDetailPage = () => {
     if (result.status === 'success') {
       setFixModalVisible(false)
       await loadFeedback()
+      showToast('Feedback fix details updated.')
       return
     }
     dialog.alert('Failed to update: ' + result.message)
@@ -147,6 +149,7 @@ const FeedbackDetailPage = () => {
       if (result.status === 'success') {
         setEditVisible(false)
         await loadFeedback()
+        showToast('Feedback updated.')
       } else {
         dialog.alert(result.message || 'Failed to update feedback.')
       }
@@ -169,7 +172,7 @@ const FeedbackDetailPage = () => {
       return
     const result = await deleteFeedback(feedbackId)
     if (result.status === 'success') {
-      dialog.alert('Feedback deleted.')
+      showToast('Feedback deleted.')
       navigate(returnTo)
       return
     }

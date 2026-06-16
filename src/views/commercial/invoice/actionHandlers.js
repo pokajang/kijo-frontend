@@ -1,4 +1,6 @@
 ﻿import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
+
 /**
  * Centralized endpoints for each invoice action
  */
@@ -35,8 +37,8 @@ const getEndpoint = (action) => endpoints[action]
 /**
  * 1) Fetch all invoices and map to UI model
  */
-export const fetchAllInvoices = async (setInvoices, setLoading) => {
-  setLoading(true)
+export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = true } = {}) => {
+  if (showLoader) setLoading(true)
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE}invoices`, {
       method: 'GET',
@@ -252,6 +254,7 @@ export const handleMarkPaidConfirmed = async (invoice, paidData, refreshList, se
       credentials: 'include',
       body: JSON.stringify({ id: invoice.rawId, ...paidData }),
     })
+    showToast('Invoice marked as paid.')
     await refreshList()
   } catch (err) {
     console.error('Update status failed:', err)
@@ -275,7 +278,7 @@ export const handleMarkUnpaidConfirmed = async (invoice, refreshList) => {
     })
     const result = await res.json()
     if (result.status === 'success') {
-      dialog.alert('Invoice marked as Pending.')
+      showToast('Invoice marked as pending.')
       await refreshList()
     } else {
       dialog.alert(result.message || 'Failed to mark as Pending.')
@@ -307,7 +310,7 @@ export const handleDelete = async (invoice, refreshList) => {
     })
     const result = await res.json()
     if (result.status === 'success') {
-      dialog.alert('Invoice deleted.')
+      showToast('Invoice deleted.')
       await refreshList()
     } else {
       dialog.alert('Delete failed: ' + result.message)
@@ -340,7 +343,7 @@ export const handleUpdateHrdClaimRefConfirmed = async (
     })
     const result = await res.json()
     if (result.status === 'success') {
-      dialog.alert('HRD claim reference updated.')
+      showToast('HRD claim reference updated.')
       await refreshList()
     } else {
       dialog.alert(`Update failed: ${result.message || 'Unknown error'}`)

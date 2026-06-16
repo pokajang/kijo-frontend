@@ -189,13 +189,12 @@ export const useProjectCommercialDocs = (projectId, visible, groupKeys = null, r
     setLoading(true)
     setError('')
 
-    getProjectCommercialDocs(projectId, { signal: controller.signal })
+    getProjectCommercialDocs(projectId, { signal: controller.signal, silentError: true })
       .then((payload) => {
         setDocs(payload?.data || emptyDocs)
       })
       .catch((err) => {
         if (err.name === 'AbortError') return
-        console.error('Project commercial docs fetch error:', err)
         setDocs(emptyDocs)
         setError(err.message || 'Unable to load existing commercial records.')
       })

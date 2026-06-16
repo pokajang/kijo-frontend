@@ -164,6 +164,9 @@ const Invoice = () => {
     fetchAllInvoices(setInvoices, setLoading)
   }, [])
 
+  const refreshInvoicesQuietly = () =>
+    fetchAllInvoices(setInvoices, setLoading, { showLoader: false })
+
   useEffect(() => {
     if (String(serviceTypeFilter).toLowerCase() !== 'training' && trainingPaymentFilter !== 'all') {
       setTrainingPaymentFilter('all')
@@ -319,9 +322,7 @@ const Invoice = () => {
               }
               onAction={(action, invoice) => {
                 if (action === 'markunpaid') {
-                  handleMarkUnpaidConfirmed(invoice, () =>
-                    fetchAllInvoices(setInvoices, setLoading),
-                  )
+                  handleMarkUnpaidConfirmed(invoice, refreshInvoicesQuietly)
                   return
                 }
                 handleAction(
@@ -336,9 +337,7 @@ const Invoice = () => {
                   setShowHrdClaimRefModal,
                 )
               }}
-              onDelete={(invoice) =>
-                handleDelete(invoice, () => fetchAllInvoices(setInvoices, setLoading))
-              }
+              onDelete={(invoice) => handleDelete(invoice, refreshInvoicesQuietly)}
               onOpen={(invoice) => navigate(`/commercial/invoice/${invoice.rawId || invoice.id}`)}
               desktopUtilityPortalId="invoice-table-tools"
               mobileUtilityPortalId="invoice-mobile-table-tools"
@@ -365,7 +364,7 @@ const Invoice = () => {
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
         invoice={selectedInvoice}
-        onSaved={() => fetchAllInvoices(setInvoices, setLoading)}
+        onSaved={refreshInvoicesQuietly}
       />
 
       <MarkPaidModal
@@ -373,12 +372,7 @@ const Invoice = () => {
         onClose={() => setShowMarkPaid(false)}
         invoice={currentInvoice}
         onConfirmed={(invoice, paidData) =>
-          handleMarkPaidConfirmed(
-            invoice,
-            paidData,
-            () => fetchAllInvoices(setInvoices, setLoading),
-            setShowMarkPaid,
-          )
+          handleMarkPaidConfirmed(invoice, paidData, refreshInvoicesQuietly, setShowMarkPaid)
         }
       />
 
@@ -390,7 +384,7 @@ const Invoice = () => {
           handleUpdateHrdClaimRefConfirmed(
             invoice,
             hrdClaimRef,
-            () => fetchAllInvoices(setInvoices, setLoading),
+            refreshInvoicesQuietly,
             setShowHrdClaimRefModal,
           )
         }

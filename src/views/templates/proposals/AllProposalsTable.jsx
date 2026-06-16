@@ -416,6 +416,7 @@ const AllProposalsTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="templates.proposals.all.visible-columns.v1"
+        scrollStorageKey="templates.proposals.all.scroll"
         idPrefix="proposal-record"
         emptyMessage={rows.length ? 'No matching records.' : 'No records to display.'}
         exportFilename={`proposal-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -447,7 +448,7 @@ const AllProposalsTable = ({
         initialSortDir="desc"
         initialSortDirByField={{ dateCreated: 'desc' }}
         getSortValue={(row, field) => (field === 'dateCreated' ? row.dateCreatedRaw : row[field])}
-        resetDeps={[filteredRows, searchTerm, serviceFilter, createdByFilter, yearFilter]}
+        resetDeps={[searchTerm, serviceFilter, createdByFilter, yearFilter]}
         actionColumnWidth="56px"
       />
 

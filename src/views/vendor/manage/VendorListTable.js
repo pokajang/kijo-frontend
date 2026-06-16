@@ -149,6 +149,7 @@ const VendorListTable = ({
       defaultVisibleColumns={defaultVisibleColumns}
       requiredColumns={requiredColumns}
       storageKey={columnStorageKey}
+      scrollStorageKey="vendor.manage.records.scroll"
       idPrefix="vendor-manage-record"
       emptyMessage="No vendors found."
       exportFilename={`vendors-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -187,7 +188,7 @@ const VendorListTable = ({
       }}
       initialSortField="vendor"
       getSortValue={(vendor, field) => vendor[field]}
-      resetDeps={[vendors]}
+      resetDeps={[]}
     />
   )
 }

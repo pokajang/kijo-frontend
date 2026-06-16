@@ -5,8 +5,13 @@ import { fetchersByTab } from '../config/recordFetchers'
 export const useRecordsFetch = (activeTab) => {
   const [quotes, setQuotes] = useState([])
   const [quotesLoading, setQuotesLoading] = useState(false)
+  const quotesRef = useRef([])
   const fetchSeqRef = useRef(0)
   const abortControllerRef = useRef(null)
+
+  useEffect(() => {
+    quotesRef.current = quotes
+  }, [quotes])
 
   const fetchQuotes = useCallback(
     async (tabKey = activeTab, options = {}) => {
@@ -40,7 +45,9 @@ export const useRecordsFetch = (activeTab) => {
         }
         console.error('Error fetching quotes:', err)
         if (requestId === fetchSeqRef.current) {
-          setQuotes([])
+          if (showLoader || quotesRef.current.length === 0) {
+            setQuotes([])
+          }
           setQuotesLoading(false)
           dialog.alert('Failed to load quotations. Please refresh the page.')
         }

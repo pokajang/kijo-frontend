@@ -17,10 +17,14 @@ import {
   deleteProject,
   deleteProjectExpense,
   getProjectLoaUrl,
+  getCurrentProjectValue,
+  getProjectVariationValue,
   listProjects,
+  previewProjectValueImpact,
   requestJson,
   toFiniteNumber,
   updateProjectDetails,
+  updateProjectCurrentValue,
 } from '../projectApi'
 
 afterEach(() => {
@@ -66,6 +70,14 @@ describe('projectApi normalizers', () => {
     expect(toFiniteNumber(undefined, 99)).toBe(99)
   })
 
+  it('resolves current project values with awarded fallback', () => {
+    expect(getCurrentProjectValue({ quote_value: 1000 })).toBe(1000)
+    expect(getCurrentProjectValue({ quote_value: 1000, current_project_value: 1250 })).toBe(1250)
+    expect(getCurrentProjectValue({ quote_value: 1000, resolved_project_value: 1100 })).toBe(1100)
+    expect(getProjectVariationValue({ quote_value: 1000, current_project_value: 1250 })).toBe(250)
+    expect(getProjectVariationValue({ quote_value: 1000 })).toBe(0)
+  })
+
   it('sends project API requests with credentials by default', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -80,19 +92,73 @@ describe('projectApi normalizers', () => {
     )
   })
 
-  it('includes project_id when updating project details', async () => {
+  it('includes project_id and strips value fields when updating project details', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ status: 'success' }),
     })
 
-    await updateProjectDetails({ id: 158, project_name: 'A' })
+    await updateProjectDetails({
+      id: 158,
+      project_name: 'A',
+      quote_value: 1000,
+      current_project_value: 1250,
+      resolved_project_value: 1250,
+    })
 
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('projects/158'),
       expect.objectContaining({
         method: 'PUT',
         body: expect.stringContaining('"project_id":158'),
+      }),
+    )
+    const body = JSON.parse(global.fetch.mock.calls[0][1].body)
+    expect(body).toEqual({ id: 158, project_name: 'A', project_id: 158 })
+  })
+
+  it('updates current project value through the dedicated value route', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success' }),
+    })
+
+    await updateProjectCurrentValue(158, {
+      current_project_value: 5000,
+      reason: 'Approved variation',
+    })
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('projects/158/value'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          current_project_value: 5000,
+          reason: 'Approved variation',
+        }),
+      }),
+    )
+  })
+
+  it('previews project value commercial impact through the dedicated preview route', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success' }),
+    })
+
+    await previewProjectValueImpact(158, {
+      current_project_value: 5000,
+      reason: 'Approved variation',
+    })
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('projects/158/value/impact-preview'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          current_project_value: 5000,
+          reason: 'Approved variation',
+        }),
       }),
     )
   })

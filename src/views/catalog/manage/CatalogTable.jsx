@@ -222,6 +222,7 @@ const CatalogTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={columnStorageKey}
+        scrollStorageKey="catalog.manage.records.scroll"
         idPrefix="catalog-manage-record"
         emptyMessage="No catalog items found."
         exportFilename={`catalog-items-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -259,7 +260,7 @@ const CatalogTable = ({
           priceDate: 'desc',
         }}
         getSortValue={(item, field) => item[field]}
-        resetDeps={[data]}
+        resetDeps={[]}
       />
     </>
   )

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { CTableRow } from '@coreui/react'
 import { LARGE_DATASET_THRESHOLD, PAGE_SIZE_OPTIONS } from '../../config/allRecordsTableConfig'
 import {
@@ -136,12 +136,14 @@ const ServiceConfiguredRecordsTable = ({
   onEmail,
   onSharePdf,
   onStatsScopeLabelChange,
+  onFilterContextChange,
   statsVisible = true,
   controlsVisible = true,
 }) => {
   const columnWidths = serviceRecordColumnWidths
   const truncateStyle = serviceRecordTruncateStyle
   const fmtDate = getDateOnly
+  const didMountPageResetRef = useRef(false)
   const tableConfig = serviceRecordTableConfigs[serviceKey]
   const getSearchText = tableConfig.getSearchText
   const getSubjectText = tableConfig.getSubjectText
@@ -187,7 +189,7 @@ const ServiceConfiguredRecordsTable = ({
     yearOptions,
     resetFilters,
     clearChip,
-  } = useServiceRecordsTableState(records)
+  } = useServiceRecordsTableState(records, `crm.records.${serviceKey}.table-state.v1`)
   const { isColumnVisible, toggleColumnVisibility, resetColumnVisibility } = useColumnPreferences({
     storageKey: getServiceTableColumnStorageKey(serviceKey),
     apiKey: getServiceTableColumnPreferenceApiKey(serviceKey),
@@ -389,6 +391,10 @@ const ServiceConfiguredRecordsTable = ({
   }, [currentPage, totalPages, setCurrentPage])
 
   useEffect(() => {
+    if (!didMountPageResetRef.current) {
+      didMountPageResetRef.current = true
+      return
+    }
     setCurrentPage(1)
   }, [
     searchTerm,
@@ -451,6 +457,17 @@ const ServiceConfiguredRecordsTable = ({
   if (maxAmount) activeChips.push({ key: 'maxAmount', label: `Max RM: ${maxAmount}` })
 
   const activeFilterCount = getAdvancedFilterCount(activeChips)
+  const activeChipSignature = activeChips.map((chip) => `${chip.key}:${chip.label}`).join('|')
+
+  useEffect(() => {
+    onFilterContextChange?.({
+      activeFilterCount,
+      activeChips,
+      statusFilter,
+      searchInput,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilterCount, activeChipSignature, onFilterContextChange, searchInput, statusFilter])
 
   const handleExportCsv = () => {
     if (!sortedRecords.length) return
@@ -740,6 +757,7 @@ const ServiceConfiguredRecordsTable = ({
       toggleSort={toggleSort}
       getAriaSort={getAriaSort}
       columnWidths={columnWidths}
+      scrollStorageKey={`crm.records.${serviceKey}.scroll`}
       renderRow={renderRow}
     />
   )

@@ -60,7 +60,9 @@ export default function UploadAttachment({
 
       <CRow className="mb-3">
         <CCol>
-          <CFormLabel>{isEdit ? 'Add More Attachments' : 'Upload Full Proposal'}</CFormLabel>
+          <CFormLabel>
+            {isEdit ? 'Add More PDF Attachments' : 'Upload Full Proposal PDF'}
+          </CFormLabel>
           <CFormInput
             type="file"
             name="attachments[]"

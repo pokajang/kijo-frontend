@@ -604,6 +604,7 @@ const PaymentTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="vendor.payment-records.visible-columns.v6"
+        scrollStorageKey="vendor.payment-records.scroll"
         idPrefix="vendor-payment-record"
         emptyMessage="No payment records found."
         exportFilename={`payment-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -656,7 +657,7 @@ const PaymentTable = ({
         initialSortField="requested"
         initialSortDir="desc"
         initialSortDirByField={{ requested: 'desc', approved: 'desc', amount: 'desc' }}
-        resetDeps={[payments, searchText, selectedPeriodRange, statusFilter, methodFilter]}
+        resetDeps={[searchText, selectedPeriodRange, statusFilter, methodFilter]}
       />
       <div className="text-end fw-bold mt-2">
         Grand Total: RM {grandTotal(filteredPayments).toFixed(2)}

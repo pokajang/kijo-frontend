@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import CloseProjectModal from './CloseProjectModal'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import { closeProject } from './projectApi'
 
 vi.mock('../../../components/dialog/dialogService', () => ({
@@ -11,6 +12,10 @@ vi.mock('../../../components/dialog/dialogService', () => ({
     alert: vi.fn(),
     confirm: vi.fn(),
   },
+}))
+
+vi.mock('../../../components/toast/toastService', () => ({
+  showToast: vi.fn(),
 }))
 
 vi.mock('./projectApi', () => ({
@@ -123,7 +128,8 @@ describe('CloseProjectModal', () => {
         services: true,
       }),
     )
-    expect(dialog.alert).toHaveBeenCalledWith('Project completed successfully.')
+    expect(showToast).toHaveBeenCalledWith('Project completed.')
+    expect(dialog.alert).not.toHaveBeenCalled()
     expect(onConfirm).toHaveBeenCalled()
   })
 

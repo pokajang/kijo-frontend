@@ -102,15 +102,32 @@ export const toApiManpowerTemplate = ({
 
 export const fromApiSpecialTemplate = (row = {}) => {
   const hasAttachments = Array.isArray(row.attachments) && row.attachments.length > 0
+  const proposalMode =
+    row.proposalMode === 'upload' || row.proposalMode === 'write'
+      ? row.proposalMode
+      : row.proposal_mode === 'upload' || row.proposal_mode === 'write'
+        ? row.proposal_mode
+        : hasAttachments
+          ? 'upload'
+          : 'write'
 
   return {
-    proposalMode: hasAttachments ? 'upload' : row.proposalMode || row.proposal_mode || 'write',
+    proposalMode,
     serviceTitle: row.serviceTitle || row.service_title || '',
     serviceCode: (row.serviceCode || row.service_code || '').toUpperCase(),
-    serviceSummary: hasAttachments
-      ? row.content || row.serviceSummary || ''
-      : row.serviceSummary || '',
-    proposalContent: hasAttachments ? '' : row.content || row.proposalContent || '',
+    serviceSummary:
+      row.serviceSummary ||
+      row.service_summary ||
+      (proposalMode === 'upload' ? row.content || '' : ''),
+    proposalContent:
+      row.proposalContent ||
+      row.proposal_content ||
+      (proposalMode === 'write' ? row.content || '' : ''),
+    defaultLineItems: Array.isArray(row.defaultLineItems)
+      ? row.defaultLineItems
+      : Array.isArray(row.default_line_items)
+        ? row.default_line_items
+        : [],
   }
 }
 
@@ -135,6 +152,7 @@ export const appendSpecialTemplateFormData = ({
   formData.append('proposalMode', proposalMode)
   formData.append('serviceSummary', serviceSummary)
   formData.append('proposalContent', proposalContent)
+  formData.append('defaultLineItems', JSON.stringify(template.defaultLineItems || []))
   formData.append('remarks', remarks)
 
   if (isEdit) {

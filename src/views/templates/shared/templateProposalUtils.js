@@ -96,12 +96,20 @@ export const templateConfigs = {
     filePrefix: 'special-templates',
     titleFallback: 'Special Proposal',
     hasAttachments: true,
-    sections: [['Proposal Content', 'content']],
+    sections: [
+      ['Internal Service Summary', 'serviceSummary'],
+      ['Written Proposal Content', 'proposalContent'],
+    ],
   },
 }
 
 const getDescriptionSource = (row, type) => {
-  if (type === 'special') return row?.content || ''
+  if (type === 'special') {
+    const proposalMode = row?.proposalMode || row?.proposal_mode
+    return proposalMode === 'write'
+      ? row?.proposalContent || row?.proposal_content || row?.content || ''
+      : row?.serviceSummary || row?.service_summary || row?.content || ''
+  }
   return row?.introduction || ''
 }
 

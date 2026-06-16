@@ -21,8 +21,10 @@ describe('attachmentValidation', () => {
       ),
     ])
 
-    expect(accepted).toHaveLength(3)
+    expect(accepted).toHaveLength(1)
     expect(rejected).toEqual([
+      { fileName: 'photo.jpg', reason: 'Unsupported file type.' },
+      { fileName: 'diagram.png', reason: 'Unsupported file type.' },
       { fileName: 'script.exe', reason: 'Unsupported file type.' },
       { fileName: 'slides.pptx', reason: 'Unsupported file type.' },
     ])

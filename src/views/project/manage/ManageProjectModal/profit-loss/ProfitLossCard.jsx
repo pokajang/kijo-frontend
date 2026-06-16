@@ -14,7 +14,13 @@ import ExpenseForm from './ExpenseForm'
 import ProfitLossTable from './ProfitLossTable'
 import ViewReceiptModal from './ViewReceiptModal'
 import dialog from '../../../../../components/dialog/dialogService'
-import { addProjectExpense, deleteProjectExpense, toFiniteNumber } from '../../projectApi'
+import { showToast } from '../../../../../components/toast/toastService'
+import {
+  addProjectExpense,
+  deleteProjectExpense,
+  getCurrentProjectValue,
+  toFiniteNumber,
+} from '../../projectApi'
 
 const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefresh }) => {
   const [showExpenseModal, setShowExpenseModal] = useState(false)
@@ -53,6 +59,7 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
       })
       if (result.status === 'success') {
         onDataRefresh?.()
+        showToast('Expense deleted.')
       } else {
         dialog.alert(result.message || 'Failed to delete expense.')
       }
@@ -64,7 +71,7 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
     }
   }
 
-  const revenue = toFiniteNumber(project.quote_value)
+  const revenue = getCurrentProjectValue(project, 0)
   const approvedStatuses = ['approved', 'paid', 'completed', 'transferred']
   const approved = vendorPayments.filter((p) =>
     approvedStatuses.includes((p.status || '').toLowerCase()),
@@ -113,6 +120,7 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
       if (result.status === 'success') {
         handleCancelExpense()
         onDataRefresh?.()
+        showToast('Expense saved.')
       } else {
         dialog.alert(result.message || 'Failed to save expense.')
       }

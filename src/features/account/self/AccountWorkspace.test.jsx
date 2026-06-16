@@ -7,6 +7,7 @@ import StaffProfile from '../../../components/profile/StaffProfile'
 import PersonalSignature from '../../../components/signature/PersonalSignature'
 import UserSetting from '../../../components/user-setting/UserSetting'
 import dialog from '../../../components/dialog/dialogService'
+import { toastEvents } from '../../../components/toast/toastService'
 
 vi.mock('../../../components/dialog/dialogService', () => ({
   default: {
@@ -72,6 +73,8 @@ describe('AccountWorkspace', () => {
 
 describe('StaffProfile', () => {
   it('loads in label-value mode, edits, saves, and returns to view mode', async () => {
+    const toastHandler = vi.fn()
+    window.addEventListener(toastEvents.name, toastHandler)
     const fetchMock = vi.fn(async (url, options = {}) => {
       if (options.method === 'PUT') {
         return jsonResponse({ status: 'success', data: { staff_id: 1 } })
@@ -80,46 +83,59 @@ describe('StaffProfile', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const { container } = render(<StaffProfile />)
+    try {
+      const { container } = render(<StaffProfile />)
 
-    await screen.findByText('Jane Staff')
-    expect(container.querySelector('input[name="fullName"]')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
+      await screen.findByText('Jane Staff')
+      expect(container.querySelector('input[name="fullName"]')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /^edit$/i }))
+      fireEvent.click(screen.getByRole('button', { name: /^edit$/i }))
 
-    await screen.findAllByLabelText(/^full name$/i)
-    const fullNameInput = container.querySelector('input[name="fullName"]')
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
-    const cancelButton = screen.getByRole('button', { name: /cancel/i })
+      await screen.findAllByLabelText(/^full name$/i)
+      const fullNameInput = container.querySelector('input[name="fullName"]')
+      const saveButton = screen.getByRole('button', { name: /save changes/i })
+      const cancelButton = screen.getByRole('button', { name: /cancel/i })
 
-    expect(saveButton).toBeDisabled()
-    expect(saveButton).toHaveClass('btn-sm')
-    expect(cancelButton).toHaveClass('btn-sm')
-    fireEvent.change(fullNameInput, { target: { value: ' Jane Updated ' } })
-    await waitFor(() => expect(fullNameInput).toHaveValue(' Jane Updated '))
-    expect(saveButton).not.toBeDisabled()
+      expect(saveButton).toBeDisabled()
+      expect(saveButton).toHaveClass('btn-sm')
+      expect(cancelButton).toHaveClass('btn-sm')
+      fireEvent.change(fullNameInput, { target: { value: ' Jane Updated ' } })
+      await waitFor(() => expect(fullNameInput).toHaveValue(' Jane Updated '))
+      expect(saveButton).not.toBeDisabled()
 
-    fireEvent.click(saveButton)
+      fireEvent.click(saveButton)
 
-    await waitFor(() =>
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('staff/profile'),
-        expect.objectContaining({ method: 'PUT' }),
-      ),
-    )
-    const saveCall = fetchMock.mock.calls.find(([, options = {}]) => options.method === 'PUT')
-    const payload = JSON.parse(saveCall[1].body)
-    expect(payload.email).toBeUndefined()
-    expect(payload.nameCode).toBeUndefined()
-    expect(payload.fullName).toBe('Jane Updated')
-    await waitFor(() => expect(screen.getByText('Profile saved.')).toBeInTheDocument())
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('staff/profile'),
+          expect.objectContaining({ method: 'PUT' }),
+        ),
+      )
+      const saveCall = fetchMock.mock.calls.find(([, options = {}]) => options.method === 'PUT')
+      const payload = JSON.parse(saveCall[1].body)
+      expect(payload.email).toBeUndefined()
+      expect(payload.nameCode).toBeUndefined()
+      expect(payload.fullName).toBe('Jane Updated')
+      await waitFor(() =>
+        expect(toastHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            detail: expect.objectContaining({
+              type: 'toast',
+              message: 'Profile saved.',
+            }),
+          }),
+        ),
+      )
 
-    expect(screen.getByText('Jane Updated')).toBeInTheDocument()
-    expect(container.querySelector('input[name="fullName"]')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^edit$/i })).toHaveClass('btn-sm')
-    expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
+      expect(screen.getByText('Jane Updated')).toBeInTheDocument()
+      expect(container.querySelector('input[name="fullName"]')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /^edit$/i })).toHaveClass('btn-sm')
+      expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
+    } finally {
+      window.removeEventListener(toastEvents.name, toastHandler)
+    }
   })
 
   it('cancels edits and returns to saved label-value mode', async () => {

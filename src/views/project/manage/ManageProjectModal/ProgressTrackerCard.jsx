@@ -25,6 +25,7 @@ import {
 } from '@coreui/react'
 import { DataTableActionMenu, DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
+import { showToast } from '../../../../components/toast/toastService'
 import { stripExactProjectMention } from '../../../../utils/projectMentionText'
 import { deleteProjectProgress, listProjectProgress, saveProjectProgress } from '../projectApi'
 import {
@@ -100,7 +101,6 @@ const ProgressTrackerCard = ({ projectId, projectName = '', refreshKey = 0 }) =>
         setProgressList(data)
       } catch (err) {
         if (err.name === 'AbortError') return
-        console.error('Failed to fetch progress list:', err)
         setProgressList([])
         setLoadError(err.message || 'Failed to fetch progress list.')
       } finally {
@@ -118,7 +118,7 @@ const ProgressTrackerCard = ({ projectId, projectName = '', refreshKey = 0 }) =>
       return
     }
     const controller = new AbortController()
-    fetchProgressList({ signal: controller.signal })
+    fetchProgressList({ signal: controller.signal, silentError: true })
 
     return () => {
       controller.abort()
@@ -190,6 +190,7 @@ const ProgressTrackerCard = ({ projectId, projectName = '', refreshKey = 0 }) =>
         setProgressText('')
         setShowUpdateModal(false)
         setEditingProgressId(null)
+        showToast(editingProgressId ? 'Progress update saved.' : 'Progress update added.')
       } else {
         dialog.alert(
           result?.message ||
@@ -240,6 +241,7 @@ const ProgressTrackerCard = ({ projectId, projectName = '', refreshKey = 0 }) =>
       })
       if (result?.status === 'success') {
         await fetchProgressList()
+        showToast('Progress update deleted.')
       } else {
         dialog.alert(result?.message || 'Failed to delete progress.')
       }

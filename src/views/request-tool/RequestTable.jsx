@@ -460,6 +460,7 @@ export default function RequestTable({
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
           storageKey="request-tool.usage-records.visible-columns.v3"
+          scrollStorageKey="request-tool.usage-records.scroll"
           idPrefix="request-tool-record"
           emptyMessage="No usage records found."
           exportFilename={`usage-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -485,7 +486,7 @@ export default function RequestTable({
           renderQuickFilters={() => (
             <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
           )}
-          resetDeps={[filteredRecords, searchKeyword, staffFilter, periodRange]}
+          resetDeps={[searchKeyword, staffFilter, periodRange]}
           actionColumnWidth="56px"
           desktopUtilityPlacement="portal"
           desktopUtilityPortalId={desktopToolsId}

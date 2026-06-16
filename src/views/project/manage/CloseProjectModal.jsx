@@ -16,6 +16,7 @@ import {
   CFormCheck,
 } from '@coreui/react'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import { formatLocalDate } from '../../../components/filters'
 import { closeProject } from './projectApi'
 import { PROJECT_CLOSE_TYPES } from './projectStatus'
@@ -123,9 +124,7 @@ const CloseProjectModal = ({
       const data = await closeProject(project.id, finalPayload)
 
       if (data.status === 'success') {
-        dialog.alert(
-          isTermination ? 'Project terminated successfully.' : 'Project completed successfully.',
-        )
+        showToast(isTermination ? 'Project terminated.' : 'Project completed.')
         onConfirm()
       } else {
         dialog.alert('Failed to close project: ' + data.message)

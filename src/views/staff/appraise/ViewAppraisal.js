@@ -515,6 +515,7 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey="staff.appraise.records.visible-columns.v1"
+              scrollStorageKey="staff.appraise.records.scroll"
               apiKey="staff-appraise-records-visible-columns-v1"
               idPrefix="staff-appraise-record"
               emptyMessage="No appraisal records found."
@@ -548,7 +549,7 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
               renderQuickFilters={() => (
                 <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
               )}
-              resetDeps={[filteredRecords, searchText, filterStaff, filterType, periodRange]}
+              resetDeps={[searchText, filterStaff, filterType, periodRange]}
               desktopUtilityPlacement="portal"
               desktopUtilityPortalId="appraisal-record-table-tools"
               mobileUtilityPlacement="portal"

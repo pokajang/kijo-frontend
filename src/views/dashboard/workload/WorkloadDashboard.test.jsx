@@ -17,7 +17,7 @@ import {
   getKnowledgeAssistantThread,
 } from '../../knowledge/knowledgeApi'
 import dialog from '../../../components/dialog/dialogService'
-import { apiClientEvents } from '../../../api/apiClient'
+import { toastEvents } from '../../../components/toast/toastService'
 import WorkloadDashboard from './WorkloadDashboard'
 import { fetchJson, fetchJsonGet } from '../shared/fetchUtils'
 
@@ -825,7 +825,7 @@ describe('WorkloadDashboard', () => {
       configurable: true,
       value: { writeText },
     })
-    window.addEventListener(apiClientEvents.name, toastHandler)
+    window.addEventListener(toastEvents.name, toastHandler)
 
     try {
       renderWorkloadDashboard()
@@ -843,14 +843,13 @@ describe('WorkloadDashboard', () => {
           expect.objectContaining({
             detail: expect.objectContaining({
               type: 'toast',
-              color: 'success',
               message: expect.stringContaining('Share link copied. Expires'),
             }),
           }),
         ),
       )
     } finally {
-      window.removeEventListener(apiClientEvents.name, toastHandler)
+      window.removeEventListener(toastEvents.name, toastHandler)
     }
   })
 

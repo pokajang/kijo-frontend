@@ -5,6 +5,7 @@ import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '
 import ViewPoModal from './SupplierModal/ViewPoModal '
 import MarkSupplierPaid from './SupplierModal/MarkSupplierPaid '
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import {
   DataTableCardHeader,
   DataTableRecordControls,
@@ -142,8 +143,8 @@ export default function SupplierPoRecords() {
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('commercial.supplier-po')
 
-  const fetchAllPos = useCallback(async () => {
-    setLoading(true)
+  const fetchAllPos = useCallback(async ({ showLoader = true } = {}) => {
+    if (showLoader) setLoading(true)
     try {
       const rows = await fetchAllPagedRecords({
         url: `${import.meta.env.VITE_API_BASE}catalog/purchase-orders`,
@@ -261,8 +262,8 @@ export default function SupplierPoRecords() {
       .then((res) => res.json())
       .then((result) => {
         if (result.status === 'success') {
-          dialog.alert('PO deleted successfully.')
-          fetchAllPos()
+          showToast('Supplier PO deleted.')
+          fetchAllPos({ showLoader: false })
         } else {
           dialog.alert('Failed to delete PO: ' + (result.message || 'Unknown error.'))
         }
@@ -289,8 +290,8 @@ export default function SupplierPoRecords() {
       .then((res) => res.json())
       .then((result) => {
         if (result.status === 'success') {
-          dialog.alert('PO marked as paid.')
-          fetchAllPos()
+          showToast('Supplier PO marked as paid.')
+          fetchAllPos({ showLoader: false })
           setMarkPaidVisible(false)
         } else {
           dialog.alert('Failed to mark as paid: ' + (result.message || 'Unknown error.'))
@@ -580,6 +581,7 @@ export default function SupplierPoRecords() {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey={columnStorageKey}
+                scrollStorageKey="commercial.supplier-po.records.scroll"
                 idPrefix="supplier-po-record"
                 emptyMessage="No supplier PO records found."
                 exportFilename={`supplier-po-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -616,7 +618,6 @@ export default function SupplierPoRecords() {
                 initialSortDirByField={{ issued: 'desc', total: 'desc' }}
                 getSortValue={(po, field) => po[field]}
                 resetDeps={[
-                  filteredPos,
                   searchTerm,
                   periodRange,
                   personInChargeFilter,

@@ -474,6 +474,7 @@ export default function ProjectTable({
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey={columnStorageKey}
+              scrollStorageKey="project.manage.overview.scroll"
               idPrefix="project-manage-record"
               emptyMessage="No project records match current filters."
               exportFilename={`project-overview-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -537,7 +538,6 @@ export default function ProjectTable({
               }}
               getSortValue={(project, field) => project[field]}
               resetDeps={[
-                filtered,
                 activeTab,
                 searchTerm,
                 statusFilter,

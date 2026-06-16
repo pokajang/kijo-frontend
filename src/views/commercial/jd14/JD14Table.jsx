@@ -5,6 +5,7 @@ import { StatsStrip } from '../../../components/stats'
 import { countByPredicate, formatCount } from '../../../utils/stats/formatStats'
 import EditJd14Modal from './EditJd14Modal'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.jd14.visible-columns.v3'
@@ -143,6 +144,7 @@ const JD14Table = ({
   desktopUtilityPortalId,
   mobileUtilityPortalId,
   onStatFilter,
+  onRefresh,
   statsVisible = true,
 }) => {
   const navigate = useNavigate()
@@ -183,8 +185,8 @@ const JD14Table = ({
 
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('JD14 deleted successfully.')
-        window.location.reload()
+        showToast('JD14 record deleted.')
+        await onRefresh?.()
       } else {
         dialog.alert(`Failed to delete: ${result.message}`)
       }
@@ -294,6 +296,7 @@ const JD14Table = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={columnStorageKey}
+        scrollStorageKey="commercial.jd14.records.scroll"
         idPrefix="jd14-record"
         emptyMessage="No JD14 records found."
         exportFilename={`jd14-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -323,7 +326,7 @@ const JD14Table = ({
         initialSortDir="desc"
         initialSortDirByField={{ commenced: 'desc', ended: 'desc' }}
         getSortValue={(form, field) => form[field]}
-        resetDeps={[forms]}
+        resetDeps={[]}
         actionColumnWidth="56px"
       />
 
@@ -332,6 +335,7 @@ const JD14Table = ({
           visible={editJd14Visible}
           formData={selectedForm}
           onClose={() => setEditJd14Visible(false)}
+          onSaved={onRefresh}
         />
       )}
     </>

@@ -9,6 +9,7 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../../../project/manage/commercialDocsWarning'
+import { getCurrentProjectValue } from '../../../project/manage/projectApi'
 import { isProjectActive } from '../../../project/manage/projectStatus'
 import InvoiceFormShell from '../../../../shared/invoice/InvoiceFormShell'
 import { normalizePaymentTermsDays } from '../../../../shared/paymentTerms'
@@ -66,7 +67,7 @@ const isCancelledInvoice = (invoice = {}) => {
 }
 
 const buildProjectInvoiceSummary = ({ project, payload, docs }) => {
-  const projectValue = toNullableMoneyNumber(project?.quote_value ?? project?.quoteValue)
+  const projectValue = toNullableMoneyNumber(getCurrentProjectValue(project, null))
   const invoices = Array.isArray(docs?.invoices) ? docs.invoices : []
   const alreadyInvoiced = invoices
     .filter((invoice) => !isCancelledInvoice(invoice))

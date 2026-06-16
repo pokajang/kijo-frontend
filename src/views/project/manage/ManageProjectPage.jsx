@@ -81,17 +81,24 @@ const ManageProjectPage = () => {
     close: false,
   })
 
-  const triggerProgressRefresh = () => {
+  const triggerProgressRefresh = useCallback(() => {
     setProgressRefreshKey((prev) => prev + 1)
-  }
+  }, [])
 
-  const triggerCommercialRefresh = () => {
+  const triggerCommercialRefresh = useCallback(() => {
     setCommercialRefreshKey((prev) => prev + 1)
-  }
+  }, [])
 
-  const triggerVendorRefresh = () => {
+  const triggerVendorRefresh = useCallback(() => {
     setVendorRefreshKey((prev) => prev + 1)
-  }
+  }, [])
+
+  const handleProjectDetailsSaved = useCallback((updated) => {
+    setProject((prev) => ({
+      ...prev,
+      ...updated,
+    }))
+  }, [])
 
   const refreshProject = useCallback(async () => {
     if (!project?.id) return
@@ -111,15 +118,32 @@ const ManageProjectPage = () => {
         setProjectExpenses(data.expenses)
       } catch (err) {
         if (err.name === 'AbortError') return
-        console.error('Failed to fetch finance data:', err)
-        setProjectPayments([])
-        setProjectExpenses([])
+        if (!options.silentError) {
+          console.error('Failed to fetch finance data:', err)
+          setProjectPayments([])
+          setProjectExpenses([])
+        }
         setFinanceError(err.message || 'Failed to load project finance data.')
       } finally {
         setLoadingPayments(false)
       }
     },
     [project?.id],
+  )
+
+  const handleProjectValueUpdated = useCallback(
+    (updated) => {
+      handleProjectDetailsSaved(updated)
+      triggerCommercialRefresh()
+      triggerProgressRefresh()
+      fetchProjectFinanceData({ silentError: true })
+    },
+    [
+      fetchProjectFinanceData,
+      handleProjectDetailsSaved,
+      triggerCommercialRefresh,
+      triggerProgressRefresh,
+    ],
   )
 
   const openActionModal = useCallback((name, options = {}) => {
@@ -310,12 +334,8 @@ const ManageProjectPage = () => {
 
                 <ProjectDetailsCard
                   project={project}
-                  onSave={(updated) =>
-                    setProject((prev) => ({
-                      ...prev,
-                      ...updated,
-                    }))
-                  }
+                  onSave={handleProjectDetailsSaved}
+                  onValueUpdated={handleProjectValueUpdated}
                 />
 
                 <ProgressTrackerCard

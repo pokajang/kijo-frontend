@@ -22,6 +22,7 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../commercialDocsWarning'
+import { getCurrentProjectValue } from '../projectApi'
 const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false }) => {
   const navigate = useNavigate()
   const isActive = asPage || visible
@@ -79,14 +80,15 @@ const Jd14Modal = ({ visible = true, onClose, onCreated, project, asPage = false
   // If you have training-specific fields on `project`, you can sync here:
   useEffect(() => {
     if (project) {
+      const projectValue = getCurrentProjectValue(project, '')
       setTrainingDetails({
         topic: project.project_name || '',
         commencedDate: project.service_start_date || '',
         endDate: project.service_end_date || '',
         trainingVenue: project.training_venue || '',
         noOfPax: '',
-        amountApproved: project.quote_value || '',
-        amountClaimed: project.quote_value || '',
+        amountApproved: projectValue || '',
+        amountClaimed: projectValue || '',
       })
     }
   }, [project])

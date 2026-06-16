@@ -6,6 +6,7 @@ import { DetailField, DetailSection, ItemsTable } from '../shared/CommercialDeta
 import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import DoEditModalMain from './DoModal/DoEditModalMain'
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 
 const normalizeDeliveryOrder = (order = {}) => {
@@ -97,7 +98,7 @@ const DeliveryOrderDetailPage = () => {
       })
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('Delivery Order deleted successfully.')
+        showToast('Delivery Order deleted.')
         navigate('/commercial/delivery-order')
       } else {
         dialog.alert('Failed to delete delivery order.')
@@ -163,7 +164,7 @@ const DeliveryOrderDetailPage = () => {
       })
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('Delivery Order updated successfully.')
+        showToast('Delivery Order updated.')
         setEditVisible(false)
         fetchRecords()
       } else {

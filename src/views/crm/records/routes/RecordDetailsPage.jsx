@@ -164,6 +164,12 @@ const RecordDetailsPage = () => {
         onDescriptionChange={setDescription}
         loaRefNo={clientLoaRefNo}
         onLoaChange={setClientLoaRefNo}
+        onEditQuotation={() => {
+          const svc = serviceTab.replace('-tab', '')
+          navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record?.id}`, {
+            state: { returnTo },
+          })
+        }}
         mode={successActionType}
         isSubmitting={isSuccessSubmitting}
       />

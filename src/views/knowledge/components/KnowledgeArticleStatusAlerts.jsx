@@ -1,10 +1,9 @@
 import React from 'react'
 import { CAlert, CButton } from '@coreui/react'
 
-const KnowledgeArticleStatusAlerts = ({ error, success, draftNotice, onDismissDraftNotice }) => (
+const KnowledgeArticleStatusAlerts = ({ error, draftNotice, onDismissDraftNotice }) => (
   <>
     {error && <CAlert color="danger">{error}</CAlert>}
-    {success && <CAlert color="success">{success}</CAlert>}
     {draftNotice && (
       <CAlert
         color="info"

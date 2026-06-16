@@ -426,6 +426,7 @@ const FeedbackTable = ({
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
           storageKey="feedback.records.visible-columns.v3"
+          scrollStorageKey="feedback.records.scroll"
           idPrefix="feedback-record"
           emptyMessage="No feedbacks match the current filters."
           exportFilename={`feedback-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -452,7 +453,7 @@ const FeedbackTable = ({
           renderQuickFilters={() => (
             <PeriodRangeSelector value={periodRange} onChange={setPeriodRange} />
           )}
-          resetDeps={[filteredFeedbacks, searchTerm, statusFilter, reportedByFilter, periodRange]}
+          resetDeps={[searchTerm, statusFilter, reportedByFilter, periodRange]}
           actionColumnWidth="56px"
           desktopUtilityPlacement="portal"
           desktopUtilityPortalId={desktopToolsId}

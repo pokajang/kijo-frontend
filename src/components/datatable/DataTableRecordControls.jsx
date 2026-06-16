@@ -29,6 +29,7 @@ const DataTableRecordControls = ({
   advancedClassName = '',
   advancedPanelId,
   loading = false,
+  hideWhileLoading = false,
   visible = true,
 }) => {
   const canToggleFilters = typeof setShowAdvancedFilters === 'function'
@@ -37,7 +38,7 @@ const DataTableRecordControls = ({
   const panelId =
     advancedPanelId || `data-table-record-filters-${generatedPanelId.replace(/:/g, '')}`
 
-  if (loading || !visible) return null
+  if (!visible || (loading && hideWhileLoading)) return null
 
   return (
     <>

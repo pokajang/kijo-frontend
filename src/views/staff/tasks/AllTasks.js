@@ -604,6 +604,7 @@ const AllTasks = () => {
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
           storageKey="staff.tasks.all.visible-columns.v7"
+          scrollStorageKey="staff.tasks.all.scroll"
           idPrefix="all-staff-task"
           emptyMessage="No staff tasks found."
           exportFilename={`all-staff-tasks-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -655,7 +656,7 @@ const AllTasks = () => {
           }}
           getSortValue={(task, field) => (field === 'statusText' ? task.statusRank : task[field])}
           sortComparators={{ statusText: compareTaskPriority }}
-          resetDeps={[filteredTasks, staffFilter, periodRange, searchTerm]}
+          resetDeps={[staffFilter, periodRange, searchTerm]}
         />
       </CCardBody>
 

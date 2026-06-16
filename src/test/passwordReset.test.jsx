@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import PasswordReset from '../views/pages/login/PasswordReset'
+import { toastEvents } from '../components/toast/toastService'
 
 const authMock = vi.hoisted(() => ({
   resetPassword: vi.fn(),
@@ -35,29 +36,44 @@ describe('PasswordReset', () => {
   })
 
   it('submits a reset token and redirects after success', async () => {
+    const toastHandler = vi.fn()
+    window.addEventListener(toastEvents.name, toastHandler)
     renderPasswordReset()
 
-    expect(screen.getByLabelText('Email address')).toHaveValue('staff@example.com')
+    try {
+      expect(screen.getByLabelText('Email address')).toHaveValue('staff@example.com')
 
-    fireEvent.change(screen.getByLabelText('New password'), {
-      target: { name: 'newPassword', value: 'new-secret-123' },
-    })
-    fireEvent.change(screen.getByLabelText('Confirm password'), {
-      target: { name: 'confirmPassword', value: 'new-secret-123' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Reset password' }))
-
-    await waitFor(() => {
-      expect(authMock.resetPassword).toHaveBeenCalledWith({
-        email: 'staff@example.com',
-        token: 'token-123',
-        newPassword: 'new-secret-123',
-        confirmPassword: 'new-secret-123',
+      fireEvent.change(screen.getByLabelText('New password'), {
+        target: { name: 'newPassword', value: 'new-secret-123' },
       })
-    })
-    expect(await screen.findByText(/Password reset successfully/)).toBeInTheDocument()
+      fireEvent.change(screen.getByLabelText('Confirm password'), {
+        target: { name: 'confirmPassword', value: 'new-secret-123' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Reset password' }))
 
-    expect(await screen.findByText('Login page', {}, { timeout: 2000 })).toBeInTheDocument()
+      await waitFor(() => {
+        expect(authMock.resetPassword).toHaveBeenCalledWith({
+          email: 'staff@example.com',
+          token: 'token-123',
+          newPassword: 'new-secret-123',
+          confirmPassword: 'new-secret-123',
+        })
+      })
+      await waitFor(() =>
+        expect(toastHandler).toHaveBeenCalledWith(
+          expect.objectContaining({
+            detail: expect.objectContaining({
+              type: 'toast',
+              message: 'Password reset successfully. You can now sign in with your new password.',
+            }),
+          }),
+        ),
+      )
+
+      expect(await screen.findByText('Login page', {}, { timeout: 2000 })).toBeInTheDocument()
+    } finally {
+      window.removeEventListener(toastEvents.name, toastHandler)
+    }
   })
 
   it('shows reset failures without redirecting', async () => {

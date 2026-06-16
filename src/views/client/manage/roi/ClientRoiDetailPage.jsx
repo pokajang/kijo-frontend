@@ -400,6 +400,7 @@ const HistoryTableCard = ({
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
           storageKey={storageKey}
+          scrollStorageKey={`${storageKey}.scroll`}
           idPrefix={idPrefix}
           emptyMessage={emptyMessage}
           exportFilename={exportFilename}
@@ -432,7 +433,7 @@ const HistoryTableCard = ({
             paidAmount: 'desc',
           }}
           getSortValue={(row, field) => row[field]}
-          resetDeps={[filteredRows, searchTerm, statusFilter, typeFilter]}
+          resetDeps={[searchTerm, statusFilter, typeFilter]}
         />
       </CCardBody>
     </CCard>
@@ -649,6 +650,7 @@ const ClientRoiDetailPage = () => {
         }}
         requiredColumns={paymentRequiredColumns}
         storageKey="client.roi.detail.payments.visible-columns.v1"
+        scrollStorageKey="client.roi.detail.payments.scroll"
         idPrefix="client-roi-payments"
         emptyMessage="No payment history found for this client."
         exportFilename={`client-${companyId}-payments-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -692,6 +694,7 @@ const ClientRoiDetailPage = () => {
         }}
         requiredColumns={invoiceRequiredColumns}
         storageKey="client.roi.detail.invoices.visible-columns.v1"
+        scrollStorageKey="client.roi.detail.invoices.scroll"
         idPrefix="client-roi-invoices"
         emptyMessage="No invoice history found for this client."
         exportFilename={`client-${companyId}-invoices-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -733,6 +736,7 @@ const ClientRoiDetailPage = () => {
         }}
         requiredColumns={quoteRequiredColumns}
         storageKey="client.roi.detail.quotes.visible-columns.v1"
+        scrollStorageKey="client.roi.detail.quotes.scroll"
         idPrefix="client-roi-quotes"
         emptyMessage="No quotation history found for this client."
         exportFilename={`client-${companyId}-quotes-${new Date().toISOString().slice(0, 10)}.csv`}

@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import dialog from '../../../../components/dialog/dialogService'
+import { showToast } from '../../../../components/toast/toastService'
 import { getMessage, isSuccess, postJsonCompat } from '../services/compatApi'
 import { endpointsByService } from '../services/recordsActions'
+import {
+  buildRecordDetailStatusToastMessage,
+  RECORD_ACTION_TOAST_MESSAGES,
+} from '../utils/recordActionToastMessages'
 import {
   buildRecordEmailDraft,
   openRecordEmail,
@@ -66,8 +71,25 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
       navigate(returnTo)
     },
     navigate,
-    onRowMoved: async () => {
+    onActionSuccess: async ({ type, status, message } = {}) => {
+      if (type === 'delete') {
+        showToast(message || RECORD_ACTION_TOAST_MESSAGES.deleted)
+        return
+      }
       await loadRecord({ preferState: false, withSpinner: false })
+      if (status === 'Awarded') {
+        dialog
+          .confirm('Quotation awarded successfully. Go to project list?', {
+            title: 'Quotation Awarded',
+            confirmText: 'Go to project list',
+            cancelText: 'Stay here',
+          })
+          .then((goToList) => {
+            if (goToList) navigate('/project/manage')
+          })
+        return
+      }
+      showToast(message || (status ? buildRecordDetailStatusToastMessage(status) : ''))
     },
     modalBindings: detailModalBindings,
   })
@@ -129,7 +151,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     }
   }
 
-  const handleSuccessConfirm = async (projectCollaborators = []) => {
+  const handleSuccessConfirm = async (projectCollaborators = [], projectValueAdjustment = {}) => {
     if (!handlers || !selectedRecordIdForSuccess) return
     setIsSuccessSubmitting(true)
     try {
@@ -140,6 +162,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
         clientLoaRefNo,
         selectedRecordIdForSuccess,
         projectCollaborators,
+        projectValueAdjustment,
       }
       const ok =
         successActionType === 're-award'
@@ -171,7 +194,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
       setFollowUpRemarks('')
       setFollowUpDate('')
       await loadRecord({ preferState: false, withSpinner: false })
-      dialog.alert('Follow-up added successfully')
+      showToast(RECORD_ACTION_TOAST_MESSAGES.followUpAdded)
     } catch (err) {
       console.error('Add follow-up error:', err)
       dialog.alert(err?.message || 'Failed to add follow-up. Please try again.')
@@ -214,7 +237,6 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     setIsSyncingClient(true)
     try {
       await handlers.handleSyncClientDetails(record)
-      await loadRecord({ preferState: false, withSpinner: false })
     } finally {
       setIsSyncingClient(false)
     }
@@ -241,7 +263,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
         subject: emailDraftSubject,
         body: emailDraftBody,
       })
-      dialog.alert(result?.message || 'Quotation email sent successfully.')
+      showToast(result?.message || RECORD_ACTION_TOAST_MESSAGES.quotationEmailSent)
       setShowEmailConfirmModal(false)
     } catch (error) {
       setEmailSendError(error?.message || 'System email sending failed.')

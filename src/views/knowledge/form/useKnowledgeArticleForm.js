@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { showToast } from '../../../components/toast/toastService'
 import {
   ALLOWED_KNOWLEDGE_IMAGE_TYPES,
   MAX_KNOWLEDGE_IMAGE_BYTES,
@@ -36,7 +37,6 @@ const useKnowledgeArticleForm = ({ mode = 'create' } = {}) => {
   const [saving, setSaving] = useState(false)
   const [processingImages, setProcessingImages] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [draftNotice, setDraftNotice] = useState('')
   const previewUrlsRef = useRef(new Set())
   const draftKeyRef = useRef(localDraftKey(isEditing ? articleId : null))
@@ -260,7 +260,6 @@ const useKnowledgeArticleForm = ({ mode = 'create' } = {}) => {
 
     setSaving(true)
     setError('')
-    setSuccess('')
 
     try {
       if (isEditing && form.status === 'published' && status === 'draft') {
@@ -281,7 +280,7 @@ const useKnowledgeArticleForm = ({ mode = 'create' } = {}) => {
             : await unpublishKnowledgeArticle(json.data.id, statusRemarks)
       }
 
-      setSuccess(json.message || 'Knowledge article saved.')
+      showToast(String(json.message || 'Knowledge article saved.'))
       removeLocalDraft(draftKeyRef.current)
       revokeAllPreviewUrls()
       window.setTimeout(() => {
@@ -315,7 +314,6 @@ const useKnowledgeArticleForm = ({ mode = 'create' } = {}) => {
     saveArticle,
     saving,
     setDraftNotice,
-    success,
     updateExistingImageDescription,
     updateField,
     updateNewImageDescription,

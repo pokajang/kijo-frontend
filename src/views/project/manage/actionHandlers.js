@@ -1,4 +1,5 @@
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import { deleteProject, listProjects } from './projectApi'
 import { getProjectStatusTone } from './projectStatus'
 // src/views/project/actionHandlers.js
@@ -24,7 +25,7 @@ export async function handleDeleteProject(project) {
   try {
     const result = await deleteProject(project.id)
     if (result.status === 'success') {
-      dialog.alert('Project deleted successfully.')
+      showToast('Project deleted.')
       return true
     }
 

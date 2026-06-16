@@ -571,6 +571,7 @@ const SalaryRecord = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="my.salary-records.visible-columns.v1"
+        scrollStorageKey="my.salary-records.scroll"
         idPrefix="salary-record"
         emptyMessage="No salary records found."
         exportFilename={`my-salary-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -622,7 +623,7 @@ const SalaryRecord = ({
           payableSalary: 'desc',
           status: 'asc',
         }}
-        resetDeps={[records, searchText, statusFilter]}
+        resetDeps={[searchText, statusFilter]}
       />
     </>
   )

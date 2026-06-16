@@ -195,6 +195,7 @@ const Users = () => {
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey={columnStorageKey}
+              scrollStorageKey="users.records.scroll"
               apiKey={columnPreferenceApiKey}
               exportFilename={`system-users-${new Date().toISOString().slice(0, 10)}.csv`}
               emptyMessage="No system users found."

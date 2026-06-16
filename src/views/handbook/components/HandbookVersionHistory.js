@@ -307,6 +307,7 @@ const HandbookVersionHistory = ({ refreshKey = 0 }) => {
             defaultVisibleColumns={defaultVersionVisibleColumns}
             requiredColumns={requiredVersionColumns}
             storageKey={versionColumnStorageKey}
+            scrollStorageKey="handbook.version-history.scroll"
             idPrefix="handbook-version-history"
             exportFilename={`handbook-version-history-${new Date().toISOString().slice(0, 10)}.csv`}
             getRowKey={(version) => version.id}

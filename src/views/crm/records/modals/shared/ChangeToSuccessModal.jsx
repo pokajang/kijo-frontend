@@ -12,6 +12,7 @@ import {
   CCol,
   CFormLabel,
   CFormInput,
+  CFormCheck,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilTrash } from '@coreui/icons'
@@ -38,6 +39,24 @@ const getQuoteOwnerId = (record) => normalizeId(record?.createdById ?? record?.c
 
 const getCurrentUserStaffId = (user) => normalizeId(user?.staff_id ?? user?.id)
 
+const moneyValue = (record) => {
+  const raw =
+    record?.amount ??
+    record?.quote_value ??
+    record?.quoteValue ??
+    record?.grand_total ??
+    record?.grandTotal ??
+    0
+  const numeric = Number(String(raw).replace(/,/g, ''))
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
+const formatMoney = (value) =>
+  `RM ${Number(value || 0).toLocaleString('en-MY', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+
 const ChangeToSuccessModal = ({
   visible,
   onCancel,
@@ -49,6 +68,7 @@ const ChangeToSuccessModal = ({
   onChange,
   loaRefNo = '',
   onLoaChange,
+  onEditQuotation,
   awardDate,
   onAwardDateChange,
   description,
@@ -59,6 +79,9 @@ const ChangeToSuccessModal = ({
   const [staffLoading, setStaffLoading] = useState(false)
   const [staffLoadError, setStaffLoadError] = useState('')
   const [teamRows, setTeamRows] = useState([])
+  const [useAdjustedProjectValue, setUseAdjustedProjectValue] = useState(false)
+  const [currentProjectValue, setCurrentProjectValue] = useState('')
+  const [projectValueReason, setProjectValueReason] = useState('')
   const teamTouchedRef = useRef(false)
 
   const isReAward = mode === 're-award'
@@ -68,6 +91,7 @@ const ChangeToSuccessModal = ({
   const infoText = isReAward
     ? 'Upon Confirm Re-Award, a new project instance will be created under '
     : 'Upon Confirm Award, the project will be created under '
+  const quoteTotal = moneyValue(record)
 
   // Convert JS Date to yyyy-MM-dd string for input display
   const formattedAwardDate = awardDate ? new Date(awardDate).toISOString().split('T')[0] : ''
@@ -171,6 +195,9 @@ const ChangeToSuccessModal = ({
   useEffect(() => {
     if (!visible) {
       setTeamRows([])
+      setUseAdjustedProjectValue(false)
+      setCurrentProjectValue('')
+      setProjectValueReason('')
       teamTouchedRef.current = false
       return
     }
@@ -178,7 +205,10 @@ const ChangeToSuccessModal = ({
     if (!teamTouchedRef.current) {
       setTeamRows(buildDefaultTeamRows())
     }
-  }, [buildDefaultTeamRows, visible])
+    if (currentProjectValue === '') {
+      setCurrentProjectValue(quoteTotal ? quoteTotal.toFixed(2) : '')
+    }
+  }, [buildDefaultTeamRows, currentProjectValue, quoteTotal, visible])
 
   const selectedStaffIds = useMemo(
     () =>
@@ -235,11 +265,26 @@ const ChangeToSuccessModal = ({
   }, [teamRows])
 
   const leaderCount = projectCollaborators.filter((row) => row.project_role === 'Leader').length
+  const adjustedValueNumber = Number(currentProjectValue)
+  const hasValidAdjustedValue =
+    !useAdjustedProjectValue || (Number.isFinite(adjustedValueNumber) && adjustedValueNumber >= 0)
+  const hasProjectValueReason =
+    !useAdjustedProjectValue || String(projectValueReason || '').trim().length > 0
   const disableConfirm =
-    !value.trim() || !description.trim() || leaderCount !== 1 || isSubmitting || staffLoading
+    !value.trim() ||
+    !description.trim() ||
+    leaderCount !== 1 ||
+    !hasValidAdjustedValue ||
+    !hasProjectValueReason ||
+    isSubmitting ||
+    staffLoading
 
   const handleConfirm = () => {
-    onConfirm(projectCollaborators)
+    onConfirm(projectCollaborators, {
+      project_value_decision: useAdjustedProjectValue ? 'adjusted' : 'default',
+      current_project_value: useAdjustedProjectValue ? adjustedValueNumber : undefined,
+      project_value_reason: useAdjustedProjectValue ? projectValueReason.trim() : undefined,
+    })
   }
 
   return (
@@ -256,6 +301,76 @@ const ChangeToSuccessModal = ({
               onChange={(e) => onChange(e.target.value)}
               placeholder="E.g., Constant follow-up with clients and persistent negotiation."
             />
+          </CCol>
+        </CRow>
+
+        <CRow className="mb-3">
+          <CCol xs={12}>
+            <div className="border rounded p-3">
+              <div className="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                <div>
+                  <div className="small text-body-secondary">Quotation Grand Total</div>
+                  <div className="fw-semibold">{formatMoney(quoteTotal)}</div>
+                </div>
+                {onEditQuotation ? (
+                  <CButton
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    onClick={onEditQuotation}
+                    disabled={isSubmitting}
+                  >
+                    Edit Quotation First
+                  </CButton>
+                ) : null}
+              </div>
+
+              <CFormCheck
+                id="adjustProjectValue"
+                className="mt-3"
+                checked={useAdjustedProjectValue}
+                onChange={(event) => setUseAdjustedProjectValue(event.target.checked)}
+                label="Award with a different current project value"
+                disabled={isSubmitting}
+              />
+
+              {useAdjustedProjectValue ? (
+                <CRow className="g-2 mt-1">
+                  <CCol md={4}>
+                    <CFormLabel htmlFor="currentProjectValue" className="small text-muted mb-1">
+                      Current Project Value (RM)
+                    </CFormLabel>
+                    <CFormInput
+                      id="currentProjectValue"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={currentProjectValue}
+                      onChange={(event) => setCurrentProjectValue(event.target.value)}
+                      disabled={isSubmitting}
+                    />
+                  </CCol>
+                  <CCol md={8}>
+                    <CFormLabel htmlFor="projectValueReason" className="small text-muted mb-1">
+                      Reason
+                    </CFormLabel>
+                    <CFormInput
+                      id="projectValueReason"
+                      value={projectValueReason}
+                      onChange={(event) => setProjectValueReason(event.target.value)}
+                      placeholder="Example: Client awarded with approved variation."
+                      disabled={isSubmitting}
+                    />
+                  </CCol>
+                  <CCol xs={12}>
+                    <div className="small text-body-secondary">
+                      The quotation total remains {formatMoney(quoteTotal)}. The adjusted amount is
+                      stored as the project current value with revision history.
+                    </div>
+                  </CCol>
+                </CRow>
+              ) : null}
+            </div>
           </CCol>
         </CRow>
 

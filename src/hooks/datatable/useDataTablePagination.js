@@ -1,9 +1,31 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getInitialPageSize } from '../../utils/datatable/tableFormatters'
 
+const normalizeResetDep = (value) => {
+  if (Array.isArray(value) || typeof value === 'function') return undefined
+  if (value instanceof Date) return value.toISOString()
+  if (value && typeof value === 'object') {
+    try {
+      return JSON.stringify(
+        Object.keys(value)
+          .sort()
+          .reduce((acc, key) => {
+            acc[key] = value[key]
+            return acc
+          }, {}),
+      )
+    } catch {
+      return undefined
+    }
+  }
+  return value
+}
+
 export const useDataTablePagination = ({ rows = [], initialPageSize, resetDeps = [] } = {}) => {
+  const didMountResetRef = useRef(false)
   const [pageSize, setPageSize] = useState(initialPageSize || getInitialPageSize)
   const [currentPage, setCurrentPage] = useState(1)
+  const resetSignature = resetDeps.map(normalizeResetDep).join('|')
 
   const totalRows = rows.length
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
@@ -18,9 +40,12 @@ export const useDataTablePagination = ({ rows = [], initialPageSize, resetDeps =
   }, [currentPage, totalPages])
 
   useEffect(() => {
+    if (!didMountResetRef.current) {
+      didMountResetRef.current = true
+      return
+    }
     setCurrentPage(1)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, resetDeps)
+  }, [resetSignature])
 
   return {
     pageSize,

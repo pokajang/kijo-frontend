@@ -379,6 +379,7 @@ const InvoiceTable = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={columnStorageKey}
+        scrollStorageKey="commercial.invoice.records.scroll"
         idPrefix="invoice-record"
         emptyMessage="No invoice records found."
         exportFilename={`invoices-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -408,7 +409,7 @@ const InvoiceTable = ({
         initialSortDir="desc"
         initialSortDirByField={{ issued: 'desc', total: 'desc', age: 'desc' }}
         getSortValue={(invoice, field) => invoice[field]}
-        resetDeps={[invoices]}
+        resetDeps={[]}
         actionColumnWidth="56px"
       />
     </>

@@ -10,6 +10,23 @@ const PUBLIC_PATH_PREFIXES = ['/share/workload/', '/reset-password/']
 const isPublicPath = (path) =>
   PUBLIC_PATH_PREFIXES.some((prefix) => String(path || '').startsWith(prefix))
 
+const normalizeSessionUser = (payload) => {
+  const user = payload?.user || payload?.data?.user || null
+  if (!user) return null
+
+  const roles = Array.isArray(user.roles) ? user.roles : []
+  const normalizedRoles =
+    roles.includes('System Administrator') && !roles.includes('System Admin')
+      ? [...roles, 'System Admin']
+      : roles
+
+  return {
+    ...user,
+    staff_id: user.staff_id ?? user.staffId ?? user.id ?? null,
+    roles: normalizedRoles,
+  }
+}
+
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState('loading') // loading | authenticated | unauthenticated
@@ -99,8 +116,9 @@ const AuthProvider = ({ children }) => {
 
         const data = await res.json()
         setCsrfToken(data?.csrf_token)
-        if (data?.status === 'success' && data.user?.staff_id) {
-          setUser(data.user)
+        const sessionUser = normalizeSessionUser(data)
+        if ((data?.status === 'success' || sessionUser) && sessionUser?.staff_id) {
+          setUser(sessionUser)
           setStatus('authenticated')
           return true
         }
@@ -153,8 +171,9 @@ const AuthProvider = ({ children }) => {
       return { ok: false, message: data?.message || data?.error || fallbackMessage }
     }
 
-    if (data?.status === 'success' && data.user?.staff_id) {
-      setUser(data.user)
+    const sessionUser = normalizeSessionUser(data)
+    if ((data?.status === 'success' || sessionUser) && sessionUser?.staff_id) {
+      setUser(sessionUser)
       setStatus('authenticated')
       return { ok: true, data }
     }

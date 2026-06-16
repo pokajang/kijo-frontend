@@ -1,24 +1,45 @@
 import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import { useNavigate } from 'react-router-dom'
 import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CFormInput, CButton } from '@coreui/react'
 import { DataTableStatusBadge } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
+import { showToast } from '../../../../components/toast/toastService'
 import { reloadProjectPoNumber, updateProjectDetails } from '../projectApi'
 import { formatProjectDate } from '../projectDetailFormatters'
 import { getProjectStatusTone } from '../projectStatus'
+import ProjectValueUpdateModal from './ProjectValueUpdateModal'
 
-const ProjectDetailsCard = ({ project, onSave }) => {
+const quoteServiceFromProject = (project = {}) => {
+  const quoteType = String(project.quote_type || project.quoteType || '')
+    .trim()
+    .toLowerCase()
+  if (quoteType) return quoteType
+
+  const projectType = String(project.project_type || project.projectType || '').toLowerCase()
+  if (projectType.includes('training')) return 'training'
+  if (projectType.includes('industrial') || projectType.includes('hygiene')) return 'ih'
+  if (projectType.includes('manpower') || projectType.includes('man power')) return 'manpower'
+  if (projectType.includes('equipment')) return 'equipment'
+  if (projectType.includes('special')) return 'special'
+  return ''
+}
+
+const ProjectDetailsCard = ({ project, onSave, onValueUpdated }) => {
+  const navigate = useNavigate()
   const [draft, setDraft] = useState({ ...project })
   const [isDirty, setIsDirty] = useState(false)
   const [isReloadingPo, setIsReloadingPo] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showValueModal, setShowValueModal] = useState(false)
 
   useEffect(() => {
     setDraft({ ...project }) // reset draft when project changes externally
     setIsDirty(false)
     setIsEditing(false)
     setIsSaving(false)
+    setShowValueModal(false)
   }, [project])
 
   const handleChange = (e) => {
@@ -34,6 +55,8 @@ const ProjectDetailsCard = ({ project, onSave }) => {
   }
 
   const canReloadPo = !String(draft.po_loa_number || '').trim() && Boolean(project?.quote_id)
+  const quoteService = quoteServiceFromProject(project)
+  const canOpenSourceQuotation = Boolean(project?.quote_id && quoteService)
 
   const handleReloadPoNumber = async () => {
     if (!project?.id) return
@@ -46,7 +69,7 @@ const ProjectDetailsCard = ({ project, onSave }) => {
           po_loa_number: result.po_loa_number || '',
         }))
         setIsDirty(false)
-        dialog.alert('PO/LOA number reloaded successfully.')
+        showToast('PO/LOA number reloaded.')
       } else {
         dialog.alert(result.message || 'Failed to reload PO/LOA number.')
       }
@@ -67,7 +90,7 @@ const ProjectDetailsCard = ({ project, onSave }) => {
       const result = await updateProjectDetails(draft)
 
       if (result.status === 'success') {
-        dialog.alert('Project details updated successfully.')
+        showToast('Project details updated.')
         setIsDirty(false)
         setIsEditing(false)
         onSave?.(draft)
@@ -87,9 +110,41 @@ const ProjectDetailsCard = ({ project, onSave }) => {
       <CCardHeader className="rounded-0 d-flex align-items-center justify-content-between">
         <strong>Project Details</strong>
         {!isEditing && (
-          <CButton color="secondary" variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-            Edit
-          </CButton>
+          <div className="d-flex gap-2 flex-wrap justify-content-end">
+            {canOpenSourceQuotation ? (
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  navigate(
+                    `/crm/quotes?service=${quoteService}&edit=true&quoteId=${project.quote_id}`,
+                    {
+                      state: { returnTo: `/project/manage/${project.id}` },
+                    },
+                  )
+                }
+              >
+                Open Source Quotation
+              </CButton>
+            ) : null}
+            <CButton
+              color="primary"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowValueModal(true)}
+            >
+              Update Current Value
+            </CButton>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </CButton>
+          </div>
         )}
       </CCardHeader>
       <CCardBody className={!isEditing ? 'project-detail-compact-body' : undefined}>
@@ -250,6 +305,18 @@ const ProjectDetailsCard = ({ project, onSave }) => {
           )}
         </CRow>
       </CCardBody>
+      <ProjectValueUpdateModal
+        visible={showValueModal}
+        project={project}
+        onClose={() => setShowValueModal(false)}
+        onUpdated={(updated) => {
+          if (onValueUpdated) {
+            onValueUpdated(updated)
+          } else {
+            onSave?.(updated)
+          }
+        }}
+      />
     </>
   )
 }
@@ -257,6 +324,7 @@ const ProjectDetailsCard = ({ project, onSave }) => {
 ProjectDetailsCard.propTypes = {
   project: PropTypes.object,
   onSave: PropTypes.func,
+  onValueUpdated: PropTypes.func,
 }
 
 export default ProjectDetailsCard

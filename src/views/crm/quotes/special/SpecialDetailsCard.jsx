@@ -67,6 +67,10 @@ export default function SpecialDetailsCard({
   const [editingIndex, setEditingIndex] = useState(null)
   const [editLineItem, setEditLineItem] = useState(createDefaultLineItem)
   const selectedTemplate = templates.find((t) => Number(t.id) === Number(formData.specialId))
+  const appendabilityMessage =
+    formData.appendableProposalMessage || selectedTemplate?.appendableProposalMessage || ''
+  const hasKnownAppendability =
+    formData.hasAppendableProposal !== null && formData.hasAppendableProposal !== undefined
   const editServiceLabel = selectedTemplate
     ? `${selectedTemplate.serviceTitle} (${selectedTemplate.serviceCode})`
     : formData.serviceTitle
@@ -252,6 +256,13 @@ export default function SpecialDetailsCard({
               />
             ) : (
               <CFormInput readOnly value={editServiceLabel} />
+            )}
+            {appendabilityMessage && (
+              <div
+                className={`small mt-2 ${hasKnownAppendability && !formData.hasAppendableProposal ? 'text-danger' : 'text-muted'}`}
+              >
+                {appendabilityMessage}
+              </div>
             )}
           </CCol>
         </CRow>

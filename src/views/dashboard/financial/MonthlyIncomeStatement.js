@@ -400,6 +400,7 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
               dataColumns={debtorTableColumns}
               defaultVisibleColumns={debtorDefaultVisibleColumns}
               requiredColumns={debtorRequiredColumns}
+              scrollStorageKey="dashboard.financial.debtors.scroll"
               idPrefix="financial-debtors"
               loading={debtorsLoading}
               loadingMessage="Loading debtors..."

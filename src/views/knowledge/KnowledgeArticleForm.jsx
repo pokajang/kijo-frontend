@@ -35,7 +35,6 @@ const KnowledgeArticleForm = ({ mode = 'create' }) => {
     saveArticle,
     saving,
     setDraftNotice,
-    success,
     updateExistingImageDescription,
     updateField,
     updateNewImageDescription,
@@ -59,7 +58,6 @@ const KnowledgeArticleForm = ({ mode = 'create' }) => {
           <CCardBody onPaste={handlePaste}>
             <KnowledgeArticleStatusAlerts
               error={error}
-              success={success}
               draftNotice={draftNotice}
               onDismissDraftNotice={() => setDraftNotice('')}
             />

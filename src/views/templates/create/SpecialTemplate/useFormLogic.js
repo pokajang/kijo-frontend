@@ -20,7 +20,17 @@ const INITIAL_TEMPLATE_STATE = {
   serviceCode: '',
   serviceSummary: '',
   proposalContent: '',
+  defaultLineItems: [],
 }
+
+const createDefaultLineItem = () => ({
+  title: '',
+  description: '',
+  unit: '',
+  quantity: 1,
+  unitPrice: 0,
+  amount: 0,
+})
 
 export default function useFormLogic({ isEdit, editId }) {
   const navigate = useNavigate()
@@ -126,6 +136,37 @@ export default function useFormLogic({ isEdit, editId }) {
   const handleEditorChange = (html, field) => {
     const targetField = field === 'proposalContent' ? 'proposalContent' : 'serviceSummary'
     setTemplate((prev) => ({ ...prev, [targetField]: html }))
+  }
+
+  const handleAddDefaultLineItem = () => {
+    setTemplate((prev) => ({
+      ...prev,
+      defaultLineItems: [...(prev.defaultLineItems || []), createDefaultLineItem()],
+    }))
+  }
+
+  const handleDefaultLineItemChange = (index, field, value) => {
+    setTemplate((prev) => {
+      const items = [...(prev.defaultLineItems || [])]
+      const current = { ...createDefaultLineItem(), ...(items[index] || {}) }
+      const next = { ...current, [field]: value }
+      if (field === 'quantity' || field === 'unitPrice') {
+        const quantity = field === 'quantity' ? Number(value) || 0 : Number(next.quantity) || 0
+        const unitPrice = field === 'unitPrice' ? Number(value) || 0 : Number(next.unitPrice) || 0
+        next.quantity = quantity
+        next.unitPrice = unitPrice
+        next.amount = parseFloat((quantity * unitPrice).toFixed(2))
+      }
+      items[index] = next
+      return { ...prev, defaultLineItems: items }
+    })
+  }
+
+  const handleRemoveDefaultLineItem = (index) => {
+    setTemplate((prev) => ({
+      ...prev,
+      defaultLineItems: (prev.defaultLineItems || []).filter((_, itemIndex) => itemIndex !== index),
+    }))
   }
 
   const finalizingBmTranslation =
@@ -271,6 +312,9 @@ export default function useFormLogic({ isEdit, editId }) {
     setSaveError,
     handleInputChange,
     handleEditorChange,
+    handleAddDefaultLineItem,
+    handleDefaultLineItemChange,
+    handleRemoveDefaultLineItem,
     handleNewFileChange,
     handleRenameFile,
     handleRemoveNewAttachment,

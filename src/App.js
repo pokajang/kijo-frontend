@@ -12,6 +12,7 @@ import AuthProvider from './auth/AuthProvider'
 import RequireAuth from './auth/RequireAuth'
 import VersionNotifier from './components/VersionNotifier'
 import AppDialogProvider from './components/dialog/AppDialogProvider'
+import AppToastProvider from './components/toast/AppToastProvider'
 import AppApiProvider from './api/AppApiProvider'
 import AppNotificationProvider from './notifications/AppNotificationProvider'
 import WorkflowSetupStatusProvider from './workflows/WorkflowSetupStatusProvider'
@@ -41,52 +42,54 @@ const App = () => {
 
   return (
     <BrowserRouter basename={import.meta.env.VITE_BASENAME || '/'}>
-      <AppApiProvider>
-        <AuthProvider>
-          <AppDialogProvider>
-            <VersionNotifier />
-            <Suspense
-              fallback={
-                <div className="pt-3 text-center">
-                  <CSpinner color="primary" variant="grow" />
-                </div>
-              }
-            >
-              <Routes>
-                <Route path="/login" name="Login Page" element={<Login />} />
-                <Route
-                  path="/reset-password/:token"
-                  name="Password Reset"
-                  element={<PasswordReset />}
-                />
-                <Route
-                  path="/share/workload/:token"
-                  name="Shared Workload Dashboard"
-                  element={
-                    <RightDrawerProvider>
-                      <SharedWorkloadDashboard />
-                    </RightDrawerProvider>
-                  }
-                />
-                {/* Wildcard route for everything else */}
-                <Route
-                  path="*"
-                  name="Home"
-                  element={
-                    <RequireAuth>
-                      <AppNotificationProvider>
-                        <WorkflowSetupStatusProvider>
-                          <DefaultLayout />
-                        </WorkflowSetupStatusProvider>
-                      </AppNotificationProvider>
-                    </RequireAuth>
-                  }
-                />
-              </Routes>
-            </Suspense>
-          </AppDialogProvider>
-        </AuthProvider>
-      </AppApiProvider>
+      <AppToastProvider>
+        <AppApiProvider>
+          <AuthProvider>
+            <AppDialogProvider>
+              <VersionNotifier />
+              <Suspense
+                fallback={
+                  <div className="pt-3 text-center">
+                    <CSpinner color="primary" variant="grow" />
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route path="/login" name="Login Page" element={<Login />} />
+                  <Route
+                    path="/reset-password/:token"
+                    name="Password Reset"
+                    element={<PasswordReset />}
+                  />
+                  <Route
+                    path="/share/workload/:token"
+                    name="Shared Workload Dashboard"
+                    element={
+                      <RightDrawerProvider>
+                        <SharedWorkloadDashboard />
+                      </RightDrawerProvider>
+                    }
+                  />
+                  {/* Wildcard route for everything else */}
+                  <Route
+                    path="*"
+                    name="Home"
+                    element={
+                      <RequireAuth>
+                        <AppNotificationProvider>
+                          <WorkflowSetupStatusProvider>
+                            <DefaultLayout />
+                          </WorkflowSetupStatusProvider>
+                        </AppNotificationProvider>
+                      </RequireAuth>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </AppDialogProvider>
+          </AuthProvider>
+        </AppApiProvider>
+      </AppToastProvider>
     </BrowserRouter>
   )
 }

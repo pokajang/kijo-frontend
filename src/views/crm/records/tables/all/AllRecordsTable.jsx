@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { CBadge, CTooltip } from '@coreui/react'
 import { getDateOnly, getIssuerCodeOptions, getYearOptions } from '../../utils/recordFilters'
 import {
@@ -62,6 +62,7 @@ const AllRecordsTable = ({
   onEmail,
   onSharePdf,
   onStatsScopeLabelChange,
+  onFilterContextChange,
   statsVisible = true,
   controlsVisible = true,
 }) => {
@@ -69,6 +70,7 @@ const AllRecordsTable = ({
   const truncateStyle = recordsTruncateStyle
   const currentYear = String(new Date().getFullYear())
   const fmtDate = getDateOnly
+  const didMountPageResetRef = useRef(false)
   const dataColumns = useMemo(
     () => [
       {
@@ -157,7 +159,7 @@ const AllRecordsTable = ({
     [],
   )
 
-  const state = useRecordTableState()
+  const state = useRecordTableState(`crm.records.${activeTab}.table-state.v1`)
   const {
     copiedEmail,
     setCopiedEmail,
@@ -243,6 +245,17 @@ const AllRecordsTable = ({
   })
 
   const { sortedRecords, totalPages, activeChips, activeFilterCount } = derived
+  const activeChipSignature = activeChips.map((chip) => `${chip.key}:${chip.label}`).join('|')
+
+  useEffect(() => {
+    onFilterContextChange?.({
+      activeFilterCount,
+      activeChips,
+      statusFilter,
+      searchInput,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilterCount, activeChipSignature, onFilterContextChange, searchInput, statusFilter])
 
   const statsItems = useMemo(
     () =>
@@ -302,6 +315,10 @@ const AllRecordsTable = ({
   }, [currentPage, totalPages, setCurrentPage])
 
   useEffect(() => {
+    if (!didMountPageResetRef.current) {
+      didMountPageResetRef.current = true
+      return
+    }
     setCurrentPage(1)
   }, [
     searchTerm,
@@ -652,6 +669,7 @@ const AllRecordsTable = ({
         storageKey={COLUMN_STORAGE_KEY}
         apiKey={COLUMN_PREFERENCE_API_KEY}
         idPrefix="all-records"
+        scrollStorageKey={`crm.records.${activeTab}.scroll`}
         getRowKey={getAllRecordRowKey}
         renderCell={renderRecordCell}
         renderActions={renderRecordActions}

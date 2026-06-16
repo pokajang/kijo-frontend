@@ -13,6 +13,7 @@ import {
   CRow,
   CSpinner,
 } from '@coreui/react'
+import { showToast } from '../toast/toastService'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 
@@ -365,7 +366,7 @@ const StaffProfile = ({ onStatusChange }) => {
       setSavedProfileDetails(nextSavedProfile)
       setValidationErrors({})
       setEditing(false)
-      setNotice({ color: 'success', message: 'Profile saved.' })
+      showToast('Profile saved.')
       onStatusChange?.({ profileComplete: isStaffProfileComplete(nextSavedProfile) })
     } catch (error) {
       setNotice({

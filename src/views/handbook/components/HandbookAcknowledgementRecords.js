@@ -228,6 +228,7 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
             requiredColumns={requiredAcknowledgementColumns}
             storageKey={acknowledgementColumnStorageKey}
             apiKey={acknowledgementColumnPreferenceApiKey}
+            scrollStorageKey="handbook.acknowledgement-records.scroll"
             idPrefix="handbook-acknowledgement"
             exportFilename={`handbook-acknowledgements-${new Date().toISOString().slice(0, 10)}.csv`}
             getRowKey={(record, index) => record.id || `${record.fullName}-${index}`}
@@ -246,7 +247,7 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
             mobileUtilityPortalId={mobileUtilityPortalId}
             showMobileUtilityRow={false}
             showDesktopSummary={false}
-            resetDeps={[searchTerm, periodRange, records.length]}
+            resetDeps={[searchTerm, periodRange]}
             getMobileTitle={(record) => record.fullName}
             getMobileSubtitle={(record) => record.version}
             mobileRecord={{

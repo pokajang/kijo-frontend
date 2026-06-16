@@ -23,6 +23,7 @@ import dialog from '../../components/dialog/dialogService'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { supportModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import { useAuth } from '../../auth/AuthProvider'
+import { showToast } from '../../components/toast/toastService'
 
 const FeedbackPage = () => {
   const navigate = useNavigate()
@@ -113,6 +114,7 @@ const FeedbackPage = () => {
       setAllFeedbacks((prev) =>
         prev.map((fb) => (fb.id === modalData.id ? { ...fb, ...modalData } : fb)),
       )
+      showToast('Feedback fix details updated.')
       handleCloseModal()
     } else {
       dialog.alert('Failed to update: ' + result.message)
@@ -156,7 +158,7 @@ const FeedbackPage = () => {
             item.id === userEditFeedbackId ? { ...item, feedback: trimmed } : item,
           ),
         )
-        dialog.alert('Feedback updated successfully.')
+        showToast('Feedback updated.')
         closeUserEditModal()
       } else {
         dialog.alert(result.message || 'Failed to update feedback.')
@@ -201,7 +203,7 @@ const FeedbackPage = () => {
     const result = await deleteFeedback(fb.id)
     if (result.status === 'success') {
       setAllFeedbacks((prev) => prev.filter((item) => item.id !== fb.id))
-      dialog.alert('Feedback deleted.')
+      showToast('Feedback deleted.')
     } else {
       dialog.alert('Failed to delete: ' + result.message)
     }

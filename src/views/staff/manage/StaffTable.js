@@ -146,6 +146,7 @@ const StaffTable = ({ staffList = [], onView, onEdit, onTerminate, statsVisible 
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey={columnStorageKey}
+        scrollStorageKey="staff.manage.table.scroll"
         apiKey={columnPreferenceApiKey}
         idPrefix="staff-table"
         emptyMessage="No staff records found."

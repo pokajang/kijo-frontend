@@ -477,6 +477,7 @@ const OtherClaimRecords = ({
         defaultVisibleColumns={defaultVisibleColumns}
         requiredColumns={requiredColumns}
         storageKey="my.other-claim-records.visible-columns.v2"
+        scrollStorageKey="my.other-claim-records.scroll"
         idPrefix="other-claim-record"
         emptyMessage="No other claim records found."
         exportFilename={`my-other-claim-records-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -524,7 +525,7 @@ const OtherClaimRecords = ({
           claimsTotal: 'desc',
           status: 'asc',
         }}
-        resetDeps={[records, searchText, statusFilter]}
+        resetDeps={[searchText, statusFilter]}
       />
     </>
   )

@@ -1,31 +1,127 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getPeriodRangePreset } from '../../../../components/filters'
 import { getInitialPageSize } from '../utils/allRecordsTableUtils'
 import { getIssuerCodeOptions, getYearOptions } from '../utils/recordFilters'
 
-export const useServiceRecordsTableState = (records = []) => {
-  const currentYear = String(new Date().getFullYear())
+const readStoredState = (storageKey) => {
+  if (!storageKey || typeof window === 'undefined') return {}
+  try {
+    return JSON.parse(window.sessionStorage.getItem(storageKey) || '{}') || {}
+  } catch {
+    return {}
+  }
+}
 
-  const [searchInput, setSearchInput] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [yearFilter, setYearFilter] = useState('all')
-  const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
-  const [quotationAge, setQuotationAge] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [followUpFilter, setFollowUpFilter] = useState('all')
-  const [followUpRecency, setFollowUpRecency] = useState('all')
-  const [createdByFilter, setCreatedByFilter] = useState('all')
-  const [minAmount, setMinAmount] = useState('')
-  const [maxAmount, setMaxAmount] = useState('')
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+const writeStoredState = (storageKey, state) => {
+  if (!storageKey || typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(storageKey, JSON.stringify(state))
+  } catch {
+    // Ignore storage failures; table state will fall back to defaults.
+  }
+}
+
+const getStoredString = (state, key, fallback) =>
+  typeof state?.[key] === 'string' ? state[key] : fallback
+
+const getStoredBoolean = (state, key, fallback) =>
+  typeof state?.[key] === 'boolean' ? state[key] : fallback
+
+const getStoredNumber = (state, key, fallback) => {
+  const value = Number(state?.[key])
+  return Number.isFinite(value) && value > 0 ? value : fallback
+}
+
+export const useServiceRecordsTableState = (
+  records = [],
+  storageKey = 'crm.records.service.table-state.v1',
+) => {
+  const currentYear = String(new Date().getFullYear())
+  const storedState = useMemo(() => readStoredState(storageKey), [storageKey])
+
+  const [searchInput, setSearchInput] = useState(() =>
+    getStoredString(storedState, 'searchInput', ''),
+  )
+  const [searchTerm, setSearchTerm] = useState(() => getStoredString(storedState, 'searchTerm', ''))
+  const [yearFilter, setYearFilter] = useState(() =>
+    getStoredString(storedState, 'yearFilter', 'all'),
+  )
+  const [periodRange, setPeriodRange] = useState(
+    () => storedState.periodRange || getPeriodRangePreset('ytd'),
+  )
+  const [quotationAge, setQuotationAge] = useState(() =>
+    getStoredString(storedState, 'quotationAge', 'all'),
+  )
+  const [statusFilter, setStatusFilter] = useState(() =>
+    getStoredString(storedState, 'statusFilter', 'all'),
+  )
+  const [followUpFilter, setFollowUpFilter] = useState(() =>
+    getStoredString(storedState, 'followUpFilter', 'all'),
+  )
+  const [followUpRecency, setFollowUpRecency] = useState(() =>
+    getStoredString(storedState, 'followUpRecency', 'all'),
+  )
+  const [createdByFilter, setCreatedByFilter] = useState(() =>
+    getStoredString(storedState, 'createdByFilter', 'all'),
+  )
+  const [minAmount, setMinAmount] = useState(() => getStoredString(storedState, 'minAmount', ''))
+  const [maxAmount, setMaxAmount] = useState(() => getStoredString(storedState, 'maxAmount', ''))
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(() =>
+    getStoredBoolean(storedState, 'showAdvancedFilters', false),
+  )
   const [openActionDropdown, setOpenActionDropdown] = useState(null)
-  const [sortField, setSortField] = useState('created')
-  const [sortDir, setSortDir] = useState('desc')
-  const [pageSize, setPageSize] = useState(getInitialPageSize)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [sortField, setSortField] = useState(() =>
+    getStoredString(storedState, 'sortField', 'created'),
+  )
+  const [sortDir, setSortDir] = useState(() => getStoredString(storedState, 'sortDir', 'desc'))
+  const [pageSize, setPageSize] = useState(() =>
+    getStoredNumber(storedState, 'pageSize', getInitialPageSize()),
+  )
+  const [currentPage, setCurrentPage] = useState(() =>
+    getStoredNumber(storedState, 'currentPage', 1),
+  )
 
   const creatorOptions = useMemo(() => getIssuerCodeOptions(records), [records])
   const yearOptions = useMemo(() => getYearOptions(records, currentYear), [records, currentYear])
+
+  useEffect(() => {
+    writeStoredState(storageKey, {
+      searchInput,
+      searchTerm,
+      yearFilter,
+      periodRange,
+      quotationAge,
+      statusFilter,
+      followUpFilter,
+      followUpRecency,
+      createdByFilter,
+      minAmount,
+      maxAmount,
+      showAdvancedFilters,
+      sortField,
+      sortDir,
+      pageSize,
+      currentPage,
+    })
+  }, [
+    createdByFilter,
+    currentPage,
+    followUpFilter,
+    followUpRecency,
+    maxAmount,
+    minAmount,
+    pageSize,
+    periodRange,
+    quotationAge,
+    searchInput,
+    searchTerm,
+    showAdvancedFilters,
+    sortDir,
+    sortField,
+    statusFilter,
+    storageKey,
+    yearFilter,
+  ])
 
   const resetFilters = () => {
     setSearchInput('')

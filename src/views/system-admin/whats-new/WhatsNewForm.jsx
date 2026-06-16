@@ -15,6 +15,7 @@ import {
   CRow,
 } from '@coreui/react'
 import { DataTableLoadingState } from '../../../components/datatable'
+import { showToast } from '../../../components/toast/toastService'
 import {
   actionDestinations,
   ALLOWED_NOTICE_IMAGE_TYPES,
@@ -53,7 +54,6 @@ const WhatsNewForm = ({ mode }) => {
   const [loading, setLoading] = useState(isEditing)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [draftRecovered, setDraftRecovered] = useState(false)
   const hasLoadedCreateDraftRef = useRef(false)
   const previewUrlsRef = useRef(new Set())
@@ -260,7 +260,6 @@ const WhatsNewForm = ({ mode }) => {
 
     setSaving(true)
     setError('')
-    setSuccess('')
     try {
       const payload = buildPayload(form)
       const res = await fetch(`${API_BASE}whats-new${isEditing ? `/${noticeId}` : ''}`, {
@@ -273,7 +272,7 @@ const WhatsNewForm = ({ mode }) => {
         throw new Error(data?.message || "Failed to save What's New notice.")
       }
 
-      setSuccess(data.message || "What's New notice saved.")
+      showToast(String(data.message || "What's New notice saved."))
       revokeAllPreviewUrls()
       if (!isEditing) window.localStorage.removeItem(CREATE_DRAFT_STORAGE_KEY)
       window.setTimeout(() => navigate('/system-admin/whats-new'), 450)
@@ -301,7 +300,6 @@ const WhatsNewForm = ({ mode }) => {
           </CCardHeader>
           <CCardBody>
             {error && <CAlert color="danger">{error}</CAlert>}
-            {success && <CAlert color="success">{success}</CAlert>}
             {draftRecovered && (
               <CAlert
                 color="info"

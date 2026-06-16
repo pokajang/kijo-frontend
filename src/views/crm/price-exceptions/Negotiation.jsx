@@ -746,6 +746,7 @@ const Negotiation = () => {
                 defaultVisibleColumns={defaultVisibleColumns}
                 requiredColumns={requiredColumns}
                 storageKey="crm.negotiations.visible-columns.v2"
+                scrollStorageKey="crm.negotiations.records.scroll"
                 idPrefix="crm-negotiation"
                 loading={loading}
                 loadingMessage="Loading negotiations..."

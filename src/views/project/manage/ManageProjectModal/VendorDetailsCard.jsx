@@ -28,6 +28,7 @@ import {
 import Select from '../../../../components/forms/ThemedSelect'
 import { DataTableActionMenu, DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
+import { showToast } from '../../../../components/toast/toastService'
 import {
   getProjectLoaUrl,
   listAllVendors,
@@ -222,6 +223,7 @@ const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
         await fetchAssignedVendors()
         resetAwardForm()
         setShowAwardModal(false)
+        showToast(isEditing ? 'Vendor assignment updated.' : 'Vendor assigned.')
 
         if (typeof onProgressUpdate === 'function') {
           onProgressUpdate()
@@ -279,6 +281,7 @@ const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
       const result = await removeProjectVendor(payload)
       if (result.status === 'success') {
         await fetchAssignedVendors()
+        showToast('Vendor removed from project.')
 
         if (
           editingAssignmentId != null &&

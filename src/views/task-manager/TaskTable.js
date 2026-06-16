@@ -565,6 +565,7 @@ const TaskTable = ({
           defaultVisibleColumns={defaultVisibleColumns}
           requiredColumns={requiredColumns}
           storageKey="task-manager.tasks.visible-columns.v7"
+          scrollStorageKey="task-manager.tasks.scroll"
           apiKey="task-manager-tasks-visible-columns-v7"
           idPrefix="task-manager-task"
           emptyMessage="No tasks data"
@@ -606,7 +607,7 @@ const TaskTable = ({
           }}
           getSortValue={(task, field) => (field === 'statusText' ? task.statusRank : task[field])}
           sortComparators={{ statusText: compareTaskPriority }}
-          resetDeps={[filteredTasks, searchTerm, selectedPeriodRange]}
+          resetDeps={[searchTerm, selectedPeriodRange]}
         />
       </CCardBody>
       <CModal

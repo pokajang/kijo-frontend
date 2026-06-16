@@ -11,6 +11,7 @@ import {
   ProjectCommercialDocsNotice,
   useProjectCommercialDocs,
 } from '../../../project/manage/commercialDocsWarning'
+import { getCurrentProjectValue } from '../../../project/manage/projectApi'
 import { buildJD14CreatePayload, createJD14Form } from './jd14CreatePayload'
 import JD14ReviewStep from './JD14ReviewStep'
 import JD14SuccessStep from './JD14SuccessStep'
@@ -42,6 +43,8 @@ const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
   useEffect(() => {
     if (!project) return
 
+    const projectValue = getCurrentProjectValue(project, '')
+
     setEmployerDetails({
       employerName: project.client_name || '',
       address: project.client_full_address || '',
@@ -55,8 +58,8 @@ const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
       endDate: project.service_end_date || '',
       trainingVenue: project.training_venue || '',
       noOfPax: '',
-      amountApproved: project.quote_value || '',
-      amountClaimed: project.quote_value || '',
+      amountApproved: projectValue || '',
+      amountClaimed: projectValue || '',
     })
   }, [project])
 

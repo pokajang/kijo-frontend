@@ -6,6 +6,7 @@ import { DetailField, DetailSection, ItemsTable } from '../shared/CommercialDeta
 import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import MarkSupplierPaid from './SupplierModal/MarkSupplierPaid '
 import dialog from '../../../components/dialog/dialogService'
+import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 
 const money = (value) => `RM ${Number.parseFloat(value || 0).toFixed(2)}`
@@ -82,7 +83,7 @@ const SupplierPoDetailPage = () => {
       )
       const result = await res.json()
       if (result.status === 'success') {
-        dialog.alert('PO deleted successfully.')
+        showToast('Supplier PO deleted.')
         navigate('/commercial/supplier-po')
       } else {
         dialog.alert('Failed to delete PO: ' + (result.message || 'Unknown error.'))
@@ -107,7 +108,7 @@ const SupplierPoDetailPage = () => {
       .then((res) => res.json())
       .then((result) => {
         if (result.status === 'success') {
-          dialog.alert('PO marked as paid.')
+          showToast('Supplier PO marked as paid.')
           setMarkPaidVisible(false)
           fetchRecords()
         } else {

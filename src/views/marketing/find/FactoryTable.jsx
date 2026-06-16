@@ -129,6 +129,7 @@ const FactoryTable = ({
       defaultVisibleColumns={defaultVisibleColumns}
       requiredColumns={requiredColumns}
       storageKey="marketing.factory-find.visible-columns.v3"
+      scrollStorageKey="marketing.factory-find.scroll"
       idPrefix="marketing-factory"
       emptyMessage='No factories found. Try "Generate", different keywords, or a different region.'
       exportFilename={`factory-results-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -161,7 +162,7 @@ const FactoryTable = ({
       }}
       initialSortField="name"
       renderQuickFilters={renderQuickFilters}
-      resetDeps={[filtered, details]}
+      resetDeps={[details]}
       actionColumnWidth="56px"
       className="factory-directory-table"
     />

@@ -314,6 +314,7 @@ const SectionMailDiagnostics = () => {
             rows={logRows}
             dataColumns={logColumns}
             requiredColumns={requiredLogColumns}
+            scrollStorageKey="system-admin.mail-diagnostics.scroll"
             idPrefix="system-admin-mail-diagnostics"
             emptyMessage="No email test records yet."
             initialSortField="timestamp"

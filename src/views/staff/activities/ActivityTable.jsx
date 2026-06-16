@@ -79,6 +79,7 @@ const ActivityTable = ({
       defaultVisibleColumns={defaultVisibleColumns}
       requiredColumns={requiredColumns}
       storageKey="staff.activities.visible-columns.v3"
+      scrollStorageKey="staff.activities.scroll"
       idPrefix="staff-activity"
       emptyMessage="No records found for the selected filters."
       exportFilename={`activity-log-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -96,7 +97,7 @@ const ActivityTable = ({
       }}
       initialSortField="date"
       initialSortDir="desc"
-      resetDeps={[data]}
+      resetDeps={[]}
       desktopUtilityPlacement="portal"
       desktopUtilityPortalId={desktopUtilityPortalId}
       mobileUtilityPlacement="portal"

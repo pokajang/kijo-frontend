@@ -12,6 +12,7 @@ import {
   CSpinner,
 } from '@coreui/react'
 import dialog from '../dialog/dialogService'
+import { showToast } from '../toast/toastService'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png']
@@ -27,7 +28,6 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState(null)
 
   const hasExistingSignature = Boolean(currentSignatureUrl)
   const hasSelectedFile = Boolean(signatureFile)
@@ -51,7 +51,6 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
     const fetchSignature = async () => {
       setLoading(true)
       setError('')
-      setNotice(null)
       try {
         const res = await fetch(`${API_BASE}signature`, {
           credentials: 'include',
@@ -86,7 +85,6 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
-    setNotice(null)
     setError('')
     setSignatureFile(null)
     setPreviewUrl(null)
@@ -125,7 +123,6 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
 
     setSaving(true)
     setError('')
-    setNotice(null)
     try {
       const formData = new FormData()
       formData.append('signature', signatureFile)
@@ -143,7 +140,7 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
       setPreviewUrl(null)
       setSignatureFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
-      setNotice({ color: 'success', message: 'Signature saved.' })
+      showToast('Signature saved.')
       window.dispatchEvent(new Event('kijo:signature-updated'))
       onStatusChange?.({ signatureUploaded: true })
       onClose?.()
@@ -162,11 +159,6 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
         </div>
       </CCardHeader>
       <CCardBody className="records-page-card-body">
-        {notice && (
-          <CAlert color={notice.color} className="mb-3" aria-live="polite">
-            {notice.message}
-          </CAlert>
-        )}
         {error && (
           <CAlert id="signatureUpload-error" color="danger" className="mb-3" aria-live="assertive">
             {error}

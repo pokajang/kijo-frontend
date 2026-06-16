@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import dialog from '../../components/dialog/dialogService'
 import { useAuth } from '../../auth/AuthProvider'
+import { showToast } from '../../components/toast/toastService'
 import { fetchAllPagedRecords } from '../../utils/detailPages'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -87,6 +88,7 @@ export function useToolRequestActions() {
           remarks: '',
         })
         fetchRecords()
+        showToast('Request submitted.')
         return true
       }
 
@@ -135,6 +137,7 @@ export function useToolRequestActions() {
       if (data.status === 'success') {
         setShowModal(false)
         fetchRecords()
+        showToast('Achievement updated.')
       } else {
         dialog.alert(`Update error: ${data.message}`)
       }

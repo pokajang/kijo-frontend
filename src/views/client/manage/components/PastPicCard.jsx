@@ -130,6 +130,7 @@ const PastPicCard = ({
               defaultVisibleColumns={defaultVisibleColumns}
               requiredColumns={requiredColumns}
               storageKey={columnStorageKey}
+              scrollStorageKey="client.past-pic.records.scroll"
               idPrefix="client-past-pic-record"
               emptyMessage="No past PICs found."
               exportFilename={`past-pics-${new Date().toISOString().slice(0, 10)}.csv`}
@@ -157,7 +158,7 @@ const PastPicCard = ({
               }}
               initialSortField="fullName"
               getSortValue={(pic, field) => pic[field]}
-              resetDeps={[filteredPics, searchTerm]}
+              resetDeps={[searchTerm]}
             />
           </div>
         )}

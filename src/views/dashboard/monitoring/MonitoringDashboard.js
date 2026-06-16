@@ -68,7 +68,7 @@ const monitoringTourSteps = [
     target: '[data-tour="monitoring-weekly-status-value"]',
     title: 'Weekly Quantity and Revenue',
     content:
-      'This table shows realized QTY and RM by service across the selected reporting period. RM comes from project quote value or valid manual closed estimated RM where available.',
+      'This table shows realized QTY and RM by service across the selected reporting period. RM comes from current project value with awarded value fallback, or valid manual closed estimated RM where available.',
     skipBeacon: true,
   },
   {

@@ -40,6 +40,12 @@ const addMaxLength = (errors, value, maxLength, field, label) => {
   }
 }
 
+const isPdfAttachment = (attachment = {}) => {
+  const fileName = String(attachment.fileName || attachment.name || attachment.file?.name || '')
+  const mimeType = String(attachment.mimeType || attachment.file?.type || '').toLowerCase()
+  return attachment.isPdf === true || mimeType === 'application/pdf' || /\.pdf$/i.test(fileName)
+}
+
 const toMinutes = (value) => {
   const match = String(value || '').match(/^(\d{2}):(\d{2})$/)
   if (!match) return null
@@ -183,15 +189,37 @@ export const validateSpecialTemplate = ({
   }
 
   if (proposalMode === 'upload') {
-    addRequiredRichText(errors, template.serviceSummary, 'serviceSummary', 'Service summary')
-    const hasAttachments = newAttachments.length > 0 || (isEdit && existingAttachments.length > 0)
+    const hasAttachments =
+      newAttachments.length > 0 || (isEdit && existingAttachments.some(isPdfAttachment))
     if (!hasAttachments) {
       errors.push({
         field: 'attachments',
-        message: 'At least one proposal attachment is required in upload mode.',
+        message: 'At least one PDF proposal attachment is required in upload mode.',
       })
     }
   }
+
+  ;(template.defaultLineItems || []).forEach((item, index) => {
+    const title = item?.title || item?.item_name || ''
+    if (!hasText(title)) {
+      errors.push({
+        field: `defaultLineItems.${index}.title`,
+        message: `Default line item ${index + 1} title is required.`,
+      })
+    }
+    if (Number(item?.quantity || 0) <= 0) {
+      errors.push({
+        field: `defaultLineItems.${index}.quantity`,
+        message: `Default line item ${index + 1} quantity must be greater than 0.`,
+      })
+    }
+    if (Number(item?.unitPrice ?? item?.unit_price ?? 0) < 0) {
+      errors.push({
+        field: `defaultLineItems.${index}.unitPrice`,
+        message: `Default line item ${index + 1} unit price cannot be negative.`,
+      })
+    }
+  })
 
   return errors
 }

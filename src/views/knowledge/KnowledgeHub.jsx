@@ -23,7 +23,6 @@ const KnowledgeHub = () => {
     setStatus,
     setTag,
     status,
-    success,
     tag,
     tags,
   } = useKnowledgeHubArticles()
@@ -51,7 +50,6 @@ const KnowledgeHub = () => {
           </CCardHeader>
           <CCardBody>
             {error && <CAlert color="danger">{error}</CAlert>}
-            {success && <CAlert color="success">{success}</CAlert>}
             <KnowledgeHubFilters
               category={category}
               categories={meta.categories || []}

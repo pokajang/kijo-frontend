@@ -60,6 +60,11 @@ export default function SpecialQuotationForm({
     subTotal: 0,
     sstAmount: 0,
     attachProposal: true,
+    proposalMode: '',
+    hasAppendableProposal: null,
+    appendablePdfCount: 0,
+    hasWrittenProposalContent: false,
+    appendableProposalMessage: '',
     clientId: null,
     clientName: '',
     clientSsm: '',
@@ -124,6 +129,11 @@ export default function SpecialQuotationForm({
       subTotal: parseFloat(initialFormData.subTotal) || 0,
       sstAmount: parseFloat(initialFormData.sstAmount) || 0,
       attachProposal: Boolean(initialFormData.attachProposal),
+      proposalMode: initialFormData.proposalMode || '',
+      hasAppendableProposal: initialFormData.hasAppendableProposal ?? null,
+      appendablePdfCount: Number(initialFormData.appendablePdfCount || 0),
+      hasWrittenProposalContent: Boolean(initialFormData.hasWrittenProposalContent),
+      appendableProposalMessage: initialFormData.appendableProposalMessage || '',
       clientId: initialFormData.clientId ?? null,
       clientName: initialFormData.clientName || '',
       clientSsm: initialFormData.clientSsm || '',
@@ -152,6 +162,11 @@ export default function SpecialQuotationForm({
       serviceTitle: '',
       serviceCode: '',
       lineItems: [],
+      proposalMode: '',
+      hasAppendableProposal: null,
+      appendablePdfCount: 0,
+      hasWrittenProposalContent: false,
+      appendableProposalMessage: '',
     }))
   }, [proposalLanguage, isEditMode])
 
@@ -167,6 +182,12 @@ export default function SpecialQuotationForm({
     }
     if (!Array.isArray(formData.lineItems) || formData.lineItems.length === 0) {
       dialog.alert('Please add at least one special service line item.')
+      return
+    }
+    if (formData.attachProposal && formData.hasAppendableProposal === false) {
+      dialog.alert(
+        formData.appendableProposalMessage || 'Selected special proposal cannot be appended.',
+      )
       return
     }
     const invalidLineItem = formData.lineItems.find(
