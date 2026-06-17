@@ -3,6 +3,14 @@ import PropTypes from 'prop-types'
 import { CBadge } from '@coreui/react'
 
 const statusConfig = {
+  queued: {
+    label: 'AI queued',
+    color: 'warning',
+  },
+  processing: {
+    label: 'AI processing',
+    color: 'warning',
+  },
   pending: {
     label: 'AI pending',
     color: 'warning',
@@ -12,7 +20,11 @@ const statusConfig = {
     color: 'info',
   },
   cached: {
-    label: 'Learned classification',
+    label: 'Learned',
+    color: 'secondary',
+  },
+  stale: {
+    label: 'AI delayed',
     color: 'secondary',
   },
 }

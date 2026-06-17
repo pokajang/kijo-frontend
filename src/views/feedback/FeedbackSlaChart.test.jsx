@@ -45,11 +45,14 @@ describe('FeedbackSlaChart', () => {
       month: '2026-05',
       month_label: 'May 2026',
       reported_count: 2,
+      sla_track_count: 2,
       eligible_count: 1,
       completed_count: 1,
       fixed_under_30_count: 1,
       missed_30_count: 0,
       open_within_window_count: 1,
+      needs_triage_count: 0,
+      excluded_count: 0,
       sla_percent: 100,
       is_final: false,
     },
@@ -57,11 +60,14 @@ describe('FeedbackSlaChart', () => {
       month: '2026-04',
       month_label: 'Apr 2026',
       reported_count: 2,
+      sla_track_count: 1,
       eligible_count: 2,
       completed_count: 1,
       fixed_under_30_count: 0,
       missed_30_count: 2,
       open_within_window_count: 0,
+      needs_triage_count: 0,
+      excluded_count: 1,
       sla_percent: 0,
       is_final: true,
     },
@@ -69,11 +75,14 @@ describe('FeedbackSlaChart', () => {
       month: '2026-06',
       month_label: 'Jun 2026',
       reported_count: 1,
+      sla_track_count: 1,
       eligible_count: 0,
       completed_count: 0,
       fixed_under_30_count: 0,
       missed_30_count: 0,
       open_within_window_count: 1,
+      needs_triage_count: 0,
+      excluded_count: 0,
       sla_percent: null,
       is_final: false,
     },
@@ -83,6 +92,7 @@ describe('FeedbackSlaChart', () => {
     render(<FeedbackSlaChart rows={rows} year={2026} targetPercent={85} />)
 
     expect(screen.getByText('30-Day Feedback SLA')).toBeInTheDocument()
+    expect(screen.getByText('30-Day Fix track, reported month, 2026')).toBeInTheDocument()
     expect(screen.getByText('Target: 85%')).toBeInTheDocument()
     expect(screen.getByText('Green >= target')).toBeInTheDocument()
     expect(screen.getByText('Amber below target')).toBeInTheDocument()
@@ -107,11 +117,14 @@ describe('FeedbackSlaChart', () => {
         month: `2026-${month}`,
         month_label: `M${month} 2026`,
         reported_count: 1,
+        sla_track_count: 1,
         eligible_count: 1,
         completed_count: 1,
         fixed_under_30_count: 1,
         missed_30_count: 0,
         open_within_window_count: 0,
+        needs_triage_count: 0,
+        excluded_count: 0,
         sla_percent: 100,
         is_final: true,
       }

@@ -47,6 +47,15 @@ vi.mock('./FeedbackSlaChart', () => ({
 
 vi.mock('./AdminFixModal', () => ({
   default: () => null,
+  STATUS_OPTIONS: ['Pending', 'Fixed Pending Pushed', 'In Progress', 'Fixed Completed', 'Resolved'],
+  RESOLUTION_TRACK_OPTIONS: [
+    'Needs Triage',
+    '30-Day Fix',
+    'Next Upgrade',
+    'Roadmap / Backlog',
+    'Not Actionable',
+    'Rejected',
+  ],
 }))
 
 vi.mock('../../components/navigation/ModuleNavStrip', () => ({

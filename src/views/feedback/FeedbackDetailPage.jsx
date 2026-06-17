@@ -16,7 +16,7 @@ import {
 } from '../../components/datatable'
 import dialog from '../../components/dialog/dialogService'
 import { findRecordById } from '../../utils/detailPages'
-import AdminFixModal from './AdminFixModal'
+import AdminFixModal, { RESOLUTION_TRACK_OPTIONS, STATUS_OPTIONS } from './AdminFixModal'
 import {
   deleteFeedback,
   fetchAllFeedbacks,
@@ -26,14 +26,22 @@ import {
 import { useAuth } from '../../auth/AuthProvider'
 import { showToast } from '../../components/toast/toastService'
 
-const ADMIN_STATUS_OPTIONS = ['Pending', 'Fixed Pending Pushed', 'In Progress', 'Fixed Completed']
-
 const normalize = (value) => (value ?? '').toString().trim().toLowerCase()
 
 const getStatusTone = (status) => {
   const normalized = normalize(status)
-  if (normalized.includes('fix')) return 'success'
-  if (normalized.includes('pend')) return 'warning'
+  if (normalized === 'fixed completed') return 'success'
+  if (normalized === 'pending' || normalized === 'fixed pending pushed') return 'warning'
+  if (normalized === 'resolved') return 'secondary'
+  return 'info'
+}
+
+const getResolutionTrackTone = (track) => {
+  const normalized = normalize(track)
+  if (normalized === '30-day fix') return 'primary'
+  if (normalized === 'needs triage') return 'warning'
+  if (normalized === 'rejected') return 'danger'
+  if (normalized === 'not actionable') return 'secondary'
   return 'info'
 }
 
@@ -46,11 +54,19 @@ const getTodayISO = () => {
 }
 
 const normalizeAdminStatus = (status) => {
-  if (!status) return ADMIN_STATUS_OPTIONS[0]
-  const match = ADMIN_STATUS_OPTIONS.find(
+  if (!status) return STATUS_OPTIONS[0]
+  const match = STATUS_OPTIONS.find(
     (option) => option.toLowerCase() === status.toString().trim().toLowerCase(),
   )
-  return match || ADMIN_STATUS_OPTIONS[0]
+  return match || STATUS_OPTIONS[0]
+}
+
+const normalizeResolutionTrack = (track) => {
+  if (!track) return RESOLUTION_TRACK_OPTIONS[0]
+  const match = RESOLUTION_TRACK_OPTIONS.find(
+    (option) => option.toLowerCase() === track.toString().trim().toLowerCase(),
+  )
+  return match || RESOLUTION_TRACK_OPTIONS[0]
 }
 
 const FeedbackDetailPage = () => {
@@ -65,7 +81,13 @@ const FeedbackDetailPage = () => {
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentStaffId, setCurrentStaffId] = useState(null)
   const [fixModalVisible, setFixModalVisible] = useState(false)
-  const [fixData, setFixData] = useState({ id: null, status: '', action_date: '', remarks: '' })
+  const [fixData, setFixData] = useState({
+    id: null,
+    status: '',
+    resolution_track: '',
+    action_date: '',
+    remarks: '',
+  })
   const [editVisible, setEditVisible] = useState(false)
   const [editMessage, setEditMessage] = useState('')
   const [editSubmitting, setEditSubmitting] = useState(false)
@@ -111,6 +133,7 @@ const FeedbackDetailPage = () => {
     setFixData({
       id: feedback.id,
       status: normalizeAdminStatus(feedback.status),
+      resolution_track: normalizeResolutionTrack(feedback.resolution_track),
       action_date: feedback.action_date || getTodayISO(),
       remarks: feedback.remarks || '',
     })
@@ -221,6 +244,15 @@ const FeedbackDetailPage = () => {
               value: (
                 <DataTableStatusBadge tone={getStatusTone(feedback?.status)}>
                   {feedback?.status || '-'}
+                </DataTableStatusBadge>
+              ),
+            },
+            {
+              key: 'resolutionTrack',
+              label: 'Resolution Track',
+              value: (
+                <DataTableStatusBadge tone={getResolutionTrackTone(feedback?.resolution_track)}>
+                  {feedback?.resolution_track || 'Needs Triage'}
                 </DataTableStatusBadge>
               ),
             },

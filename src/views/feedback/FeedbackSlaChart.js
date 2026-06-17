@@ -67,19 +67,46 @@ const FeedbackSlaChart = ({
   const chartColors = useChartSemanticColors()
   const targetValue = normalizePercent(targetPercent)
 
-  const displayRows = useMemo(() => rows.filter((row) => row?.month), [rows])
+  const displayRows = useMemo(
+    () =>
+      rows
+        .filter((row) => row?.month)
+        .map((row) => {
+          const reportedCount = Number(row.reported_count || 0)
+          const slaTrackCount =
+            row.sla_track_count === null || row.sla_track_count === undefined
+              ? reportedCount
+              : Number(row.sla_track_count || 0)
+
+          return {
+            ...row,
+            reported_count: reportedCount,
+            sla_track_count: slaTrackCount,
+            eligible_count: Number(row.eligible_count || 0),
+            fixed_under_30_count: Number(row.fixed_under_30_count || 0),
+            missed_30_count: Number(row.missed_30_count || 0),
+            open_within_window_count: Number(row.open_within_window_count || 0),
+            needs_triage_count: Number(row.needs_triage_count || 0),
+            excluded_count:
+              row.excluded_count === null || row.excluded_count === undefined
+                ? Math.max(0, reportedCount - slaTrackCount)
+                : Number(row.excluded_count || 0),
+          }
+        }),
+    [rows],
+  )
   const hasRows = displayRows.some((row) => Number(row.reported_count || 0) > 0)
   const labels = displayRows.map((row) => row.month_label || row.month)
   const barValues = displayRows.map((row) => {
     if (row.sla_percent === null || row.sla_percent === undefined) {
-      return Number(row.reported_count || 0) > 0 ? PENDING_BAR_PERCENT : null
+      return Number(row.sla_track_count || 0) > 0 ? PENDING_BAR_PERCENT : null
     }
 
     return Number(row.sla_percent)
   })
   const valueLabels = displayRows.map((row) => {
     if (row.sla_percent === null || row.sla_percent === undefined) {
-      return Number(row.reported_count || 0) > 0 ? 'Pending' : ''
+      return Number(row.sla_track_count || 0) > 0 ? 'Pending' : ''
     }
 
     return formatPercent(row.sla_percent)
@@ -97,10 +124,13 @@ const FeedbackSlaChart = ({
   const tableColumns = [
     { key: 'month_label', label: 'Month', align: 'center' },
     { key: 'reported_count', label: 'Reported', align: 'center' },
+    { key: 'sla_track_count', label: '30-Day Fix', align: 'center' },
     { key: 'eligible_count', label: 'Eligible', align: 'center' },
     { key: 'fixed_under_30_count', label: 'Fixed <=30d', align: 'center' },
     { key: 'missed_30_count', label: 'Missed', align: 'center' },
     { key: 'open_within_window_count', label: 'Open Window', align: 'center' },
+    { key: 'needs_triage_count', label: 'Needs Triage', align: 'center' },
+    { key: 'excluded_count', label: 'Excluded', align: 'center' },
     { key: 'slaDisplay', label: 'SLA', align: 'center' },
   ]
 
@@ -110,7 +140,7 @@ const FeedbackSlaChart = ({
         <CRow className="align-items-center gy-2">
           <CCol>
             <strong>30-Day Feedback SLA</strong>{' '}
-            <small className="text-muted">Reported month, {year}</small>
+            <small className="text-muted">30-Day Fix track, reported month, {year}</small>
           </CCol>
           <CCol xs="auto">
             <span className="small text-muted">Target: {formatTargetPercent(targetValue)}</span>
@@ -164,6 +194,9 @@ const FeedbackSlaChart = ({
                             const row = displayRows[item?.dataIndex]
                             if (!row) return ''
                             if (row.sla_percent === null || row.sla_percent === undefined) {
+                              if (Number(row.sla_track_count || 0) === 0) {
+                                return 'SLA: No 30-Day Fix tickets'
+                              }
                               return Number(row.reported_count || 0) > 0
                                 ? 'SLA: Pending window'
                                 : 'SLA: -'
@@ -176,10 +209,13 @@ const FeedbackSlaChart = ({
                             if (!row) return []
                             return [
                               `Reported: ${row.reported_count}`,
+                              `30-Day Fix: ${row.sla_track_count}`,
                               `Eligible: ${row.eligible_count}`,
                               `Fixed <=30d: ${row.fixed_under_30_count}`,
                               `Missed: ${row.missed_30_count}`,
                               `Open within window: ${row.open_within_window_count}`,
+                              `Needs triage: ${row.needs_triage_count}`,
+                              `Excluded: ${row.excluded_count}`,
                               row.is_final ? 'Final month' : 'Provisional month',
                             ]
                           },
@@ -239,13 +275,13 @@ const FeedbackSlaChart = ({
                     <div className="data-table-mobile-main">
                       <div className="data-table-mobile-title">{row.month_label}</div>
                       <div className="data-table-mobile-subtitle">
-                        {row.is_final ? 'Final' : 'Provisional'} | Eligible {row.eligible_count}
+                        {row.is_final ? 'Final' : 'Provisional'} | 30-Day Fix {row.sla_track_count}
                       </div>
                     </div>
                     <div className="data-table-mobile-values">
                       <div className="data-table-mobile-primary">{row.slaDisplay}</div>
                       <div className="data-table-mobile-secondary">
-                        {row.fixed_under_30_count}/{row.reported_count} fixed
+                        {row.fixed_under_30_count}/{row.eligible_count} eligible fixed
                       </div>
                     </div>
                   </div>

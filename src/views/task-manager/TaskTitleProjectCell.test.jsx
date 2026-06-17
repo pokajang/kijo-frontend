@@ -42,12 +42,12 @@ describe('TaskTitleProjectCell', () => {
       <TaskTitleProjectCell
         task={{
           title: 'Prepare handover summary',
-          aiClassificationStatus: 'pending',
+          aiClassificationStatus: 'queued',
         }}
       />,
     )
 
-    expect(screen.getByText('AI pending')).toBeInTheDocument()
+    expect(screen.getByText('AI queued')).toBeInTheDocument()
 
     rerender(
       <TaskTitleProjectCell
@@ -67,6 +67,6 @@ describe('TaskTitleProjectCell', () => {
         }}
       />,
     )
-    expect(screen.getByText('Learned classification')).toBeInTheDocument()
+    expect(screen.getByText('Learned')).toBeInTheDocument()
   })
 })

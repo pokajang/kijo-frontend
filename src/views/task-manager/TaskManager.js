@@ -21,6 +21,7 @@ import { showToast } from '../../components/toast/toastService'
 const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v3'
 const AI_CLASSIFICATION_POLL_INTERVAL_MS = 4000
 const AI_CLASSIFICATION_POLL_TIMEOUT_MS = 30000
+const ACTIVE_AI_CLASSIFICATION_STATUSES = new Set(['pending', 'queued', 'processing'])
 
 export const buildPersonalTasksUrl = (apiBase, periodRange) =>
   appendQueryParams(`${apiBase}tasks/personal`, {
@@ -48,7 +49,7 @@ const isDateOnlyValue = (value) => {
 
 const getPendingAiClassificationIds = (tasks = []) =>
   tasks
-    .filter((task) => task?.aiClassificationStatus === 'pending')
+    .filter((task) => ACTIVE_AI_CLASSIFICATION_STATUSES.has(task?.aiClassificationStatus))
     .map((task) => String(task.id || ''))
     .filter(Boolean)
 
@@ -327,7 +328,10 @@ const TaskManager = () => {
         if (Array.isArray(tasks)) {
           tasks.forEach((task) => {
             const id = String(task?.id || '')
-            if (pendingIds.has(id) && task?.aiClassificationStatus !== 'pending') {
+            if (
+              pendingIds.has(id) &&
+              !ACTIVE_AI_CLASSIFICATION_STATUSES.has(task?.aiClassificationStatus)
+            ) {
               pendingIds.delete(id)
             }
           })

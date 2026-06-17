@@ -46,7 +46,7 @@ describe('workload task evidence AI classification labels', () => {
       .getByText('Clerical / Admin')
       .closest('.workload-evidence-classification-line')
 
-    expect(classificationLine).toContainElement(screen.getByText('Learned classification'))
+    expect(classificationLine).toContainElement(screen.getByText('Learned'))
   })
 
   it('renders AI classification labels in active task activity rows', () => {
@@ -63,6 +63,6 @@ describe('workload task evidence AI classification labels', () => {
       />,
     )
 
-    expect(screen.getByText('Learned classification')).toBeInTheDocument()
+    expect(screen.getByText('Learned')).toBeInTheDocument()
   })
 })

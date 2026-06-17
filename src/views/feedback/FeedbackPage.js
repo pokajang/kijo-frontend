@@ -12,7 +12,7 @@ import {
   CModalTitle,
 } from '@coreui/react'
 import FeedbackTable from './FeedbackTable'
-import AdminFixModal from './AdminFixModal'
+import AdminFixModal, { RESOLUTION_TRACK_OPTIONS, STATUS_OPTIONS } from './AdminFixModal'
 import FeedbackSlaChart from './FeedbackSlaChart'
 import {
   fetchSessionInfo,
@@ -43,6 +43,7 @@ const FeedbackPage = () => {
   const [modalData, setModalData] = useState({
     id: null,
     status: '',
+    resolution_track: '',
     action_date: '',
     remarks: '',
   })
@@ -51,7 +52,6 @@ const FeedbackPage = () => {
   const [userEditMessage, setUserEditMessage] = useState('')
   const [userEditSubmitting, setUserEditSubmitting] = useState(false)
 
-  const ADMIN_STATUS_OPTIONS = ['Pending', 'Fixed Pending Pushed', 'In Progress', 'Fixed Completed']
   const currentYear = new Date().getFullYear()
   const userStaffId = user?.staff_id || ''
   const userRolesKey = Array.isArray(user?.roles) ? [...user.roles].sort().join('|') : ''
@@ -147,17 +147,26 @@ const FeedbackPage = () => {
   }
 
   const normalizeAdminStatus = (status) => {
-    if (!status) return ADMIN_STATUS_OPTIONS[0]
-    const match = ADMIN_STATUS_OPTIONS.find(
+    if (!status) return STATUS_OPTIONS[0]
+    const match = STATUS_OPTIONS.find(
       (opt) => opt.toLowerCase() === status.toString().trim().toLowerCase(),
     )
-    return match || ADMIN_STATUS_OPTIONS[0]
+    return match || STATUS_OPTIONS[0]
+  }
+
+  const normalizeResolutionTrack = (track) => {
+    if (!track) return RESOLUTION_TRACK_OPTIONS[0]
+    const match = RESOLUTION_TRACK_OPTIONS.find(
+      (opt) => opt.toLowerCase() === track.toString().trim().toLowerCase(),
+    )
+    return match || RESOLUTION_TRACK_OPTIONS[0]
   }
 
   const handleOpenModal = (fb) => {
     setModalData({
       id: fb.id,
       status: normalizeAdminStatus(fb.status),
+      resolution_track: normalizeResolutionTrack(fb.resolution_track),
       action_date: fb.action_date || getTodayISO(),
       remarks: fb.remarks || '',
     })
@@ -166,7 +175,7 @@ const FeedbackPage = () => {
 
   const handleCloseModal = () => {
     setModalVisible(false)
-    setModalData({ id: null, status: '', action_date: '', remarks: '' })
+    setModalData({ id: null, status: '', resolution_track: '', action_date: '', remarks: '' })
   }
 
   const handleChangeField = (field, value) => {

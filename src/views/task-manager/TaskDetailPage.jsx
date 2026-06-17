@@ -14,6 +14,34 @@ const formatCommentLogs = (logs = []) =>
         .join('\n')
     : '-'
 
+const sourceLabels = {
+  system: 'Local rules',
+  ai: 'AI',
+  ai_cache: 'Learned',
+  user: 'Manual',
+}
+
+const aiStatusLabels = {
+  not_applicable: 'Not needed',
+  pending: 'Pending',
+  queued: 'Queued',
+  processing: 'Processing',
+  applied: 'Applied',
+  cached: 'Learned',
+  no_result: 'No useful AI result',
+  failed: 'Failed',
+  stale: 'Delayed',
+}
+
+const formatSource = (source) => sourceLabels[String(source || '').trim()] || source || '-'
+const formatAiStatus = (status) => aiStatusLabels[String(status || '').trim()] || status || '-'
+const formatScore = (score) => {
+  const value = Number(score)
+  if (!Number.isFinite(value)) return '-'
+
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
 const formatDateLocal = (date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -159,6 +187,56 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
           },
         ]}
       />
+      <div className="border-top mt-4 pt-3">
+        <h6 className="mb-3">Classification</h6>
+        <DataTableDetailFields
+          fields={[
+            {
+              key: 'task-type',
+              label: 'Task Type',
+              value: task?.taskCategoryLabel || task?.taskCategory || '-',
+            },
+            {
+              key: 'effort-score',
+              label: 'Effort Score',
+              value: formatScore(task?.effortScore),
+            },
+            {
+              key: 'work-type',
+              label: 'Work Type',
+              value: task?.workTypeLabel || task?.workType || '-',
+            },
+            {
+              key: 'classification-source',
+              label: 'Source',
+              value: formatSource(task?.classificationSource),
+            },
+            {
+              key: 'classification-confidence',
+              label: 'Confidence',
+              value: task?.classificationConfidence || '-',
+            },
+            {
+              key: 'ai-status',
+              label: 'AI Status',
+              value: formatAiStatus(task?.aiClassificationStatus),
+            },
+            {
+              key: 'matched-pattern',
+              label: 'Matched Rule',
+              value: task?.matchedPattern || '-',
+              xs: 12,
+            },
+            {
+              key: 'ai-error',
+              label: 'AI Error',
+              value: task?.aiClassificationError || '-',
+              hidden: !task?.aiClassificationError,
+              xs: 12,
+            },
+          ]}
+        />
+      </div>
     </DataTableDetailShell>
   )
 }

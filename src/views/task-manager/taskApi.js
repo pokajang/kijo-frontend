@@ -13,6 +13,10 @@ export const DEFAULT_PREVIEW_CLASSIFICATION = {
   workTypeConfidence: 'low',
   workTypeMatchedPattern: null,
   aiClassificationStatus: 'not_applicable',
+  aiClassificationQueuedAt: null,
+  aiClassificationStartedAt: null,
+  aiClassificationCompletedAt: null,
+  aiClassificationError: null,
   classificationStatus: 'idle',
 }
 
@@ -31,6 +35,10 @@ export const normalizeTaskClassification = (classification = {}, status = 'resol
   workTypeConfidence: classification.workTypeConfidence || 'low',
   workTypeMatchedPattern: classification.workTypeMatchedPattern || null,
   aiClassificationStatus: classification.aiClassificationStatus || 'not_applicable',
+  aiClassificationQueuedAt: classification.aiClassificationQueuedAt || null,
+  aiClassificationStartedAt: classification.aiClassificationStartedAt || null,
+  aiClassificationCompletedAt: classification.aiClassificationCompletedAt || null,
+  aiClassificationError: classification.aiClassificationError || null,
   classificationStatus: status,
 })
 

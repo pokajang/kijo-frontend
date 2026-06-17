@@ -312,7 +312,7 @@ describe('TaskManager route actions', () => {
             {
               id: 501,
               title: 'Plain task',
-              aiClassificationStatus: 'pending',
+              aiClassificationStatus: 'queued',
             },
           ],
         })
@@ -320,7 +320,7 @@ describe('TaskManager route actions', () => {
 
       if (String(url).includes('tasks/personal')) {
         personalLoads += 1
-        const aiClassificationStatus = personalLoads >= 3 ? 'applied' : 'pending'
+        const aiClassificationStatus = personalLoads >= 3 ? 'applied' : 'processing'
 
         return jsonResponse({
           status: 'success',
@@ -353,7 +353,7 @@ describe('TaskManager route actions', () => {
           message: 'Task saved. AI classification is updating in the background.',
         }),
       )
-      expect(screen.getByTestId('task-table-statuses')).toHaveTextContent('501:pending')
+      expect(screen.getByTestId('task-table-statuses')).toHaveTextContent('501:processing')
     })
 
     await waitFor(

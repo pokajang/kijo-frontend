@@ -16,7 +16,22 @@ import {
   CButton,
 } from '@coreui/react'
 
-const STATUS_OPTIONS = ['Pending', 'Fixed Pending Pushed', 'In Progress', 'Fixed Completed']
+export const STATUS_OPTIONS = [
+  'Pending',
+  'Fixed Pending Pushed',
+  'In Progress',
+  'Fixed Completed',
+  'Resolved',
+]
+
+export const RESOLUTION_TRACK_OPTIONS = [
+  'Needs Triage',
+  '30-Day Fix',
+  'Next Upgrade',
+  'Roadmap / Backlog',
+  'Not Actionable',
+  'Rejected',
+]
 
 const AdminFixModal = ({ visible, data, onClose, onChangeField, onSave }) => {
   return (
@@ -36,6 +51,23 @@ const AdminFixModal = ({ visible, data, onClose, onChangeField, onSave }) => {
                 onChange={(e) => onChangeField('status', e.target.value)}
               >
                 {STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </CFormSelect>
+            </CCol>
+          </CRow>
+          <CRow className="mb-3">
+            <CCol xs={4}>
+              <strong>Resolution Track</strong>
+            </CCol>
+            <CCol xs={8}>
+              <CFormSelect
+                value={data.resolution_track || 'Needs Triage'}
+                onChange={(e) => onChangeField('resolution_track', e.target.value)}
+              >
+                {RESOLUTION_TRACK_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>
                     {opt}
                   </option>

@@ -526,7 +526,7 @@ const TaskTable = ({
   return (
     <CCard>
       <DataTableCardHeader
-        title="Task List"
+        title="My Tasks"
         scopeLabel={selectedPeriodRange ? getPeriodRangeScopeLabel(selectedPeriodRange) : ''}
       >
         <DataTableStatsToggle
