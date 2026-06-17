@@ -68,6 +68,7 @@ describe('SectionAiAssistantGovernance', () => {
         data: [
           {
             id: 1,
+            message_id: 91,
             rating: 'bad',
             blocked: true,
             question: 'How do I create quotation?',
@@ -96,6 +97,92 @@ describe('SectionAiAssistantGovernance', () => {
     expect(await screen.findByText('How do I create quotation?')).toBeInTheDocument()
     expect(screen.getByText('Wrong source')).toBeInTheDocument()
     expect(screen.getByText('Blocked')).toBeInTheDocument()
+  })
+
+  it('opens assistant diagnostics from a feedback row', async () => {
+    window.fetch.mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('admin/assistant/analytics/overview')) {
+        return Promise.resolve(overviewResponse())
+      }
+      if (url.includes('admin/assistant/messages/91/diagnostics')) {
+        return Promise.resolve(
+          jsonResponse({
+            status: 'success',
+            data: {
+              message_id: 91,
+              question: 'How do I create quotation?',
+              current_route: '/crm/quotes',
+              diagnostics: {
+                retrieval_question: 'create quotation',
+                ai_status: 'ok',
+                planner: { domains: ['knowledge'] },
+                providers: [{ provider_key: 'knowledge', status: 'ran' }],
+                score_stages: {
+                  after_intent_ranking: [
+                    {
+                      title: 'How to Create a Quotation',
+                      source_type: 'knowledge',
+                      score: 700,
+                      score_explanations: ['quote_intent_tag_match +350'],
+                    },
+                  ],
+                },
+                suppressed_sources: [
+                  { title: 'Old quote guide', suppression_reason: 'not_in_top_ranked_sources' },
+                ],
+                denied_retrievals: [
+                  {
+                    provider_key: 'detail_record',
+                    record_type: 'salary',
+                    reason: 'self_scope_record_denied_or_missing',
+                  },
+                ],
+                source_gap: null,
+                selected_source_fingerprints: ['abc'],
+              },
+            },
+          }),
+        )
+      }
+
+      return Promise.resolve(
+        jsonResponse({
+          status: 'success',
+          data: [
+            {
+              id: 1,
+              message_id: 91,
+              rating: 'bad',
+              blocked: false,
+              question: 'How do I create quotation?',
+              answer_excerpt: 'Use the quotation screen.',
+              reasons: ['Wrong source'],
+              confidence: 'low',
+              answer_mode: 'static',
+              created_at: '2026-05-30T03:00:00.000Z',
+            },
+          ],
+        }),
+      )
+    })
+
+    render(<SectionAiAssistantGovernance />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Diagnostics' }))
+
+    expect(await screen.findByText('Assistant Diagnostics')).toBeInTheDocument()
+    expect(await screen.findByText('/crm/quotes')).toBeInTheDocument()
+    expect(screen.getByText('Request Summary')).toBeInTheDocument()
+    expect(screen.getByText('Providers')).toBeInTheDocument()
+    expect(screen.getByText('Suppressed Sources')).toBeInTheDocument()
+    expect(screen.getByText('Denied Retrievals')).toBeInTheDocument()
+    expect(screen.getByText('Raw JSON')).toBeInTheDocument()
+    expect(screen.getByText(/retrieval_question/)).toBeInTheDocument()
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('admin/assistant/messages/91/diagnostics'),
+      expect.objectContaining({ credentials: 'include' }),
+    )
   })
 
   it('loads source gaps and saves status changes', async () => {

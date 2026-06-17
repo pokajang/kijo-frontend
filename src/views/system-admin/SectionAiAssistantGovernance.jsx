@@ -10,6 +10,10 @@ import {
   CFormInput,
   CFormSelect,
   CFormTextarea,
+  CModal,
+  CModalBody,
+  CModalHeader,
+  CModalTitle,
   CSpinner,
   CTable,
   CTableBody,
@@ -89,6 +93,33 @@ const buildQuery = (filters) => {
   return query ? `?${query}` : ''
 }
 
+const JsonBlock = ({ value }) => (
+  <pre className="bg-light border rounded p-2 mb-0 small overflow-auto">
+    {JSON.stringify(value || {}, null, 2)}
+  </pre>
+)
+
+const DiagnosticsSection = ({ title, children }) => (
+  <div className="border rounded p-3">
+    <strong className="d-block mb-2">{title}</strong>
+    {children}
+  </div>
+)
+
+const renderList = (items, renderItem) => {
+  const list = safeArray(items)
+  if (list.length === 0) return <span className="text-muted">None</span>
+  return (
+    <div className="d-flex flex-column gap-2">
+      {list.map((item, index) => (
+        <div key={`${index}-${JSON.stringify(item).slice(0, 40)}`} className="border rounded p-2">
+          {renderItem(item, index)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 const SectionAiAssistantGovernance = () => {
   const [overview, setOverview] = useState(null)
   const [activeView, setActiveView] = useState('feedback')
@@ -99,6 +130,9 @@ const SectionAiAssistantGovernance = () => {
   const [gapStatus, setGapStatus] = useState({})
   const [gapNotes, setGapNotes] = useState({})
   const [gapPriority, setGapPriority] = useState({})
+  const [diagnostics, setDiagnostics] = useState(null)
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false)
+  const [diagnosticsError, setDiagnosticsError] = useState('')
   const [filters, setFilters] = useState({
     date_from: '',
     date_to: '',
@@ -184,6 +218,25 @@ const SectionAiAssistantGovernance = () => {
     refreshAll()
   }
 
+  const loadDiagnostics = async (row) => {
+    const messageId = row.message_id || row.id
+    if (!messageId) return
+    setDiagnosticsLoading(true)
+    setDiagnosticsError('')
+    setDiagnostics(null)
+    try {
+      const payload = await apiJson(apiUrl(`admin/assistant/messages/${messageId}/diagnostics`), {
+        credentials: 'include',
+        silentError: true,
+      })
+      setDiagnostics(payload?.data || null)
+    } catch (err) {
+      setDiagnosticsError(err.message || 'Diagnostics are unavailable for this answer.')
+    } finally {
+      setDiagnosticsLoading(false)
+    }
+  }
+
   const runGapAction = async (row, action) => {
     const notes = Object.prototype.hasOwnProperty.call(gapNotes, row.id)
       ? gapNotes[row.id]
@@ -219,6 +272,16 @@ const SectionAiAssistantGovernance = () => {
         <CTableDataCell>{row.confidence || '-'}</CTableDataCell>
         <CTableDataCell>{row.answer_mode || '-'}</CTableDataCell>
         <CTableDataCell>{formatDate(row.created_at)}</CTableDataCell>
+        <CTableDataCell>
+          <CButton
+            size="sm"
+            color="secondary"
+            variant="outline"
+            onClick={() => loadDiagnostics(row)}
+          >
+            Diagnostics
+          </CButton>
+        </CTableDataCell>
       </CTableRow>
     ))
 
@@ -375,7 +438,16 @@ const SectionAiAssistantGovernance = () => {
     ))
 
   const tableHead = {
-    feedback: ['Rating', 'Question', 'Answer', 'Reasons', 'Confidence', 'Mode', 'Submitted'],
+    feedback: [
+      'Rating',
+      'Question',
+      'Answer',
+      'Reasons',
+      'Confidence',
+      'Mode',
+      'Submitted',
+      'Diagnostics',
+    ],
     cache: ['Mode', 'Question', 'Answer', 'Hits', 'Refreshed', 'Expires', 'Action'],
     'provider-memory': [
       'Question',
@@ -675,6 +747,135 @@ const SectionAiAssistantGovernance = () => {
             </CTable>
           </div>
         )}
+
+        <CModal
+          visible={diagnosticsLoading || diagnosticsError !== '' || diagnostics !== null}
+          size="xl"
+          onClose={() => {
+            setDiagnostics(null)
+            setDiagnosticsError('')
+            setDiagnosticsLoading(false)
+          }}
+        >
+          <CModalHeader>
+            <CModalTitle>Assistant Diagnostics</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            {diagnosticsLoading ? (
+              <div className="d-flex align-items-center gap-2 py-3">
+                <CSpinner size="sm" />
+                <span>Loading diagnostics...</span>
+              </div>
+            ) : diagnosticsError ? (
+              <CAlert color="warning" className="mb-0">
+                {diagnosticsError}
+              </CAlert>
+            ) : diagnostics ? (
+              <div className="d-flex flex-column gap-3">
+                <div className="row g-2">
+                  <div className="col-md-6">
+                    <strong>Question</strong>
+                    <div className="text-muted">{diagnostics.question || '-'}</div>
+                  </div>
+                  <div className="col-md-6">
+                    <strong>Route</strong>
+                    <div className="text-muted">{diagnostics.current_route || '-'}</div>
+                  </div>
+                </div>
+                <DiagnosticsSection title="Request Summary">
+                  <div className="row g-2 small">
+                    <div className="col-md-4">
+                      <span className="text-muted">Retrieval</span>
+                      <div>{diagnostics.diagnostics?.retrieval_question || '-'}</div>
+                    </div>
+                    <div className="col-md-4">
+                      <span className="text-muted">AI Status</span>
+                      <div>{diagnostics.diagnostics?.ai_status || 'ok'}</div>
+                    </div>
+                    <div className="col-md-4">
+                      <span className="text-muted">Failure Stage</span>
+                      <div>{diagnostics.diagnostics?.ai_failure_stage || '-'}</div>
+                    </div>
+                  </div>
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Planner">
+                  <JsonBlock value={diagnostics.diagnostics?.planner || {}} />
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Providers">
+                  {renderList(diagnostics.diagnostics?.providers, (item) => (
+                    <div className="small">
+                      <div>
+                        <strong>{item.provider_key || '-'}</strong>{' '}
+                        <CBadge color={item.status === 'ran' ? 'success' : 'secondary'}>
+                          {item.status || '-'}
+                        </CBadge>
+                      </div>
+                      <div className="text-muted">
+                        Sources: {item.source_count ?? 0} - Mode: {item.answer_mode || '-'} -
+                        Quality: {item.context_quality || '-'}
+                      </div>
+                      {item.reason ? <div className="text-muted">Reason: {item.reason}</div> : null}
+                    </div>
+                  ))}
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Selected Sources">
+                  {renderList(
+                    diagnostics.diagnostics?.score_stages?.after_intent_ranking,
+                    (item) => (
+                      <div className="small">
+                        <div>
+                          <strong>{item.title || item.slug || '-'}</strong>
+                        </div>
+                        <div className="text-muted">
+                          {item.source_type || '-'} - Score: {item.score ?? '-'} -{' '}
+                          {item.match_reason || '-'}
+                        </div>
+                        {safeArray(item.score_explanations).length > 0 ? (
+                          <div className="mt-1">
+                            {safeArray(item.score_explanations).map((reason) => (
+                              <CBadge key={reason} color="secondary" className="me-1 mb-1">
+                                {reason}
+                              </CBadge>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ),
+                  )}
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Suppressed Sources">
+                  {renderList(diagnostics.diagnostics?.suppressed_sources, (item) => (
+                    <div className="small">
+                      <div>
+                        <strong>{item.title || item.slug || '-'}</strong>
+                      </div>
+                      <div className="text-muted">
+                        {item.source_type || '-'} - Score: {item.score ?? '-'} - Reason:{' '}
+                        {item.suppression_reason || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Denied Retrievals">
+                  {renderList(diagnostics.diagnostics?.denied_retrievals, (item) => (
+                    <div className="small">
+                      <strong>{item.provider_key || '-'}</strong>
+                      <div className="text-muted">
+                        {item.record_type || '-'} · {item.reason || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Source Gap">
+                  <JsonBlock value={diagnostics.diagnostics?.source_gap || {}} />
+                </DiagnosticsSection>
+                <DiagnosticsSection title="Raw JSON">
+                  <JsonBlock value={diagnostics.diagnostics || {}} />
+                </DiagnosticsSection>
+              </div>
+            ) : null}
+          </CModalBody>
+        </CModal>
       </CCardBody>
     </CCard>
   )

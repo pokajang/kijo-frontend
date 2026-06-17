@@ -128,6 +128,10 @@ describe('personal salary routes', () => {
           name: 'My Salary Payment Queue',
         }),
         expect.objectContaining({
+          path: '/my/salary/payment-queue/:staffId/:period',
+          name: 'My Salary Payment Queue Details',
+        }),
+        expect.objectContaining({
           path: '/my/salary/records',
           name: 'My Salary Records',
         }),
@@ -178,6 +182,25 @@ describe('financial routes', () => {
       expect.objectContaining({
         path: '/financial/payment-queue',
         name: 'Payment Queue',
+      }),
+    )
+    expect(route?.element?.props?.allowedRoles).toEqual([
+      'System Admin',
+      'Manager',
+      'HR',
+      'Finance',
+      'Account',
+      'Bank',
+    ])
+  })
+
+  it('includes the internal operations financial payment queue detail page', () => {
+    const route = routes.find((item) => item.path === '/financial/payment-queue/:staffId/:period')
+
+    expect(route).toEqual(
+      expect.objectContaining({
+        path: '/financial/payment-queue/:staffId/:period',
+        name: 'Payment Queue Details',
       }),
     )
     expect(route?.element?.props?.allowedRoles).toEqual([

@@ -10,7 +10,7 @@ const repoRoot = resolve(frontendDir, '..')
 const baseUrl = process.env.QA_BASE_URL || 'http://localhost:3000'
 const reportPath = process.env.QA_REPORT_PATH
   ? resolve(process.env.QA_REPORT_PATH)
-  : resolve(repoRoot, 'TABLE_UNIFICATION_BROWSER_QA_REPORT.md')
+  : resolve(repoRoot, 'docs', 'work-notes', 'TABLE_UNIFICATION_BROWSER_QA_REPORT.md')
 const shouldStartServer = process.env.QA_START_SERVER !== '0'
 const requireTableCoverage =
   process.env.QA_REQUIRE_TABLES === '1' || Boolean(process.env.QA_ROUTE_FILTER)

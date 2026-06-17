@@ -67,6 +67,7 @@ const SalaryWorkspace = ({ routeSection }) => {
   )
   const [salaryRecordsScopeLabel, setSalaryRecordsScopeLabel] = useState('')
   const [otherClaimRecordsScopeLabel, setOtherClaimRecordsScopeLabel] = useState('')
+  const [paymentQueueScopeLabel, setPaymentQueueScopeLabel] = useState('')
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('my.salary')
 
@@ -110,7 +111,7 @@ const SalaryWorkspace = ({ routeSection }) => {
               title={activeConfig.title}
               scopeLabel={
                 activeSection === 'payment-queue'
-                  ? ''
+                  ? paymentQueueScopeLabel
                   : activeSection === 'records'
                     ? salaryRecordsScopeLabel
                     : activeSection === 'other-claim-records'
@@ -169,7 +170,7 @@ const SalaryWorkspace = ({ routeSection }) => {
                   editRecord={null}
                   onScopeLabelChange={
                     activeSection === 'payment-queue'
-                      ? undefined
+                      ? setPaymentQueueScopeLabel
                       : activeSection === 'records'
                         ? setSalaryRecordsScopeLabel
                         : activeSection === 'other-claim-records'

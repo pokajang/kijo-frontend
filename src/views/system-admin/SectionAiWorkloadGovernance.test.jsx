@@ -117,19 +117,25 @@ describe('SectionAiWorkloadGovernance', () => {
   })
 
   it('renders health cards and learned classification rows', async () => {
-    window.fetch
-      .mockResolvedValueOnce(healthResponse())
-      .mockResolvedValueOnce(snapshotHealthResponse())
-      .mockResolvedValueOnce(
+    window.fetch.mockImplementation((url) => {
+      if (String(url).includes('task-classification-health')) {
+        return Promise.resolve(healthResponse())
+      }
+      if (String(url).includes('snapshot-health')) {
+        return Promise.resolve(snapshotHealthResponse())
+      }
+
+      return Promise.resolve(
         listResponse([learnedRow], {
           total: 1,
         }),
       )
+    })
 
     render(<SectionAiWorkloadGovernance />)
 
     expect(await screen.findByText('Daily Snapshot Health')).toBeInTheDocument()
-    expect(screen.getByText('Latest Snapshot')).toBeInTheDocument()
+    expect(await screen.findByText('Latest Snapshot')).toBeInTheDocument()
     expect(screen.getByText('2026-05-31')).toBeInTheDocument()
     expect(screen.getByText('Captured 31d')).toBeInTheDocument()
     expect(screen.getByText('Replayed 31d')).toBeInTheDocument()

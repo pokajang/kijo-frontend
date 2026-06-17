@@ -25,8 +25,17 @@ export const normalizePaymentQueueRow = (row = {}) => ({
   status: row.status || 'Pending Payment',
   blockReason: row.blockReason || '',
   lastApprovedAt: row.lastApprovedAt || '',
+  paidAt: row.paidAt || '',
+  paidBy: row.paidBy || '',
+  paymentRunId: row.paymentRunId || null,
+  paymentDate: row.paymentDate || '',
+  paymentReference: row.paymentReference || '',
+  paymentMethod: row.paymentMethod || '',
+  remarks: row.remarks || '',
+  voidedAt: row.voidedAt || '',
   canViewValues: row.canViewValues !== false,
   canMarkPaid: Boolean(row.canMarkPaid),
+  canUndoPaid: Boolean(row.canUndoPaid),
   restricted: Boolean(row.restricted || row.canViewValues === false),
 })
 
@@ -82,5 +91,57 @@ export const markPaymentQueuePaid = async ({
   })
 
   dispatchAppNotificationsChanged()
-  return payload.run || null
+  return payload
+}
+
+export const undoPaymentQueuePaid = async ({ staffId, period, reason }) => {
+  const payload = await apiJson(`${API_BASE}hr/salary/payment-queue/undo-paid`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      staff_id: staffId,
+      payment_period: period,
+      reason,
+    }),
+  })
+
+  dispatchAppNotificationsChanged()
+  return payload
+}
+
+const toBulkRowsPayload = (rows = []) =>
+  rows.map((row) => ({
+    staff_id: row.staffId,
+    payment_period: row.period,
+  }))
+
+export const bulkMarkPaymentQueuePaid = async (rows, paymentForm = {}) => {
+  const payload = await apiJson(`${API_BASE}hr/salary/payment-queue/bulk-mark-paid`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      rows: toBulkRowsPayload(rows),
+      payment_date: paymentForm.paymentDate,
+      payment_reference: paymentForm.paymentReference || '',
+      payment_method: paymentForm.paymentMethod || '',
+      remarks: paymentForm.remarks || '',
+    }),
+  })
+
+  dispatchAppNotificationsChanged()
+  return payload
+}
+
+export const bulkUndoPaymentQueuePaid = async (rows, reason) => {
+  const payload = await apiJson(`${API_BASE}hr/salary/payment-queue/bulk-undo-paid`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      rows: toBulkRowsPayload(rows),
+      reason,
+    }),
+  })
+
+  dispatchAppNotificationsChanged()
+  return payload
 }

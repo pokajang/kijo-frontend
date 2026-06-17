@@ -86,6 +86,9 @@ const SalaryRecordDetailPage = React.lazy(
 const OtherClaimRecordDetailPage = React.lazy(
   () => import('./components/salary/OtherClaimRecordDetailPage'),
 )
+const PaymentQueueRecordDetailPage = React.lazy(
+  () => import('./components/salary/PaymentQueueRecordDetailPage'),
+)
 const ViewTasks = React.lazy(() => import('./views/staff/tasks/ViewTasks'))
 const TaskDetailPage = React.lazy(() => import('./views/task-manager/TaskDetailPage'))
 
@@ -804,6 +807,15 @@ const routes = [
     ),
   },
   {
+    path: '/my/salary/payment-queue/:staffId/:period',
+    name: 'My Salary Payment Queue Details',
+    element: (
+      <ProtectedRoute>
+        <PaymentQueueRecordDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/my/salary/records',
     name: 'My Salary Records',
     element: (
@@ -888,6 +900,15 @@ const routes = [
     element: (
       <ProtectedRoute allowedRoles={financialAllowedRoles}>
         <FinancialPaymentQueuePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/financial/payment-queue/:staffId/:period',
+    name: 'Payment Queue Details',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <PaymentQueueRecordDetailPage />
       </ProtectedRoute>
     ),
   },
