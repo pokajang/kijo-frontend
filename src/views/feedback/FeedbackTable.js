@@ -107,10 +107,13 @@ const defaultVisibleColumns = {
 
 const requiredColumns = new Set(['feedbackText', 'status'])
 
+const isCompletedStatus = (status) => normalize(status) === 'fixed completed'
+const isPendingStatus = (status) => normalize(status) === 'pending'
+
 const getStatusTone = (status) => {
   const normalized = normalize(status)
-  if (normalized.includes('fix')) return 'success'
-  if (normalized.includes('pend')) return 'warning'
+  if (isCompletedStatus(normalized)) return 'success'
+  if (isPendingStatus(normalized) || normalized === 'fixed pending pushed') return 'warning'
   return 'info'
 }
 
@@ -198,8 +201,8 @@ const FeedbackTable = ({
           .join(' ')
 
         let passStatus = true
-        if (statusFilter === 'pending') passStatus = status.includes('pend')
-        else if (statusFilter === 'fixed') passStatus = status.includes('fix')
+        if (statusFilter === 'pending') passStatus = isPendingStatus(status)
+        else if (statusFilter === 'fixed') passStatus = isCompletedStatus(status)
 
         let passReporter = true
         if (reportedByFilter !== 'all') {
@@ -229,10 +232,8 @@ const FeedbackTable = ({
   )
 
   const statsItems = useMemo(() => {
-    const pendingCount = countByPredicate(rows, (feedback) =>
-      normalize(feedback.status).includes('pend'),
-    )
-    const fixedRows = rows.filter((feedback) => normalize(feedback.status).includes('fix'))
+    const pendingCount = countByPredicate(rows, (feedback) => isPendingStatus(feedback.status))
+    const fixedRows = rows.filter((feedback) => isCompletedStatus(feedback.status))
     const topReporter = getTopGroupByCount(rows, (feedback) => feedback.reportedBy)
 
     return [

@@ -42,6 +42,20 @@ export async function fetchAllFeedbacks() {
 }
 
 /**
+ * Fetch monthly feedback SLA metrics.
+ * @param {number} year
+ * @returns {Promise<Object>} API response
+ */
+export async function fetchMonthlyFeedbackSla(year = new Date().getFullYear(), signal = undefined) {
+  const params = new URLSearchParams({ year: String(year) })
+  const res = await fetch(`${API_BASE}feedback/metrics/monthly?${params.toString()}`, {
+    credentials: 'include',
+    signal,
+  })
+  return await res.json()
+}
+
+/**
  * Submit a new feedback entry.
  * @param {string} feedbackText
  * @returns {Promise<Object>} API response
