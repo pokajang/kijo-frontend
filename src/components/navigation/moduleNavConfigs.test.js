@@ -130,8 +130,14 @@ describe('vendorModuleTabs', () => {
 })
 
 describe('financialModuleTabs', () => {
-  it('shows Salary Records, Other Claim Records, and Balance Sheet tabs', () => {
+  it('shows Payment Queue, Salary Records, Other Claim Records, and Balance Sheet tabs', () => {
     expect(financialModuleTabs).toEqual([
+      {
+        key: 'payment-queue',
+        label: 'Payment Queue',
+        to: '/financial/payment-queue',
+        notificationTabKey: 'financial.payment-queue',
+      },
       {
         key: 'salary-records',
         label: 'Salary Records',
@@ -154,8 +160,14 @@ describe('financialModuleTabs', () => {
 })
 
 describe('salarySelfModuleTabs', () => {
-  it('shows salary application, records, other claim, and settings tabs', () => {
+  it('shows payment queue, salary application, records, other claim, and settings tabs', () => {
     expect(salarySelfModuleTabs).toEqual([
+      {
+        key: 'payment-queue',
+        label: 'Payment Queue',
+        to: '/my/salary/payment-queue',
+        notificationTabKey: 'my.salary.payment-queue',
+      },
       {
         key: 'apply',
         label: 'Apply Salary',

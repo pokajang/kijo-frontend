@@ -13,7 +13,8 @@ import { findOtherClaimRecordByUrlKey, removeOtherClaimRecord } from './otherCla
 import { SalaryPayablePreviewTable } from './SalaryTables'
 import { openPreparingPdfTab } from './salaryFileUtils'
 
-const mutableStatuses = new Set(['Draft', 'Submitted', 'Prepared', 'Rejected'])
+const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
+const paidStatuses = new Set(['Paid'])
 
 const AttachmentActions = ({ attachment, onPreviewAttachment }) => {
   if (!attachment) return '-'
@@ -174,7 +175,7 @@ const OtherClaimRecordDetailPage = () => {
   }, [record])
 
   const actions = useMemo(() => {
-    const canMutate = mutableStatuses.has(record?.status)
+    const isPaid = paidStatuses.has(record?.status)
     return [
       {
         key: 'export-claims',
@@ -208,17 +209,58 @@ const OtherClaimRecordDetailPage = () => {
       {
         key: 'edit',
         label: 'Edit',
-        hidden: !canMutate,
-        onClick: (otherClaimRecord) =>
-          navigate('/my/salary/other-claims/apply', { state: { editRecord: otherClaimRecord } }),
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        onClick: async (otherClaimRecord) => {
+          if (paidStatuses.has(otherClaimRecord?.status)) return
+          let amendmentReason = ''
+          if (reviewedMutableStatuses.has(otherClaimRecord.status)) {
+            const reason = await dialog.prompt(
+              `This other claim has already been ${otherClaimRecord.status.toLowerCase()}. Enter a reason to restart the workflow.`,
+              {
+                title: 'Edit Reviewed Other Claim',
+                confirmText: 'Continue',
+                required: true,
+                multiline: true,
+                rows: 4,
+                placeholder: 'Reason for amending this other claim',
+              },
+            )
+            if (reason === null) return
+            amendmentReason = String(reason || '').trim()
+            if (!amendmentReason) return
+          }
+          navigate('/my/salary/other-claims/apply', {
+            state: { editRecord: otherClaimRecord, amendmentReason },
+          })
+        },
       },
       {
         key: 'delete',
         label: 'Delete',
         danger: true,
-        hidden: !canMutate,
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
         onClick: async (otherClaimRecord) => {
-          if (
+          if (paidStatuses.has(otherClaimRecord?.status)) return
+          let cancellationReason = ''
+          if (reviewedMutableStatuses.has(otherClaimRecord.status)) {
+            const reason = await dialog.prompt(
+              `This other claim has already been ${otherClaimRecord.status.toLowerCase()}. Enter a reason to cancel it.`,
+              {
+                title: 'Cancel Reviewed Other Claim',
+                confirmText: 'Cancel Claim',
+                confirmColor: 'danger',
+                required: true,
+                multiline: true,
+                rows: 4,
+                placeholder: 'Reason for cancelling this other claim',
+              },
+            )
+            if (reason === null) return
+            cancellationReason = String(reason || '').trim()
+            if (!cancellationReason) return
+          } else if (
             !(await dialog.confirm('Delete this other claim?', {
               title: 'Delete Other Claim',
               confirmText: 'Delete',
@@ -228,7 +270,7 @@ const OtherClaimRecordDetailPage = () => {
             return
           }
           try {
-            await removeOtherClaimRecord(otherClaimRecord.id)
+            await removeOtherClaimRecord(otherClaimRecord.id, cancellationReason)
             navigate(returnTo)
           } catch (err) {
             setError(err?.message || 'Unable to delete other claim record.')

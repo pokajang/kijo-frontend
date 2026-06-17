@@ -3,9 +3,7 @@ import { dispatchAppNotificationsChanged } from '../../notifications/appNotifica
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 export const salaryRecordsChangedEvent = 'kijo:salary-records-changed'
-const salaryClaimTypes = new Set(['Allowance', 'Expense', 'Mileage', 'Medical'])
-const salaryAttachmentMimes = new Set(['application/pdf', 'image/jpeg', 'image/png'])
-const salaryAttachmentExtensions = new Set(['pdf', 'jpg', 'jpeg', 'png'])
+const salaryClaimTypes = new Set(['Allowance'])
 
 const pdfExportErrorMessage = async (response, fallback) => {
   const contentType = response.headers.get('content-type') || ''
@@ -18,8 +16,6 @@ const pdfExportErrorMessage = async (response, fallback) => {
     return response.statusText || fallback
   }
 }
-const maxServerAttachmentBytes = 5 * 1024 * 1024
-
 export const formatSalaryMonth = (salaryMonth) => {
   if (!salaryMonth) return 'Current period'
 
@@ -65,34 +61,48 @@ const normalizeClaim = (claim = {}) => ({
   attachment: normalizeAttachment(claim.attachment),
 })
 
+const salaryClaimsForRecord = (claims) =>
+  Array.isArray(claims)
+    ? claims.map(normalizeClaim).filter((claim) => salaryClaimTypes.has(claim.type))
+    : []
+
+const salaryClaimsTotal = (claims) =>
+  claims.reduce((total, claim) => total + Number(claim.amount || 0), 0)
+
 export const normalizeSalaryStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
-  if (status === 'Paid') return 'Approved'
   return status
 }
 
-const normalizeRecord = (record = {}) => ({
-  id: record.id,
-  salaryMonth: record.salaryMonth || formatSalaryMonth(record.salaryMonthValue),
-  salaryMonthValue: record.salaryMonthValue || '',
-  basicSalary: Number(record.basicSalary || 0),
-  claimsTotal: Number(record.claimsTotal || 0),
-  medicalClaimsTotal: Number(record.medicalClaimsTotal || 0),
-  employeeDeductions: Number(record.employeeDeductions || 0),
-  employerContributions: Number(record.employerContributions || 0),
-  payableSalary: Number(record.payableSalary || 0),
-  status: normalizeSalaryStatus(record.status || 'Submitted'),
-  claims: Array.isArray(record.claims) ? record.claims.map(normalizeClaim) : [],
-  deductions: record.deductions || {},
-  draftPayload:
-    record.draftPayload &&
-    typeof record.draftPayload === 'object' &&
-    !Array.isArray(record.draftPayload)
-      ? record.draftPayload
-      : null,
-  draftSavedAt: record.draftSavedAt || '',
-  submittedAt: record.submittedAt || '',
-})
+const normalizeRecord = (record = {}) => {
+  const hasClaimDetails = Array.isArray(record.claims)
+  const salaryClaims = salaryClaimsForRecord(record.claims)
+
+  return {
+    id: record.id,
+    salaryMonth: record.salaryMonth || formatSalaryMonth(record.salaryMonthValue),
+    salaryMonthValue: record.salaryMonthValue || '',
+    basicSalary: Number(record.basicSalary || 0),
+    claimsTotal: hasClaimDetails
+      ? salaryClaimsTotal(salaryClaims)
+      : Number(record.claimsTotal || 0),
+    medicalClaimsTotal: 0,
+    employeeDeductions: Number(record.employeeDeductions || 0),
+    employerContributions: Number(record.employerContributions || 0),
+    payableSalary: Number(record.payableSalary || 0),
+    status: normalizeSalaryStatus(record.status || 'Submitted'),
+    claims: salaryClaims,
+    deductions: record.deductions || {},
+    draftPayload:
+      record.draftPayload &&
+      typeof record.draftPayload === 'object' &&
+      !Array.isArray(record.draftPayload)
+        ? record.draftPayload
+        : null,
+    draftSavedAt: record.draftSavedAt || '',
+    submittedAt: record.submittedAt || '',
+  }
+}
 
 const normalizeRecordResponse = (payload = {}) => {
   const record = normalizeRecord(payload.record || {})
@@ -111,17 +121,6 @@ const dispatchRecordsChanged = () => {
 const normalizeClaimDateForPayload = (date) => {
   if (!date) return null
   return /^\d{4}-\d{2}$/.test(date) ? `${date}-01` : date
-}
-
-const getExtension = (fileName = '') => String(fileName).split('.').pop()?.toLowerCase() || ''
-
-const isServerSafeAttachmentFile = (file) => {
-  if (!file) return false
-  const extension = getExtension(file.name)
-  return (
-    Number(file.size || 0) <= maxServerAttachmentBytes &&
-    (salaryAttachmentMimes.has(file.type) || salaryAttachmentExtensions.has(extension))
-  )
 }
 
 const isServerSafeDraftClaim = (claim = {}) => {
@@ -145,15 +144,6 @@ const isServerSafeDraftClaim = (claim = {}) => {
     return false
   }
 
-  if (type === 'Mileage') {
-    return Boolean(
-      date &&
-        String(claim.startLocation || '').trim() &&
-        String(claim.endLocation || '').trim() &&
-        km > 0,
-    )
-  }
-
   return Boolean(String(claim.description || '').trim() && amount > 0)
 }
 
@@ -171,40 +161,6 @@ const claimForPayload = (claim) => ({
   sourceLabel: claim.sourceLabel || '',
   attachmentId: claim.attachment?.id ?? null,
 })
-
-const attachmentFileFromDataUrl = (attachment) => {
-  if (attachment?.file) return attachment.file
-  if (!attachment?.dataUrl || typeof File === 'undefined') return null
-
-  const [header = '', data = ''] = String(attachment.dataUrl).split(',')
-  if (!header.startsWith('data:') || !data) return null
-
-  const mimeType =
-    header.match(/^data:([^;]+)/)?.[1] || attachment.type || 'application/octet-stream'
-  const isBase64 = header.includes(';base64')
-  const binary = isBase64 ? atob(data) : decodeURIComponent(data)
-  const bytes = new Uint8Array(binary.length)
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-
-  return new File([bytes], attachment.name || attachment.originalName || 'attachment', {
-    type: mimeType,
-    lastModified: Date.now(),
-  })
-}
-
-const appendClaimAttachments = (formData, claims) => {
-  claims.forEach((claim) => {
-    if (claim.attachment?.id) return
-
-    const file = attachmentFileFromDataUrl(claim.attachment)
-    if (isServerSafeAttachmentFile(file)) {
-      formData.append(`attachments[${claim.id}]`, file, claim.attachment.name || file.name)
-    }
-  })
-}
 
 export const getSalaryRecords = async () => {
   const payload = await apiJson(`${API_BASE}hr/salary/records`)
@@ -239,7 +195,9 @@ export const findSalaryRecordByUrlKey = async (key) => {
 
 export const saveSalaryRecord = async (record) => {
   const formData = new FormData()
-  const claims = Array.isArray(record.claims) ? record.claims : []
+  const claims = Array.isArray(record.claims)
+    ? record.claims.filter((claim) => claim?.type === 'Allowance')
+    : []
 
   formData.append('salary_month', record.salaryMonthValue)
   formData.append('basic_salary', String(record.basicSalary))
@@ -249,8 +207,9 @@ export const saveSalaryRecord = async (record) => {
   formData.append('payable_salary', String(record.payableSalary))
   formData.append('deductions', JSON.stringify(record.deductions || {}))
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
-
-  appendClaimAttachments(formData, claims)
+  if (String(record.amendmentReason || '').trim()) {
+    formData.append('amendment_reason', String(record.amendmentReason).trim())
+  }
 
   const payload = await apiJson(`${API_BASE}hr/salary/applications`, {
     method: 'POST',
@@ -273,7 +232,9 @@ export const fetchSalaryApplicationDraft = async (salaryMonth) => {
 
 export const saveSalaryApplicationDraft = async (draft) => {
   const formData = new FormData()
-  const claims = Array.isArray(draft.claims) ? draft.claims.filter(isServerSafeDraftClaim) : []
+  const claims = Array.isArray(draft.claims)
+    ? draft.claims.filter((claim) => claim?.type === 'Allowance').filter(isServerSafeDraftClaim)
+    : []
   const salaryMonth = draft.salaryMonthValue || draft.draftPayload?.formData?.salaryMonth || ''
 
   if (!/^\d{4}-\d{2}$/.test(salaryMonth)) return null
@@ -282,8 +243,6 @@ export const saveSalaryApplicationDraft = async (draft) => {
   formData.append('basic_salary', String(draft.basicSalary || 0))
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
   formData.append('draft_payload', JSON.stringify(draft.draftPayload || {}))
-  appendClaimAttachments(formData, claims)
-
   const payload = await apiJson(`${API_BASE}hr/salary/applications/draft`, {
     method: 'PUT',
     body: formData,
@@ -306,9 +265,16 @@ export const clearSalaryApplicationServerDraft = async (salaryMonth) => {
   dispatchRecordsChanged()
 }
 
-export const removeSalaryRecord = async (id) => {
+export const removeSalaryRecord = async (id, reason = '') => {
+  const trimmedReason = String(reason || '').trim()
   await apiJson(`${API_BASE}hr/salary/records/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    ...(trimmedReason
+      ? {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: trimmedReason }),
+        }
+      : {}),
   })
   dispatchRecordsChanged()
   dispatchAppNotificationsChanged()

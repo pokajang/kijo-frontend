@@ -30,6 +30,10 @@ const DataTableStatsToggle = ({
   const statsHasPendingChange = draftVisible !== visible
   const controlsHasPendingChange = controlsToggleEnabled && draftControlsVisible !== controlsVisible
   const hasPendingChange = statsHasPendingChange || controlsHasPendingChange
+  const displayTooltip =
+    controlsToggleEnabled && !controlsVisible
+      ? 'Table display - search and filters row hidden'
+      : 'Table display'
 
   const openSettings = () => {
     setDraftVisible(visible)
@@ -53,7 +57,7 @@ const DataTableStatsToggle = ({
 
   return (
     <>
-      <CTooltip content="Table display" placement="top">
+      <CTooltip content={displayTooltip} placement="top">
         <CButton
           type="button"
           color="secondary"
@@ -61,7 +65,7 @@ const DataTableStatsToggle = ({
           size="sm"
           className={`data-table-stats-toggle ${className}`.trim()}
           aria-label="Table display"
-          title="Table display"
+          title={displayTooltip}
           onClick={openSettings}
         >
           <CIcon icon={cilChartPie} />

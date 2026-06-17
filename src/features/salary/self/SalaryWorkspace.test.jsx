@@ -27,6 +27,10 @@ vi.mock('../../../components/salary/OtherClaimRecordDetailPage', () => ({
   default: () => <div>Other Claim Record Detail Mock</div>,
 }))
 
+vi.mock('../../../components/salary/PaymentQueueRecords', () => ({
+  default: () => <div>Payment Queue Mock</div>,
+}))
+
 vi.mock('../../../components/salary/SalarySettings', () => ({
   default: () => <div>Salary Settings Mock</div>,
 }))
@@ -74,6 +78,7 @@ describe('SalaryWorkspace', () => {
       .getAllByRole('tab')
       .map((tab) => tab.textContent)
     expect(tabLabels).toEqual([
+      'Payment Queue',
       'Apply Salary',
       'Salary Records',
       'Apply Other Claim',

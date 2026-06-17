@@ -14,7 +14,8 @@ import { SalaryPayablePreviewTable } from './SalaryTables'
 import { openPreparingPdfTab } from './salaryFileUtils'
 import { getSalaryPayslipAvailability } from './salaryPayslipAvailability'
 
-const mutableStatuses = new Set(['Draft', 'Submitted', 'Prepared', 'Rejected'])
+const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
+const paidStatuses = new Set(['Paid'])
 
 const deductionRows = (record) => [
   {
@@ -73,11 +74,8 @@ const sortAllowanceClaims = (claims = []) => [
   ...claims.filter((claim) => claim.source !== 'profile'),
 ]
 
-const claimInlineMeta = (claim = {}, key = '') => {
-  if (key === 'allowance') return ''
-
-  return [claim.date, claim.meta || claim.sourceLabel].filter(Boolean).join(' - ')
-}
+const claimInlineMeta = (claim = {}) =>
+  [claim.date, claim.meta || claim.sourceLabel].filter(Boolean).join(' - ')
 
 const buildClaimGroupRows = ({ key, label, total, items, onPreviewAttachment }) => {
   if (Number(total || 0) <= 0 && !items.some((item) => Number(item.amount || 0) > 0)) return []
@@ -95,8 +93,8 @@ const buildClaimGroupRows = ({ key, label, total, items, onPreviewAttachment }) 
       item: (
         <>
           {index + 1}. {item.description || label}
-          {claimInlineMeta(item, key) && (
-            <span className="salary-preview-inline-note">{claimInlineMeta(item, key)}</span>
+          {claimInlineMeta(item) && (
+            <span className="salary-preview-inline-note">{claimInlineMeta(item)}</span>
           )}
           {item.attachment && (
             <AttachmentActions
@@ -178,9 +176,6 @@ const SalaryRecordDetailPage = () => {
     const allowanceClaims = sortAllowanceClaims(
       claims.filter((claim) => claim.type === 'Allowance'),
     )
-    const expenseClaims = claims.filter((claim) => claim.type === 'Expense')
-    const mileageClaims = claims.filter((claim) => claim.type === 'Mileage')
-    const medicalClaims = claims.filter((claim) => claim.type === 'Medical')
     const basicSalary = Number(record?.basicSalary || 0)
     const claimsTotal = Number(record?.claimsTotal || 0)
 
@@ -192,35 +187,14 @@ const SalaryRecordDetailPage = () => {
       },
       {
         id: 'claims-total',
-        item: 'Claims Total',
+        item: 'Salary Adjustments',
         amount: claimsTotal,
       },
       ...buildClaimGroupRows({
         key: 'allowance',
-        label: 'Allowance',
+        label: 'Allowance Adjustments',
         total: sumClaims(claims, 'Allowance'),
         items: allowanceClaims,
-        onPreviewAttachment: setPreviewAttachment,
-      }),
-      ...buildClaimGroupRows({
-        key: 'expense',
-        label: 'Expense',
-        total: sumClaims(claims, 'Expense'),
-        items: expenseClaims,
-        onPreviewAttachment: setPreviewAttachment,
-      }),
-      ...buildClaimGroupRows({
-        key: 'mileage',
-        label: 'Mileage',
-        total: sumClaims(claims, 'Mileage'),
-        items: mileageClaims,
-        onPreviewAttachment: setPreviewAttachment,
-      }),
-      ...buildClaimGroupRows({
-        key: 'medical',
-        label: 'Medical',
-        total: sumClaims(claims, 'Medical'),
-        items: medicalClaims,
         onPreviewAttachment: setPreviewAttachment,
       }),
       {
@@ -257,7 +231,7 @@ const SalaryRecordDetailPage = () => {
   }, [record, statutoryEmployeeTotal, statutoryRows])
 
   const actions = useMemo(() => {
-    const canMutate = mutableStatuses.has(record?.status)
+    const isPaid = paidStatuses.has(record?.status)
     const payslipAvailability = getSalaryPayslipAvailability(record)
     const exportingClaims = exportingPdfAction === 'claims'
     const exportingPayslip = exportingPdfAction === 'payslip'
@@ -325,29 +299,69 @@ const SalaryRecordDetailPage = () => {
       {
         key: 'edit',
         label: 'Edit',
-        hidden: !canMutate,
-        onClick: (salaryRecord) =>
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        onClick: async (salaryRecord) => {
+          if (paidStatuses.has(salaryRecord?.status)) return
+          let amendmentReason = ''
+          if (reviewedMutableStatuses.has(salaryRecord.status)) {
+            const reason = await dialog.prompt(
+              `${salaryRecord.salaryMonth} has already been ${salaryRecord.status.toLowerCase()}. Enter a reason to restart the workflow.`,
+              {
+                title: 'Edit Reviewed Salary Record',
+                confirmText: 'Continue',
+                required: true,
+                multiline: true,
+                rows: 4,
+                placeholder: 'Reason for amending this salary record',
+              },
+            )
+            if (reason === null) return
+            amendmentReason = String(reason || '').trim()
+            if (!amendmentReason) return
+          }
           navigate('/my/salary/apply', {
-            state: { editRecord: salaryRecord },
-          }),
+            state: { editRecord: salaryRecord, amendmentReason },
+          })
+        },
       },
       {
         key: 'delete',
         label: 'Delete',
         danger: true,
-        hidden: !canMutate,
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
         onClick: async (salaryRecord) => {
-          if (
+          if (paidStatuses.has(salaryRecord?.status)) return
+          let cancellationReason = ''
+          if (reviewedMutableStatuses.has(salaryRecord.status)) {
+            const reason = await dialog.prompt(
+              `${salaryRecord.salaryMonth} has already been ${salaryRecord.status.toLowerCase()}. Enter a reason to cancel this salary record.`,
+              {
+                title: 'Cancel Reviewed Salary Record',
+                confirmText: 'Cancel Record',
+                confirmColor: 'danger',
+                required: true,
+                multiline: true,
+                rows: 4,
+                placeholder: 'Reason for cancelling this salary record',
+              },
+            )
+            if (reason === null) return
+            cancellationReason = String(reason || '').trim()
+            if (!cancellationReason) return
+          } else if (
             !(await dialog.confirm(`Delete ${salaryRecord.salaryMonth} salary application?`, {
               title: 'Delete Salary Record',
               confirmText: 'Delete',
               confirmColor: 'danger',
             }))
-          )
+          ) {
             return
+          }
 
           try {
-            await removeSalaryRecord(salaryRecord.id)
+            await removeSalaryRecord(salaryRecord.id, cancellationReason)
             navigate(returnTo)
           } catch (err) {
             setError(err?.message || 'Unable to delete salary record.')

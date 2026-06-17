@@ -58,6 +58,7 @@ describe('SalaryRecord', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dialog.confirm.mockResolvedValue(true)
+    dialog.prompt.mockResolvedValue('Corrected amount')
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:salary')
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
     vi.spyOn(window, 'open').mockReturnValue({
@@ -222,6 +223,99 @@ describe('SalaryRecord', () => {
     })
     expect(window.open).toHaveBeenCalledWith('', '_blank')
     expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled()
+  })
+
+  it('prompts for reviewed salary edit and delete reasons', async () => {
+    const LocationProbe = () => {
+      const location = useLocation()
+
+      return (
+        <div data-testid="location">
+          {location.pathname}
+          {location.state?.editRecord?.id ? `:${location.state.editRecord.id}` : ''}
+          {location.state?.amendmentReason ? `:${location.state.amendmentReason}` : ''}
+        </div>
+      )
+    }
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (options.method === 'DELETE') return { status: 'success' }
+      if (String(url).includes('hr/salary/records/10')) {
+        return { record: { ...detailRecord, status: 'Checked' } }
+      }
+      return { records: [{ ...detailRecord, status: 'Checked', claims: undefined }] }
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/my/salary/records']}>
+        <Routes>
+          <Route
+            path="/my/salary/records"
+            element={
+              <>
+                <SalaryRecord />
+                <LocationProbe />
+              </>
+            }
+          />
+          <Route path="/my/salary/apply" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findAllByText('June 2026')
+    fireEvent.click(screen.getAllByLabelText('Actions')[0])
+    fireEvent.click(within(await getOpenActionMenu()).getByText('Edit'))
+
+    await waitFor(() => {
+      expect(dialog.prompt).toHaveBeenCalledWith(
+        expect.stringContaining('restart the workflow'),
+        expect.objectContaining({ title: 'Edit Reviewed Salary Record', required: true }),
+      )
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/my/salary/apply:10:Corrected amount',
+      )
+    })
+
+    cleanup()
+    render(
+      <MemoryRouter initialEntries={['/my/salary/records']}>
+        <SalaryRecord />
+      </MemoryRouter>,
+    )
+
+    await screen.findAllByText('June 2026')
+    fireEvent.click(screen.getAllByLabelText('Actions')[0])
+    fireEvent.click(within(await getOpenActionMenu()).getByText('Delete'))
+
+    await waitFor(() => {
+      expect(apiMock.apiJson).toHaveBeenCalledWith(
+        expect.stringContaining('hr/salary/records/10'),
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'Corrected amount' }),
+        },
+      )
+    })
+  })
+
+  it('shows paid salary edit and delete actions disabled', async () => {
+    apiMock.apiJson.mockResolvedValue({
+      records: [{ ...detailRecord, status: 'Paid', claims: undefined }],
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/my/salary/records']}>
+        <SalaryRecord />
+      </MemoryRouter>,
+    )
+
+    await screen.findAllByText('June 2026')
+    fireEvent.click(screen.getAllByLabelText('Actions')[0])
+    const menu = await getOpenActionMenu()
+
+    expect(within(menu).getByText('Edit').closest('button, a')).toHaveAttribute('aria-disabled')
+    expect(within(menu).getByText('Delete').closest('button, a')).toHaveAttribute('aria-disabled')
   })
 
   it('keeps the payslip row action visible but inactive before the salary month closes', async () => {

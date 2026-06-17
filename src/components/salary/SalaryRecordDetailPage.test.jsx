@@ -34,16 +34,10 @@ describe('SalaryRecordDetailPage', () => {
     status: 'Submitted',
     claims: [
       {
-        id: 'expense-1',
-        type: 'Expense',
-        description: 'Parking receipt',
+        id: 'allowance-1',
+        type: 'Allowance',
+        description: 'Payroll adjustment',
         amount: 75,
-        attachment: {
-          name: 'parking.pdf',
-          size: 1024,
-          type: 'application/pdf',
-          url: '/hr/salary/attachments/1',
-        },
       },
     ],
     deductions: {
@@ -98,12 +92,10 @@ describe('SalaryRecordDetailPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Parking receipt/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
-    expect(screen.getAllByText(/Parking receipt/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText('parking.pdf').length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Open parking.pdf' }).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: 'Download parking.pdf' })).not.toBeInTheDocument()
+    expect(screen.getAllByText(/Salary Adjustments/).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Parking receipt/)).not.toBeInTheDocument()
     expect(screen.getAllByText('-RM 374.05').length).toBeGreaterThan(0)
   })
 
@@ -130,7 +122,7 @@ describe('SalaryRecordDetailPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Parking receipt/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Export Claims' }))
@@ -158,7 +150,7 @@ describe('SalaryRecordDetailPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Parking receipt/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
@@ -200,7 +192,7 @@ describe('SalaryRecordDetailPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Parking receipt/).length).toBeGreaterThan(0)
+      expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Export Payslip' }))

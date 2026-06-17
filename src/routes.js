@@ -184,6 +184,9 @@ const FinancialSalaryRecordsPage = React.lazy(
 const FinancialOtherClaimRecordsPage = React.lazy(
   () => import('./views/internal-operations/financial/FinancialOtherClaimRecordsPage'),
 )
+const FinancialPaymentQueuePage = React.lazy(
+  () => import('./views/internal-operations/financial/FinancialPaymentQueuePage'),
+)
 const FinancialBalanceSheetPage = React.lazy(
   () => import('./views/internal-operations/financial/FinancialBalanceSheetPage'),
 )
@@ -788,8 +791,17 @@ const routes = [
   },
   {
     path: '/my/salary',
-    name: 'My Salary Records',
-    element: <Navigate to="/my/salary/records" replace />,
+    name: 'My Salary Payment Queue',
+    element: <Navigate to="/my/salary/payment-queue" replace />,
+  },
+  {
+    path: '/my/salary/payment-queue',
+    name: 'My Salary Payment Queue',
+    element: (
+      <ProtectedRoute>
+        <SalaryWorkspace routeSection="payment-queue" />
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/my/salary/records',
@@ -867,6 +879,15 @@ const routes = [
     element: (
       <ProtectedRoute allowedRoles={staffAllowedRoles}>
         <ViewTasks />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/financial/payment-queue',
+    name: 'Payment Queue',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <FinancialPaymentQueuePage />
       </ProtectedRoute>
     ),
   },

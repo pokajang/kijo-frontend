@@ -22,7 +22,6 @@ export const formatClaimMonth = (claimMonth) => {
 
 export const normalizeOtherClaimStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
-  if (status === 'Paid') return 'Approved'
   return status
 }
 
@@ -242,6 +241,9 @@ export const saveOtherClaimRecord = async (record) => {
   }
   formData.append('claim_month', record.claimMonthValue)
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
+  if (String(record.amendmentReason || '').trim()) {
+    formData.append('amendment_reason', String(record.amendmentReason).trim())
+  }
   appendClaimAttachments(formData, claims)
 
   const payload = await apiJson(`${API_BASE}hr/salary/other-claims`, {
@@ -297,9 +299,16 @@ export const clearOtherClaimServerDraft = async (claimMonth) => {
   dispatchRecordsChanged()
 }
 
-export const removeOtherClaimRecord = async (id) => {
+export const removeOtherClaimRecord = async (id, reason = '') => {
+  const trimmedReason = String(reason || '').trim()
   await apiJson(`${API_BASE}hr/salary/other-claims/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    ...(trimmedReason
+      ? {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: trimmedReason }),
+        }
+      : {}),
   })
   dispatchRecordsChanged()
   dispatchAppNotificationsChanged()

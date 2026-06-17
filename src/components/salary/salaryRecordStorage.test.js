@@ -44,7 +44,7 @@ describe('salaryRecordStorage API adapter', () => {
     ])
   })
 
-  it('finds a salary record through the API', async () => {
+  it('normalizes salary details to payroll allowance rows only', async () => {
     apiMock.apiJson.mockResolvedValueOnce({
       record: {
         id: 10,
@@ -55,14 +55,18 @@ describe('salaryRecordStorage API adapter', () => {
         employeeDeductions: 374.05,
         payableSalary: 2900.95,
         status: 'Submitted',
-        claims: [{ id: 1, type: 'Expense', description: 'Parking', amount: 75 }],
+        claims: [
+          { id: 1, type: 'Expense', description: 'Parking', amount: 75 },
+          { id: 2, type: 'Allowance', description: 'Payroll adjustment', amount: 25 },
+        ],
       },
     })
 
     await expect(findSalaryRecord(10)).resolves.toEqual(
       expect.objectContaining({
         id: 10,
-        claims: [expect.objectContaining({ description: 'Parking' })],
+        claimsTotal: 25,
+        claims: [expect.objectContaining({ description: 'Payroll adjustment' })],
       }),
     )
     expect(apiMock.apiJson).toHaveBeenCalledWith(expect.stringContaining('hr/salary/records/10'), {
@@ -82,7 +86,7 @@ describe('salaryRecordStorage API adapter', () => {
     })
   })
 
-  it('submits salary records as multipart form data with attachment files', async () => {
+  it('submits salary records as payroll-only multipart form data', async () => {
     apiMock.apiJson.mockResolvedValueOnce({
       record: {
         id: 10,
@@ -97,7 +101,6 @@ describe('salaryRecordStorage API adapter', () => {
       },
     })
 
-    const file = new File(['receipt'], 'parking.pdf', { type: 'application/pdf' })
     const saved = await saveSalaryRecord({
       salaryMonthValue: '2026-06',
       basicSalary: 3200,
@@ -106,11 +109,20 @@ describe('salaryRecordStorage API adapter', () => {
       payableSalary: 2900.95,
       claims: [
         {
+          id: 'claim-allowance',
+          type: 'Allowance',
+          description: 'Payroll adjustment',
+          amount: 75,
+        },
+        {
           id: 'claim-1',
           type: 'Expense',
           description: 'Parking',
           amount: 75,
-          attachment: { file, name: 'parking.pdf' },
+          attachment: {
+            file: new File(['receipt'], 'parking.pdf', { type: 'application/pdf' }),
+            name: 'parking.pdf',
+          },
         },
       ],
       deductions: { employeeTotal: 374.05, employerTotal: 485.55 },
@@ -119,10 +131,14 @@ describe('salaryRecordStorage API adapter', () => {
     const [, options] = apiMock.apiJson.mock.calls[0]
     expect(options.body).toBeInstanceOf(FormData)
     expect(options.body.get('salary_month')).toBe('2026-06')
-    expect(JSON.parse(options.body.get('claims'))[0].attachmentId).toBeNull()
-    expect(options.body.get('attachments[claim-1]')).toEqual(
-      expect.objectContaining({ name: 'parking.pdf', type: 'application/pdf' }),
-    )
+    expect(JSON.parse(options.body.get('claims'))).toEqual([
+      expect.objectContaining({
+        id: 'claim-allowance',
+        type: 'Allowance',
+        attachmentId: null,
+      }),
+    ])
+    expect(options.body.get('attachments[claim-1]')).toBeNull()
     expect(saved.id).toBe(10)
   })
 

@@ -8,12 +8,18 @@ import ApplySalary from '../../../components/salary/ApplySalary'
 import OtherClaimApply from '../../../components/salary/OtherClaimApply'
 import OtherClaimRecords from '../../../components/salary/OtherClaimRecords'
 import OtherClaimRecordDetailPage from '../../../components/salary/OtherClaimRecordDetailPage'
+import PaymentQueueRecords from '../../../components/salary/PaymentQueueRecords'
 import SalaryRecord from '../../../components/salary/SalaryRecord'
 import SalaryRecordDetailPage from '../../../components/salary/SalaryRecordDetailPage'
 import SalarySettings from '../../../components/salary/SalarySettings'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 
 const sections = [
+  {
+    key: 'payment-queue',
+    title: 'Payment Queue',
+    component: PaymentQueueRecords,
+  },
   {
     key: 'records',
     title: 'Salary Records',
@@ -42,6 +48,7 @@ const sections = [
 ]
 
 const sectionPath = (key) => {
+  if (key === 'payment-queue') return '/my/salary/payment-queue'
   if (key === 'records') return '/my/salary/records'
   if (key === 'other-claim-apply') return '/my/salary/other-claims/apply'
   if (key === 'other-claim-records') return '/my/salary/other-claims/records'
@@ -64,7 +71,7 @@ const SalaryWorkspace = ({ routeSection }) => {
     useDataTableStatsVisibility('my.salary')
 
   const activeSection =
-    routeSection && validSectionKeys.has(routeSection) ? routeSection : 'records'
+    routeSection && validSectionKeys.has(routeSection) ? routeSection : 'payment-queue'
   const activeConfig = useMemo(
     () => sections.find((section) => section.key === activeSection) || sections[0],
     [activeSection],
@@ -98,15 +105,17 @@ const SalaryWorkspace = ({ routeSection }) => {
         <ActiveComponent />
       ) : (
         <CCard className="salary-workspace">
-          {(activeSection === 'records' || activeSection === 'other-claim-records') && (
+          {['payment-queue', 'records', 'other-claim-records'].includes(activeSection) && (
             <DataTableCardHeader
               title={activeConfig.title}
               scopeLabel={
-                activeSection === 'records'
-                  ? salaryRecordsScopeLabel
-                  : activeSection === 'other-claim-records'
-                    ? otherClaimRecordsScopeLabel
-                    : ''
+                activeSection === 'payment-queue'
+                  ? ''
+                  : activeSection === 'records'
+                    ? salaryRecordsScopeLabel
+                    : activeSection === 'other-claim-records'
+                      ? otherClaimRecordsScopeLabel
+                      : ''
               }
               className="salary-workspace-header"
             >
@@ -135,6 +144,11 @@ const SalaryWorkspace = ({ routeSection }) => {
                   ? location.state?.editRecord
                   : null
               }
+              amendmentReason={
+                activeSection === 'apply' || activeSection === 'other-claim-apply'
+                  ? location.state?.amendmentReason
+                  : ''
+              }
               showAdjustments={
                 activeSection === 'apply'
                   ? salaryAdjustmentsVisible
@@ -154,19 +168,21 @@ const SalaryWorkspace = ({ routeSection }) => {
                 <ActiveComponent
                   editRecord={null}
                   onScopeLabelChange={
-                    activeSection === 'records'
-                      ? setSalaryRecordsScopeLabel
-                      : activeSection === 'other-claim-records'
-                        ? setOtherClaimRecordsScopeLabel
-                        : undefined
+                    activeSection === 'payment-queue'
+                      ? undefined
+                      : activeSection === 'records'
+                        ? setSalaryRecordsScopeLabel
+                        : activeSection === 'other-claim-records'
+                          ? setOtherClaimRecordsScopeLabel
+                          : undefined
                   }
                   statsVisible={
-                    activeSection === 'records' || activeSection === 'other-claim-records'
+                    ['payment-queue', 'records', 'other-claim-records'].includes(activeSection)
                       ? statsVisible
                       : true
                   }
                   controlsVisible={
-                    activeSection === 'records' || activeSection === 'other-claim-records'
+                    ['payment-queue', 'records', 'other-claim-records'].includes(activeSection)
                       ? controlsVisible
                       : true
                   }

@@ -18,7 +18,6 @@ import { formatAttachmentSize, prepareSalaryAttachment } from './attachmentUtils
 import {
   AttachmentInput,
   AttachmentPreviewModal,
-  adjustmentTypes,
   ClaimDraftActions,
   FormPanelHeading,
 } from './ApplySalary'
@@ -48,6 +47,13 @@ const colorByType = {
   error: 'danger',
   info: 'info',
 }
+
+const otherClaimTypes = [
+  { key: 'allowance', label: 'Non-Recurring Allowance' },
+  { key: 'expense', label: 'Expense' },
+  { key: 'medical', label: 'Medical' },
+  { key: 'mileage', label: 'Mileage' },
+]
 
 const createAttachmentProcessingState = () => ({
   allowance: false,
@@ -309,7 +315,12 @@ const isCompleteClaim = (claim) => {
   return Number(claim.amount || 0) > 0
 }
 
-const OtherClaimApply = ({ onViewRecords, editRecord, showAdjustments = false }) => {
+const OtherClaimApply = ({
+  onViewRecords,
+  editRecord,
+  amendmentReason = '',
+  showAdjustments = false,
+}) => {
   const initialType = firstClaimType(editRecord)
   const [isAdjusting, setIsAdjusting] = useState(Boolean(editRecord) || showAdjustments)
   const [activeAdjustmentType, setActiveAdjustmentType] = useState(initialType)
@@ -331,6 +342,7 @@ const OtherClaimApply = ({ onViewRecords, editRecord, showAdjustments = false })
   const attachmentProcessingRef = useRef(attachmentProcessing)
   const draftSaveTimerRef = useRef(null)
   const initialRecordRef = useRef(editRecord)
+  const amendmentReasonRef = useRef(String(amendmentReason || '').trim())
   const hasPersistedDraftRef = useRef(false)
   const hasSubmittedRef = useRef(false)
   const initialStateRef = useRef(null)
@@ -996,6 +1008,7 @@ const OtherClaimApply = ({ onViewRecords, editRecord, showAdjustments = false })
         status: 'Submitted',
         claims: allClaims,
         submittedAt: new Date().toISOString(),
+        amendmentReason: amendmentReasonRef.current,
       })
       setActiveRecordId(savedRecord.id || null)
       hasSubmittedRef.current = true
@@ -1054,7 +1067,7 @@ const OtherClaimApply = ({ onViewRecords, editRecord, showAdjustments = false })
         </h3>
       </div>
       <div className="salary-adjustment-type-row">
-        {adjustmentTypes.map((type) => (
+        {otherClaimTypes.map((type) => (
           <CButton
             key={type.key}
             className={`salary-adjustment-type-card${
@@ -1421,7 +1434,10 @@ const OtherClaimApply = ({ onViewRecords, editRecord, showAdjustments = false })
             variant="outline"
             size="sm"
             type="button"
-            onClick={() => setIsAdjusting(true)}
+            onClick={() => {
+              setIsAdjusting(true)
+              setShowClaimDraft(true)
+            }}
           >
             Add Claim
           </CButton>

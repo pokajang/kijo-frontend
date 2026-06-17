@@ -264,7 +264,9 @@ export const AttachmentInput = ({
   onChange,
 }) => (
   <div className="salary-attachment-field">
-    <div className="salary-attachment-label">{label}</div>
+    <label className="salary-attachment-label" htmlFor={id}>
+      {label}
+    </label>
     <div className="salary-attachment-control">
       <label className="btn btn-outline-secondary salary-attachment-choose" htmlFor={id}>
         Choose File
@@ -290,12 +292,7 @@ export const AttachmentInput = ({
   </div>
 )
 
-export const adjustmentTypes = [
-  { key: 'allowance', label: 'Non-Recurring Allowance' },
-  { key: 'expense', label: 'Expense' },
-  { key: 'mileage', label: 'Mileage' },
-  { key: 'medical', label: 'Medical' },
-]
+export const adjustmentTypes = [{ key: 'allowance', label: 'Salary Adjustment' }]
 
 const buildClaimBreakdownGroup = ({ key, label, total, items, note }) => {
   const hasClaimValue = Number(total || 0) > 0 || items.some((item) => Number(item.amount || 0) > 0)
@@ -356,9 +353,7 @@ const sortAllowanceItemsForSummary = (items = []) => [
 ]
 
 const firstEditableClaimType = (record) => {
-  const firstClaimType = record?.claims?.find((claim) =>
-    ['Allowance', 'Expense', 'Mileage', 'Medical'].includes(claim?.type),
-  )?.type
+  const firstClaimType = record?.claims?.find((claim) => ['Allowance'].includes(claim?.type))?.type
 
   return firstClaimType ? firstClaimType.toLowerCase() : null
 }
@@ -367,6 +362,7 @@ const ApplySalary = ({
   onViewRecords,
   onViewRecord,
   editRecord,
+  amendmentReason = '',
   showAdjustments: controlledShowAdjustments,
   onShowAdjustmentsChange,
   showAddAdjustmentAction = false,
@@ -415,13 +411,8 @@ const ApplySalary = ({
   const {
     formData,
     allowanceItems,
-    expenseItems,
-    mileageItems,
-    medicalItems,
-    attachmentInputVersion,
     attachmentProcessing,
     summary,
-    medicalBalance,
     draftSaveState,
     isSubmitting,
     isSwitchingSalaryMonth,
@@ -432,18 +423,18 @@ const ApplySalary = ({
     handleSalaryMonthSelect,
     resumeSelectedMonthDraft,
     editSelectedMonthRecord,
-    handleAttachmentChange,
     addAllowance,
-    addExpense,
-    addMileage,
-    addMedical,
     removeClaimItem,
     startEditClaimItem,
     resetForm,
     resetClaimDrafts,
     handleSubmit,
     isLoadingProfile,
-  } = useApplySalaryHandlers({ onNotify: showNotice, initialRecord: editRecord })
+  } = useApplySalaryHandlers({
+    onNotify: showNotice,
+    initialRecord: editRecord,
+    amendmentReason,
+  })
 
   const showSubmissionPanel = isSubmitting || (notice.visible && notice.scope === 'submission')
   const draftStatusText =
@@ -529,49 +520,16 @@ const ApplySalary = ({
   ])
   const deductions = summary.deductions
   const manualAllowanceItems = allowanceItems.filter((item) => item.source !== 'profile')
-  const { current: currentMedicalBalance, afterClaim: medicalBalanceAfterClaim } = medicalBalance
   const claimBreakdownRows = useMemo(
     () => [
       ...buildClaimBreakdownGroup({
         key: 'allowance',
-        label: 'Allowance',
+        label: 'Salary Adjustment',
         total: summary.totalAllowance,
         items: sortAllowanceItemsForSummary(allowanceItems),
       }),
-      ...buildClaimBreakdownGroup({
-        key: 'expense',
-        label: 'Expense',
-        total: summary.totalExpenses,
-        items: expenseItems,
-      }),
-      ...buildClaimBreakdownGroup({
-        key: 'mileage',
-        label: 'Mileage',
-        total: summary.totalMileage,
-        items: mileageItems,
-      }),
-      ...buildClaimBreakdownGroup({
-        key: 'medical',
-        label: 'Medical',
-        total: summary.totalMedical,
-        items: medicalItems,
-        note: `Annual medical balance: current ${formatMoney(
-          currentMedicalBalance,
-        )} | after this claim ${formatMoney(medicalBalanceAfterClaim)}`,
-      }),
     ],
-    [
-      allowanceItems,
-      expenseItems,
-      medicalItems,
-      currentMedicalBalance,
-      medicalBalanceAfterClaim,
-      mileageItems,
-      summary.totalAllowance,
-      summary.totalExpenses,
-      summary.totalMedical,
-      summary.totalMileage,
-    ],
+    [allowanceItems, summary.totalAllowance],
   )
   const payablePreviewRows = useMemo(
     () => [
@@ -977,7 +935,7 @@ const ApplySalary = ({
               >
                 <FormPanelHeading
                   id="allowanceHeading"
-                  title="Non-Recurring Allowance"
+                  title="Salary Adjustment"
                   action={renderPanelAddAction()}
                 />
                 {showClaimDraft && (
@@ -1004,7 +962,7 @@ const ApplySalary = ({
                           name="allowanceDescription"
                           value={formData.allowanceDescription}
                           onChange={handleChange}
-                          placeholder="Phone allowance"
+                          placeholder="Phone allowance or payroll adjustment"
                         />
                       </CCol>
                       <CCol xs={12} md="auto" className="salary-claim-amount-col">
@@ -1021,16 +979,6 @@ const ApplySalary = ({
                           onChange={handleChange}
                         />
                       </CCol>
-                      <CCol xs={12} md className="salary-claim-attachment-col">
-                        <AttachmentInput
-                          id="allowanceAttachment"
-                          label="Attachment (optional)"
-                          attachment={formData.allowanceAttachment}
-                          inputKey={`allowance-${attachmentInputVersion}`}
-                          isPreparing={attachmentProcessing.allowance}
-                          onChange={(file) => handleAttachmentChange('allowance', file)}
-                        />
-                      </CCol>
                     </CRow>
                     <ClaimDraftActions
                       onSave={() => handleSaveClaimDraft(addAllowance)}
@@ -1040,253 +988,11 @@ const ApplySalary = ({
                   </>
                 )}
                 <ClaimList
-                  title="Non-Recurring Allowance"
+                  title="Salary Adjustment"
                   items={manualAllowanceItems}
                   type="allowance"
                   onEdit={handleEditClaimItem}
                   onRemove={removeClaimItem}
-                  onPreviewAttachment={setPreviewAttachment}
-                />
-              </section>
-            )}
-
-            {activeAdjustmentType === 'expense' && (
-              <section
-                className="salary-adjustment-input-panel mt-3"
-                aria-labelledby="expenseHeading"
-              >
-                <FormPanelHeading
-                  id="expenseHeading"
-                  title="Expense"
-                  action={renderPanelAddAction()}
-                />
-                {showClaimDraft && (
-                  <>
-                    <CRow className="g-3 salary-claim-field-row">
-                      <CCol xs={12} md="auto" className="salary-claim-date-col">
-                        <CFormLabel htmlFor="expenseDate" className="mb-1">
-                          Date
-                        </CFormLabel>
-                        <CFormInput
-                          id="expenseDate"
-                          type="date"
-                          name="expenseDate"
-                          value={formData.expenseDate}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md className="salary-claim-grow-col">
-                        <CFormLabel htmlFor="expenseDescription" className="mb-1">
-                          Description
-                        </CFormLabel>
-                        <CFormInput
-                          id="expenseDescription"
-                          name="expenseDescription"
-                          value={formData.expenseDescription}
-                          onChange={handleChange}
-                          placeholder="Parking, toll, or meal claim"
-                        />
-                      </CCol>
-                      <CCol xs={12} md="auto" className="salary-claim-amount-col">
-                        <CFormLabel htmlFor="expenseAmount" className="mb-1">
-                          Amount
-                        </CFormLabel>
-                        <CFormInput
-                          id="expenseAmount"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          name="expenseAmount"
-                          value={formData.expenseAmount}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md className="salary-claim-attachment-col">
-                        <AttachmentInput
-                          id="expenseAttachment"
-                          attachment={formData.expenseAttachment}
-                          inputKey={`expense-${attachmentInputVersion}`}
-                          isPreparing={attachmentProcessing.expense}
-                          onChange={(file) => handleAttachmentChange('expense', file)}
-                        />
-                      </CCol>
-                    </CRow>
-                    <ClaimDraftActions
-                      onSave={() => handleSaveClaimDraft(addExpense)}
-                      onCancel={handleCancelClaimDraft}
-                      isPreparing={attachmentProcessing.expense}
-                    />
-                  </>
-                )}
-                <ClaimList
-                  title="Expense"
-                  items={expenseItems}
-                  type="expense"
-                  onEdit={handleEditClaimItem}
-                  onRemove={removeClaimItem}
-                  onPreviewAttachment={setPreviewAttachment}
-                />
-              </section>
-            )}
-
-            {activeAdjustmentType === 'medical' && (
-              <section
-                className="salary-adjustment-input-panel mt-3"
-                aria-labelledby="medicalHeading"
-              >
-                <FormPanelHeading
-                  id="medicalHeading"
-                  title="Medical"
-                  action={renderPanelAddAction()}
-                />
-                {showClaimDraft && (
-                  <>
-                    <CRow className="g-3 salary-claim-field-row">
-                      <CCol xs={12} md="auto" className="salary-claim-date-col">
-                        <CFormLabel htmlFor="medicalDate" className="mb-1">
-                          Date
-                        </CFormLabel>
-                        <CFormInput
-                          id="medicalDate"
-                          type="date"
-                          name="medicalDate"
-                          value={formData.medicalDate}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md className="salary-claim-grow-col">
-                        <CFormLabel htmlFor="medicalDescription" className="mb-1">
-                          Description
-                        </CFormLabel>
-                        <CFormInput
-                          id="medicalDescription"
-                          name="medicalDescription"
-                          value={formData.medicalDescription}
-                          onChange={handleChange}
-                          placeholder="Clinic, medicine, or medical claim"
-                        />
-                      </CCol>
-                      <CCol xs={12} md="auto" className="salary-claim-amount-col">
-                        <CFormLabel htmlFor="medicalAmount" className="mb-1">
-                          Amount
-                        </CFormLabel>
-                        <CFormInput
-                          id="medicalAmount"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          name="medicalAmount"
-                          value={formData.medicalAmount}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md className="salary-claim-attachment-col">
-                        <AttachmentInput
-                          id="medicalAttachment"
-                          attachment={formData.medicalAttachment}
-                          inputKey={`medical-${attachmentInputVersion}`}
-                          isPreparing={attachmentProcessing.medical}
-                          onChange={(file) => handleAttachmentChange('medical', file)}
-                        />
-                      </CCol>
-                    </CRow>
-                    <ClaimDraftActions
-                      onSave={() => handleSaveClaimDraft(addMedical)}
-                      onCancel={handleCancelClaimDraft}
-                      isPreparing={attachmentProcessing.medical}
-                    />
-                  </>
-                )}
-                <ClaimList
-                  title="Medical"
-                  items={medicalItems}
-                  type="medical"
-                  onEdit={handleEditClaimItem}
-                  onRemove={removeClaimItem}
-                  onPreviewAttachment={setPreviewAttachment}
-                />
-              </section>
-            )}
-
-            {activeAdjustmentType === 'mileage' && (
-              <section
-                className="salary-adjustment-input-panel mt-3"
-                aria-labelledby="mileageHeading"
-              >
-                <FormPanelHeading
-                  id="mileageHeading"
-                  title="Mileage"
-                  action={renderPanelAddAction()}
-                />
-                {showClaimDraft && (
-                  <>
-                    <CRow className="g-3 salary-claim-field-row">
-                      <CCol xs={12} md="auto" className="salary-claim-date-col">
-                        <CFormLabel htmlFor="mileageDate" className="mb-1">
-                          Date
-                        </CFormLabel>
-                        <CFormInput
-                          id="mileageDate"
-                          type="date"
-                          name="mileageDate"
-                          value={formData.mileageDate}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md className="salary-claim-grow-col">
-                        <CFormLabel htmlFor="startLocation" className="mb-1">
-                          From
-                        </CFormLabel>
-                        <CFormInput
-                          id="startLocation"
-                          name="startLocation"
-                          value={formData.startLocation}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md className="salary-claim-grow-col">
-                        <CFormLabel htmlFor="endLocation" className="mb-1">
-                          To
-                        </CFormLabel>
-                        <CFormInput
-                          id="endLocation"
-                          name="endLocation"
-                          value={formData.endLocation}
-                          onChange={handleChange}
-                        />
-                      </CCol>
-                      <CCol xs={12} md="auto" className="salary-claim-km-col">
-                        <CFormLabel htmlFor="mileageKm" className="mb-1">
-                          KM (one-way)
-                        </CFormLabel>
-                        <CFormInput
-                          id="mileageKm"
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          name="mileageKm"
-                          value={formData.mileageKm}
-                          onChange={handleChange}
-                        />
-                        <div className="salary-field-help">
-                          Return trip is calculated automatically.
-                        </div>
-                      </CCol>
-                    </CRow>
-                    <ClaimDraftActions
-                      onSave={() => handleSaveClaimDraft(addMileage)}
-                      onCancel={handleCancelClaimDraft}
-                    />
-                  </>
-                )}
-                <ClaimList
-                  title="Mileage"
-                  items={mileageItems}
-                  type="mileage"
-                  onEdit={handleEditClaimItem}
-                  onRemove={removeClaimItem}
-                  onPreviewAttachment={setPreviewAttachment}
-                  showKm
                 />
               </section>
             )}

@@ -29,6 +29,22 @@ describe('DataTableStatsToggle', () => {
     expect(screen.queryByText('SHOW STATS')).not.toBeInTheDocument()
   })
 
+  it('surfaces when the search and filters row is hidden', () => {
+    render(
+      <DataTableStatsToggle
+        visible
+        onToggle={vi.fn()}
+        controlsVisible={false}
+        onControlsToggle={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Table display' })).toHaveAttribute(
+      'title',
+      'Table display - search and filters row hidden',
+    )
+  })
+
   it('opens settings with controls for the stats and search rows', () => {
     render(<DataTableStatsToggle visible onToggle={vi.fn()} onControlsToggle={vi.fn()} />)
 

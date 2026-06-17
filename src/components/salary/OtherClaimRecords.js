@@ -51,7 +51,6 @@ const claimDateFormatter = new Intl.DateTimeFormat('en-US', {
 
 const displayStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
-  if (status === 'Paid') return 'Approved'
   return status
 }
 
@@ -110,7 +109,8 @@ const defaultVisibleColumns = {
 }
 
 const requiredColumns = new Set(['claimDate', 'claimsTotal', 'status'])
-const mutableStatuses = new Set(['Draft', 'Submitted', 'Prepared', 'Rejected'])
+const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
+const paidStatuses = new Set(['Paid'])
 const submittedStatuses = new Set(['Submitted', 'Prepared'])
 
 const formatClaimMonthScope = (claimMonthValue) => {
@@ -287,14 +287,56 @@ const OtherClaimRecords = ({
   }
 
   const editRecord = async (record) => {
+    if (paidStatuses.has(record?.status)) return
     const detailRecord = await loadRecordDetail(record)
     if (!detailRecord) return
-    navigate('/my/salary/other-claims/apply', { state: { editRecord: detailRecord } })
+    let amendmentReason = ''
+    if (reviewedMutableStatuses.has(detailRecord.status)) {
+      const reason = await dialog.prompt(
+        `This other claim has already been ${displayStatus(
+          detailRecord.status,
+        ).toLowerCase()}. Enter a reason to restart the workflow.`,
+        {
+          title: 'Edit Reviewed Other Claim',
+          confirmText: 'Continue',
+          required: true,
+          multiline: true,
+          rows: 4,
+          placeholder: 'Reason for amending this other claim',
+        },
+      )
+      if (reason === null) return
+      amendmentReason = String(reason || '').trim()
+      if (!amendmentReason) return
+    }
+    navigate('/my/salary/other-claims/apply', {
+      state: { editRecord: detailRecord, amendmentReason },
+    })
   }
 
   const deleteRecord = async (record) => {
     if (!record?.id) return
-    if (
+    if (paidStatuses.has(record.status)) return
+    let cancellationReason = ''
+    if (reviewedMutableStatuses.has(record.status)) {
+      const reason = await dialog.prompt(
+        `This other claim has already been ${displayStatus(
+          record.status,
+        ).toLowerCase()}. Enter a reason to cancel it.`,
+        {
+          title: 'Cancel Reviewed Other Claim',
+          confirmText: 'Cancel Claim',
+          confirmColor: 'danger',
+          required: true,
+          multiline: true,
+          rows: 4,
+          placeholder: 'Reason for cancelling this other claim',
+        },
+      )
+      if (reason === null) return
+      cancellationReason = String(reason || '').trim()
+      if (!cancellationReason) return
+    } else if (
       !(await dialog.confirm(`Delete this other claim from ${formatClaimDate(record)}?`, {
         title: 'Delete Other Claim',
         confirmText: 'Delete',
@@ -305,7 +347,7 @@ const OtherClaimRecords = ({
     }
 
     try {
-      await removeOtherClaimRecord(record.id)
+      await removeOtherClaimRecord(record.id, cancellationReason)
       await refreshRecords()
     } catch (err) {
       setError(err?.message || 'Unable to delete other claim record.')
@@ -329,7 +371,7 @@ const OtherClaimRecords = ({
   }
 
   const getActions = (record) => {
-    const canMutate = mutableStatuses.has(record.status)
+    const isPaid = paidStatuses.has(record.status)
     const isExporting = exportingRecordId === record.id
     return [
       {
@@ -339,8 +381,21 @@ const OtherClaimRecords = ({
         disabled: Boolean(exportingRecordId),
         onClick: exportClaim,
       },
-      { key: 'edit', label: 'Edit', hidden: !canMutate, onClick: editRecord },
-      { key: 'delete', label: 'Delete', danger: true, hidden: !canMutate, onClick: deleteRecord },
+      {
+        key: 'edit',
+        label: 'Edit',
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        onClick: editRecord,
+      },
+      {
+        key: 'delete',
+        label: 'Delete',
+        danger: true,
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        onClick: deleteRecord,
+      },
     ]
   }
 

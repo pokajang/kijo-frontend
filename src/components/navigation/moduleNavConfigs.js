@@ -44,6 +44,12 @@ export const accountModuleTabs = [
 ]
 
 export const salarySelfModuleTabs = [
+  {
+    key: 'payment-queue',
+    label: 'Payment Queue',
+    to: '/my/salary/payment-queue',
+    notificationTabKey: 'my.salary.payment-queue',
+  },
   { key: 'apply', label: 'Apply Salary', to: '/my/salary/apply' },
   {
     key: 'records',
@@ -99,6 +105,12 @@ export const workflowModuleTabs = [
 ]
 
 export const financialModuleTabs = [
+  {
+    key: 'payment-queue',
+    label: 'Payment Queue',
+    to: '/financial/payment-queue',
+    notificationTabKey: 'financial.payment-queue',
+  },
   {
     key: 'salary-records',
     label: 'Salary Records',

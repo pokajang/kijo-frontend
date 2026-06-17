@@ -45,7 +45,6 @@ const statusSortPriority = {
 
 const displayStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
-  if (status === 'Paid') return 'Approved'
   return status
 }
 
@@ -70,7 +69,7 @@ const dataColumns = [
   },
   {
     key: 'claimsTotal',
-    label: 'Claims Total',
+    label: 'Adjustments',
     width: '120px',
     sortable: true,
     sortType: 'number',
@@ -120,7 +119,8 @@ const defaultVisibleColumns = {
 }
 
 const requiredColumns = new Set(['salaryMonth', 'payableSalary', 'status'])
-const mutableStatuses = new Set(['Draft', 'Submitted', 'Prepared', 'Rejected'])
+const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
+const paidStatuses = new Set(['Paid'])
 
 const formatSalaryMonthScope = (salaryMonthValue) => {
   const [year, month] = String(salaryMonthValue || '')
@@ -238,7 +238,7 @@ const SalaryRecord = ({
       (total, record) => total + Number(record.payableSalary || 0),
       0,
     )
-    const claimsTotal = filteredRecords.reduce(
+    const adjustmentTotal = filteredRecords.reduce(
       (total, record) => total + Number(record.claimsTotal || 0),
       0,
     )
@@ -265,9 +265,9 @@ const SalaryRecord = ({
       },
       {
         key: 'claims',
-        label: 'Claims',
-        value: formatMoney(roundMoney(claimsTotal)),
-        sublabel: 'allowance, expense, mileage',
+        label: 'Adjustments',
+        value: formatMoney(roundMoney(adjustmentTotal)),
+        sublabel: 'recurring and non-recurring allowance',
         tone: 'warning',
       },
       {
@@ -281,7 +281,7 @@ const SalaryRecord = ({
         key: 'company-cost',
         label: 'Total Cost',
         value: formatMoney(roundMoney(companyCost)),
-        sublabel: 'salary + claims + employer',
+        sublabel: 'salary + adjustments + employer',
         tone: 'info',
       },
     ]
@@ -354,27 +354,69 @@ const SalaryRecord = ({
   }
 
   const editSalaryRecord = async (record) => {
+    if (paidStatuses.has(record?.status)) return
+
     const detailRecord = await loadSalaryRecordDetail(record)
     if (!detailRecord) return
+    let amendmentReason = ''
+    if (reviewedMutableStatuses.has(detailRecord.status)) {
+      const reason = await dialog.prompt(
+        `${detailRecord.salaryMonth} has already been ${displayStatus(
+          detailRecord.status,
+        ).toLowerCase()}. Enter a reason to restart the workflow.`,
+        {
+          title: 'Edit Reviewed Salary Record',
+          confirmText: 'Continue',
+          required: true,
+          multiline: true,
+          rows: 4,
+          placeholder: 'Reason for amending this salary record',
+        },
+      )
+      if (reason === null) return
+      amendmentReason = String(reason || '').trim()
+      if (!amendmentReason) return
+    }
 
     navigate('/my/salary/apply', {
-      state: { editRecord: detailRecord },
+      state: { editRecord: detailRecord, amendmentReason },
     })
   }
 
   const deleteSalaryRecord = async (record) => {
     if (!record?.id) return
-    if (
+    if (paidStatuses.has(record.status)) return
+    let cancellationReason = ''
+    if (reviewedMutableStatuses.has(record.status)) {
+      const reason = await dialog.prompt(
+        `${record.salaryMonth} has already been ${displayStatus(
+          record.status,
+        ).toLowerCase()}. Enter a reason to cancel this salary record.`,
+        {
+          title: 'Cancel Reviewed Salary Record',
+          confirmText: 'Cancel Record',
+          confirmColor: 'danger',
+          required: true,
+          multiline: true,
+          rows: 4,
+          placeholder: 'Reason for cancelling this salary record',
+        },
+      )
+      if (reason === null) return
+      cancellationReason = String(reason || '').trim()
+      if (!cancellationReason) return
+    } else if (
       !(await dialog.confirm(`Delete ${record.salaryMonth} salary application?`, {
         title: 'Delete Salary Record',
         confirmText: 'Delete',
         confirmColor: 'danger',
       }))
-    )
+    ) {
       return
+    }
 
     try {
-      await removeSalaryRecord(record.id)
+      await removeSalaryRecord(record.id, cancellationReason)
       await refreshRecords()
     } catch (err) {
       setError(err?.message || 'Unable to delete salary record.')
@@ -410,7 +452,7 @@ const SalaryRecord = ({
   }
 
   const getActions = (record) => {
-    const canMutate = mutableStatuses.has(record.status)
+    const isPaid = paidStatuses.has(record.status)
     const isExportingClaims = exportingRecordId === `claims-${record.id}`
     const isExportingPayslip = exportingRecordId === `payslip-${record.id}`
     const payslipAvailability = getSalaryPayslipAvailability(record)
@@ -433,14 +475,16 @@ const SalaryRecord = ({
       {
         key: 'edit',
         label: 'Edit',
-        hidden: !canMutate,
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
         onClick: editSalaryRecord,
       },
       {
         key: 'delete',
         label: 'Delete',
         danger: true,
-        hidden: !canMutate,
+        disabled: isPaid,
+        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
         onClick: deleteSalaryRecord,
       },
     ]
@@ -489,7 +533,7 @@ const SalaryRecord = ({
         </div>
         <div className="records-mobile-kv-grid mt-2">
           <div className="records-mobile-kv">
-            <span className="records-mobile-k">Claims</span>
+            <span className="records-mobile-k">Adjustments</span>
             <span className="records-mobile-v">{formatMoney(record.claimsTotal)}</span>
           </div>
           <div className="records-mobile-kv">
@@ -601,7 +645,7 @@ const SalaryRecord = ({
           kv: (record) => [
             {
               key: 'claimsTotal',
-              label: 'Claims',
+              label: 'Adjustments',
               value: formatMoney(record.claimsTotal),
             },
             {

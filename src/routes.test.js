@@ -120,16 +120,20 @@ describe('staff leave admin routes', () => {
 })
 
 describe('personal salary routes', () => {
-  it('includes salary records and apply workspace routes', () => {
+  it('includes payment queue, salary records, and apply workspace routes', () => {
     expect(routes).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          path: '/my/salary/payment-queue',
+          name: 'My Salary Payment Queue',
+        }),
         expect.objectContaining({
           path: '/my/salary/records',
           name: 'My Salary Records',
         }),
         expect.objectContaining({
           path: '/my/salary',
-          name: 'My Salary Records',
+          name: 'My Salary Payment Queue',
         }),
         expect.objectContaining({
           path: '/my/salary/apply',
@@ -158,15 +162,34 @@ describe('personal salary routes', () => {
     expect(detailIndex).toBeLessThan(recordsIndex)
   })
 
-  it('redirects the old salary root to the records tab URL', () => {
+  it('redirects the old salary root to the payment queue tab URL', () => {
     const route = routes.find((item) => item.path === '/my/salary')
 
-    expect(route?.element?.props?.to).toBe('/my/salary/records')
+    expect(route?.element?.props?.to).toBe('/my/salary/payment-queue')
     expect(route?.element?.props?.replace).toBe(true)
   })
 })
 
 describe('financial routes', () => {
+  it('includes the internal operations financial payment queue page', () => {
+    const route = routes.find((item) => item.path === '/financial/payment-queue')
+
+    expect(route).toEqual(
+      expect.objectContaining({
+        path: '/financial/payment-queue',
+        name: 'Payment Queue',
+      }),
+    )
+    expect(route?.element?.props?.allowedRoles).toEqual([
+      'System Admin',
+      'Manager',
+      'HR',
+      'Finance',
+      'Account',
+      'Bank',
+    ])
+  })
+
   it('includes the internal operations financial salary records page', () => {
     const route = routes.find((item) => item.path === '/financial/salary-records')
 

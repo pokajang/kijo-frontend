@@ -78,9 +78,9 @@ const createStateFromDraft = (draft = {}, fallbackMonth = getCurrentSalaryMonth(
   allowanceItems: normalizeDraftItems(draft.allowanceItems).filter(
     (item) => item.source !== 'profile',
   ),
-  expenseItems: normalizeDraftItems(draft.expenseItems),
-  mileageItems: normalizeDraftItems(draft.mileageItems),
-  medicalItems: normalizeDraftItems(draft.medicalItems),
+  expenseItems: [],
+  mileageItems: [],
+  medicalItems: [],
 })
 
 const createInitialSalaryState = (initialRecord = null, draft = null) => {
@@ -115,15 +115,9 @@ const createInitialSalaryState = (initialRecord = null, draft = null) => {
       allowanceItems: claims
         .filter((claim) => claim.type === 'Allowance')
         .map((claim) => normalizeEditableClaim(claim)),
-      expenseItems: claims
-        .filter((claim) => claim.type === 'Expense')
-        .map((claim) => normalizeEditableClaim(claim)),
-      mileageItems: claims
-        .filter((claim) => claim.type === 'Mileage')
-        .map((claim) => normalizeEditableClaim(claim)),
-      medicalItems: claims
-        .filter((claim) => claim.type === 'Medical')
-        .map((claim) => normalizeEditableClaim(claim)),
+      expenseItems: [],
+      mileageItems: [],
+      medicalItems: [],
     }
   }
 
@@ -213,13 +207,7 @@ const serializeAttachment = (attachment) => {
   }
 }
 
-const createApplicationDraftPayload = ({
-  formData,
-  allowanceItems,
-  expenseItems,
-  mileageItems,
-  medicalItems,
-}) => ({
+const createApplicationDraftPayload = ({ formData, allowanceItems }) => ({
   formData: {
     salaryMonth: formData.salaryMonth,
     basicSalary: formData.basicSalary,
@@ -227,55 +215,26 @@ const createApplicationDraftPayload = ({
     allowanceDate: formData.allowanceDate,
     allowanceDescription: formData.allowanceDescription,
     allowanceAmount: formData.allowanceAmount,
-    allowanceAttachment: serializeDraftAttachment(formData.allowanceAttachment),
-    expenseDate: formData.expenseDate,
-    expenseDescription: formData.expenseDescription,
-    expenseAmount: formData.expenseAmount,
-    expenseAttachment: serializeDraftAttachment(formData.expenseAttachment),
-    medicalDate: formData.medicalDate,
-    medicalDescription: formData.medicalDescription,
-    medicalAmount: formData.medicalAmount,
-    medicalAttachment: serializeDraftAttachment(formData.medicalAttachment),
-    mileageDate: formData.mileageDate,
-    startLocation: formData.startLocation,
-    endLocation: formData.endLocation,
-    mileageKm: formData.mileageKm,
+    allowanceAttachment: null,
   },
   allowanceItems: allowanceItems
     .filter((item) => item.source !== 'profile')
     .map(serializeDraftItem),
-  expenseItems: expenseItems.map(serializeDraftItem),
-  mileageItems: mileageItems.map(serializeDraftItem),
-  medicalItems: medicalItems.map(serializeDraftItem),
+  expenseItems: [],
+  mileageItems: [],
+  medicalItems: [],
 })
 
 const draftHasContent = (draft) => {
   if (!draft) return false
 
-  const hasItems = ['allowanceItems', 'expenseItems', 'mileageItems', 'medicalItems'].some(
+  const hasItems = ['allowanceItems'].some(
     (key) => Array.isArray(draft[key]) && draft[key].length > 0,
   )
   if (hasItems) return true
 
   const fields = draft.formData || {}
-  return [
-    fields.allowanceDate,
-    fields.allowanceDescription,
-    fields.allowanceAmount,
-    fields.allowanceAttachment,
-    fields.expenseDate,
-    fields.expenseDescription,
-    fields.expenseAmount,
-    fields.expenseAttachment,
-    fields.medicalDate,
-    fields.medicalDescription,
-    fields.medicalAmount,
-    fields.medicalAttachment,
-    fields.mileageDate,
-    fields.startLocation,
-    fields.endLocation,
-    fields.mileageKm,
-  ].some(Boolean)
+  return [fields.allowanceDate, fields.allowanceDescription, fields.allowanceAmount].some(Boolean)
 }
 
 const mapClaimItems = (items = [], type) =>
@@ -319,7 +278,12 @@ const parseMileageDescription = (description = '') => {
   }
 }
 
-export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } = {}) => {
+export const useApplySalaryHandlers = ({
+  onNotify,
+  onSubmitted,
+  initialRecord,
+  amendmentReason = '',
+} = {}) => {
   const initialDraftRef = useRef(null)
   const [initialSalaryState] = useState(() => {
     const salaryMonth = initialRecord?.salaryMonthValue || getCurrentSalaryMonth()
@@ -344,6 +308,7 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
   const initialSalaryMonthRef = useRef(initialSalaryState.formData.salaryMonth)
   const draftSaveTimerRef = useRef(null)
   const hasSubmittedRef = useRef(false)
+  const amendmentReasonRef = useRef(String(amendmentReason || '').trim())
   const hasPersistedDraftRef = useRef(
     Boolean(initialDraftRef.current || isInitialDraftRecordRef.current),
   )
@@ -696,7 +661,7 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
       amount: roundMoney(amount),
       source: 'manual',
       sourceLabel: 'Manual adjustment',
-      attachment: formData.allowanceAttachment,
+      attachment: null,
     }
     setAllowanceItems((prev) =>
       editingClaim?.type === 'allowance'
@@ -937,6 +902,12 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
   )
   const selectedMonthStatus = selectedMonthRecord?.status || ''
   const isSelectedMonthLocked = staffLockedStatuses.has(selectedMonthStatus)
+  const isEditingReviewedMonthWithReason = Boolean(
+    activeRecordId &&
+      selectedMonthRecord?.id === activeRecordId &&
+      ['Checked', 'Approved'].includes(selectedMonthStatus) &&
+      amendmentReasonRef.current,
+  )
   const requiresExistingRecordEdit = Boolean(
     selectedMonthRecord &&
       selectedMonthStatus !== 'Draft' &&
@@ -1004,7 +975,7 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
       isLoadingProfile ||
       isSubmitting ||
       isSwitchingSalaryMonth ||
-      isSelectedMonthLocked ||
+      (isSelectedMonthLocked && !isEditingReviewedMonthWithReason) ||
       requiresExistingRecordEdit
     )
       return undefined
@@ -1040,12 +1011,7 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
       saveSalaryApplicationDraft({
         salaryMonthValue: salaryMonth,
         basicSalary: summary.basicSalary,
-        claims: [
-          ...mapClaimItems(allowanceItems, 'Allowance'),
-          ...mapClaimItems(expenseItems, 'Expense'),
-          ...mapClaimItems(mileageItems, 'Mileage'),
-          ...mapClaimItems(medicalItems, 'Medical'),
-        ].filter(isCompleteDraftClaim),
+        claims: mapClaimItems(allowanceItems, 'Allowance').filter(isCompleteDraftClaim),
         draftPayload: applicationDraftPayload,
       })
         .then(() => {
@@ -1066,6 +1032,7 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
     isLoadingProfile,
     isSubmitting,
     isSelectedMonthLocked,
+    isEditingReviewedMonthWithReason,
     isSwitchingSalaryMonth,
     medicalItems,
     mileageItems,
@@ -1145,7 +1112,14 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
       return
     }
 
-    if (isSelectedMonthLocked) {
+    if (selectedMonthStatus === 'Paid') {
+      notify('warning', 'Paid salary records cannot be changed.', {
+        scope: 'validation',
+      })
+      return
+    }
+
+    if (isSelectedMonthLocked && !isEditingReviewedMonthWithReason) {
       notify('warning', 'This salary month is locked after review and cannot be changed.', {
         scope: 'validation',
       })
@@ -1175,14 +1149,10 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
         employeeDeductions: summary.deductions.employeeTotal,
         payableSalary: summary.payableSalary,
         status: 'Submitted',
-        claims: [
-          ...mapClaimItems(allowanceItems, 'Allowance'),
-          ...mapClaimItems(expenseItems, 'Expense'),
-          ...mapClaimItems(mileageItems, 'Mileage'),
-          ...mapClaimItems(medicalItems, 'Medical'),
-        ],
+        claims: mapClaimItems(allowanceItems, 'Allowance'),
         deductions: summary.deductions,
         submittedAt: new Date().toISOString(),
+        amendmentReason: amendmentReasonRef.current,
       })
       hasSubmittedRef.current = true
       if (draftSaveTimerRef.current) {
@@ -1250,7 +1220,7 @@ export const useApplySalaryHandlers = ({ onNotify, onSubmitted, initialRecord } 
     isLoadingProfile,
     isSwitchingSalaryMonth,
     selectedMonthRecord,
-    isSelectedMonthLocked,
+    isSelectedMonthLocked: isSelectedMonthLocked && !isEditingReviewedMonthWithReason,
     requiresExistingRecordEdit,
     handleChange,
     handleSalaryMonthSelect,
