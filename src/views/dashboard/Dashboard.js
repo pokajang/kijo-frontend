@@ -9,6 +9,7 @@ import {
   CDropdownToggle,
 } from '@coreui/react'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
+import { dashboardModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import PeriodSelector from './shared/PeriodSelector'
 import { buildQueryUrl, fetchJsonGet, isAbortError } from './shared/fetchUtils'
 import { formatLocalISODate } from '../marketing/pipeline/pipelineEntryUtils'
@@ -117,13 +118,7 @@ const getSelectedMonitoringStaffLabel = (staffOptions, selectedStaffCode, user) 
   )
 }
 
-const dashboardTabs = [
-  { key: 'sales', label: 'Sales Tracking', to: '/dashboard/sales' },
-  { key: 'crm', label: 'CRM Tracking', to: '/dashboard/crm' },
-  { key: 'financial', label: 'Financial Tracking', to: '/dashboard/financial' },
-  { key: 'monitoring', label: 'Pipeline Monitoring', to: '/dashboard/monitoring' },
-  { key: 'workload', label: 'Workload Tracking', to: '/dashboard/workload' },
-]
+const dashboardTabs = dashboardModuleTabs
 
 const getTabFromPath = (dashboardTab) => {
   if (!dashboardTab) return 'sales'

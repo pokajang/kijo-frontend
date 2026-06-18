@@ -1,6 +1,6 @@
 // src/views/feedback/FeedbackPage.jsx
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CButton,
@@ -13,11 +13,10 @@ import {
 } from '@coreui/react'
 import FeedbackTable from './FeedbackTable'
 import AdminFixModal, { RESOLUTION_TRACK_OPTIONS, STATUS_OPTIONS } from './AdminFixModal'
-import FeedbackSlaChart from './FeedbackSlaChart'
+import FeedbackSlaSummary from './FeedbackSlaSummary'
 import {
   fetchSessionInfo,
   fetchAllFeedbacks,
-  fetchMonthlyFeedbackSla,
   updateFeedback,
   deleteFeedback,
 } from './actionHandlers'
@@ -27,6 +26,7 @@ import { supportModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import { useAuth } from '../../auth/AuthProvider'
 import { showToast } from '../../components/toast/toastService'
 import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
+import useFeedbackSlaMetrics from './useFeedbackSlaMetrics'
 
 const FeedbackPage = () => {
   const navigate = useNavigate()
@@ -34,10 +34,6 @@ const FeedbackPage = () => {
   const { user, status: authStatus } = useAuth()
   const [allFeedbacks, setAllFeedbacks] = useState([])
   const [loading, setLoading] = useState(true)
-  const [slaRows, setSlaRows] = useState([])
-  const [slaLoading, setSlaLoading] = useState(true)
-  const [slaError, setSlaError] = useState('')
-  const [slaTargetPercent, setSlaTargetPercent] = useState(90)
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentStaffId, setCurrentStaffId] = useState(null)
 
@@ -55,6 +51,16 @@ const FeedbackPage = () => {
   const [userEditSubmitting, setUserEditSubmitting] = useState(false)
 
   const currentYear = new Date().getFullYear()
+  const {
+    rows: slaRows,
+    loading: slaLoading,
+    error: slaError,
+    targetPercent: slaTargetPercent,
+    refresh: refreshSlaMetrics,
+  } = useFeedbackSlaMetrics({
+    year: currentYear,
+    enabled: authStatus === 'authenticated',
+  })
   const userStaffId = user?.staff_id || ''
   const userRolesKey = Array.isArray(user?.roles) ? [...user.roles].sort().join('|') : ''
   const sessionUser = useMemo(
@@ -68,37 +74,8 @@ const FeedbackPage = () => {
     [userRolesKey, userStaffId],
   )
 
-  const loadSlaMetrics = useCallback(
-    async (signal = undefined) => {
-      setSlaLoading(true)
-      setSlaError('')
-      try {
-        const result = await fetchMonthlyFeedbackSla(currentYear, signal)
-        if (signal?.aborted) return
-
-        if (result.status === 'success' && Array.isArray(result.months)) {
-          setSlaRows(result.months)
-          setSlaTargetPercent(Number(result.target_percent ?? 90))
-        } else {
-          setSlaRows([])
-          setSlaError(result.message || 'Unable to load feedback SLA.')
-        }
-      } catch (err) {
-        if (signal?.aborted) return
-        setSlaRows([])
-        setSlaError('Unable to load feedback SLA.')
-      } finally {
-        if (!signal?.aborted) {
-          setSlaLoading(false)
-        }
-      }
-    },
-    [currentYear],
-  )
-
   useEffect(() => {
     if (authStatus !== 'authenticated') return undefined
-    const controller = new AbortController()
     let active = true
 
     async function load() {
@@ -126,13 +103,11 @@ const FeedbackPage = () => {
     }
 
     load()
-    loadSlaMetrics(controller.signal)
 
     return () => {
       active = false
-      controller.abort()
     }
-  }, [authStatus, loadSlaMetrics, sessionUser])
+  }, [authStatus, sessionUser])
 
   const isOwnerFeedback = (fb) => {
     const ownerId = Number(fb?.reported_by_id)
@@ -192,7 +167,7 @@ const FeedbackPage = () => {
       )
       showToast('Feedback fix details updated.')
       handleCloseModal()
-      loadSlaMetrics()
+      refreshSlaMetrics()
     } else {
       dialog.alert('Failed to update: ' + result.message)
     }
@@ -281,7 +256,7 @@ const FeedbackPage = () => {
     if (result.status === 'success') {
       setAllFeedbacks((prev) => prev.filter((item) => item.id !== fb.id))
       showToast('Feedback deleted.')
-      loadSlaMetrics()
+      refreshSlaMetrics()
     } else {
       dialog.alert('Failed to delete: ' + result.message)
     }
@@ -289,9 +264,13 @@ const FeedbackPage = () => {
 
   return (
     <>
-      <ModuleNavStrip tabs={supportModuleTabs} ariaLabel="Support sections" />
+      <ModuleNavStrip
+        tabs={supportModuleTabs}
+        activeTab="feedback-records"
+        ariaLabel="Support sections"
+      />
 
-      <FeedbackSlaChart
+      <FeedbackSlaSummary
         rows={slaRows}
         loading={slaLoading}
         error={slaError}

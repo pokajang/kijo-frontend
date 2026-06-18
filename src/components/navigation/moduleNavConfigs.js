@@ -34,7 +34,16 @@ export const administrationModuleTabs = [
 
 export const supportModuleTabs = [
   { key: 'requests', label: 'Request Tool', to: '/support/requests' },
-  { key: 'feedback', label: 'System Feedback', to: '/support/feedback' },
+  { key: 'feedback-records', label: 'Feedback Records', to: '/support/feedback' },
+  { key: 'feedback-sla', label: 'SLA Analytics', to: '/support/feedback/sla' },
+]
+
+export const dashboardModuleTabs = [
+  { key: 'sales', label: 'Sales Tracking', to: '/dashboard/sales' },
+  { key: 'crm', label: 'CRM Tracking', to: '/dashboard/crm' },
+  { key: 'financial', label: 'Financial Tracking', to: '/dashboard/financial' },
+  { key: 'monitoring', label: 'Pipeline Monitoring', to: '/dashboard/monitoring' },
+  { key: 'workload', label: 'Workload Tracking', to: '/dashboard/workload' },
 ]
 
 export const accountModuleTabs = [

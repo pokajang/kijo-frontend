@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import routes from './routes'
 
+describe('support feedback routes', () => {
+  it('keeps the feedback SLA analytics route before the feedback detail route', () => {
+    const slaIndex = routes.findIndex((route) => route.path === '/support/feedback/sla')
+    const detailIndex = routes.findIndex((route) => route.path === '/support/feedback/:feedbackId')
+
+    expect(slaIndex).toBeGreaterThanOrEqual(0)
+    expect(detailIndex).toBeGreaterThanOrEqual(0)
+    expect(slaIndex).toBeLessThan(detailIndex)
+  })
+})
+
 describe('client ROI routes', () => {
   it('includes the commercial history drilldown route before the ROI list route', () => {
     const detailIndex = routes.findIndex((route) => route.path === '/client/roi/:companyId')

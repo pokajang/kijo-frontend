@@ -48,9 +48,9 @@ vi.mock('./FeedbackTable', () => ({
   ),
 }))
 
-vi.mock('./FeedbackSlaChart', () => ({
+vi.mock('./FeedbackSlaSummary', () => ({
   default: ({ error = '', loading = false, rows = [], targetPercent }) => (
-    <div data-testid="sla-chart">
+    <div data-testid="sla-summary">
       {loading ? 'Loading SLA' : error || `target ${targetPercent} rows ${rows.length}`}
     </div>
   ),
@@ -70,7 +70,7 @@ vi.mock('./AdminFixModal', () => ({
 }))
 
 vi.mock('../../components/navigation/ModuleNavStrip', () => ({
-  default: () => null,
+  default: ({ activeTab }) => <div data-testid="module-nav">{activeTab}</div>,
 }))
 
 vi.mock('../../components/dialog/dialogService', () => ({
@@ -103,7 +103,7 @@ beforeEach(() => {
 })
 
 describe('FeedbackPage', () => {
-  it('passes backend SLA target and rows into the chart', async () => {
+  it('passes backend SLA target and rows into the compact summary', async () => {
     fetchMonthlyFeedbackSla.mockResolvedValue({
       status: 'success',
       target_percent: 85,
@@ -126,8 +126,10 @@ describe('FeedbackPage', () => {
     render(<FeedbackPage />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('sla-chart')).toHaveTextContent('target 85 rows 1')
+      expect(screen.getByTestId('sla-summary')).toHaveTextContent('target 85 rows 1')
     })
+    expect(screen.getByTestId('module-nav')).toHaveTextContent('feedback-records')
+    expect(screen.queryByTestId('sla-chart')).not.toBeInTheDocument()
   })
 
   it('opens details with the current table URL as returnTo state', async () => {
@@ -158,6 +160,6 @@ describe('FeedbackPage', () => {
       expect(screen.getByTestId('feedback-table')).toHaveTextContent('Ticket table still loads')
     })
 
-    expect(screen.getByTestId('sla-chart')).toHaveTextContent('Unable to load feedback SLA.')
+    expect(screen.getByTestId('sla-summary')).toHaveTextContent('Unable to load feedback SLA.')
   })
 })

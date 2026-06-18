@@ -1,13 +1,18 @@
 import navigation from '../../_nav'
 import {
+  accountModuleTabs,
   administrationModuleTabs,
   catalogModuleTabs,
   clientModuleTabs,
   commercialModuleTabs,
+  dashboardModuleTabs,
+  financialModuleTabs,
   pipelineCrmModuleTabs,
+  salarySelfModuleTabs,
   staffModuleTabs,
   supportModuleTabs,
   vendorModuleTabs,
+  workflowModuleTabs,
 } from '../navigation/moduleNavConfigs'
 import { hasAnyAllowedRole } from '../../utils/roles'
 
@@ -24,6 +29,13 @@ const FUZZY_ONLY_SCORE = 260
 const SHORT_FUZZY_EXCLUSIONS = new Set(['hr', 'po', 'do', 'kpi', 'crm', 'mc', 'roi', 'loa'])
 
 const moduleGroups = [
+  {
+    group: 'Dashboard',
+    tabs: dashboardModuleTabs,
+    keywords: ['dashboard', 'stats', 'tracking', 'monitoring', 'reporting'],
+    aliases: ['home dashboard', 'statistics'],
+    intentPhrases: ['sales dashboard', 'crm dashboard', 'financial dashboard', 'pipeline report'],
+  },
   {
     group: 'Pipeline CRM',
     tabs: pipelineCrmModuleTabs,
@@ -88,6 +100,52 @@ const moduleGroups = [
     aliases: ['help', 'ticket'],
     intentPhrases: ['support ticket', 'system request', 'send feedback'],
   },
+  {
+    group: 'My Account',
+    tabs: accountModuleTabs,
+    keywords: ['my account', 'profile', 'signature', 'password', 'settings'],
+    aliases: ['account settings'],
+    intentPhrases: ['account settings'],
+  },
+  {
+    group: 'My Salary',
+    tabs: salarySelfModuleTabs,
+    keywords: ['my salary', 'salary self service', 'salary payment queue', 'other claim'],
+    aliases: ['salary workspace', 'my claims'],
+    intentPhrases: [
+      'apply salary',
+      'salary records',
+      'apply other claim',
+      'other claim records',
+      'salary settings',
+    ],
+  },
+  {
+    group: 'Financial',
+    tabs: financialModuleTabs,
+    allowedRoles: WORKFLOW_ALLOWED_ROLES,
+    keywords: ['financial', 'finance', 'salary records', 'payment queue', 'other claim'],
+    aliases: ['finance operations', 'financial records'],
+    intentPhrases: [
+      'financial payment queue',
+      'financial salary records',
+      'financial other claim records',
+      'balance sheet',
+    ],
+  },
+  {
+    group: 'Workflows',
+    tabs: workflowModuleTabs,
+    allowedRoles: WORKFLOW_ALLOWED_ROLES,
+    keywords: ['workflow', 'approval setup', 'workflow settings'],
+    aliases: ['approval workflow', 'workflow setup'],
+    intentPhrases: [
+      'salary approval',
+      'vendor payment workflow',
+      'leave approval',
+      'negotiation workflow',
+    ],
+  },
 ]
 
 const itemEnhancements = {
@@ -142,6 +200,18 @@ const itemEnhancements = {
   '/my/kpi/parameters': {
     aliases: ['kpi parameter', 'kpi parameters'],
     intentPhrases: ['add kpi', 'create kpi', 'target', 'weightage', 'annual target'],
+  },
+  '/my/profile': {
+    aliases: ['my profile', 'user profile'],
+    intentPhrases: ['view profile', 'update my profile', 'employee profile'],
+  },
+  '/my/signature': {
+    aliases: ['my signature', 'digital signature'],
+    intentPhrases: ['update signature', 'upload signature'],
+  },
+  '/my/password': {
+    aliases: ['my password', 'change password'],
+    intentPhrases: ['change password', 'update password'],
   },
   '/commercial/invoice': {
     aliases: ['invoice', 'invoices', 'billing'],
@@ -285,6 +355,10 @@ const itemEnhancements = {
     aliases: ['feedback', 'support ticket', 'bug report'],
     intentPhrases: ['submit feedback', 'report issue', 'improvement request', 'system feedback'],
   },
+  '/support/feedback/sla': {
+    aliases: ['feedback sla', 'sla analytics', 'feedback analytics'],
+    intentPhrases: ['feedback sla chart', '30 day feedback fix', 'feedback performance'],
+  },
   '/handbook': {
     aliases: ['handbook', 'policy', 'policies'],
     intentPhrases: ['employee handbook', 'company policy', 'leave entitlement policy'],
@@ -333,9 +407,53 @@ const itemEnhancements = {
     aliases: ['system admin', 'migration status', 'email test'],
     intentPhrases: ['admin dashboard', 'laravel migration', 'mail diagnostics', 'schema sync'],
   },
+  '/my/salary/payment-queue': {
+    aliases: ['my salary payment queue', 'salary payment queue'],
+    intentPhrases: ['review my salary payment', 'salary payment queue'],
+  },
+  '/my/salary/records': {
+    aliases: ['my salary records', 'salary records'],
+    intentPhrases: ['view my salary records', 'salary payslips'],
+  },
+  '/my/salary/other-claims/records': {
+    aliases: ['my other claim records', 'other claim records'],
+    intentPhrases: ['view my other claims', 'claim records'],
+  },
+  '/financial/payment-queue': {
+    aliases: ['financial payment queue', 'finance payment queue'],
+    intentPhrases: ['approve salary payment', 'financial payment approval'],
+  },
+  '/financial/other-claim-records': {
+    aliases: ['financial other claim records', 'finance claim records'],
+    intentPhrases: ['review other claims', 'financial claim records'],
+  },
+  '/workflows/salary-application': {
+    aliases: ['salary workflow', 'salary approval'],
+    intentPhrases: ['salary approval setup', 'salary workflow settings'],
+  },
+  '/workflows/vendor-payment': {
+    aliases: ['vendor payment workflow', 'vendor workflow'],
+    intentPhrases: ['vendor payment approval setup', 'vendor workflow settings'],
+  },
+  '/workflows/leave-application': {
+    aliases: ['leave application workflow', 'leave approval'],
+    intentPhrases: ['leave approval setup', 'leave workflow settings'],
+  },
+  '/workflows/quote-price-exception': {
+    aliases: ['negotiation workflow', 'quote price exception workflow'],
+    intentPhrases: ['negotiation approval setup', 'quote approval workflow'],
+  },
 }
 
 const standaloneItems = [
+  {
+    label: 'Knowledge Hub',
+    group: 'Tools & Resources',
+    to: '/knowledge',
+    keywords: ['knowledge', 'learn kijo', 'help articles', 'guide'],
+    aliases: ['learn kijo', 'knowledge base', 'help hub'],
+    intentPhrases: ['open knowledge hub', 'learn kijo', 'how to use kijo'],
+  },
   {
     label: 'Legal Compliance Assessment',
     group: 'Tools & Resources',
@@ -359,6 +477,14 @@ const standaloneItems = [
     keywords: ['legal compliance templates', 'assessment templates', 'form builder'],
     aliases: ['legal compliance templates', 'assessment templates', 'osh template builder'],
     intentPhrases: ['manage legal compliance templates', 'edit assessment template'],
+  },
+  {
+    label: 'Choose Legal Compliance Template',
+    group: 'Tools & Resources',
+    to: '/internal-tools/legal-compliance/select-template',
+    keywords: ['legal compliance template selector', 'choose assessment template'],
+    aliases: ['select legal compliance template', 'choose osh template'],
+    intentPhrases: ['start from legal compliance template', 'choose legal assessment template'],
   },
   {
     label: 'Task Manager',
@@ -455,6 +581,7 @@ const standaloneItems = [
     group: 'System Admin',
     to: '/system-admin/dashboard',
     allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    skipEnhancements: true,
     keywords: ['migration status', 'schema sync', 'laravel migrations'],
     aliases: ['migrations', 'database status'],
     intentPhrases: ['pending migrations', 'applied migrations', 'missing files'],
@@ -464,9 +591,40 @@ const standaloneItems = [
     group: 'System Admin',
     to: '/system-admin/dashboard',
     allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    skipEnhancements: true,
     keywords: ['email test', 'mail diagnostics', 'smtp'],
-    aliases: ['mail test', 'email diagnostics'],
+    aliases: ['mail test', 'email diagnostics', 'mail diagnostics'],
     intentPhrases: ['send test email', 'mail configuration', 'test smtp'],
+  },
+  {
+    label: 'Monthly Report Test',
+    group: 'System Admin',
+    to: '/system-admin/dashboard',
+    allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    skipEnhancements: true,
+    keywords: ['monthly report test', 'monthly report scheduler'],
+    aliases: ['report scheduler', 'scheduler test'],
+    intentPhrases: ['test monthly report', 'monthly dashboard report test'],
+  },
+  {
+    label: 'AI Workload Governance',
+    group: 'System Admin',
+    to: '/system-admin/dashboard',
+    allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    skipEnhancements: true,
+    keywords: ['ai workload governance', 'workload ai governance'],
+    aliases: ['workload governance', 'ai workload settings'],
+    intentPhrases: ['review ai workload governance', 'workload ai controls'],
+  },
+  {
+    label: 'AI Assistant Governance',
+    group: 'System Admin',
+    to: '/system-admin/dashboard',
+    allowedRoles: SYSTEM_ADMIN_ALLOWED_ROLES,
+    skipEnhancements: true,
+    keywords: ['ai assistant governance', 'assistant governance'],
+    aliases: ['assistant ai governance', 'ai assistant settings'],
+    intentPhrases: ['review ai assistant governance', 'assistant ai controls'],
   },
 ]
 
@@ -518,6 +676,18 @@ const actionItems = [
       'bank details',
       'account holder',
       'vendor contact',
+    ],
+  },
+  {
+    label: 'Pay Vendor',
+    group: 'Vendors',
+    to: '/vendor/pay',
+    aliases: ['pay supplier', 'make payment'],
+    intentPhrases: [
+      'make vendor payment',
+      'make supplier payment',
+      'bank account',
+      'upload invoice',
     ],
   },
   {
@@ -599,6 +769,13 @@ const actionItems = [
     to: '/templates/create',
     aliases: ['new template'],
     intentPhrases: ['add template', 'create document template'],
+  },
+  {
+    label: 'Create Knowledge Article',
+    group: 'Tools & Resources',
+    to: '/knowledge/create',
+    aliases: ['new knowledge article', 'write guide'],
+    intentPhrases: ['add knowledge article', 'create help article', 'write kijo guide'],
   },
   {
     label: 'Create Training Template',
@@ -855,9 +1032,12 @@ const createItem = ({
   allowedRoles,
   type = 'module',
   action,
+  skipEnhancements = false,
 }) => {
   const enhancement =
-    type === 'module' ? itemEnhancements[to] || itemEnhancements[`${group}:${label}`] || {} : {}
+    !skipEnhancements && type !== 'action'
+      ? itemEnhancements[to] || itemEnhancements[`${group}:${label}`] || {}
+      : {}
   const itemKeywords = [...keywords]
   const itemAliases = [...aliases, ...(enhancement.aliases || [])]
   const itemIntentPhrases = [...intentPhrases, ...(enhancement.intentPhrases || [])]
@@ -876,6 +1056,7 @@ const createItem = ({
     allowedRoles,
     type,
     action,
+    skipEnhancements,
     searchText: normalize(searchText),
   }
 }
@@ -885,12 +1066,12 @@ const flattenNavigationItems = () => {
   let currentGroup = 'General'
 
   navigation.forEach((item) => {
-    if (!item?.to && item?.name) {
+    if (!item?.to && typeof item?.name === 'string') {
       currentGroup = item.name
       return
     }
 
-    if (!isNavigablePath(item?.to) || !item?.name) return
+    if (!isNavigablePath(item?.to) || typeof item?.name !== 'string') return
 
     items.push(
       createItem({

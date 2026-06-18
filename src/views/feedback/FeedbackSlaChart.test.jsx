@@ -101,7 +101,7 @@ describe('FeedbackSlaChart', () => {
     const chart = screen.getByRole('img', { name: 'Feedback SLA chart' })
     expect(chart).toHaveTextContent('May 2026, Apr 2026, Jun 2026')
     expect(chart).toHaveTextContent('Fixed <=30d SLA')
-    expect(chart).toHaveTextContent('values 100, 0, 2')
+    expect(chart).toHaveTextContent('values 100, 2, 2')
     expect(chart).toHaveTextContent('labels 100.0%, 0.0%, Pending')
     expect(chart).not.toHaveTextContent('90% target')
     expect(chart).toHaveTextContent('feedbackSlaValueLabels')
@@ -135,6 +135,39 @@ describe('FeedbackSlaChart', () => {
     const chart = screen.getByRole('img', { name: 'Feedback SLA chart' })
     expect(chart).toHaveTextContent('M01 2026')
     expect(chart).toHaveTextContent('M12 2026')
+  })
+
+  it('explains when reported feedback has not been classified into the SLA track', () => {
+    render(
+      <FeedbackSlaChart
+        rows={[
+          {
+            month: '2026-06',
+            month_label: 'Jun 2026',
+            reported_count: 3,
+            sla_track_count: 0,
+            eligible_count: 0,
+            fixed_under_30_count: 0,
+            missed_30_count: 0,
+            open_within_window_count: 0,
+            needs_triage_count: 3,
+            excluded_count: 3,
+            sla_percent: null,
+            is_final: false,
+          },
+        ]}
+        year={2026}
+      />,
+    )
+
+    expect(screen.queryByRole('img', { name: 'Feedback SLA chart' })).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Feedback records exist for 2026, but none are classified as 30-Day Fix yet/,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Jun 2026').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0)
   })
 
   it('renders loading, error, and empty states', () => {

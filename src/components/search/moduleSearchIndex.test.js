@@ -2,11 +2,43 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getModuleSearchResults,
   getRecentModuleSearchItems,
+  moduleSearchItems,
   recordModuleSearchSelection,
   searchModuleItems,
 } from './moduleSearchIndex'
+import {
+  accountModuleTabs,
+  administrationModuleTabs,
+  catalogModuleTabs,
+  clientModuleTabs,
+  commercialModuleTabs,
+  dashboardModuleTabs,
+  financialModuleTabs,
+  pipelineCrmModuleTabs,
+  salarySelfModuleTabs,
+  staffModuleTabs,
+  supportModuleTabs,
+  vendorModuleTabs,
+  workflowModuleTabs,
+} from '../navigation/moduleNavConfigs'
 
 const recentStorageKey = 'kijo:module-search:recent:v1'
+const indexedModuleTabs = [
+  ...accountModuleTabs,
+  ...administrationModuleTabs,
+  ...catalogModuleTabs,
+  ...clientModuleTabs,
+  ...commercialModuleTabs,
+  ...dashboardModuleTabs,
+  ...financialModuleTabs,
+  ...pipelineCrmModuleTabs,
+  ...salarySelfModuleTabs,
+  ...staffModuleTabs,
+  ...supportModuleTabs,
+  ...vendorModuleTabs,
+  ...workflowModuleTabs,
+]
+
 const installLocalStorageMock = () => {
   const store = new Map()
   const storage = {
@@ -242,6 +274,129 @@ describe('module search index', () => {
       label: 'Email Test',
       to: '/system-admin/dashboard',
     })
+  })
+
+  it('indexes all route-backed shared module tab configs', () => {
+    const indexedRoutes = new Set(moduleSearchItems.map((item) => item.to))
+    const routeBackedTabs = indexedModuleTabs.filter((tab) => typeof tab.to === 'string')
+
+    routeBackedTabs.forEach((tab) => {
+      expect(indexedRoutes).toContain(tab.to)
+    })
+  })
+
+  it('finds dashboard sections from shared dashboard tabs', () => {
+    expect(searchModuleItems('Sales Tracking', ['Staff'])[0]).toMatchObject({
+      label: 'Sales Tracking',
+      group: 'Dashboard',
+      to: '/dashboard/sales',
+    })
+    expect(searchModuleItems('CRM Tracking', ['Staff'])[0]).toMatchObject({
+      label: 'CRM Tracking',
+      group: 'Dashboard',
+      to: '/dashboard/crm',
+    })
+    expect(searchModuleItems('Financial Tracking', ['Staff'])[0]).toMatchObject({
+      label: 'Financial Tracking',
+      group: 'Dashboard',
+      to: '/dashboard/financial',
+    })
+    expect(searchModuleItems('Pipeline Monitoring', ['Staff'])[0]).toMatchObject({
+      label: 'Pipeline Monitoring',
+      group: 'Dashboard',
+      to: '/dashboard/monitoring',
+    })
+    expect(searchModuleItems('Workload Tracking', ['Staff'])[0]).toMatchObject({
+      label: 'Workload Tracking',
+      group: 'Dashboard',
+      to: '/dashboard/workload',
+    })
+  })
+
+  it('finds account workspace tabs', () => {
+    expect(searchModuleItems('my profile', ['Staff'])[0]).toMatchObject({
+      label: 'Profile',
+      group: 'My Account',
+      to: '/my/profile',
+    })
+    expect(searchModuleItems('my signature', ['Staff'])[0]).toMatchObject({
+      label: 'Signature',
+      group: 'My Account',
+      to: '/my/signature',
+    })
+    expect(searchModuleItems('change password', ['Staff'])[0]).toMatchObject({
+      label: 'Password',
+      group: 'My Account',
+      to: '/my/password',
+    })
+  })
+
+  it('finds salary self-service tabs', () => {
+    const labels = searchModuleItems('my salary', ['Staff'], 20).map((item) => item.label)
+
+    expect(labels).toContain('Payment Queue')
+    expect(labels).toContain('Apply Salary')
+    expect(labels).toContain('Salary Records')
+    expect(labels).toContain('Apply Other Claim')
+    expect(labels).toContain('Other Claim Records')
+    expect(labels).toContain('Settings')
+  })
+
+  it('finds financial operation tabs for allowed roles', () => {
+    const labels = searchModuleItems('financial', ['Manager'], 20).map((item) => item.label)
+
+    expect(labels).toContain('Payment Queue')
+    expect(labels).toContain('Salary Records')
+    expect(labels).toContain('Other Claim Records')
+    expect(labels).toContain('Balance Sheet')
+  })
+
+  it('finds workflow setup tabs for workflow-capable roles', () => {
+    const labels = searchModuleItems('workflow setup', ['Manager'], 20).map((item) => item.label)
+
+    expect(labels).toContain('Salary')
+    expect(labels).toContain('Vendor Payment')
+    expect(labels).toContain('Leave Application')
+    expect(labels).toContain('Negotiation')
+  })
+
+  it('finds explicit action and standalone coverage gaps', () => {
+    expect(searchModuleItems('learn kijo', ['Staff'])[0]).toMatchObject({
+      label: 'Knowledge Hub',
+      to: '/knowledge',
+    })
+    expect(searchModuleItems('create knowledge article', ['Staff'])[0]).toMatchObject({
+      label: 'Create Knowledge Article',
+      to: '/knowledge/create',
+    })
+    expect(searchModuleItems('pay vendor', ['Staff'])[0]).toMatchObject({
+      label: 'Pay Vendor',
+      to: '/vendor/pay',
+    })
+    expect(searchModuleItems('choose legal assessment template', ['Staff'])[0]).toMatchObject({
+      label: 'Choose Legal Compliance Template',
+      to: '/internal-tools/legal-compliance/select-template',
+    })
+  })
+
+  it('shows system admin dashboard sections only to system admins', () => {
+    const staffLabels = searchModuleItems('ai assistant governance', ['Staff'], 20).map(
+      (item) => item.label,
+    )
+    const adminLabels = searchModuleItems('ai assistant governance', ['System Admin'], 20).map(
+      (item) => item.label,
+    )
+    const monthlyReportLabels = searchModuleItems('monthly report test', ['System Admin'], 20).map(
+      (item) => item.label,
+    )
+    const workloadLabels = searchModuleItems('ai workload governance', ['System Admin'], 20).map(
+      (item) => item.label,
+    )
+
+    expect(staffLabels).not.toContain('AI Assistant Governance')
+    expect(adminLabels).toContain('AI Assistant Governance')
+    expect(monthlyReportLabels).toContain('Monthly Report Test')
+    expect(workloadLabels).toContain('AI Workload Governance')
   })
 
   it('does not typo-correct short acronyms into unrelated modules', () => {

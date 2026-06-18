@@ -4,9 +4,11 @@ import React, { useMemo, useState } from 'react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
 import {
+  CAlert,
   CButton,
   CCard,
   CCardBody,
+  CCloseButton,
   CCol,
   CFormInput,
   CFormLabel,
@@ -46,7 +48,9 @@ import {
   getProjectTypeOptions,
   isProjectOwnedByUser,
 } from './projectFilters'
-import { PROJECT_CLOSE_TYPES, getProjectStatusTone } from './projectStatus'
+import { getCurrentProjectValue } from './projectApi'
+import { formatProjectMoney } from './projectDetailFormatters'
+import { PROJECT_CLOSE_TYPES, getProjectStatusTone, isProjectActive } from './projectStatus'
 import { buildProjectActions } from './projectActions'
 import {
   actionColumnWidth,
@@ -60,6 +64,125 @@ import { buildProjectTableStats } from './projectTableStats'
 
 const emptyValue = emptyProjectTableValue
 const maxUpdatePreviewChars = 34
+const closeReminderDismissPrefix = 'kijo:project-close-reminder:dismissed'
+
+const getDateOnlyText = (value) => {
+  if (!value) return ''
+  const text = String(value).trim()
+  if (!text) return ''
+  if (text.includes('T')) return text.split('T')[0]
+  if (text.includes(' ')) return text.split(' ')[0]
+  return text
+}
+
+const parseDateOnly = (value) => {
+  const dateOnly = getDateOnlyText(value)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOnly)
+  if (!match) return null
+
+  const [, yearText, monthText, dayText] = match
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const date = new Date(year, month - 1, day)
+
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null
+  }
+
+  return date
+}
+
+const formatAgeLabel = (value, label) => {
+  const date = parseDateOnly(value)
+  if (!date) return ''
+
+  const today = new Date()
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const diffDays = Math.floor((todayStart.getTime() - date.getTime()) / 86400000)
+  if (diffDays < 0) return ''
+  if (diffDays === 0) return `${label} today`
+  return `${label} ${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+}
+
+const getCloseReminderDismissKey = (project = {}, user = {}) => {
+  const staffId = user?.staff_id ?? user?.staffId ?? user?.id ?? 'anonymous'
+  const projectId = project?.id ?? project?.project_id
+  const signature =
+    project?.close_reminder_signature ||
+    [getCurrentProjectValue(project, ''), project?.fully_invoiced_at || ''].join(':')
+
+  if (!projectId || !signature) return ''
+  return `${closeReminderDismissPrefix}:${staffId}:${projectId}:${signature}`
+}
+
+const readDismissedCloseReminder = (key, dismissedKeys = {}) => {
+  if (!key) return false
+  if (dismissedKeys[key]) return true
+  if (typeof window === 'undefined') return false
+
+  try {
+    return window.localStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+
+const ProjectCloseReminderAlerts = ({ projects, user, onDismiss, onClose }) => {
+  if (!projects.length) return null
+
+  return (
+    <div className="d-flex flex-column gap-2 mb-3">
+      {projects.map((project) => {
+        const projectName = project?.project_name || 'Unnamed Project'
+        const clientName = project?.client_name || 'Unassigned client'
+        const details = [
+          projectName,
+          clientName,
+          formatProjectMoney(getCurrentProjectValue(project, null)),
+          formatAgeLabel(project?.award_date, 'Awarded'),
+          formatAgeLabel(project?.fully_invoiced_at, 'Fully invoiced'),
+        ].filter(Boolean)
+        const dismissKey = getCloseReminderDismissKey(project, user)
+
+        return (
+          <CAlert color="warning" className="mb-0 py-2" key={dismissKey || project?.id}>
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <span className="fw-semibold flex-shrink-0">
+                Already invoiced? Close the project.
+              </span>
+              <span className="small text-body-secondary text-break flex-grow-1">
+                {details.join(' | ')}
+              </span>
+              <CButton
+                color="primary"
+                size="sm"
+                className="flex-shrink-0"
+                onClick={() => onClose?.(project, PROJECT_CLOSE_TYPES.COMPLETED)}
+              >
+                Close Project
+              </CButton>
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0"
+                onClick={() => onDismiss(project)}
+              >
+                Dismiss for now
+              </CButton>
+              <CCloseButton
+                className="flex-shrink-0"
+                aria-label={`Dismiss close reminder for ${projectName}`}
+                onClick={() => onDismiss(project)}
+              />
+            </div>
+          </CAlert>
+        )
+      })}
+    </div>
+  )
+}
 
 const truncateUpdateText = (text = '', maxChars = maxUpdatePreviewChars) => {
   const raw = String(text || '').trim()
@@ -154,6 +277,7 @@ export default function ProjectTable({
   const [minAmount, setMinAmount] = useState('')
   const [maxAmount, setMaxAmount] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [dismissedCloseReminderKeys, setDismissedCloseReminderKeys] = useState({})
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('project.manage')
 
@@ -258,6 +382,42 @@ export default function ProjectTable({
   const normalizedProjects = useMemo(() => normalizeProjectTableRows(filtered), [filtered])
 
   const statsItems = useMemo(() => buildProjectTableStats(normalizedProjects), [normalizedProjects])
+  const showCloseReminders = activeTab === 'my-tab'
+
+  const closeReminderScope = useMemo(() => {
+    if (!showCloseReminders) return []
+
+    const scoped = projects.filter((project) =>
+      isDateInPeriodRange(project?.award_date, selectedPeriodRange),
+    )
+
+    return scoped.filter((project) => isProjectOwnedByUser(project, user))
+  }, [projects, selectedPeriodRange, showCloseReminders, user])
+
+  const closeReminderProjects = useMemo(
+    () =>
+      closeReminderScope.filter((project) => {
+        if (!project?.close_reminder_ready) return false
+        if (!isProjectActive(project)) return false
+        if (!project?.fully_invoiced_at) return false
+
+        const dismissKey = getCloseReminderDismissKey(project, user)
+        return !readDismissedCloseReminder(dismissKey, dismissedCloseReminderKeys)
+      }),
+    [closeReminderScope, dismissedCloseReminderKeys, user],
+  )
+
+  const dismissCloseReminder = (project) => {
+    const dismissKey = getCloseReminderDismissKey(project, user)
+    if (!dismissKey) return
+
+    try {
+      window.localStorage.setItem(dismissKey, '1')
+    } catch {
+      // Ignore storage failures; local state still hides it for this render session.
+    }
+    setDismissedCloseReminderKeys((current) => ({ ...current, [dismissKey]: true }))
+  }
 
   const getActions = (project) => {
     const generateHandlers = {
@@ -357,6 +517,14 @@ export default function ProjectTable({
           </DataTableCardHeader>
           <CCardBody>
             {statsVisible && <StatsStrip loading={loading} items={statsItems} />}
+            {showCloseReminders && (
+              <ProjectCloseReminderAlerts
+                projects={closeReminderProjects}
+                user={user}
+                onDismiss={dismissCloseReminder}
+                onClose={onClose}
+              />
+            )}
             <DataTableRecordControls
               visible={controlsVisible}
               searchValue={searchTerm}

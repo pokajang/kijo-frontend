@@ -6,6 +6,7 @@ import { useChartSemanticColors, useChartTickColor } from '../../utils/chartThem
 
 const DEFAULT_TARGET_PERCENT = 90
 const PENDING_BAR_PERCENT = 2
+const MIN_VISIBLE_BAR_PERCENT = 2
 
 const chartStyle = {
   position: 'absolute',
@@ -95,14 +96,18 @@ const FeedbackSlaChart = ({
         }),
     [rows],
   )
-  const hasRows = displayRows.some((row) => Number(row.reported_count || 0) > 0)
+  const hasReportedRows = displayRows.some((row) => Number(row.reported_count || 0) > 0)
+  const hasSlaTrackRows = displayRows.some((row) => Number(row.sla_track_count || 0) > 0)
   const labels = displayRows.map((row) => row.month_label || row.month)
   const barValues = displayRows.map((row) => {
     if (row.sla_percent === null || row.sla_percent === undefined) {
       return Number(row.sla_track_count || 0) > 0 ? PENDING_BAR_PERCENT : null
     }
 
-    return Number(row.sla_percent)
+    const percent = Number(row.sla_percent)
+    if (!Number.isFinite(percent)) return null
+
+    return percent === 0 && Number(row.sla_track_count || 0) > 0 ? MIN_VISIBLE_BAR_PERCENT : percent
   })
   const valueLabels = displayRows.map((row) => {
     if (row.sla_percent === null || row.sla_percent === undefined) {
@@ -152,8 +157,41 @@ const FeedbackSlaChart = ({
           <DataTableLoadingState message="Loading feedback SLA..." />
         ) : error ? (
           <div className="text-center text-danger py-4">{error}</div>
-        ) : !hasRows ? (
+        ) : !hasReportedRows ? (
           <div className="text-center text-muted py-4">No feedback SLA data available.</div>
+        ) : !hasSlaTrackRows ? (
+          <CRow className="gy-4">
+            <CCol xs={12}>
+              <div className="text-center text-muted py-4">
+                Feedback records exist for {year}, but none are classified as 30-Day Fix yet.
+                Classify records with Update Fix to populate the SLA chart.
+              </div>
+            </CCol>
+            <CCol xs={12}>
+              <DataTableEmbeddedList
+                rows={tableRows}
+                columns={tableColumns}
+                getRowKey={(row) => row.month}
+                desktopBreakpoint="lg"
+                renderMobileItem={(row) => (
+                  <div className="data-table-mobile-item">
+                    <div className="data-table-mobile-main">
+                      <div className="data-table-mobile-title">{row.month_label}</div>
+                      <div className="data-table-mobile-subtitle">
+                        {row.is_final ? 'Final' : 'Provisional'} | 30-Day Fix {row.sla_track_count}
+                      </div>
+                    </div>
+                    <div className="data-table-mobile-values">
+                      <div className="data-table-mobile-primary">{row.slaDisplay}</div>
+                      <div className="data-table-mobile-secondary">
+                        {row.fixed_under_30_count}/{row.eligible_count} eligible fixed
+                      </div>
+                    </div>
+                  </div>
+                )}
+              />
+            </CCol>
+          </CRow>
         ) : (
           <CRow className="gy-4">
             <CCol xs={12}>

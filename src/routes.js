@@ -203,6 +203,7 @@ const WhatsNewAdmin = React.lazy(() => import('./views/system-admin/WhatsNewAdmi
 // existing theme components
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const FeedbackPage = React.lazy(() => import('./views/feedback/FeedbackPage'))
+const FeedbackSlaPage = React.lazy(() => import('./views/feedback/FeedbackSlaPage'))
 const FeedbackDetailPage = React.lazy(() => import('./views/feedback/FeedbackDetailPage'))
 const Meetings = React.lazy(() => import('./views/meetings/Meetings'))
 const MeetingMinuteForm = React.lazy(() => import('./views/meetings/MeetingMinuteForm'))
@@ -1145,6 +1146,7 @@ const routes = [
     element: <RequestDetailPage />,
   },
   { path: '/support/requests', name: 'Request Tool', element: RequestTool },
+  { path: '/support/feedback/sla', name: 'Feedback SLA Analytics', element: FeedbackSlaPage },
   { path: '/support/feedback/:feedbackId', name: 'Feedback Details', element: FeedbackDetailPage },
   { path: '/support/feedback', name: 'FeedbackPage', element: FeedbackPage },
   { path: '/about', name: 'About This App', element: About },
