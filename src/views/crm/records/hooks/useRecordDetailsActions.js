@@ -71,6 +71,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
       navigate(returnTo)
     },
     navigate,
+    getReturnTo: () => returnTo,
     onActionSuccess: async ({ type, status, message } = {}) => {
       if (type === 'delete') {
         showToast(message || RECORD_ACTION_TOAST_MESSAGES.deleted)

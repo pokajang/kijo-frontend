@@ -12,6 +12,7 @@ import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templ
 import { formatValidationErrors, validateSpecialTemplate } from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
 import { validateAttachmentCustomNames, validateNewAttachments } from './attachmentValidation'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 // Key for localStorage draft
 const DRAFT_KEY = 'specialProposalDraft'
 const INITIAL_TEMPLATE_STATE = {
@@ -175,6 +176,7 @@ export default function useFormLogic({ isEdit, editId }) {
     templateMeta?.translationStatus === 'machine_draft'
   const isBmProposal = templateMeta?.proposalLanguage === 'ms-MY'
   const returnPath = getProposalListPath('special', isBmProposal ? 'ms-MY' : 'en')
+  const returnTo = getDetailReturnTo(location, returnPath)
 
   const handleNewFileChange = (e) => {
     const files = Array.from(e.target.files)
@@ -267,7 +269,7 @@ export default function useFormLogic({ isEdit, editId }) {
       if (!isEdit) {
         clearTemplateDraft('special', DRAFT_KEY)
       }
-      navigate(returnPath, {
+      navigate(returnTo, {
         replace: true,
       })
     } catch (err) {
@@ -291,7 +293,7 @@ export default function useFormLogic({ isEdit, editId }) {
   }
 
   const handleCancel = () => {
-    navigate(location.state?.returnTo || returnPath)
+    navigate(returnTo)
   }
 
   return {

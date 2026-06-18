@@ -222,7 +222,7 @@ const VendorLoaDetailPage = () => {
       const result = await res.json()
       if (res.ok && result.status === 'success') {
         showToast('Vendor LOA deleted.')
-        navigate('/commercial/vendor-loa')
+        navigate(returnContext.backPath)
         return
       }
 

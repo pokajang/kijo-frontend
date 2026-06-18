@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CAlert,
   CCard,
@@ -30,6 +30,7 @@ import {
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { formatCount } from '../../../utils/stats/formatStats'
 import AppraisalModal from './AppraisalModal'
 import {
@@ -118,6 +119,7 @@ const getRecordActionKey = (record) => `${record.recordKind || 'feedback'}-${rec
 
 const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -318,7 +320,9 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
 
   const handleEdit = (record) => {
     if (record.recordKind === 'final') {
-      navigate(`/staff/appraise/final-appraisal/${record.id}`)
+      navigate(`/staff/appraise/final-appraisal/${record.id}`, {
+        state: { record, returnTo: getCurrentReturnTo(location) },
+      })
       return
     }
 
@@ -526,13 +530,13 @@ const ViewAppraisal = ({ className = '', onAddFeedback, onFinalAppraisal }) => {
               onRowOpen={(record) => {
                 if (record.recordKind === 'final') {
                   navigate(`/staff/appraise/final-appraisal/records/${record.id}`, {
-                    state: { record, returnTo: '/staff/appraise' },
+                    state: { record, returnTo: getCurrentReturnTo(location) },
                   })
                   return
                 }
 
                 navigate(`/staff/appraise/records/${record.id}`, {
-                  state: { record, returnTo: '/staff/appraise' },
+                  state: { record, returnTo: getCurrentReturnTo(location) },
                 })
               }}
               getMobileTitle={(record) => record.staff}

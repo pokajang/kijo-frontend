@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   CButton,
   CCard,
@@ -16,6 +16,7 @@ import Select from '../../../../components/forms/ThemedSelect'
 import dialog from '../../../../components/dialog/dialogService'
 import { dispatchClientVendorRegistrationChanged } from '../../../../hooks/useClientVendorRegistrationAttentionCount'
 import SelectClientCard from '../../../crm/quotes/SelectClientCard'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
 import { buildVendorRegistrationFormData } from './vendorRegistrationUtils'
 
@@ -99,7 +100,9 @@ const getPortalUrlError = (value) => {
 
 const ClientVendorRegistrationFormPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { registrationId } = useParams()
+  const returnTo = getDetailReturnTo(location, '/client/vendor-registration')
   const isEdit = Boolean(registrationId)
   const [form, setForm] = useState(initialForm)
   const [staffOptions, setStaffOptions] = useState([])
@@ -150,14 +153,14 @@ const ClientVendorRegistrationFormPage = () => {
         setForm(mapRegistrationToForm(result.data))
       } catch (err) {
         dialog.alert(err.message || 'Failed to load vendor registration.')
-        navigate('/client/vendor-registration')
+        navigate(returnTo)
       } finally {
         setLoading(false)
       }
     }
 
     loadRegistration()
-  }, [isEdit, navigate, registrationId])
+  }, [isEdit, navigate, registrationId, returnTo])
 
   const submitForm = async () => {
     const recipientStaffIds = Array.isArray(form.recipientStaffIds) ? form.recipientStaffIds : []
@@ -190,7 +193,7 @@ const ClientVendorRegistrationFormPage = () => {
         throw new Error(result.message || 'Failed to save vendor registration.')
       }
       dispatchClientVendorRegistrationChanged()
-      navigate('/client/vendor-registration')
+      navigate(returnTo)
     } catch (err) {
       dialog.alert(err.message || 'Server error. Please try again later.')
     } finally {
@@ -198,7 +201,7 @@ const ClientVendorRegistrationFormPage = () => {
     }
   }
 
-  const goBack = () => navigate('/client/vendor-registration')
+  const goBack = () => navigate(returnTo)
   const portalUrlError = portalUrlTouched ? getPortalUrlError(form.portalUrl) : ''
   const isRenewal = isEdit && form.status === 'expired'
   const pageTitle = isRenewal

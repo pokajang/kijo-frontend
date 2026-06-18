@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -18,6 +18,7 @@ import useDuplicateChecker from '../../../hooks/useDuplicateChecker'
 import CompanyDetails from '../create/CompanyDetails'
 import PicCard from './components/PicCard'
 import { SYSTEM_DEFAULT_PAYMENT_TERMS_DAYS } from '../../../shared/paymentTerms'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -136,7 +137,9 @@ const normalizeBranch = (branch, companyId) => {
 
 const ClientEditPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { companyId } = useParams()
+  const returnTo = getDetailReturnTo(location, '/client/manage')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -428,7 +431,7 @@ const ClientEditPage = () => {
           },
         })
         navigate(`/client/manage/${selectedClient.company_id}`, {
-          state: { message: 'Client updated successfully.' },
+          state: { message: 'Client updated successfully.', returnTo },
         })
         return
       }
@@ -445,7 +448,9 @@ const ClientEditPage = () => {
 
   const handleCancel = () => {
     const id = selectedClient?.company_id || companyId
-    navigate(id ? `/client/manage/${id}` : '/client/manage')
+    navigate(id ? `/client/manage/${id}` : returnTo, {
+      state: id ? { returnTo } : undefined,
+    })
   }
 
   if (loading) {
@@ -460,12 +465,7 @@ const ClientEditPage = () => {
         </CCardHeader>
         <CCardBody>
           <CAlert color="danger">{error || 'Client company not found.'}</CAlert>
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/client/manage')}
-          >
+          <CButton color="secondary" variant="outline" size="sm" onClick={() => navigate(returnTo)}>
             Back
           </CButton>
         </CCardBody>

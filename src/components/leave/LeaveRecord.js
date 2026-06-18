@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CAlert, CBadge, CButton, CFormLabel, CFormSelect } from '@coreui/react'
 import { getMyEntitlementHistory, getMyEntitlements } from './actionHandlers'
 import { useLeaveRecordHandlers } from './actionHandlersRecords'
@@ -12,6 +12,7 @@ import {
   getDefaultLeaveType,
   getLeaveTypeOptions,
 } from './leaveBalanceSummary'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const currentYear = new Date().getFullYear()
 
@@ -23,6 +24,7 @@ const getAssignmentHistoryBadgeColor = (eventType = '') => {
 
 const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible = true }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [entitlements, setEntitlements] = useState([])
   const [loadingEntitlements, setLoadingEntitlements] = useState(false)
   const [entitlementsError, setEntitlementsError] = useState('')
@@ -263,7 +265,7 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
         getStatusBadge={getStatusBadge}
         onView={(record) =>
           navigate(`/my/leaves/records/${record.id}`, {
-            state: { record, returnTo: '/my/leaves' },
+            state: { record, returnTo: getCurrentReturnTo(location) },
           })
         }
       />

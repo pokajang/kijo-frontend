@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CButton, CCol } from '@coreui/react'
 import { DataTableDetailShell } from '../../../components/datatable'
 import { DetailField, DetailSection } from '../../commercial/shared/CommercialDetailFields'
@@ -7,6 +7,7 @@ import EditCatalogModal from './EditCatalogModal'
 import dialog from '../../../components/dialog/dialogService'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { fetchDetailJson } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const emptyValue = '-'
@@ -28,6 +29,8 @@ const DetailLongField = ({ label, value }) => (
 const CatalogDetailPage = () => {
   const { itemId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = getDetailReturnTo(location, '/catalog/manage')
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -88,7 +91,7 @@ const CatalogDetailPage = () => {
       const result = await response.json()
       if (result.status === 'success') {
         dialog.alert('Catalog item deleted successfully.')
-        navigate('/catalog/manage')
+        navigate(returnTo)
       } else {
         dialog.alert(result.message || 'Failed to delete item.')
       }
@@ -111,7 +114,7 @@ const CatalogDetailPage = () => {
       <DataTableDetailShell
         title="Catalog Item Details"
         backLabel="Back"
-        onBack={() => navigate('/catalog/manage')}
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={error}
         record={item}

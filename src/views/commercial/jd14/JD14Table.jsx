@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { DataTableRecordList, DataTableStatusBadge } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { countByPredicate, formatCount } from '../../../utils/stats/formatStats'
 import EditJd14Modal from './EditJd14Modal'
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.jd14.visible-columns.v3'
@@ -148,6 +149,7 @@ const JD14Table = ({
   statsVisible = true,
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [editJd14Visible, setEditJd14Visible] = useState(false)
   const [selectedForm, setSelectedForm] = useState(null)
 
@@ -251,7 +253,10 @@ const JD14Table = ({
     {
       key: 'view',
       label: 'View',
-      onClick: (record) => navigate(`/commercial/jd14/${record.id}`),
+      onClick: (record) =>
+        navigate(`/commercial/jd14/${record.id}`, {
+          state: { record, returnTo: getCurrentReturnTo(location) },
+        }),
     },
     {
       key: 'edit',
@@ -310,7 +315,11 @@ const JD14Table = ({
         getRowKey={(form, index) => form.id || `${form.approvalNo}-${index}`}
         renderCell={renderCell}
         getActions={getActions}
-        onRowOpen={(form) => navigate(`/commercial/jd14/${form.id}`)}
+        onRowOpen={(form) =>
+          navigate(`/commercial/jd14/${form.id}`, {
+            state: { record: form, returnTo: getCurrentReturnTo(location) },
+          })
+        }
         getMobileTitle={(form) => form.approvalNo}
         getMobileSubtitle={(form) => form.employer}
         getMobileMeta={(form) => `${form.commencedDisplay} | ${form.endedDisplay}`}

@@ -27,10 +27,37 @@ import { createRowOpenHandlers } from '../../utils/datatable/rowOpen'
 const defaultGetRowKey = (row, index) => row?.id || index
 const isPrimitiveTextCell = (content) => typeof content === 'string' || typeof content === 'number'
 const mergeClassNames = (...classNames) => classNames.filter(Boolean).join(' ')
+const TABLE_STATE_PREFIX = 'data-table-state'
 const getSafeGroupKey = (groupKey) =>
   groupKey === null || typeof groupKey === 'undefined' || groupKey === ''
     ? 'Ungrouped'
     : String(groupKey)
+
+const readRecordListState = (key) => {
+  if (!key || typeof window === 'undefined') return {}
+  try {
+    return JSON.parse(window.sessionStorage.getItem(`${TABLE_STATE_PREFIX}:${key}`) || '{}') || {}
+  } catch {
+    return {}
+  }
+}
+
+const writeRecordListState = (key, state) => {
+  if (!key || typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(`${TABLE_STATE_PREFIX}:${key}`, JSON.stringify(state))
+  } catch {
+    // Ignore storage failures; table state will fall back to defaults.
+  }
+}
+
+const getStoredString = (state, key, fallback) =>
+  typeof state?.[key] === 'string' && state[key] ? state[key] : fallback
+
+const getStoredNumber = (state, key, fallback) => {
+  const value = Number(state?.[key])
+  return Number.isFinite(value) && value > 0 ? value : fallback
+}
 
 const resolveUtilityPortalTarget = (portalId, setPortalTarget) => {
   if (!portalId || typeof document === 'undefined') {
@@ -152,6 +179,8 @@ const DataTableRecordList = ({
   const stickyActionHeaderStyle = createStickyActionHeaderStyle(actionColumnWidth)
   const stickyActionCellStyle = createStickyActionCellStyle(actionColumnWidth)
   const hasActions = typeof getActions === 'function' || typeof renderActions === 'function'
+  const scrollMemoryKey = scrollStorageKey || storageKey || idPrefix
+  const storedListState = useMemo(() => readRecordListState(scrollMemoryKey), [scrollMemoryKey])
 
   const visibleDataColumns = useMemo(
     () => dataColumns.filter((column) => isColumnVisible(column.key)),
@@ -185,8 +214,8 @@ const DataTableRecordList = ({
 
   const internalSort = useDataTableSort({
     rows,
-    initialSortField,
-    initialSortDir,
+    initialSortField: getStoredString(storedListState, 'sortField', initialSortField),
+    initialSortDir: getStoredString(storedListState, 'sortDir', initialSortDir),
     getSortValue: getSortValue || ((row, field) => row?.[field]),
     sortTypes,
     sortComparators,
@@ -267,7 +296,8 @@ const DataTableRecordList = ({
     setCurrentPage: setInternalCurrentPage,
   } = useDataTablePagination({
     rows: displayOrderedRows,
-    initialPageSize,
+    initialPageSize: getStoredNumber(storedListState, 'pageSize', initialPageSize),
+    initialCurrentPage: getStoredNumber(storedListState, 'currentPage', 1),
     resetDeps: [sortField, sortDir, ...resetDeps],
   })
   const hasControlledPagination =
@@ -322,7 +352,6 @@ const DataTableRecordList = ({
       ...groupRows,
     ])
   }, [getRowGroupKey, getRowGroupLabel, pagedRows, rowGroupSortComparator])
-  const scrollMemoryKey = scrollStorageKey || storageKey || idPrefix
   useDataTableScrollMemory(tableViewportRef, scrollMemoryKey, [
     showInitialLoading,
     totalRows,
@@ -340,6 +369,24 @@ const DataTableRecordList = ({
       }
     : setInternalPageSize
   const setCurrentPage = hasControlledPagination ? controlledSetCurrentPage : setInternalCurrentPage
+
+  useEffect(() => {
+    if (hasControlledPagination && hasControlledSort) return
+    writeRecordListState(scrollMemoryKey, {
+      sortField,
+      sortDir,
+      pageSize,
+      currentPage: safeCurrentPage,
+    })
+  }, [
+    hasControlledPagination,
+    hasControlledSort,
+    pageSize,
+    safeCurrentPage,
+    scrollMemoryKey,
+    sortDir,
+    sortField,
+  ])
 
   useEffect(() => {
     if (!hasControlledPagination) return

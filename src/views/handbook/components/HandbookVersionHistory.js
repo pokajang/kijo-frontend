@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { CBadge, CButton, CCol, CTooltip } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilReload } from '@coreui/icons'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   DataTableFilterPanel,
   DataTableRecordList,
@@ -14,6 +14,7 @@ import { useDebouncedSearch } from '../../../hooks/datatable'
 import { recordsTruncateStyle } from '../../../utils/datatable/tableFormatters'
 import dialog from '../../../components/dialog/dialogService'
 import { getHandbookVersions, reactivateHandbookVersion } from '../api/handbookApi'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const emptyValue = 'N/A'
 const desktopUtilityPortalId = 'handbook-version-history-utilities'
@@ -64,6 +65,7 @@ const formatDateTime = (value) => {
 
 const HandbookVersionHistory = ({ refreshKey = 0 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [loading, setLoading] = useState(false)
   const [versions, setVersions] = useState([])
   const [error, setError] = useState(null)
@@ -203,7 +205,10 @@ const HandbookVersionHistory = ({ refreshKey = 0 }) => {
     {
       key: 'view',
       label: 'View',
-      onClick: () => navigate(`/handbook/versions/${version.id}`),
+      onClick: () =>
+        navigate(`/handbook/versions/${version.id}`, {
+          state: { record: version, returnTo: getCurrentReturnTo(location) },
+        }),
     },
     {
       key: 'reactivate',
@@ -328,7 +333,11 @@ const HandbookVersionHistory = ({ refreshKey = 0 }) => {
             showDesktopSummary={false}
             resetDeps={[searchTerm, versions.length]}
             getActions={getActions}
-            onRowOpen={(version) => navigate(`/handbook/versions/${version.id}`)}
+            onRowOpen={(version) =>
+              navigate(`/handbook/versions/${version.id}`, {
+                state: { record: version, returnTo: getCurrentReturnTo(location) },
+              })
+            }
             getMobileTitle={(version) => version.version}
             getMobileSubtitle={(version) => version.current}
             mobileRecord={{

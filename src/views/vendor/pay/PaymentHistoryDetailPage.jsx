@@ -7,6 +7,7 @@ import {
   DataTableStatusBadge,
 } from '../../../components/datatable'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
 
@@ -68,11 +69,12 @@ const PaymentHistoryDetailPage = () => {
   const { paymentId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo =
-    location.state?.returnTo ||
-    (location.pathname.startsWith('/vendor/payment-records')
+  const returnTo = getDetailReturnTo(
+    location,
+    location.pathname.startsWith('/vendor/payment-records')
       ? '/vendor/payment-records'
-      : '/vendor/pay')
+      : '/vendor/pay',
+  )
   const [payment, setPayment] = useState(() => normalizePayment(location.state?.record))
   const paymentRef = useRef(payment)
   const [loading, setLoading] = useState(!location.state?.record)

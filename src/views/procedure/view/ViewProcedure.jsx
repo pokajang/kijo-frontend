@@ -1,12 +1,13 @@
 // src/procedure/view/ViewProcedure.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow, CSpinner } from '@coreui/react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import dialog from '../../../components/dialog/dialogService'
 import { DataTableActionButtonGroup, DataTableStatusBadge } from '../../../components/datatable'
 import { useAuth } from '../../../auth/AuthProvider'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { fetchDetailJson } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const formatDate = (s) => {
   if (!s) return '-'
@@ -16,10 +17,12 @@ const formatDate = (s) => {
 
 export default function ViewProcedure() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id: routeId } = useParams()
   const [params] = useSearchParams()
   const { user } = useAuth()
   const id = routeId || params.get('id')
+  const returnTo = getDetailReturnTo(location, '/administration/procedures')
 
   const [item, setItem] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -92,7 +95,7 @@ export default function ViewProcedure() {
       if (!res.ok || data?.success === false) {
         throw new Error(data?.message || 'Failed to delete procedure.')
       }
-      navigate('/administration/procedures')
+      navigate(returnTo)
     } catch (e) {
       setError(e.message || 'Unexpected error while deleting.')
     }
@@ -106,7 +109,10 @@ export default function ViewProcedure() {
           buttonColor: 'secondary',
           disabled: !canModify,
           tooltip: canModify ? 'Edit this SOP' : 'Only the owner may edit this SOP',
-          onClick: () => navigate(`/administration/procedures/edit/${item.id}`),
+          onClick: () =>
+            navigate(`/administration/procedures/edit/${item.id}`, {
+              state: { record: item, returnTo },
+            }),
         },
         {
           key: 'delete',
@@ -129,7 +135,7 @@ export default function ViewProcedure() {
               color="secondary"
               size="sm"
               variant="outline"
-              onClick={() => navigate('/administration/procedures')}
+              onClick={() => navigate(returnTo)}
             >
               Back
             </CButton>

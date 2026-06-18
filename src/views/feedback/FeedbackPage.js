@@ -1,7 +1,7 @@
 // src/views/feedback/FeedbackPage.jsx
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CButton,
   CFormTextarea,
@@ -26,9 +26,11 @@ import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { supportModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import { useAuth } from '../../auth/AuthProvider'
 import { showToast } from '../../components/toast/toastService'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const FeedbackPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, status: authStatus } = useAuth()
   const [allFeedbacks, setAllFeedbacks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -307,7 +309,7 @@ const FeedbackPage = () => {
         onDeleteFeedback={handleDeleteFeedback}
         onViewFeedback={(feedback) =>
           navigate(`/support/feedback/${feedback.id}`, {
-            state: { record: feedback, returnTo: '/support/feedback' },
+            state: { record: feedback, returnTo: getCurrentReturnTo(location) },
           })
         }
       />

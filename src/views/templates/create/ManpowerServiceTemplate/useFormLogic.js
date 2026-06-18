@@ -11,6 +11,7 @@ import { fromApiManpowerTemplate, toApiManpowerTemplate } from '../../shared/tem
 import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templateUtils'
 import { formatValidationErrors, validateManpowerTemplate } from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 // Key for localStorage draft
 const DRAFT_KEY = 'manpowerProposalDraft'
 
@@ -118,6 +119,7 @@ export default function useFormLogic({ isEdit, editId }) {
     templateMeta?.translationStatus === 'machine_draft'
   const isBmProposal = templateMeta?.proposalLanguage === 'ms-MY'
   const returnPath = getProposalListPath('manpower', isBmProposal ? 'ms-MY' : 'en')
+  const returnTo = getDetailReturnTo(location, returnPath)
 
   // --- Save (create or update) ------------------------------------------
   const handleSave = async () => {
@@ -165,7 +167,7 @@ export default function useFormLogic({ isEdit, editId }) {
       if (!isEdit) {
         clearTemplateDraft('manpower', DRAFT_KEY)
       }
-      navigate(returnPath, { replace: true })
+      navigate(returnTo, { replace: true })
     } catch (err) {
       const message = err?.message || 'Failed to save manpower template.'
       console.error('Failed to save manpower template:', err)
@@ -185,7 +187,7 @@ export default function useFormLogic({ isEdit, editId }) {
   }
 
   const handleCancel = () => {
-    navigate(location.state?.returnTo || returnPath)
+    navigate(returnTo)
   }
 
   return {

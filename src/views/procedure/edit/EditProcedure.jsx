@@ -14,9 +14,10 @@ import {
   CAlert,
   CSpinner,
 } from '@coreui/react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { fetchDetailJson } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const CATEGORY_OPTIONS = [
   { value: '', label: 'Choose category...' },
@@ -36,9 +37,11 @@ const cleanTail = (s) => (s || '').trim().replace(/[\s,;:/\\.!-]+$/g, '')
 
 export default function EditProcedure() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id: routeId } = useParams()
   const [params] = useSearchParams()
   const id = routeId || params.get('id')
+  const returnTo = getDetailReturnTo(location, '/administration/procedures')
 
   const [loading, setLoading] = useState(true)
   const [loaded, setLoaded] = useState(false)
@@ -360,11 +363,11 @@ export default function EditProcedure() {
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        navigate(
-                          id
-                            ? `/administration/procedures/view/${id}`
-                            : '/administration/procedures',
-                        )
+                        id
+                          ? navigate(`/administration/procedures/view/${id}`, {
+                              state: { returnTo },
+                            })
+                          : navigate(returnTo)
                       }
                       disabled={submitting}
                     >
@@ -381,7 +384,7 @@ export default function EditProcedure() {
                     color="secondary"
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/administration/procedures')}
+                    onClick={() => navigate(returnTo)}
                   >
                     Back to List
                   </CButton>

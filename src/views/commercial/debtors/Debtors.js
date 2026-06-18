@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CButton,
   CCard,
@@ -26,6 +26,7 @@ import { commercialModuleTabs } from '../../../components/navigation/moduleNavCo
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson } from '../../../utils/detailPages'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
 import DebtorMarkPaidModal from './DebtorMarkPaidModal'
 import {
@@ -193,6 +194,7 @@ const getPaymentTermsDisplay = (debtor) =>
 
 const Debtors = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -379,12 +381,18 @@ const Debtors = () => {
         ? {
             key: 'open-invoice',
             label: 'Open Invoice',
-            onClick: (record) => navigate(`/commercial/invoice/${record.sourceId}`),
+            onClick: (record) =>
+              navigate(`/commercial/invoice/${record.sourceId}`, {
+                state: { record, returnTo: getCurrentReturnTo(location) },
+              }),
           }
         : {
             key: 'edit',
             label: 'Edit',
-            onClick: (record) => navigate(`/commercial/debtors/manual/${record.sourceId}/edit`),
+            onClick: (record) =>
+              navigate(`/commercial/debtors/manual/${record.sourceId}/edit`, {
+                state: { record, returnTo: getCurrentReturnTo(location) },
+              }),
           },
       debtor.sourceType === 'invoice'
         ? {
@@ -489,7 +497,11 @@ const Debtors = () => {
               <CButton
                 color="primary"
                 size="sm"
-                onClick={() => navigate('/commercial/debtors/create')}
+                onClick={() =>
+                  navigate('/commercial/debtors/create', {
+                    state: { returnTo: getCurrentReturnTo(location) },
+                  })
+                }
               >
                 <CIcon icon={cilPlus} className="me-1" />
                 Add Debtor
@@ -573,8 +585,12 @@ const Debtors = () => {
                 getActions={getActions}
                 onRowOpen={(debtor) =>
                   debtor.sourceType === 'invoice'
-                    ? navigate(`/commercial/invoice/${debtor.sourceId}`)
-                    : navigate(`/commercial/debtors/manual/${debtor.sourceId}/edit`)
+                    ? navigate(`/commercial/invoice/${debtor.sourceId}`, {
+                        state: { record: debtor, returnTo: getCurrentReturnTo(location) },
+                      })
+                    : navigate(`/commercial/debtors/manual/${debtor.sourceId}/edit`, {
+                        state: { record: debtor, returnTo: getCurrentReturnTo(location) },
+                      })
                 }
                 getMobileTitle={(debtor) => debtor.invoiceRef}
                 getMobileSubtitle={(debtor) => debtor.client}

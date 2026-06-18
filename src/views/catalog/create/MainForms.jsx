@@ -22,6 +22,7 @@ import {
   handleSubmit,
   handleReset,
 } from './formHandlers'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 // Key to identify the draft in localStorage
 const DRAFT_KEY = 'catalogItemDraft'
@@ -29,7 +30,7 @@ const DRAFT_KEY = 'catalogItemDraft'
 const MainForms = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/catalog/manage'
+  const returnTo = getDetailReturnTo(location, '/catalog/manage')
   const initialFormData = {
     item_name: '',
     category_id: '',

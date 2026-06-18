@@ -14,6 +14,12 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useNavigate: () => testState.navigate,
+    useLocation: () => ({
+      pathname: '/support/feedback',
+      search: '?status=Pending',
+      hash: '#row-100',
+      state: null,
+    }),
   }
 })
 
@@ -30,9 +36,14 @@ vi.mock('./actionHandlers', () => ({
 }))
 
 vi.mock('./FeedbackTable', () => ({
-  default: ({ allFeedbacks = [], loading = false }) => (
+  default: ({ allFeedbacks = [], loading = false, onViewFeedback }) => (
     <div data-testid="feedback-table">
       {loading ? 'Loading table' : allFeedbacks.map((row) => row.feedback).join(', ')}
+      {allFeedbacks[0] ? (
+        <button type="button" onClick={() => onViewFeedback(allFeedbacks[0])}>
+          Open feedback
+        </button>
+      ) : null}
     </div>
   ),
 }))
@@ -116,6 +127,25 @@ describe('FeedbackPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('sla-chart')).toHaveTextContent('target 85 rows 1')
+    })
+  })
+
+  it('opens details with the current table URL as returnTo state', async () => {
+    fetchMonthlyFeedbackSla.mockResolvedValue({ status: 'success', months: [] })
+
+    render(<FeedbackPage />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Open feedback' })).toBeInTheDocument()
+    })
+
+    screen.getByRole('button', { name: 'Open feedback' }).click()
+
+    expect(testState.navigate).toHaveBeenCalledWith('/support/feedback/1', {
+      state: {
+        record: expect.objectContaining({ id: 1 }),
+        returnTo: '/support/feedback?status=Pending#row-100',
+      },
     })
   })
 

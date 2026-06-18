@@ -36,6 +36,7 @@ import {
 } from './quoteMainDrafts'
 import { isQuoteResultSuccess, readQuoteResultRow } from './quoteApi'
 import { useQuoteRouteParams } from './helpers/quoteRouteParams'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -95,7 +96,7 @@ const QuoteMain = () => {
   const hasInvalidServiceParam = Boolean(serviceQueryParam && !serviceParam)
   const initialServiceParam = serviceQueryParam || location.state?.initialService || ''
   const quoteResetToken = location.state?.quoteResetToken
-  const returnTo = location.state?.returnTo || '/crm/records'
+  const returnTo = getDetailReturnTo(location, '/crm/records')
   const explicitServiceKey = normalizeQuoteServiceKey(initialServiceParam)
   const [editFormData, setEditFormData] = useState(null)
   const [editLoadError, setEditLoadError] = useState('')

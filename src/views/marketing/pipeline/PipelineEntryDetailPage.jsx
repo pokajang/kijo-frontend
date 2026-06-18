@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { CAlert, CCol, CRow } from '@coreui/react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LoadingImage from '../../../components/LoadingImage'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
 import {
   API_BASE,
@@ -99,7 +100,9 @@ const normalizeEntry = (entry) => ({
 
 const PipelineEntryDetailPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams()
+  const returnTo = getDetailReturnTo(location, '/pipeline/entries')
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -163,7 +166,7 @@ const PipelineEntryDetailPage = () => {
       )
 
       if (response?.status === 'success') {
-        navigate('/pipeline/entries', {
+        navigate(returnTo, {
           state: { pipelineMessage: 'Pipeline entry deleted.' },
         })
       } else {
@@ -218,7 +221,7 @@ const PipelineEntryDetailPage = () => {
       <DataTableDetailShell
         title="Pipeline Entry Details"
         backLabel="Back"
-        onBack={() => navigate('/pipeline/entries')}
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={loadError}
         record={entry}

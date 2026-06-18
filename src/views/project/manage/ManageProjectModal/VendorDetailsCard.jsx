@@ -38,6 +38,7 @@ import {
   toFiniteNumber,
 } from '../projectApi'
 import { formatProjectMoney } from '../projectDetailFormatters'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 const PAYMENT_TERM_OPTIONS = [
   { value: '14 days', label: '14 days' },
   { value: '30 days', label: '30 days' },
@@ -49,7 +50,7 @@ const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const shouldOpenVendorAssignment = Boolean(location.state?.openVendorAssignment)
-  const assignmentReturnTo = location.state?.returnTo
+  const assignmentReturnTo = getDetailReturnTo(location, '')
   const createdVendorId = location.state?.createdVendorId
   const createdVendorName = location.state?.createdVendorName
   const [vendorList, setVendorList] = useState([])

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { CButton, CCard, CCardBody, CAlert } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import CallSearchControls from './CallSearchControls'
 import CallTable from './CallTable'
 import AddCallModal from './AddCallModal'
@@ -25,6 +25,7 @@ import {
   getPeriodRangeScopeLabel,
   isDefaultPeriodRange,
 } from '../../../components/filters'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const YEAR_RE = /^\d{4}$/
 
@@ -55,6 +56,7 @@ const matchesPeriodRange = (dateValue, periodRange) => {
 
 const CallRecords = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const currentYear = String(new Date().getFullYear())
   const desktopToolsId = 'call-records-table-tools'
@@ -266,7 +268,9 @@ const CallRecords = () => {
 
   const handleOpenContact = (contact) => {
     if (!contact?.id) return
-    navigate(`/pipeline/call-records/${contact.id}`)
+    navigate(`/pipeline/call-records/${contact.id}`, {
+      state: { record: contact, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const handleEditContact = (contact) => {

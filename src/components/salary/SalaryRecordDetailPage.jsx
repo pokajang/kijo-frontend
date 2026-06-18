@@ -13,6 +13,7 @@ import { findSalaryRecordByUrlKey, removeSalaryRecord } from './salaryRecordStor
 import { SalaryPayablePreviewTable } from './SalaryTables'
 import { openPreparingPdfTab } from './salaryFileUtils'
 import { getSalaryPayslipAvailability } from './salaryPayslipAvailability'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
 const paidStatuses = new Set(['Paid'])
@@ -121,7 +122,7 @@ const SalaryRecordDetailPage = () => {
   const { salaryRecordId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/my/salary/records'
+  const returnTo = getDetailReturnTo(location, '/my/salary/records')
   const [record, setRecord] = useState(location.state?.record || null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

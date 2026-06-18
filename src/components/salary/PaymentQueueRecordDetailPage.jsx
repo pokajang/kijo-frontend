@@ -18,6 +18,7 @@ import {
   undoPaymentQueuePaid,
 } from './paymentQueueStorage'
 import { PaymentQueueActionModal } from './PaymentQueueRecords'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 const todayValue = () => new Date().toLocaleDateString('en-CA')
 
@@ -36,11 +37,12 @@ const PaymentQueueRecordDetailPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { staffId, period } = useParams()
-  const returnTo =
-    location.state?.returnTo ||
-    (location.pathname.startsWith('/financial')
+  const returnTo = getDetailReturnTo(
+    location,
+    location.pathname.startsWith('/financial')
       ? '/financial/payment-queue'
-      : '/my/salary/payment-queue')
+      : '/my/salary/payment-queue',
+  )
   const [record, setRecord] = useState(location.state?.record || null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)

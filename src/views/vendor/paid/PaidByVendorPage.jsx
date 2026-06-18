@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CCard, CCardBody } from '@coreui/react'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { vendorModuleTabs } from '../../../components/navigation/moduleNavConfigs'
@@ -12,6 +12,7 @@ import {
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { formatCount, formatMoney, sumBy } from '../../../utils/stats/formatStats'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -46,6 +47,7 @@ const columns = [
 
 const PaidByVendorPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('vendor.paid')
   const [rows, setRows] = useState([])
@@ -178,7 +180,9 @@ const PaidByVendorPage = () => {
             getRowKey={(row) => row.vendor_id}
             renderCell={(row, column) => row[column.key] || '-'}
             onRowOpen={(row) =>
-              navigate(`/vendor/paid/${row.vendor_id}`, { state: { vendor: row } })
+              navigate(`/vendor/paid/${row.vendor_id}`, {
+                state: { vendor: row, returnTo: getCurrentReturnTo(location) },
+              })
             }
             getMobileTitle={(row) => row.vendor_name}
             getMobileSubtitle={(row) => `${row.paid_count} paid records`}

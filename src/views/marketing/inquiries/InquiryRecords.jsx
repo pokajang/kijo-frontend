@@ -21,6 +21,7 @@ import {
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import InquiryAssignModal from './InquiryAssignModal'
 import InquiryEditModal from './InquiryEditModal'
 import InquiryProofModal from './components/InquiryProofModal'
@@ -197,7 +198,9 @@ const InquiryRecords = () => {
 
   const createClientFromInquiry = (inquiry) => {
     if (inquiry.clientId) {
-      navigate(`/client/manage/${inquiry.clientId}`)
+      navigate(`/client/manage/${inquiry.clientId}`, {
+        state: { company: inquiry, returnTo: getCurrentReturnTo(location) },
+      })
       return
     }
 
@@ -475,7 +478,11 @@ const InquiryRecords = () => {
             getRowKey={(inquiry, index) => inquiry.id || index}
             renderCell={renderCell}
             getActions={getActions}
-            onRowOpen={(inquiry) => navigate(`/pipeline/inquiries/${inquiry.id}`)}
+            onRowOpen={(inquiry) =>
+              navigate(`/pipeline/inquiries/${inquiry.id}`, {
+                state: { record: inquiry, returnTo: getCurrentReturnTo(location) },
+              })
+            }
             getRowOpenDisabled={(inquiry) => !inquiry?.id}
             getMobileTitle={(inquiry) => inquiry.companyName}
             getMobileSubtitle={(inquiry) => inquiry.serviceRequiredLabel}

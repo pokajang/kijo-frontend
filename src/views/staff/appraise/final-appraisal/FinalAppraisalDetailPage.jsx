@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailFields, DataTableDetailShell } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
 import { deleteFinalAppraisal, fetchFinalAppraisal } from '../actionHandlers'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 
 const normalizeFinalAppraisal = (record) => {
   if (!record) return null
@@ -37,7 +38,7 @@ const FinalAppraisalDetailPage = () => {
   const { finalAppraisalId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/staff/appraise'
+  const returnTo = getDetailReturnTo(location, '/staff/appraise')
   const [record, setRecord] = useState(() => normalizeFinalAppraisal(location.state?.record))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

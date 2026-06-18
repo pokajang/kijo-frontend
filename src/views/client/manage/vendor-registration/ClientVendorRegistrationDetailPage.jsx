@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CAlert, CBadge, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 
 import { DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
 import { dispatchClientVendorRegistrationChanged } from '../../../../hooks/useClientVendorRegistrationAttentionCount'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
 import {
   buildVendorRegistrationEditPath,
@@ -48,7 +49,9 @@ const parseApiResponse = async (response) => {
 
 const ClientVendorRegistrationDetailPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { registrationId } = useParams()
+  const returnTo = getDetailReturnTo(location, '/client/vendor-registration')
   const [row, setRow] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -88,8 +91,11 @@ const ClientVendorRegistrationDetailPage = () => {
 
   const detail = useMemo(() => normalizeVendorRegistrationRows(row ? [row] : [])[0], [row])
 
-  const goBack = () => navigate('/client/vendor-registration')
-  const goEdit = () => navigate(buildVendorRegistrationEditPath(registrationId))
+  const goBack = () => navigate(returnTo)
+  const goEdit = () =>
+    navigate(buildVendorRegistrationEditPath(registrationId), {
+      state: { record: detail, returnTo },
+    })
 
   const deleteRegistration = async () => {
     if (!detail) return
@@ -112,7 +118,7 @@ const ClientVendorRegistrationDetailPage = () => {
         throw new Error(result.message || 'Failed to delete vendor registration.')
       }
       dispatchClientVendorRegistrationChanged()
-      navigate('/client/vendor-registration')
+      navigate(returnTo)
     } catch (err) {
       dialog.alert(err.message || 'Server error. Please try again later.')
     }

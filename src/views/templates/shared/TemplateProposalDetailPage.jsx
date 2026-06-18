@@ -24,6 +24,7 @@ import {
   unwrapRows,
 } from './templateProposalUtils'
 import { getProposalListPath } from '../proposals/proposalTabs'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const DetailField = ({ label, value, children }) => (
   <CCol xs={12} md={6} lg={4}>
@@ -101,6 +102,7 @@ const TemplateProposalDetailPage = ({ type }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const [record, setRecord] = useState(null)
+  const returnTo = getDetailReturnTo(location, getProposalListPath(type, record?.proposalLanguage))
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -174,9 +176,7 @@ const TemplateProposalDetailPage = ({ type }) => {
         return
       }
 
-      navigate(location.state?.returnTo || getProposalListPath(type, record?.proposalLanguage), {
-        replace: true,
-      })
+      navigate(returnTo, { replace: true })
     } catch (err) {
       setActionError(
         err?.message || `Unable to delete ${config.titleFallback.toLowerCase()} template.`,
@@ -297,9 +297,7 @@ const TemplateProposalDetailPage = ({ type }) => {
       <DataTableDetailShell
         title={config.detailTitle}
         backLabel="Back"
-        onBack={() =>
-          navigate(location.state?.returnTo || getProposalListPath(type, record?.proposalLanguage))
-        }
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={loadError}
         record={record}

@@ -99,7 +99,7 @@ const DeliveryOrderDetailPage = () => {
       const result = await res.json()
       if (result.status === 'success') {
         showToast('Delivery Order deleted.')
-        navigate('/commercial/delivery-order')
+        navigate(returnContext.backPath)
       } else {
         dialog.alert('Failed to delete delivery order.')
       }

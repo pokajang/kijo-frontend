@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 
 import FrozenVendorTable from './FrozenVendorTable'
@@ -10,9 +10,11 @@ import {
   handleDeactivateVendor,
   handleReactivateVendor,
 } from './actionHandlers'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const FrozenVendors = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [inactiveVendors, setInactiveVendors] = useState([])
 
   const fetchInactiveVendors = () => fetchVendorsByStatus('inactive', () => {}, setInactiveVendors)
@@ -38,7 +40,7 @@ const FrozenVendors = () => {
               onReactivateVendor={(vendor) => handleReactivateVendor(vendor, fetchInactiveVendors)}
               onViewVendor={(vendor) =>
                 navigate(`/vendor/frozen/${vendor.id}`, {
-                  state: { record: vendor, returnTo: '/vendor/frozen' },
+                  state: { record: vendor, returnTo: getCurrentReturnTo(location) },
                 })
               }
             />

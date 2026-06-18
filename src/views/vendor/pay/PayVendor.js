@@ -20,6 +20,7 @@ import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { vendorModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { listActiveProjectOptions, listAssignedVendors } from '../../project/manage/projectApi'
 import slugify from '../../../lib/slugify'
 import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
@@ -278,7 +279,7 @@ const PayVendor = () => {
     navigate(`/project/manage/${projectId}/${typeSlug}/${nameSlug}`, {
       state: {
         openVendorAssignment: true,
-        returnTo: '/vendor/pay',
+        returnTo: getCurrentReturnTo(location),
         paymentProjectId: projectId,
       },
     })

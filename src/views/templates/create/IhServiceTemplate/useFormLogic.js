@@ -13,6 +13,7 @@ import { fromApiIhTemplate, toApiIhTemplate } from '../../shared/templateMappers
 import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templateUtils'
 import { formatValidationErrors, validateIhTemplate } from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 // Key for saving drafts
 const DRAFT_KEY = 'ihProposalDraft'
 
@@ -154,6 +155,7 @@ export default function useFormLogic({ isEdit, editId }) {
     templateMeta?.translationStatus === 'machine_draft'
   const isBmProposal = templateMeta?.proposalLanguage === 'ms-MY'
   const returnPath = getProposalListPath('ih', isBmProposal ? 'ms-MY' : 'en')
+  const returnTo = getDetailReturnTo(location, returnPath)
 
   // --- Save or update, then clear draft if new --------------------------
   const handleSave = async () => {
@@ -200,7 +202,7 @@ export default function useFormLogic({ isEdit, editId }) {
         if (!isEdit) {
           clearTemplateDraft('ih', DRAFT_KEY)
         }
-        navigate(returnPath, {
+        navigate(returnTo, {
           replace: true,
         })
       } else {
@@ -227,7 +229,7 @@ export default function useFormLogic({ isEdit, editId }) {
   }
 
   const handleCancel = () => {
-    navigate(location.state?.returnTo || returnPath)
+    navigate(returnTo)
   }
 
   return {

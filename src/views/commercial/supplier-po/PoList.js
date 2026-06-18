@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 
 import ViewPoModal from './SupplierModal/ViewPoModal '
@@ -27,6 +27,7 @@ import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const emptyValue = '-'
@@ -128,6 +129,7 @@ const isPaidStatus = (status) => String(status || '').toLowerCase() === 'paid'
 
 export default function SupplierPoRecords() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [poList, setPoList] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -229,7 +231,9 @@ export default function SupplierPoRecords() {
   }
 
   const handleViewPo = (po) => {
-    navigate(`/commercial/supplier-po/${po.po_id}`)
+    navigate(`/commercial/supplier-po/${po.po_id}`, {
+      state: { record: po, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const openSupplierPoCreateForProject = (project) => {

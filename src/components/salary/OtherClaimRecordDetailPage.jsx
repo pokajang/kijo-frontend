@@ -12,6 +12,7 @@ import { downloadOtherClaim } from './OtherClaimRecords'
 import { findOtherClaimRecordByUrlKey, removeOtherClaimRecord } from './otherClaimRecordStorage'
 import { SalaryPayablePreviewTable } from './SalaryTables'
 import { openPreparingPdfTab } from './salaryFileUtils'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
 const paidStatuses = new Set(['Paid'])
@@ -86,7 +87,7 @@ const OtherClaimRecordDetailPage = () => {
   const { otherClaimRecordId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/my/salary/other-claims/records'
+  const returnTo = getDetailReturnTo(location, '/my/salary/other-claims/records')
   const [record, setRecord] = useState(location.state?.record || null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

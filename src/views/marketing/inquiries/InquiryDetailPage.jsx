@@ -3,6 +3,7 @@ import { CAlert, CCol, CRow } from '@coreui/react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LoadingImage from '../../../components/LoadingImage'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import InquiryAssignModal from './InquiryAssignModal'
 import InquiryEditModal from './InquiryEditModal'
 import {
@@ -98,6 +99,7 @@ const InquiryDetailPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { id } = useParams()
+  const returnTo = getDetailReturnTo(location, '/pipeline/inquiries')
   const [inquiry, setInquiry] = useState(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -239,7 +241,7 @@ const InquiryDetailPage = () => {
                 if (!window.confirm(`Delete ${inquiry.companyName}?`)) return
                 try {
                   await deleteInquiry(inquiry.id)
-                  navigate('/pipeline/inquiries', {
+                  navigate(returnTo, {
                     state: { inquiryMessage: 'Inquiry deleted.' },
                   })
                 } catch (err) {
@@ -249,7 +251,7 @@ const InquiryDetailPage = () => {
             },
           ].filter(Boolean)
         : [],
-    [inquiry, navigate],
+    [inquiry, navigate, returnTo],
   )
 
   const handleEditSaved = async () => {
@@ -282,7 +284,7 @@ const InquiryDetailPage = () => {
       <DataTableDetailShell
         title="Inquiry Details"
         backLabel="Back"
-        onBack={() => navigate('/pipeline/inquiries')}
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={loadError}
         record={inquiry}

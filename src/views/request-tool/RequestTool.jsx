@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CButton, CModal, CModalBody, CModalFooter, CModalHeader, CModalTitle } from '@coreui/react'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { supportModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import { useToolRequestActions } from './actionHandlers'
 import RequestFormFields from './RequestFormFields'
 import RequestTable from './RequestTable'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 /**
  * RequestTool
@@ -16,6 +17,7 @@ import RequestTable from './RequestTable'
  */
 export default function RequestTool() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [showPendingNotice, setShowPendingNotice] = useState(false)
 
@@ -149,7 +151,7 @@ export default function RequestTool() {
         handleSaveAchievement={handleSaveAchievement}
         onViewRecord={(record) =>
           navigate(`/support/requests/${record.id}`, {
-            state: { record, returnTo: '/support/requests' },
+            state: { record, returnTo: getCurrentReturnTo(location) },
           })
         }
       />

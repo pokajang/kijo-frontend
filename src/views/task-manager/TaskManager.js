@@ -17,6 +17,7 @@ import {
   previewTaskClassification,
 } from './taskApi'
 import { showToast } from '../../components/toast/toastService'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v3'
 const AI_CLASSIFICATION_POLL_INTERVAL_MS = 4000
@@ -589,7 +590,7 @@ const TaskManager = () => {
             onCreateTask={() => setShowCreateTaskModal(true)}
             onView={(task) =>
               navigate(`/task-manager/${task.id}`, {
-                state: { record: task, returnTo: '/task-manager' },
+                state: { record: task, returnTo: getCurrentReturnTo(location) },
               })
             }
           />

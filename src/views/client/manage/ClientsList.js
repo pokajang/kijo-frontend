@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import ClientListTableCard from './components/ClientListTableCard'
 import DeleteCompanyModal from './components/DeleteCompanyModal'
 import ClientModuleNavStrip from './components/ClientModuleNavStrip'
 import dialog from '../../../components/dialog/dialogService'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const ClientsList = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [clientDatabase, setClientDatabase] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -95,13 +97,17 @@ const ClientsList = () => {
   const openCompanyRoute = (client, target = '') => {
     const companyId = Number(client.company_id)
     if (!companyId) return
-    navigate(`/client/manage/${companyId}${target}`, { state: { company: client } })
+    navigate(`/client/manage/${companyId}${target}`, {
+      state: { company: client, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const handleEditCompany = (client) => {
     const companyId = Number(client.company_id)
     if (!companyId) return
-    navigate(`/client/manage/${companyId}/edit`, { state: { company: client } })
+    navigate(`/client/manage/${companyId}/edit`, {
+      state: { company: client, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const handleDeleteCompany = (client) => {

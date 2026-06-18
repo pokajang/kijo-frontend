@@ -21,10 +21,15 @@ const normalizeResetDep = (value) => {
   return value
 }
 
-export const useDataTablePagination = ({ rows = [], initialPageSize, resetDeps = [] } = {}) => {
+export const useDataTablePagination = ({
+  rows = [],
+  initialPageSize,
+  initialCurrentPage = 1,
+  resetDeps = [],
+} = {}) => {
   const didMountResetRef = useRef(false)
   const [pageSize, setPageSize] = useState(initialPageSize || getInitialPageSize)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPage, setCurrentPage] = useState(initialCurrentPage)
   const resetSignature = resetDeps.map(normalizeResetDep).join('|')
 
   const totalRows = rows.length

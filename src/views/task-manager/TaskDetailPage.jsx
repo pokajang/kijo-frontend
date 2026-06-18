@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailFields, DataTableDetailShell } from '../../components/datatable'
 import dialog from '../../components/dialog/dialogService'
 import { fetchJson, findRecordById } from '../../utils/detailPages'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 import { getDaysLapsedInfo, getStatusText } from './actionHandlers'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -68,7 +69,7 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
   const location = useLocation()
   const todayStr = formatDateLocal(new Date())
   const isStaffScope = scope === 'staff'
-  const returnTo = location.state?.returnTo || (isStaffScope ? '/staff/tasks' : '/task-manager')
+  const returnTo = getDetailReturnTo(location, isStaffScope ? '/staff/tasks' : '/task-manager')
   const [task, setTask] = useState(() => normalizeTask(location.state?.record, todayStr))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

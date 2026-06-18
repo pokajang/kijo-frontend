@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { getPeriodRangePreset, getPeriodRangeScopeLabel } from '../../../../components/filters'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
 import ClientRoiTableCard from './ClientRoiTableCard'
 import { buildClientRoiDetailSearch, getPeriodRangeFromSearchParams } from './clientRoiRouteUtils'
+import { getCurrentReturnTo } from '../../../../utils/navigation/returnTo'
 
 const buildRoiUrl = (periodRange) => {
   const params = new URLSearchParams()
@@ -16,6 +17,7 @@ const buildRoiUrl = (periodRange) => {
 
 const ClientRoiPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -109,9 +111,15 @@ const ClientRoiPage = () => {
         scopeLabel={getPeriodRangeScopeLabel(periodRange)}
         onResetFilters={resetFilters}
         onOpenCommercialHistory={(row) =>
-          navigate(`/client/roi/${row.company_id}${buildClientRoiDetailSearch(periodRange)}`)
+          navigate(`/client/roi/${row.company_id}${buildClientRoiDetailSearch(periodRange)}`, {
+            state: { record: row, returnTo: getCurrentReturnTo(location) },
+          })
         }
-        onViewClient={(row) => navigate(`/client/manage/${row.company_id}`)}
+        onViewClient={(row) =>
+          navigate(`/client/manage/${row.company_id}`, {
+            state: { company: row, returnTo: getCurrentReturnTo(location) },
+          })
+        }
       />
     </>
   )

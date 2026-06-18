@@ -16,6 +16,7 @@ import {
 } from './otherClaimRecordStorage'
 import { SalaryRecordTable } from './SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from './salaryFileUtils'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const statusTone = {
   Draft: 'secondary',
@@ -272,7 +273,7 @@ const OtherClaimRecords = ({
     if (!record?.id) return
     const recordUrlKey = getOtherClaimRecordUrlKey(record)
     navigate(`/my/salary/other-claims/records/${encodeURIComponent(recordUrlKey)}`, {
-      state: { record, returnTo: returnTo || '/my/salary/other-claims/records' },
+      state: { record, returnTo: returnTo || getCurrentReturnTo(location) },
     })
   }
 

@@ -1,3 +1,5 @@
+import { sanitizeInternalReturnTo } from '../../../utils/navigation/returnTo'
+
 export const PROJECT_MANAGE_ORIGIN = 'project-manage'
 
 const normalizeProjectId = (value) => {
@@ -47,7 +49,9 @@ export const getCommercialReturnContext = (location = {}, listPath = '/commercia
     isProjectOrigin,
     projectId,
     backLabel: isProjectOrigin ? 'Back to Project' : 'Back',
-    backPath: isProjectOrigin ? `/project/manage/${encodeURIComponent(projectId)}` : listPath,
+    backPath: isProjectOrigin
+      ? `/project/manage/${encodeURIComponent(projectId)}`
+      : sanitizeInternalReturnTo(state.returnTo, listPath),
     listPath,
   }
 }

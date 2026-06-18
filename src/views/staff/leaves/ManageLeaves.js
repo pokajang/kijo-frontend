@@ -13,6 +13,7 @@ import { useAuth } from '../../../auth/AuthProvider'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
 import { getPeriodRangePreset } from '../../../components/filters'
 import { APP_NOTIFICATIONS_CHANGED_EVENT } from '../../../notifications/appNotificationEvents'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const LEAVE_ADMIN_ALLOWED_ROLES = ['System Admin', 'HR']
 
@@ -148,7 +149,7 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
     [entitlementId, entitlements],
   )
 
-  const assignReturnTo = location.state?.returnTo || '/staff/leaves/entitlements'
+  const assignReturnTo = getDetailReturnTo(location, '/staff/leaves/entitlements')
   const currentReturnTo = `${location.pathname}${location.search}`
 
   const openAssignLeave = (record) => {
@@ -188,7 +189,7 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
           name_code: record.name_code,
         },
         entitlements: staffEntitlements,
-        returnTo: '/staff/leaves/entitlements',
+        returnTo: currentReturnTo,
       },
     })
   }
@@ -267,7 +268,7 @@ const ManageLeaves = ({ routeSection = 'records' }) => {
         canApproveActions={effectiveLeaveActionPermissions.canApprove}
         onViewRecord={(record) =>
           navigate(`/staff/leaves/records/${record.id}`, {
-            state: { record, returnTo: '/staff/leaves' },
+            state: { record, returnTo: currentReturnTo },
           })
         }
       />

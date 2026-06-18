@@ -8,6 +8,7 @@ import {
 } from '../../../components/datatable'
 import DeleteCompanyModal from './components/DeleteCompanyModal'
 import { getClientPaymentTermsMeta } from '../../../shared/paymentTerms'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const emptyValue = '-'
@@ -78,6 +79,7 @@ const ClientCompanyDetailPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { companyId } = useParams()
+  const returnTo = getDetailReturnTo(location, '/client/manage')
   const [company, setCompany] = useState(null)
   const [branches, setBranches] = useState([])
   const [pics, setPics] = useState([])
@@ -190,7 +192,7 @@ const ClientCompanyDetailPage = () => {
       const result = await response.json()
       if (result.status === 'success') {
         setDeleteModalVisible(false)
-        navigate('/client/manage')
+        navigate(returnTo)
       } else {
         setActionError(result.message || 'Unable to delete client company.')
       }
@@ -235,7 +237,7 @@ const ClientCompanyDetailPage = () => {
       <DataTableDetailShell
         title="Client Company Details"
         backLabel="Back"
-        onBack={() => navigate('/client/manage')}
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={error}
         record={company}

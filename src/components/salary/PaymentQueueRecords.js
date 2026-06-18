@@ -29,6 +29,7 @@ import {
   markPaymentQueuePaid,
   undoPaymentQueuePaid,
 } from './paymentQueueStorage'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const todayValue = () => new Date().toLocaleDateString('en-CA')
 
@@ -329,7 +330,7 @@ const PaymentQueueRecords = ({
     navigate(
       `${basePath}/${encodeURIComponent(record.staffId)}/${encodeURIComponent(record.period)}`,
       {
-        state: { record, returnTo: `${location.pathname}${location.search}` },
+        state: { record, returnTo: getCurrentReturnTo(location) },
       },
     )
   }

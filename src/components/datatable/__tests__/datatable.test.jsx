@@ -903,6 +903,56 @@ describe('datatable shared components', () => {
     expect(screen.queryByText('Row 1')).not.toBeInTheDocument()
   })
 
+  it('restores internal pagination and sort after remount', async () => {
+    const sortableRows = [
+      'Zulu',
+      'Yankee',
+      'Xray',
+      'Whiskey',
+      'Victor',
+      'Uniform',
+      'Tango',
+      'Sierra',
+      'Romeo',
+      'Quebec',
+      'Papa',
+      'Oscar',
+    ].map((name, index) => ({ id: index + 1, name }))
+
+    const props = {
+      rows: sortableRows,
+      dataColumns: columns,
+      defaultVisibleColumns: { name: true },
+      exportFilename: 'records.csv',
+      initialPageSize: 5,
+      scrollStorageKey: 'test.persisted-state',
+    }
+
+    const { unmount } = render(<DataTableRecordList {...props} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Name/i }))
+    fireEvent.click(screen.getAllByLabelText('Next page')[0])
+
+    expect(screen.getByText('Uniform')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        JSON.parse(window.sessionStorage.getItem('data-table-state:test.persisted-state')),
+      ).toMatchObject({
+        sortField: 'name',
+        sortDir: 'asc',
+        pageSize: 5,
+        currentPage: 2,
+      })
+    })
+
+    unmount()
+    render(<DataTableRecordList {...props} />)
+
+    expect(screen.getAllByText('Page 2/3').length).toBeGreaterThan(0)
+    expect(screen.getByText('Uniform')).toBeInTheDocument()
+    expect(screen.queryByText('Zulu')).not.toBeInTheDocument()
+  })
+
   it('resets controlled pagination only after reset dependencies change', () => {
     const setPageSize = vi.fn()
     const setCurrentPage = vi.fn()

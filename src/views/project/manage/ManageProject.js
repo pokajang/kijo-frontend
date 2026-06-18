@@ -1,6 +1,6 @@
 // src/views/project/ManageProject.js
 import React, { useCallback, useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import ProjectTable from './ProjectTable'
 import { fetchProjects, handleDeleteProject } from './actionHandlers'
@@ -10,9 +10,11 @@ import dialog from '../../../components/dialog/dialogService'
 import { getPeriodRangePreset } from '../../../components/filters'
 import { PROJECT_CLOSE_TYPES } from './projectStatus'
 import { getCommercialCreatePath, getProjectManagePath } from './projectRoutes'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 export default function ManageProject() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(false)
   const [deletingProjectId, setDeletingProjectId] = useState(null)
@@ -100,7 +102,9 @@ export default function ManageProject() {
         periodRange={periodRange}
         onPeriodRangeChange={setPeriodRange}
         onManage={(p) => {
-          navigate(getProjectManagePath(p), { state: { project: p } })
+          navigate(getProjectManagePath(p), {
+            state: { project: p, returnTo: getCurrentReturnTo(location) },
+          })
         }}
         onClose={(p, closeType) => open('close', p, { closeType })}
         onGenerateInvoice={(p) => openCommercialCreatePage('invoice', p)}

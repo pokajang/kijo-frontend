@@ -66,6 +66,7 @@ export const useRecordsActionBuilder = ({
   onActionSuccess = onRowMoved ? ({ status }) => onRowMoved(status) : undefined,
   refreshAfterLocalDelete = false,
   modalBindings,
+  getReturnTo,
 }) =>
   useMemo(
     () => (serviceKey) =>
@@ -76,7 +77,16 @@ export const useRecordsActionBuilder = ({
         navigate,
         onActionSuccess,
         refreshAfterLocalDelete,
+        getReturnTo,
         ...modalBindings,
       }),
-    [fetchQuotes, modalBindings, navigate, onActionSuccess, refreshAfterLocalDelete, setQuotes],
+    [
+      fetchQuotes,
+      getReturnTo,
+      modalBindings,
+      navigate,
+      onActionSuccess,
+      refreshAfterLocalDelete,
+      setQuotes,
+    ],
   )

@@ -1,7 +1,7 @@
 // src/views/catalog/manage/ManageCatalog.js
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
@@ -16,12 +16,14 @@ import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { catalogModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 
 const normalizeText = (value) => String(value || '').toLowerCase()
 
 const ManageCatalog = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const currentYear = String(new Date().getFullYear())
   const [catalog, setCatalog] = useState([])
   const [search, setSearch] = useState('')
@@ -45,7 +47,9 @@ const ManageCatalog = () => {
   }, [currentYear])
 
   const handleView = (item) => {
-    navigate(`/catalog/manage/${item.id}`)
+    navigate(`/catalog/manage/${item.id}`, {
+      state: { record: item, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const handleEdit = (item) => {

@@ -10,13 +10,14 @@ import VendorTypeForm from './VendorTypeForm'
 import BankingDetailsForm from './BankingDetailsForm'
 import { checkDuplicateCompany, validateRequiredFields } from './utils/vendorValidation'
 import dialog from '../../../components/dialog/dialogService'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 // helper to trim spaces and trailing punctuation (commas, slashes, etc.)
 const cleanTail = (s) => (s || '').trim().replace(/[\s,;:/\\.!-]+$/g, '')
 
 const CreateVendor = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/vendor/manage'
+  const returnTo = getDetailReturnTo(location, '/vendor/manage')
   const returnState = location.state?.returnState || null
   const [vendorList, setVendorList] = useState([])
 

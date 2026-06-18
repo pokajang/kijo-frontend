@@ -9,6 +9,7 @@ import {
 } from '../services/quoteService'
 import { getRecordListPath, normalizeRecordTab } from '../config/recordTabs'
 import { getQuotationAgeDays } from '../utils/recordFilters'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 
 const SERVICE_MAP = {
   'training-tab': { label: 'Training', fetcher: fetchTrainingQuotes },
@@ -52,7 +53,7 @@ export const useRecordDetailsData = () => {
   const returnTab = normalizeRecordTab(
     new URLSearchParams(location.search).get('tab') || serviceTab,
   )
-  const returnTo = location.state?.returnTo || getRecordListPath(returnTab)
+  const returnTo = getDetailReturnTo(location, getRecordListPath(returnTab))
 
   const loadRecord = useCallback(
     async ({ preferState = true, withSpinner = false } = {}) => {

@@ -13,6 +13,7 @@ import {
 import { DataTableDetailFields, DataTableDetailShell } from '../../components/datatable'
 import dialog from '../../components/dialog/dialogService'
 import { fetchJson, findRecordById, getArrayFromPayload } from '../../utils/detailPages'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -42,7 +43,7 @@ const RequestDetailPage = () => {
   const { requestId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/support/requests'
+  const returnTo = getDetailReturnTo(location, '/support/requests')
   const [record, setRecord] = useState(() => normalizeRequest(location.state?.record))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

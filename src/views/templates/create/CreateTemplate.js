@@ -17,6 +17,7 @@ import TrainingServiceTemplate from './TrainingServiceTemplate'
 import IhServiceTemplate from './IhServiceTemplate'
 import ManpowerServiceTemplate from './ManpowerServiceTemplate'
 import SpecialTemplate from './SpecialTemplate'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const SERVICE_OPTIONS = [
   { key: 'training', label: 'Training Proposal', component: TrainingServiceTemplate },
@@ -34,7 +35,7 @@ const CreateTemplate = () => {
   const type = params.get('type') || ''
   const isEdit = params.get('edit') === 'true'
   const editId = params.get('id') || null
-  const returnTo = location.state?.returnTo || '/templates/proposals'
+  const returnTo = getDetailReturnTo(location, '/templates/proposals')
 
   // navigate to the selected type
   const selectService = (key) => {

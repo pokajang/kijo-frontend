@@ -180,6 +180,7 @@ export async function handleSave({
   saveInFlightRef,
   finalizingBmTranslation = false,
   isBmProposal = false,
+  returnTo,
 }) {
   if (saving || saveInFlightRef?.current) return
 
@@ -236,7 +237,8 @@ export async function handleSave({
         clearTemplateDraft('training', DRAFT_KEY)
       }
       navigate(
-        getProposalListPath('training', finalizingBmTranslation || isBmProposal ? 'ms-MY' : 'en'),
+        returnTo ||
+          getProposalListPath('training', finalizingBmTranslation || isBmProposal ? 'ms-MY' : 'en'),
         { replace: true },
       )
     } else {

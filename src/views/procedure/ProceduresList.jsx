@@ -12,7 +12,7 @@ import {
   CFormSelect,
   CRow,
 } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import dialog from '../../components/dialog/dialogService'
 import {
   DataTableActionMenu,
@@ -31,6 +31,7 @@ import {
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { administrationModuleTabs } from '../../components/navigation/moduleNavConfigs'
 import { useAuth } from '../../auth/AuthProvider'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const dataColumns = [
   { key: 'title', label: 'Title', width: '220px', sortable: true, sortType: 'string' },
@@ -109,6 +110,7 @@ const displayCategory = (cat) => {
 
 export default function ProceduresList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
 
   const [rows, setRows] = useState([])
@@ -245,7 +247,10 @@ export default function ProceduresList() {
         disabled: !canModify,
         tooltip: canModify ? 'Edit this SOP' : 'Only the owner may edit this SOP',
         onClick: canModify
-          ? () => navigate(`/administration/procedures/edit/${item.id}`)
+          ? () =>
+              navigate(`/administration/procedures/edit/${item.id}`, {
+                state: { record: item, returnTo: getCurrentReturnTo(location) },
+              })
           : undefined,
       },
       {
@@ -411,7 +416,11 @@ export default function ProceduresList() {
               getRowKey={(item, index) => item.id || index}
               renderCell={renderCell}
               renderMobileItem={renderMobileItem}
-              onRowOpen={(item) => navigate(`/administration/procedures/view/${item.id}`)}
+              onRowOpen={(item) =>
+                navigate(`/administration/procedures/view/${item.id}`, {
+                  state: { record: item, returnTo: getCurrentReturnTo(location) },
+                })
+              }
               rowOpenClassName="procedure-clickable-row"
               getActions={getActions}
               getMobileTitle={(item) => item.title}

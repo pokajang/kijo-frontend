@@ -1,7 +1,7 @@
 // src/components/DeliveryOrder.js
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 import DoViewModal from './DoModal/DoViewModal'
 import DoEditModalMain from './DoModal/DoEditModalMain'
@@ -28,6 +28,7 @@ import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const emptyValue = '-'
@@ -175,6 +176,7 @@ const normalizeDeliveryOrder = (order = {}) => {
 
 const DeliveryOrder = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [deliveryOrders, setDeliveryOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -509,7 +511,9 @@ const DeliveryOrder = () => {
   const statsScopeLabel = periodRange ? getPeriodRangeScopeLabel(periodRange) : ''
 
   const handleOpenDetail = (doItem) => {
-    navigate(`/commercial/delivery-order/${doItem.do_id}`)
+    navigate(`/commercial/delivery-order/${doItem.do_id}`, {
+      state: { record: doItem, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const openDeliveryOrderCreateForProject = (project) => {

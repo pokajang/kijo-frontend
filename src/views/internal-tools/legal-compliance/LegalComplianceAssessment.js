@@ -38,6 +38,7 @@ import {
   getTemplateSections,
   isRequiredFieldComplete,
 } from './utils/templateContent'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const buildAutosaveChangeKey = ({
   assessmentDetails,
@@ -66,6 +67,12 @@ const LegalComplianceAssessment = () => {
     const params = new URLSearchParams(location.search)
     return params.get('assessmentId')
   }, [location.search])
+  const returnTo = getDetailReturnTo(
+    location,
+    selectedAssessmentId
+      ? '/internal-tools/legal-compliance/records'
+      : '/internal-tools/legal-compliance/select-template',
+  )
   const shouldOpenAssessmentInReview = useMemo(() => {
     const params = new URLSearchParams(location.search)
     return params.get('mode') === 'review'
@@ -486,7 +493,7 @@ const LegalComplianceAssessment = () => {
     clearLocalDraft()
     setIsSubmittedRecord(true)
     setIsSubmitConfirmVisible(false)
-    navigate('/internal-tools/legal-compliance/records', {
+    navigate(returnTo, {
       state: { submittedAssessmentId: result.id },
     })
   }
@@ -505,7 +512,9 @@ const LegalComplianceAssessment = () => {
       const payload = await createLegalComplianceAssessmentRevision(assessmentId)
       const revisionId = payload?.data?.id
       if (!revisionId) throw new Error('Assessment revision could not be created.')
-      navigate(`/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(revisionId)}`)
+      navigate(`/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(revisionId)}`, {
+        state: { returnTo },
+      })
     } catch (error) {
       setSaveError(error.message || 'Assessment revision could not be created.')
     } finally {
@@ -548,7 +557,7 @@ const LegalComplianceAssessment = () => {
                 onClick={() =>
                   navigate(
                     selectedAssessmentId
-                      ? '/internal-tools/legal-compliance/records'
+                      ? returnTo
                       : '/internal-tools/legal-compliance/select-template',
                   )
                 }
@@ -578,11 +587,7 @@ const LegalComplianceAssessment = () => {
               sections={sections}
               clauseResponses={clauseResponses}
               isSavingAssessment={isSavingAssessment}
-              onBack={() =>
-                isSubmittedRecord
-                  ? navigate('/internal-tools/legal-compliance/records')
-                  : setIsReviewing(false)
-              }
+              onBack={() => (isSubmittedRecord ? navigate(returnTo) : setIsReviewing(false))}
             />
           </CCol>
 
@@ -663,7 +668,7 @@ const LegalComplianceAssessment = () => {
               title="Assessment Client"
               addressLabel="Assessment Address"
               contactLabel="Client PIC"
-              onBack={() => navigate(-1)}
+              onBack={() => navigate(returnTo)}
               onCreateClient={handleCreateClient}
             />
           </CRow>
@@ -672,7 +677,7 @@ const LegalComplianceAssessment = () => {
           assessmentDetails={assessmentDetails}
           isSavingAssessment={isSavingAssessment}
           onSubmit={handleSaveAssessmentDetails}
-          onBack={() => navigate(-1)}
+          onBack={() => navigate(returnTo)}
           onReset={handleReset}
           onAssessmentChange={handleAssessmentChange}
         />
@@ -734,7 +739,7 @@ const LegalComplianceAssessment = () => {
               color="secondary"
               size="sm"
               variant="outline"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(returnTo)}
               disabled={isSavingAssessment}
             >
               Back

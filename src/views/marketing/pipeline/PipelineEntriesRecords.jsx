@@ -22,6 +22,7 @@ import {
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import PipelineEntryProofModal from './components/PipelineEntryProofModal'
 import PipelineEntriesShell from './PipelineEntriesShell'
 import {
@@ -218,6 +219,7 @@ const PipelineEntriesRecords = () => {
                 `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(
                   entry.legalAssessmentId,
                 )}&mode=review`,
+                { state: { returnTo: getCurrentReturnTo(location) } },
               ),
           },
         ]
@@ -226,7 +228,10 @@ const PipelineEntriesRecords = () => {
             ? {
                 key: 'edit',
                 label: 'Edit',
-                onClick: () => navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}/edit`),
+                onClick: () =>
+                  navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}/edit`, {
+                    state: { record: entry, returnTo: getCurrentReturnTo(location) },
+                  }),
               }
             : null,
           entry.photoUrl
@@ -493,7 +498,11 @@ const PipelineEntriesRecords = () => {
             getRowKey={(entry, index) => entry.id || index}
             renderCell={renderCell}
             getActions={getActions}
-            onRowOpen={(entry) => navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}`)}
+            onRowOpen={(entry) =>
+              navigate(`/pipeline/entries/${encodeURIComponent(entry.id)}`, {
+                state: { record: entry, returnTo: getCurrentReturnTo(location) },
+              })
+            }
             getRowOpenDisabled={(entry) => !entry?.id}
             getMobileTitle={(entry) => entry.prospectName}
             getMobileSubtitle={(entry) => entry.source}

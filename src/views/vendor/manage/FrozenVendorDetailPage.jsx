@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailFields, DataTableDetailShell } from '../../../components/datatable'
 import dialog from '../../../components/dialog/dialogService'
 import { fetchJson, findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { normalizeVendorRows } from './actionHandlers'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -13,7 +14,7 @@ const FrozenVendorDetailPage = () => {
   const { vendorId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/vendor/frozen'
+  const returnTo = getDetailReturnTo(location, '/vendor/frozen')
   const [vendor, setVendor] = useState(location.state?.record || null)
   const vendorRef = useRef(vendor)
   const [loading, setLoading] = useState(!location.state?.record)

@@ -81,7 +81,7 @@ const JD14DetailPage = () => {
       const result = await res.json()
       if (result.status === 'success') {
         showToast('JD14 record deleted.')
-        navigate('/commercial/jd14')
+        navigate(returnContext.backPath)
       } else {
         dialog.alert(`Failed to delete: ${result.message}`)
       }

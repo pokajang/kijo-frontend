@@ -24,6 +24,7 @@ import {
   getProjectManagePath,
   isProjectManagePathCanonical,
 } from './projectRoutes'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const projectActionGroups = [
   ['jd14', 'invoice', 'delivery-order', 'vendor-loa', 'supplier-po'],
@@ -62,6 +63,7 @@ const ManageProjectPage = () => {
   const navigate = useNavigate()
   const { id, type, name } = useParams()
   const location = useLocation()
+  const returnTo = getDetailReturnTo(location, '/project/manage')
 
   const [project, setProject] = useState(location.state?.project || null)
   const [loading, setLoading] = useState(!location.state?.project)
@@ -171,11 +173,11 @@ const ManageProjectPage = () => {
     setDeletingProjectId(project.id || 'pending')
     try {
       const ok = await handleDeleteProject(project)
-      if (ok) navigate('/project/manage')
+      if (ok) navigate(returnTo)
     } finally {
       setDeletingProjectId(null)
     }
-  }, [deletingProjectId, navigate, project])
+  }, [deletingProjectId, navigate, project, returnTo])
 
   const projectActions = useMemo(() => {
     return buildProjectActions({
@@ -298,12 +300,7 @@ const ManageProjectPage = () => {
               {project?.project_name || '-'}
             </span>
           </div>
-          <CButton
-            color="secondary"
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/project/manage')}
-          >
+          <CButton color="secondary" size="sm" variant="outline" onClick={() => navigate(returnTo)}>
             Back
           </CButton>
         </CCardHeader>

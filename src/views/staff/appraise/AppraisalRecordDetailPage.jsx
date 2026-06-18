@@ -11,6 +11,7 @@ import {
 import AppraisalModal from './AppraisalModal'
 import { deleteAppraisalRecord, handleInputChange, updateAppraisalRecord } from './actionHandlers'
 import infoDetails from './infoDetails'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -41,7 +42,7 @@ const AppraisalRecordDetailPage = ({ mode = 'personal' }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isStaffMode = mode === 'staff'
-  const returnTo = location.state?.returnTo || (isStaffMode ? '/staff/appraise' : null)
+  const returnTo = getDetailReturnTo(location, isStaffMode ? '/staff/appraise' : '')
   const [record, setRecord] = useState(() => normalizeAppraisal(location.state?.record))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Select from '../../../components/forms/ThemedSelect'
 import {
   CAlert,
@@ -20,6 +20,7 @@ import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { fetchAllPagedRecords, fetchJson } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import {
   getClientPaymentTermsMeta,
   getPaymentTermsCompactLabel,
@@ -329,7 +330,9 @@ const ReviewItem = ({ label, value }) => (
 
 const DebtorFormPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams()
+  const returnTo = getDetailReturnTo(location, '/commercial/debtors')
   const isEdit = Boolean(id)
   const [step, setStep] = useState('edit')
   const [form, setForm] = useState(blankForm)
@@ -582,7 +585,7 @@ const DebtorFormPage = () => {
       } catch (error) {
         if (!cancelled) {
           dialog.alert(error?.message || 'Unable to load manual debtor.')
-          navigate('/commercial/debtors')
+          navigate(returnTo)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -594,7 +597,7 @@ const DebtorFormPage = () => {
     return () => {
       cancelled = true
     }
-  }, [id, isEdit, navigate])
+  }, [id, isEdit, navigate, returnTo])
 
   useEffect(() => {
     if (returnHydratedRef.current || isEdit || clientOptions.length === 0) return
@@ -727,7 +730,7 @@ const DebtorFormPage = () => {
         throw new Error(payload?.message || `Request failed with HTTP ${res.status}`)
       }
       setStep('success')
-      navigate('/commercial/debtors')
+      navigate(returnTo)
     } catch (error) {
       dialog.alert(error?.message || 'Unable to save manual debtor.')
     } finally {
@@ -749,7 +752,7 @@ const DebtorFormPage = () => {
               color="secondary"
               variant="outline"
               size="sm"
-              onClick={() => navigate('/commercial/debtors')}
+              onClick={() => navigate(returnTo)}
               disabled={saving}
             >
               Back
@@ -1039,7 +1042,7 @@ const DebtorFormPage = () => {
                     color="secondary"
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/commercial/debtors')}
+                    onClick={() => navigate(returnTo)}
                     disabled={saving}
                   >
                     Cancel

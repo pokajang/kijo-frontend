@@ -148,7 +148,7 @@ const InvoiceDetailPage = () => {
           onClick: () =>
             handleDelete(invoice, async () => {
               await refresh()
-              navigate('/commercial/invoice')
+              navigate(returnContext.backPath)
             }),
         },
       ].filter(Boolean)

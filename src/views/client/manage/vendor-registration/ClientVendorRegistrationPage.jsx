@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCol, CFormLabel, CFormSelect, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
@@ -18,6 +18,7 @@ import { StatsStrip } from '../../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { dispatchClientVendorRegistrationChanged } from '../../../../hooks/useClientVendorRegistrationAttentionCount'
 import { formatCount } from '../../../../utils/stats/formatStats'
+import { getCurrentReturnTo } from '../../../../utils/navigation/returnTo'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
 import {
   buildVendorRegistrationDetailPath,
@@ -180,6 +181,7 @@ const parseApiResponse = async (response) => {
 
 const ClientVendorRegistrationPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('client.vendor-registration')
   const [rows, setRows] = useState([])
@@ -351,11 +353,15 @@ const ClientVendorRegistrationPage = () => {
   }
 
   const openDetailPage = (row) => {
-    navigate(buildVendorRegistrationDetailPath(row.id))
+    navigate(buildVendorRegistrationDetailPath(row.id), {
+      state: { record: row, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const openEditPage = (row) => {
-    navigate(buildVendorRegistrationEditPath(row.id))
+    navigate(buildVendorRegistrationEditPath(row.id), {
+      state: { record: row, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   const deleteRow = async (row) => {

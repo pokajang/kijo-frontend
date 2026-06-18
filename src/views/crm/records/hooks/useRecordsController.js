@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import dialog from '../../../../components/dialog/dialogService'
 import { showToast } from '../../../../components/toast/toastService'
@@ -33,6 +33,7 @@ import {
   buildRecordMovedToastMessage,
   RECORD_ACTION_TOAST_MESSAGES,
 } from '../utils/recordActionToastMessages'
+import { getCurrentReturnTo } from '../../../../utils/navigation/returnTo'
 
 const toNavigationStateValue = (value, seen = new WeakSet()) => {
   if (value == null) return value
@@ -68,6 +69,7 @@ const toNavigationStateValue = (value, seen = new WeakSet()) => {
 
 export const useRecordsController = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const currentUser = user
   const currentUserName = user?.full_name || user?.name || ''
@@ -182,7 +184,7 @@ export const useRecordsController = () => {
     navigate(getRecordDetailPath(targetServiceTab, recordId), {
       state: {
         record: navigationRecord,
-        returnTo: getRecordListPath(activeTab),
+        returnTo: getCurrentReturnTo(location),
       },
     })
   }
@@ -293,6 +295,7 @@ export const useRecordsController = () => {
     onActionSuccess: handleActionSuccess,
     refreshAfterLocalDelete: true,
     modalBindings: defaultModalBindings,
+    getReturnTo: () => getCurrentReturnTo(location),
   })
 
   const buildStateAwareHandlers = useRecordsActionBuilder({
@@ -302,6 +305,7 @@ export const useRecordsController = () => {
     onActionSuccess: handleActionSuccess,
     refreshAfterLocalDelete: true,
     modalBindings: modalStateBindings,
+    getReturnTo: () => getCurrentReturnTo(location),
   })
 
   const handlers = useMemo(() => {

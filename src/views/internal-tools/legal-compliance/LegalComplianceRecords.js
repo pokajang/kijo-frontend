@@ -30,6 +30,7 @@ import {
   openRecordReport,
   renderRecordCell,
 } from './records/assessmentRecordsTableConfig'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const LegalComplianceRecords = () => {
   const navigate = useNavigate()
@@ -99,6 +100,7 @@ const LegalComplianceRecords = () => {
     getSortValue,
     sortTypes,
   })
+  const currentReturnTo = getCurrentReturnTo(location)
 
   const renderColumnMenu = () => (
     <div className="d-none d-lg-block">
@@ -276,9 +278,10 @@ const LegalComplianceRecords = () => {
                   onDelete: handleDeleteRecord,
                   onExportPdf: handleExportPdf,
                   onCreateRevision: handleCreateRevision,
+                  returnTo: currentReturnTo,
                 })
               }
-              onRowOpen={(record) => openRecordReport(record, navigate)}
+              onRowOpen={(record) => openRecordReport(record, navigate, currentReturnTo)}
               initialSortField="updated_at"
               initialSortDir="desc"
               controlledSortField={sortField}

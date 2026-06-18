@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -29,6 +29,7 @@ import {
 import { StatsStrip } from '../../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { fetchDetailJson } from '../../../../utils/detailPages'
+import { getCurrentReturnTo, getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 import { formatCount, formatMoney } from '../../../../utils/stats/formatStats'
 import { getRecordDetailPath } from '../../../crm/records/config/recordTabs'
 import ClientModuleNavStrip from '../components/ClientModuleNavStrip'
@@ -443,11 +444,13 @@ const HistoryTableCard = ({
 const ClientRoiDetailPage = () => {
   const { companyId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const periodRange = useMemo(
     () => getPeriodRangeFromSearchParams(searchParams, 'all'),
     [searchParams],
   )
+  const returnTo = getDetailReturnTo(location, buildClientRoiListPath(periodRange))
   const [payload, setPayload] = useState({
     client: null,
     summary: null,
@@ -570,11 +573,16 @@ const ClientRoiDetailPage = () => {
       : ''
 
   const openInvoiceRow = (row) => {
+    const currentReturnTo = getCurrentReturnTo(location)
     if (row.source_type === 'manual_debtor') {
-      navigate(`/commercial/debtors/manual/${row.id}/edit`)
+      navigate(`/commercial/debtors/manual/${row.id}/edit`, {
+        state: { record: row, returnTo: currentReturnTo },
+      })
       return
     }
-    navigate(`/commercial/invoice/${row.id}`)
+    navigate(`/commercial/invoice/${row.id}`, {
+      state: { record: row, returnTo: currentReturnTo },
+    })
   }
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('client.roi.detail')
@@ -582,7 +590,9 @@ const ClientRoiDetailPage = () => {
   const openQuoteRow = (row) => {
     const tab = quoteRecordTabBySource[row.source_type]
     if (!tab) return
-    navigate(getRecordDetailPath(tab, row.id))
+    navigate(getRecordDetailPath(tab, row.id), {
+      state: { record: row, returnTo: getCurrentReturnTo(location) },
+    })
   }
 
   return (
@@ -611,7 +621,11 @@ const ClientRoiDetailPage = () => {
                   size="sm"
                   color="secondary"
                   variant="outline"
-                  onClick={() => navigate(`/client/manage/${companyId}`)}
+                  onClick={() =>
+                    navigate(`/client/manage/${companyId}`, {
+                      state: { company: payload.client, returnTo: getCurrentReturnTo(location) },
+                    })
+                  }
                 >
                   View Client Details
                 </CButton>
@@ -619,7 +633,7 @@ const ClientRoiDetailPage = () => {
                   size="sm"
                   color="secondary"
                   variant="outline"
-                  onClick={() => navigate(buildClientRoiListPath(periodRange))}
+                  onClick={() => navigate(returnTo)}
                 >
                   Back
                 </CButton>
@@ -762,7 +776,10 @@ const ClientRoiDetailPage = () => {
               ? {
                   key: 'project',
                   label: 'Open Project',
-                  onClick: () => navigate(`/project/manage/${row.project_id}`),
+                  onClick: () =>
+                    navigate(`/project/manage/${row.project_id}`, {
+                      state: { returnTo: getCurrentReturnTo(location) },
+                    }),
                 }
               : null,
           ].filter(Boolean)

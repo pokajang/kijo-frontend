@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { CAlert, CBadge, CButton, CCol, CRow } from '@coreui/react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableLoadingState } from '../../../components/datatable'
 import { getHandbookVersion } from '../api/handbookApi'
 import HandbookContent from './HandbookContent'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const emptyValue = 'N/A'
 
@@ -16,7 +17,9 @@ const formatDateTime = (value) => {
 
 const HandbookVersionDetail = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { versionId } = useParams()
+  const returnTo = getDetailReturnTo(location, '/handbook/versions')
   const [loading, setLoading] = useState(false)
   const [version, setVersion] = useState(null)
   const [error, setError] = useState(null)
@@ -95,12 +98,7 @@ const HandbookVersionDetail = () => {
             ))}
         </div>
         <div className="d-flex gap-2 flex-wrap">
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/handbook/versions')}
-          >
+          <CButton color="secondary" variant="outline" size="sm" onClick={() => navigate(returnTo)}>
             Version History
           </CButton>
           <CButton

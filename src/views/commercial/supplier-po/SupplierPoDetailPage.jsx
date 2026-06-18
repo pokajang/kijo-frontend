@@ -84,7 +84,7 @@ const SupplierPoDetailPage = () => {
       const result = await res.json()
       if (result.status === 'success') {
         showToast('Supplier PO deleted.')
-        navigate('/commercial/supplier-po')
+        navigate(returnContext.backPath)
       } else {
         dialog.alert('Failed to delete PO: ' + (result.message || 'Unknown error.'))
       }

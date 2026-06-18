@@ -18,6 +18,7 @@ import {
 import { SalaryRecordTable } from './SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from './salaryFileUtils'
 import { getSalaryPayslipAvailability } from './salaryPayslipAvailability'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -306,7 +307,7 @@ const SalaryRecord = ({
 
     const recordUrlKey = getSalaryRecordUrlKey(record)
     navigate(`/my/salary/records/${encodeURIComponent(recordUrlKey)}`, {
-      state: { record, returnTo: returnTo || '/my/salary/records' },
+      state: { record, returnTo: returnTo || getCurrentReturnTo(location) },
     })
   }
 

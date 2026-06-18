@@ -4,6 +4,7 @@ import { CAlert, CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@cor
 import { DataTableLoadingState, DataTableStatusBadge } from '../../../components/datatable'
 import { quoteApiUrl } from '../quotes/quoteApi'
 import { useAuth } from '../../../auth/AuthProvider'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const serviceOptions = [
   { value: 'training', label: 'Training' },
@@ -134,7 +135,7 @@ const NegotiationDetailsPage = () => {
   const location = useLocation()
   const { requestId } = useParams()
   const { user } = useAuth()
-  const returnTo = location.state?.returnTo || '/crm/price-exceptions'
+  const returnTo = getDetailReturnTo(location, '/crm/price-exceptions')
   const [row, setRow] = useState(() => normalizeNegotiation(location.state?.record))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

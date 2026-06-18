@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -44,6 +44,7 @@ import { getDaysLapsedInfo, getStatusBadge, getStatusText } from './actionHandle
 import TaskAchievement from './TaskAchievement'
 import { compareTaskPriority } from '../../task-manager/taskPrioritySort'
 import TaskTitleProjectCell from '../../task-manager/TaskTitleProjectCell'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 export const buildAllTasksUrl = (apiBase, periodRange) =>
   appendQueryParams(`${apiBase}tasks`, {
@@ -271,6 +272,7 @@ export const buildAllTaskStatsItems = (normalizedTasks = []) => {
 
 const AllTasks = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -628,7 +630,7 @@ const AllTasks = () => {
           renderCell={renderCell}
           onRowOpen={(task) =>
             navigate(`/staff/tasks/${task.id}`, {
-              state: { record: task, returnTo: '/staff/tasks' },
+              state: { record: task, returnTo: getCurrentReturnTo(location) },
             })
           }
           getMobileTitle={(task) => task.title}

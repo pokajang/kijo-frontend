@@ -225,9 +225,13 @@ export const exportAssessmentRecordsCsv = ({ rows, visibleColumns }) => {
   downloadCsv('legal-compliance-assessment-records.csv', csv)
 }
 
-export const getRecordActions = (record, { navigate, onDelete, onExportPdf, onCreateRevision }) => {
+export const getRecordActions = (
+  record,
+  { navigate, onDelete, onExportPdf, onCreateRevision, returnTo },
+) => {
   const reviewPath = `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(record.id)}&mode=review`
   const editPath = `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(record.id)}`
+  const state = returnTo ? { returnTo } : undefined
   return [
     {
       key: 'view',
@@ -237,7 +241,7 @@ export const getRecordActions = (record, { navigate, onDelete, onExportPdf, onCr
           : record.stage === 'submitted'
             ? 'View Submitted Report'
             : 'Review Report',
-      onClick: () => navigate(record.stage === 'details_saved' ? editPath : reviewPath),
+      onClick: () => navigate(record.stage === 'details_saved' ? editPath : reviewPath, { state }),
     },
     record.stage === 'submitted'
       ? {
@@ -248,7 +252,7 @@ export const getRecordActions = (record, { navigate, onDelete, onExportPdf, onCr
       : {
           key: 'edit',
           label: 'Edit Assessment',
-          onClick: () => navigate(editPath),
+          onClick: () => navigate(editPath, { state }),
         },
     {
       key: 'pdf',
@@ -266,7 +270,9 @@ export const getRecordActions = (record, { navigate, onDelete, onExportPdf, onCr
   ].filter(Boolean)
 }
 
-export const openRecordReport = (record, navigate) => {
+export const openRecordReport = (record, navigate, returnTo) => {
   const path = `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(record.id)}`
-  navigate(record.stage === 'details_saved' ? path : `${path}&mode=review`)
+  navigate(record.stage === 'details_saved' ? path : `${path}&mode=review`, {
+    state: returnTo ? { returnTo } : undefined,
+  })
 }

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCardHeader, CCol, CRow, CSpinner } from '@coreui/react'
 import dialog from '../../../components/dialog/dialogService'
 import { fetchDetailJson } from '../../../utils/detailPages'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const renderField = (label, value) => (
   <div className="records-detail-field">
@@ -14,6 +15,8 @@ const renderField = (label, value) => (
 export default function StaffDetailPage() {
   const { staffId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = getDetailReturnTo(location, '/staff/manage')
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -70,7 +73,7 @@ export default function StaffDetailPage() {
       const result = await res.json()
       if (result.status === 'success') {
         dialog.alert('Staff terminated successfully.')
-        navigate('/staff/manage')
+        navigate(returnTo)
       } else {
         dialog.alert(`Failed: ${result.message}`)
       }
@@ -93,7 +96,7 @@ export default function StaffDetailPage() {
               size="sm"
               color="secondary"
               variant="outline"
-              onClick={() => navigate('/staff/manage')}
+              onClick={() => navigate(returnTo)}
             >
               Back
             </CButton>

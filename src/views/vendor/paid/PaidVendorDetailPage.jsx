@@ -7,6 +7,7 @@ import {
   DataTableTextCell,
 } from '../../../components/datatable'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { getCurrentReturnTo, getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { formatMoney } from '../../../utils/stats/formatStats'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -58,6 +59,7 @@ const PaidVendorDetailPage = () => {
   const { vendorId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const returnTo = getDetailReturnTo(location, '/vendor/paid')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -105,7 +107,7 @@ const PaidVendorDetailPage = () => {
         <button
           type="button"
           className="btn btn-sm btn-outline-secondary"
-          onClick={() => navigate('/vendor/paid')}
+          onClick={() => navigate(returnTo)}
         >
           Back
         </button>
@@ -151,7 +153,7 @@ const PaidVendorDetailPage = () => {
           }}
           onRowOpen={(row) =>
             navigate(`/vendor/payment-records/${row.id}`, {
-              state: { record: row, returnTo: `/vendor/paid/${vendorId}` },
+              state: { record: row, returnTo: getCurrentReturnTo(location) },
             })
           }
           getMobileTitle={(row) => row.project_name}

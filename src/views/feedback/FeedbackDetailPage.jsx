@@ -25,6 +25,7 @@ import {
 } from './actionHandlers'
 import { useAuth } from '../../auth/AuthProvider'
 import { showToast } from '../../components/toast/toastService'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 const normalize = (value) => (value ?? '').toString().trim().toLowerCase()
 
@@ -74,7 +75,7 @@ const FeedbackDetailPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
-  const returnTo = location.state?.returnTo || '/support/feedback'
+  const returnTo = getDetailReturnTo(location, '/support/feedback')
   const [feedback, setFeedback] = useState(location.state?.record || null)
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

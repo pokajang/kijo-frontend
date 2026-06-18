@@ -146,8 +146,11 @@ export const createHandlers = ({
   navigate,
   onActionSuccess,
   refreshAfterLocalDelete = false,
+  getReturnTo,
 }) => {
   const urls = endpointsByService[serviceKey] || {}
+  const getActionReturnTo = () =>
+    typeof getReturnTo === 'function' ? getReturnTo(serviceKey) : getRecordListPath(serviceKey)
   const toApiDate = async (dateValue) => {
     if (!dateValue) return null
     if (dateValue instanceof Date) {
@@ -445,7 +448,7 @@ export const createHandlers = ({
     handleEdit: (record) => {
       const svc = serviceKey.replace('-tab', '')
       navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record.id}`, {
-        state: { returnTo: getRecordListPath(serviceKey) },
+        state: { returnTo: getActionReturnTo() },
       })
     },
 
@@ -453,7 +456,7 @@ export const createHandlers = ({
     handleRevise: (record) => {
       const svc = serviceKey.replace('-tab', '')
       navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record.id}&isRevision=true`, {
-        state: { returnTo: getRecordListPath(serviceKey) },
+        state: { returnTo: getActionReturnTo() },
       })
     },
 

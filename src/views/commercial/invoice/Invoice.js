@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { CButton, CRow, CCol, CCard, CCardBody, CFormLabel, CFormSelect } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   DataTableCardHeader,
   DataTableRecordControls,
@@ -23,6 +23,7 @@ import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { commercialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 // import everything from our actionHandlers
 import {
@@ -47,6 +48,7 @@ const getTrainingPaymentCategory = (paymentMethod) => {
 
 const Invoice = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentInvoice, setCurrentInvoice] = useState(null)
@@ -338,7 +340,11 @@ const Invoice = () => {
                 )
               }}
               onDelete={(invoice) => handleDelete(invoice, refreshInvoicesQuietly)}
-              onOpen={(invoice) => navigate(`/commercial/invoice/${invoice.rawId || invoice.id}`)}
+              onOpen={(invoice) =>
+                navigate(`/commercial/invoice/${invoice.rawId || invoice.id}`, {
+                  state: { record: invoice, returnTo: getCurrentReturnTo(location) },
+                })
+              }
               desktopUtilityPortalId="invoice-table-tools"
               mobileUtilityPortalId="invoice-mobile-table-tools"
               onStatFilter={applyStatFilter}

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailFields, DataTableDetailShell, DataTableStatusBadge } from '../datatable'
 import dialog from '../dialog/dialogService'
 import { fetchJson, findRecordById, getArrayFromPayload } from '../../utils/detailPages'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
 
@@ -49,7 +50,7 @@ const LeaveRecordDetailPage = () => {
   const { leaveId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/my/leaves'
+  const returnTo = getDetailReturnTo(location, '/my/leaves')
   const [record, setRecord] = useState(() => mapPersonalLeave(location.state?.record))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')

@@ -1,7 +1,7 @@
 // src/components/PaymentRecords.js
 
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
 import { CButton, CCard, CCardBody } from '@coreui/react'
@@ -16,10 +16,12 @@ import { useAppNotifications } from '../../../notifications/AppNotificationProvi
 import { apiFetch } from '../../../api/apiClient'
 import { DataTableCardHeader, DataTableStatsToggle } from '../../../components/datatable'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const PaymentRecords = () => {
   const API_BASE = import.meta.env.VITE_API_BASE
   const navigate = useNavigate()
+  const location = useLocation()
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const statsScopeLabel = periodRange ? getPeriodRangeScopeLabel(periodRange) : ''
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
@@ -198,7 +200,7 @@ const PaymentRecords = () => {
             staffRoles={staffRoles}
             onView={(p) =>
               navigate(`/vendor/payment-records/${p.id || p.payment_id}`, {
-                state: { record: p, returnTo: '/vendor/payment-records' },
+                state: { record: p, returnTo: getCurrentReturnTo(location) },
               })
             }
             onCheck={handleCheck}

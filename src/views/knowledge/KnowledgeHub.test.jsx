@@ -472,6 +472,64 @@ describe('KnowledgeSidePanel', () => {
     expect(await screen.findByText('Choose the client and service.')).toBeInTheDocument()
   })
 
+  it('renders assistant trace display blocks without replacing readable prose', async () => {
+    getKnowledgeArticles.mockResolvedValue({ data: [] })
+    getKnowledgeAssistantThread.mockResolvedValue({
+      assistant: { beta: true, model: 'gpt-5-nano' },
+      thread: { id: 12, title: 'My quotations' },
+      threads: [{ id: 12, title: 'My quotations', message_count: 2 }],
+      messages: [
+        { id: 1, role: 'user', content: 'how many quotations have i issued', sources: [] },
+        {
+          id: 2,
+          role: 'assistant',
+          content:
+            'For your own records, from 1 Jan 2026 to 31 Dec 2026, I found 41 quotations issued.',
+          sources: [],
+          confidence: 'high',
+          display_blocks: [
+            {
+              type: 'metric_cards',
+              title: 'Totals',
+              items: [
+                { label: 'Total', value: '41' },
+                { label: 'Total quoted value', value: '3,574,070.00' },
+              ],
+            },
+            {
+              type: 'table',
+              title: 'By status',
+              columns: ['Category', 'Value'],
+              rows: [
+                ['Open', '30'],
+                ['Awarded', '11'],
+              ],
+            },
+            {
+              type: 'bar_chart',
+              title: 'By month',
+              labels: ['Jan 2026', 'Feb 2026'],
+              values: [10, 31],
+              display_values: ['10', '31'],
+            },
+          ],
+        },
+      ],
+    })
+
+    const view = renderKnowledgePanel()
+    fireEvent.click(screen.getByText('Search guides'))
+    switchToAiMode()
+    fireEvent.click(await screen.findByRole('button', { name: 'My quotations' }))
+
+    expect(await screen.findByText(/I found 41 quotations issued/)).toBeInTheDocument()
+    expect(screen.getByText('Total quoted value')).toBeInTheDocument()
+    expect(screen.getByText('3,574,070.00')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Category' })).toBeInTheDocument()
+    expect(screen.getByText('Awarded')).toBeInTheDocument()
+    expect(view.container.querySelector('.knowledge-assistant-bar-chart')).toBeTruthy()
+  })
+
   it('does not repeat source titles in the assistant answer body', async () => {
     getKnowledgeArticles.mockResolvedValue({ data: [] })
     getKnowledgeAssistantThread.mockResolvedValue({

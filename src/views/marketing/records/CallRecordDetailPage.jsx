@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { CAlert, CCol, CRow } from '@coreui/react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DataTableDetailShell } from '../../../components/datatable'
 import dialog from '../../../components/dialog/dialogService'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import AddCallModal from './AddCallModal'
 import EditContactModal from './EditContactModal'
 import CallStackCell from './CallStackCell'
@@ -22,7 +23,9 @@ const DetailField = ({ label, value, children }) => (
 
 const CallRecordDetailPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams()
+  const returnTo = getDetailReturnTo(location, '/pipeline/call-records')
   const { user } = useAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -124,7 +127,7 @@ const CallRecordDetailPage = () => {
     try {
       await fetchApi.deleteContact(contact.id)
       showInfo('Contact deleted successfully.')
-      navigate('/pipeline/call-records')
+      navigate(returnTo)
     } catch (err) {
       showError(err?.message || 'Failed to delete contact.')
     }
@@ -185,7 +188,7 @@ const CallRecordDetailPage = () => {
       <DataTableDetailShell
         title="Call Record Details"
         backLabel="Back"
-        onBack={() => navigate('/pipeline/call-records')}
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={loadError}
         record={contact}

@@ -1,9 +1,10 @@
 // src/components/AppraisalRecords.js
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CAlert, CCol, CRow } from '@coreui/react'
 import { DataTableRecordList, DataTableTextCell } from '../datatable'
 import { PeriodRangeSelector, getPeriodRangePreset, isDateInPeriodRange } from '../filters'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 const dataColumns = [
   {
@@ -66,6 +67,7 @@ const requiredColumns = new Set(['createdAt', 'section'])
 
 const AppraisalRecords = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [records, setRecords] = useState([])
   const [error, setError] = useState('')
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
@@ -160,7 +162,7 @@ const AppraisalRecords = () => {
               renderCell={renderCell}
               onRowOpen={(record) =>
                 navigate(`/appraisal/records/${record.id}`, {
-                  state: { record },
+                  state: { record, returnTo: getCurrentReturnTo(location) },
                 })
               }
               getMobileTitle={(record) => record.section}

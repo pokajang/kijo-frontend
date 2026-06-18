@@ -262,6 +262,7 @@ describe('ManageProject commercial create routes', () => {
           project_name: 'Project Alpha',
           project_type: 'Equipment Supply',
         }),
+        returnTo: '/',
       },
     })
   })

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CButton,
   CCol,
@@ -18,6 +18,7 @@ import DataTableTextCell from '../../../components/datatable/DataTableTextCell'
 import dialog from '../../../components/dialog/dialogService'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const dataColumns = [
   { key: 'fullName', label: 'Full Name', width: '220px', sortable: true, sortType: 'string' },
@@ -72,6 +73,7 @@ export default function ManageStaff() {
   const [staffTypeFilter, setStaffTypeFilter] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_BASE}staff/manage`, { credentials: 'include' })
@@ -92,8 +94,11 @@ export default function ManageStaff() {
   }, [])
 
   const handleOpenDetail = useCallback(
-    (staffId) => navigate(`/staff/manage/${staffId}`),
-    [navigate],
+    (staffId) =>
+      navigate(`/staff/manage/${staffId}`, {
+        state: { returnTo: getCurrentReturnTo(location) },
+      }),
+    [location, navigate],
   )
 
   const handleCreateStaff = useCallback(() => navigate('/staff/create'), [navigate])

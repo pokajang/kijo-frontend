@@ -13,6 +13,7 @@ import {
 import { visibleSuggestedQueries } from './assistantSuggestionUtils'
 import { isAssistantHelpSource } from './assistantSourceUtils'
 import AssistantTooltip from './AssistantTooltip'
+import KnowledgeAssistantDisplayBlocks from './KnowledgeAssistantDisplayBlocks'
 import KnowledgeAssistantFeedbackForm, {
   KnowledgeAssistantFeedbackInline,
 } from './KnowledgeAssistantFeedback'
@@ -116,6 +117,9 @@ const KnowledgeAssistantMessage = ({
           routeRefs: messageRouteRefs,
           onOpenRouteRef: onOpenInlineRouteRef,
         })}
+        {message.role === 'assistant' ? (
+          <KnowledgeAssistantDisplayBlocks blocks={message.display_blocks} />
+        ) : null}
         {message.role === 'assistant' ? (
           <KnowledgeAssistantFeedbackInline
             copyText={assistantMessageCopyText(renderedMessageContent)}

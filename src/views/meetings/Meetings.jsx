@@ -43,6 +43,7 @@ import { toDateOnlyValue } from './utils/meetingDateUtils'
 import { normalizeActionStatus, parseActionItems } from './utils/meetingActionItems'
 import { dataColumns, defaultVisibleColumns, requiredColumns } from './utils/meetingsTableConfig'
 import { filterMeetings, normalizeMeetingRows } from './utils/meetingsRecordUtils'
+import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 
 export default function Meetings() {
   const navigate = useNavigate()
@@ -235,13 +236,17 @@ export default function Meetings() {
 
   const getActions = (item) => {
     const deleteRestriction = getDeleteRestriction(item)
+    const returnTo = getCurrentReturnTo(location)
 
     if (item.isDraft) {
       return [
         {
           key: 'continue-draft',
           label: 'Continue Draft',
-          onClick: () => navigate(`/administration/meetings/edit/${item.id}?step=2`),
+          onClick: () =>
+            navigate(`/administration/meetings/edit/${item.id}?step=2`, {
+              state: { record: item, returnTo },
+            }),
         },
         {
           key: 'discard-draft',
@@ -264,7 +269,10 @@ export default function Meetings() {
       {
         key: 'edit',
         label: 'Edit',
-        onClick: () => navigate(`/administration/meetings/edit/${item.id}`),
+        onClick: () =>
+          navigate(`/administration/meetings/edit/${item.id}`, {
+            state: { record: item, returnTo },
+          }),
       },
       {
         key: 'add-action',
@@ -292,11 +300,16 @@ export default function Meetings() {
 
   const openMeetingDetails = (item) => {
     if (!item?.id) return
+    const returnTo = getCurrentReturnTo(location)
     if (item?.isDraft) {
-      navigate(`/administration/meetings/edit/${item.id}?step=2`)
+      navigate(`/administration/meetings/edit/${item.id}?step=2`, {
+        state: { record: item, returnTo },
+      })
       return
     }
-    navigate(`/administration/meetings/view/${item.id}`)
+    navigate(`/administration/meetings/view/${item.id}`, {
+      state: { record: item, returnTo },
+    })
   }
 
   const renderPendingBadges = (item) => {

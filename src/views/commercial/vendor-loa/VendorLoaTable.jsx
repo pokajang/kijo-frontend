@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { DataTableRecordList, DataTableStatusBadge } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
@@ -7,6 +7,7 @@ import MarkPaidModal from './MarkPaidModal'
 import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
+import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.vendor-loa.visible-columns.v3'
@@ -140,6 +141,7 @@ const VendorLoaTable = ({
   statsVisible = true,
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [markPaidVisible, setMarkPaidVisible] = useState(false)
   const [submittingPaid, setSubmittingPaid] = useState(false)
@@ -415,7 +417,10 @@ const VendorLoaTable = ({
     {
       key: 'view',
       label: 'View',
-      onClick: (record) => navigate(`/commercial/vendor-loa/${record.id || record.payment_id}`),
+      onClick: (record) =>
+        navigate(`/commercial/vendor-loa/${record.id || record.payment_id}`, {
+          state: { record, returnTo: getCurrentReturnTo(location) },
+        }),
     },
     {
       key: 'edit',
@@ -484,7 +489,11 @@ const VendorLoaTable = ({
         getRowKey={(rec, index) => rec.id || rec.payment_id || `${rec.loa}-${index}`}
         renderCell={renderCell}
         getActions={getActions}
-        onRowOpen={(rec) => navigate(`/commercial/vendor-loa/${rec.id || rec.payment_id}`)}
+        onRowOpen={(rec) =>
+          navigate(`/commercial/vendor-loa/${rec.id || rec.payment_id}`, {
+            state: { record: rec, returnTo: getCurrentReturnTo(location) },
+          })
+        }
         getMobileTitle={(rec) => rec.loa}
         getMobileSubtitle={(rec) => rec.vendor}
         getMobileMeta={(rec) => `${rec.valueDisplay} | ${rec.awardDisplay}`}

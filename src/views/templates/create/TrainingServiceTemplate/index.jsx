@@ -4,6 +4,7 @@ import { CRow, CCol, CFormInput, CButton } from '@coreui/react'
 import BmDraftReviewNotice from '../../shared/BmDraftReviewNotice'
 import TemplateFormStatus from '../../shared/TemplateFormStatus'
 import { getProposalListPath } from '../../proposals/proposalTabs'
+import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 
 import MainBody from './MainBody'
 import TrainingRequirementsSection from './TrainingRequirementsSection'
@@ -116,6 +117,7 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
     templateMeta?.translationStatus === 'machine_draft'
   const isBmProposal = templateMeta?.proposalLanguage === 'ms-MY'
   const returnPath = getProposalListPath('training', isBmProposal ? 'ms-MY' : 'en')
+  const returnTo = getDetailReturnTo(location, returnPath)
 
   const onSave = () =>
     handleSave({
@@ -132,6 +134,7 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
       saveInFlightRef,
       finalizingBmTranslation,
       isBmProposal,
+      returnTo,
     })
 
   const onReset = () => {
@@ -244,7 +247,7 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
                     color="secondary"
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate(location.state?.returnTo || returnPath)}
+                    onClick={() => navigate(returnTo)}
                     disabled={saving}
                   >
                     Cancel

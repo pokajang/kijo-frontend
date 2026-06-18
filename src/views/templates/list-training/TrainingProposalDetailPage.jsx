@@ -25,6 +25,7 @@ import {
   unwrapRows,
 } from './trainingTemplateUtils'
 import { getProposalListPath } from '../proposals/proposalTabs'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const DetailField = ({ label, value, children }) => (
   <CCol xs={12} md={6} lg={4}>
@@ -114,6 +115,10 @@ const TrainingProposalDetailPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [record, setRecord] = useState(null)
+  const returnTo = getDetailReturnTo(
+    location,
+    getProposalListPath('training', record?.proposalLanguage),
+  )
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -180,12 +185,7 @@ const TrainingProposalDetailPage = () => {
         return
       }
 
-      navigate(
-        location.state?.returnTo || getProposalListPath('training', record?.proposalLanguage),
-        {
-          replace: true,
-        },
-      )
+      navigate(returnTo, { replace: true })
     } catch (err) {
       setActionError(err?.message || 'Unable to delete training proposal template.')
     }
@@ -288,11 +288,7 @@ const TrainingProposalDetailPage = () => {
       <DataTableDetailShell
         title="Training Proposal Details"
         backLabel="Back"
-        onBack={() =>
-          navigate(
-            location.state?.returnTo || getProposalListPath('training', record?.proposalLanguage),
-          )
-        }
+        onBack={() => navigate(returnTo)}
         loading={loading}
         error={loadError}
         record={record}

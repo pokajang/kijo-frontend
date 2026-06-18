@@ -54,10 +54,12 @@ import {
 import { formatChangedFieldLabels } from './utils/meetingHistoryUtils'
 import { hasMeetingVerificationRole, normalizeApprovalStatus } from './utils/meetingApprovalUtils'
 import { useAuth } from '../../auth/AuthProvider'
+import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 export default function MeetingMinuteForm() {
   const location = useLocation()
   const navigate = useNavigate()
+  const returnTo = getDetailReturnTo(location, '/administration/meetings')
   const { user } = useAuth()
   const { id: routeMeetingId } = useParams()
   const searchParams = new URLSearchParams(location.search || '')
@@ -271,8 +273,11 @@ export default function MeetingMinuteForm() {
     const toastMessage = location.state?.toast
     if (!toastMessage) return
     setAlert({ color: 'success', text: toastMessage })
-    navigate(location.pathname + location.search, { replace: true, state: {} })
-  }, [location.pathname, location.search, location.state, navigate])
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: location.state?.returnTo ? { returnTo } : {},
+    })
+  }, [location.pathname, location.search, location.state, navigate, returnTo])
 
   useEffect(() => {
     if (!isCreateDraftMode) {
@@ -546,7 +551,7 @@ export default function MeetingMinuteForm() {
         throw new Error(data?.message || 'Failed to delete meeting record.')
       }
 
-      navigate('/administration/meetings', {
+      navigate(returnTo, {
         replace: true,
         state: { toast: 'Meeting minute record deleted successfully.' },
       })
@@ -737,7 +742,7 @@ export default function MeetingMinuteForm() {
         clearCreateDraft()
         navigate(`/administration/meetings/edit/${savedId}?step=${STEP_NOTES}`, {
           replace: true,
-          state: { toast: DETAILS_SAVED_ALERT_TEXT },
+          state: { toast: DETAILS_SAVED_ALERT_TEXT, returnTo },
         })
         return
       }
@@ -746,7 +751,7 @@ export default function MeetingMinuteForm() {
         clearCreateDraft()
       }
       clearRecordDraft(recordId)
-      navigate('/administration/meetings', {
+      navigate(returnTo, {
         replace: true,
         state: {
           toast: isEditRoute
@@ -830,7 +835,7 @@ export default function MeetingMinuteForm() {
     clearCreateDraft()
     clearRecordDraft(recordId)
     if (recordId <= 0) {
-      navigate('/administration/meetings')
+      navigate(returnTo)
       return
     }
 
@@ -844,7 +849,7 @@ export default function MeetingMinuteForm() {
       if (!res.ok || data?.success === false) {
         throw new Error(data?.message || 'Failed to discard meeting draft.')
       }
-      navigate('/administration/meetings', {
+      navigate(returnTo, {
         replace: true,
         state: { toast: data?.message || 'Meeting draft discarded successfully.' },
       })
@@ -861,7 +866,10 @@ export default function MeetingMinuteForm() {
           key: 'continue-draft',
           label: 'Continue Draft',
           buttonColor: 'primary',
-          onClick: () => navigate(`/administration/meetings/edit/${recordId}?step=${STEP_NOTES}`),
+          onClick: () =>
+            navigate(`/administration/meetings/edit/${recordId}?step=${STEP_NOTES}`, {
+              state: { returnTo },
+            }),
         },
         {
           key: 'discard-draft',
@@ -881,13 +889,19 @@ export default function MeetingMinuteForm() {
           key: 'edit',
           label: 'Edit',
           buttonColor: 'secondary',
-          onClick: () => navigate(`/administration/meetings/edit/${recordId}`),
+          onClick: () =>
+            navigate(`/administration/meetings/edit/${recordId}`, {
+              state: { returnTo },
+            }),
         },
         {
           key: 'add-action',
           label: 'Add Action',
           buttonColor: 'primary',
-          onClick: () => navigate(`/administration/meetings/edit/${recordId}?step=${STEP_NOTES}`),
+          onClick: () =>
+            navigate(`/administration/meetings/edit/${recordId}?step=${STEP_NOTES}`, {
+              state: { returnTo },
+            }),
         },
         {
           key: 'complete-action',
@@ -911,7 +925,7 @@ export default function MeetingMinuteForm() {
           <MeetingMinuteCardHeader
             isViewMode={isViewMode}
             isEditRoute={isEditRoute}
-            onBack={() => navigate('/administration/meetings')}
+            onBack={() => navigate(returnTo)}
           />
           <CCardBody>
             {alert.text && (
@@ -984,7 +998,7 @@ export default function MeetingMinuteForm() {
                 meetingTypeOptions={MEETING_TYPE_OPTIONS}
                 onSubmit={handleSubmit}
                 onGoToStep={goToStep}
-                onCancel={() => navigate('/administration/meetings')}
+                onCancel={() => navigate(returnTo)}
                 onSaveDraft={handleSaveDraft}
                 onDiscardDraft={handleDiscardDraft}
                 onChangeField={updateFormField}

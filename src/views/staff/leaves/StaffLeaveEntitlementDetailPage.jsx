@@ -12,6 +12,7 @@ import {
   formatLeaveBalanceDays,
   normalizeLeaveType,
 } from '../../../components/leave/leaveBalanceSummary'
+import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import * as AH from './actionHandlers'
 
 const currentYear = new Date().getFullYear()
@@ -166,7 +167,7 @@ const StaffLeaveEntitlementDetailPage = () => {
   const { staffId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnTo = location.state?.returnTo || '/staff/leaves/entitlements'
+  const returnTo = getDetailReturnTo(location, '/staff/leaves/entitlements')
   const [staffList, setStaffList] = useState(() =>
     location.state?.staff ? [location.state.staff] : [],
   )
