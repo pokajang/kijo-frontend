@@ -265,6 +265,7 @@ const AppHeader = () => {
               onClick={handleKnowledgeClick}
               aria-label={knowledgePanelOpen ? 'Close Knowledge help' : 'Open Knowledge help'}
               aria-pressed={knowledgePanelOpen}
+              data-api-busy-allow="true"
             >
               <CIcon icon={cilSpeech} />
               <span className="app-knowledge-header-help__label">Help</span>
