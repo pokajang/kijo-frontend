@@ -268,7 +268,12 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   }, [project])
 
   useEffect(() => {
-    if (!draftKey || draftReady) return
+    if (!draftKey) {
+      setLoadedDraftKey(null)
+      setDraftReady(true)
+      return
+    }
+    if (draftReady) return
     const rawDraft = localStorage.getItem(draftKey)
     if (rawDraft) {
       try {
@@ -515,46 +520,50 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const renderEditStep = () => (
     <>
       {showCommercialDocsNotice && <CCardBody>{commercialDocsNotice}</CCardBody>}
-      <InvoiceFormShell
-        mode="create"
-        client={clientOverrides}
-        onClientChange={(event) => {
-          const { name, value } = event.target
-          setClientOverrides((prev) => ({ ...prev, [name]: value }))
-        }}
-        showPaymentMethod={project?.project_type === 'Training'}
-        paymentMethod={effectivePaymentMethod}
-        onPaymentMethodChange={setPaymentMethodOverride}
-        project={project || {}}
-        quoteDetails={quoteDetails}
-        onProjectChange={setProjectMeta}
-        invoiceDetails={invoiceDetails}
-        onInvoiceDetailsChange={(event) => {
-          if (!event?.target) return
-          const { name, value, checked } = event.target
-          if (name === 'loaNo') setLoaNo(value)
-          if (name === 'overridePaymentTerms') {
-            setClientOverrides((prev) => ({
-              ...prev,
-              overridePaymentTerms: checked,
-              paymentTermsSource: checked ? 'invoice_override' : prev.paymentTermsBaseSource,
-              paymentTermsDays: checked ? prev.paymentTermsDays : prev.paymentTermsBaseDays,
-            }))
-          }
-          if (name === 'paymentTermsDays') {
-            setClientOverrides((prev) => ({
-              ...prev,
-              paymentTermsDays: value,
-              paymentTermsSource: 'invoice_override',
-              overridePaymentTerms: true,
-            }))
-          }
-        }}
-        pricing={pricing}
-        setPricing={setPricing}
-        grantApprovalNo={grantApprovalNo}
-        onGrantApprovalChange={(event) => setGrantApprovalNo(event.target.value)}
-      />
+      {draftReady ? (
+        <InvoiceFormShell
+          mode="create"
+          client={clientOverrides}
+          onClientChange={(event) => {
+            const { name, value } = event.target
+            setClientOverrides((prev) => ({ ...prev, [name]: value }))
+          }}
+          showPaymentMethod={project?.project_type === 'Training'}
+          paymentMethod={effectivePaymentMethod}
+          onPaymentMethodChange={setPaymentMethodOverride}
+          project={project || {}}
+          quoteDetails={quoteDetails}
+          onProjectChange={setProjectMeta}
+          invoiceDetails={invoiceDetails}
+          onInvoiceDetailsChange={(event) => {
+            if (!event?.target) return
+            const { name, value, checked } = event.target
+            if (name === 'loaNo') setLoaNo(value)
+            if (name === 'overridePaymentTerms') {
+              setClientOverrides((prev) => ({
+                ...prev,
+                overridePaymentTerms: checked,
+                paymentTermsSource: checked ? 'invoice_override' : prev.paymentTermsBaseSource,
+                paymentTermsDays: checked ? prev.paymentTermsDays : prev.paymentTermsBaseDays,
+              }))
+            }
+            if (name === 'paymentTermsDays') {
+              setClientOverrides((prev) => ({
+                ...prev,
+                paymentTermsDays: value,
+                paymentTermsSource: 'invoice_override',
+                overridePaymentTerms: true,
+              }))
+            }
+          }}
+          pricing={pricing}
+          setPricing={setPricing}
+          grantApprovalNo={grantApprovalNo}
+          onGrantApprovalChange={(event) => setGrantApprovalNo(event.target.value)}
+        />
+      ) : (
+        <CCardBody>Loading invoice draft...</CCardBody>
+      )}
       <CCardFooter className="d-flex justify-content-end gap-2">
         <CButton color="secondary" size="sm" variant="outline" onClick={onBack}>
           Cancel
@@ -568,6 +577,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
             !isSupportedType ||
             (requiresQuote && !quoteDetails) ||
             missingTrainingDates ||
+            !draftReady ||
             commercialDocs.loading ||
             submitting
           }
