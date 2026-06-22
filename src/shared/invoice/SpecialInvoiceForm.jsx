@@ -1,6 +1,7 @@
 // src/shared/invoice/SpecialInvoiceForm.jsx
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  CAlert,
   CCardHeader,
   CCardBody,
   CRow,
@@ -8,6 +9,7 @@ import {
   CFormLabel,
   CFormInput,
   CTable,
+  CTableFoot,
   CTableHead,
   CTableRow,
   CTableHeaderCell,
@@ -27,7 +29,31 @@ import { cilTrash } from '@coreui/icons'
  * @param {object} pricing       { sub_total, discount, sst_percent, sst_amount, grand_total, remarks }
  * @param {Function} setPricing  Setter for pricing state
  */
-const SpecialInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create' }) => {
+const hasText = (value) => value !== null && value !== undefined && String(value).trim() !== ''
+
+const toFiniteNumber = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+const getManualProjectValue = (project = {}) => {
+  const value =
+    project.current_project_value ??
+    project.currentProjectValue ??
+    project.resolved_project_value ??
+    project.resolvedProjectValue ??
+    project.quote_value ??
+    project.quoteValue
+
+  return hasText(value) ? toFiniteNumber(value) : 0
+}
+
+const isManualSpecialProject = (project = {}, quoteDetails) =>
+  project?.project_type === 'Special' && !project?.quote_id && !quoteDetails
+
+const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode = 'create' }) => {
+  const seededProjectLineRef = useRef('')
+  const showManualProjectNotice = mode === 'create' && isManualSpecialProject(project, quoteDetails)
   const items = useMemo(
     () => (Array.isArray(pricing.special_items) ? pricing.special_items : []),
     [pricing.special_items],
@@ -58,6 +84,42 @@ const SpecialInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
       return { ...prev, special_items: mapped }
     })
   }, [quoteDetails, setPricing])
+
+  useEffect(() => {
+    const projectId = project?.id ?? project?.project_id
+    const seedKey = projectId ? String(projectId) : ''
+    const projectValue = getManualProjectValue(project)
+    const canSeedManualProjectLine =
+      mode === 'create' &&
+      isManualSpecialProject(project, quoteDetails) &&
+      projectValue > 0 &&
+      items.length === 0 &&
+      seededProjectLineRef.current !== seedKey
+
+    if (!canSeedManualProjectLine) return
+
+    seededProjectLineRef.current = seedKey
+    setPricing((prev) => {
+      const existingItems = Array.isArray(prev.special_items) ? prev.special_items : []
+      if (existingItems.length > 0) return prev
+
+      return {
+        ...prev,
+        special_items: [
+          {
+            id: `project-value-${projectId || 'manual'}`,
+            item_description: project?.project_name || 'Special service',
+            description: project?.description || '',
+            unit: 'Lot',
+            quantity: 1,
+            unit_price: projectValue,
+            is_custom: true,
+            is_project_value_seed: true,
+          },
+        ],
+      }
+    })
+  }, [items.length, mode, project, quoteDetails, setPricing])
 
   // Recalculate summary when items or discount/SST change
   useEffect(() => {
@@ -166,178 +228,186 @@ const SpecialInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
         <strong>Invoice Breakdown (Special Service)</strong>
       </CCardHeader>
       <CCardBody>
+        {showManualProjectNotice && (
+          <CAlert color="info" className="mb-3">
+            This project has no linked quotation. A draft invoice line has been created from the
+            project value and can be edited before review.
+          </CAlert>
+        )}
+
         {/* Line items table */}
-        {/* datatable-exempt: existing embedded/layout table */}
-        <CTable striped responsive className="mb-3 data-table-compact embedded-data-table">
-          <CTableHead>
-            <CTableRow>
-              <CTableHeaderCell className="text-center" style={{ width: '50px' }}>
-                #
-              </CTableHeaderCell>
-              <CTableHeaderCell>Description</CTableHeaderCell>
-              <CTableHeaderCell className="text-center" style={{ width: '90px' }}>
-                Qty
-              </CTableHeaderCell>
-              <CTableHeaderCell className="text-center" style={{ width: '90px' }}>
-                Unit
-              </CTableHeaderCell>
-              <CTableHeaderCell className="text-end" style={{ width: '105px' }}>
-                Unit Price (RM)
-              </CTableHeaderCell>
-              <CTableHeaderCell className="text-end" style={{ width: '120px' }}>
-                Line Total (RM)
-              </CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {items.map((item, idx) => {
-              const qty = parseFloat(item.quantity) || 0
-              const price = parseFloat(item.unit_price) || 0
-              const rowNum = idx + 1
-              const showRemove = mode === 'edit' || item.is_custom
-              return (
-                <CTableRow key={item.id || rowNum}>
-                  <CTableDataCell className="text-center">
-                    {showRemove ? (
-                      <div className="d-flex flex-column gap-1">
+        <div className="records-table-shell quote-line-items-table-shell overflow-hidden mb-3">
+          <div
+            className="table-scroll-viewport"
+            style={{ overflowX: 'auto', overflowY: 'visible' }}
+          >
+            {/* datatable-exempt: compact embedded editable invoice line-item table */}
+            <CTable hover className="align-middle mb-0 records-table-compact">
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell style={{ width: '56px' }}>#</CTableHeaderCell>
+                  <CTableHeaderCell>Description</CTableHeaderCell>
+                  <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
+                  <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
+                  <CTableHeaderCell className="text-end" style={{ width: '160px' }}>
+                    Unit Price (RM)
+                  </CTableHeaderCell>
+                  <CTableHeaderCell className="text-end" style={{ width: '140px' }}>
+                    Line Total (RM)
+                  </CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {items.map((item, idx) => {
+                  const qty = parseFloat(item.quantity) || 0
+                  const price = parseFloat(item.unit_price) || 0
+                  const rowNum = idx + 1
+                  const showRemove = mode === 'edit' || item.is_custom
+                  return (
+                    <CTableRow key={item.id || rowNum}>
+                      <CTableDataCell>
                         <div className="d-flex align-items-center gap-2">
                           <span>{rowNum}</span>
-                          {item.is_custom ? (
+                          {item.is_custom && !item.is_project_value_seed ? (
                             <CBadge color="info" className="text-dark">
                               New
                             </CBadge>
                           ) : null}
+                          {showRemove ? (
+                            <CTooltip content="Remove item" placement="top">
+                              <CButton
+                                aria-label={`Remove invoice item ${rowNum}`}
+                                color="danger"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleRemoveItem(idx)}
+                                className="p-0 text-danger border-0 lh-1"
+                                style={{ textDecoration: 'none' }}
+                              >
+                                <CIcon icon={cilTrash} size="sm" />
+                              </CButton>
+                            </CTooltip>
+                          ) : null}
                         </div>
-                        <CTooltip content="Remove item" placement="top">
-                          <CButton
-                            color="danger"
-                            variant="link"
-                            size="sm"
-                            onClick={handleRemoveItem(idx)}
-                            className="p-0 text-danger border-0"
-                            style={{ textDecoration: 'none' }}
-                          >
-                            <CIcon icon={cilTrash} size="sm" />
-                          </CButton>
-                        </CTooltip>
-                      </div>
-                    ) : (
-                      <span>{rowNum}</span>
-                    )}
-                  </CTableDataCell>
-                  <CTableDataCell className="text-center">
-                    <CFormInput
-                      type="text"
-                      value={item.item_description ?? item.line_item_title ?? ''}
-                      onChange={handleItemChange(idx, 'item_description')}
-                      placeholder="Item"
-                      className="mb-1"
-                    />
-                    <CFormInput
-                      type="text"
-                      value={item.description ?? ''}
-                      onChange={handleItemChange(idx, 'description')}
-                      placeholder="Description"
-                      className="form-control-sm"
-                    />
-                  </CTableDataCell>
-                  <CTableDataCell className="text-center">
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          type="text"
+                          value={item.item_description ?? item.line_item_title ?? ''}
+                          onChange={handleItemChange(idx, 'item_description')}
+                          placeholder="Item"
+                          className="mb-1"
+                        />
+                        <CFormInput
+                          type="text"
+                          value={item.description ?? ''}
+                          onChange={handleItemChange(idx, 'description')}
+                          placeholder="Description"
+                          className="form-control-sm"
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          type="number"
+                          min="0"
+                          value={item.quantity ?? ''}
+                          onChange={handleItemChange(idx, 'quantity')}
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          type="text"
+                          value={item.unit ?? ''}
+                          onChange={handleItemChange(idx, 'unit')}
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CFormInput
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unit_price ?? ''}
+                          onChange={handleItemChange(idx, 'unit_price')}
+                        />
+                      </CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        {(qty * price).toFixed(2)}
+                      </CTableDataCell>
+                    </CTableRow>
+                  )
+                })}
+
+                <CTableRow>
+                  <CTableDataCell>{discountRowNum}</CTableDataCell>
+                  <CTableDataCell>Discount (RM)</CTableDataCell>
+                  <CTableDataCell>
                     <CFormInput
                       type="number"
                       min="0"
-                      value={item.quantity ?? ''}
-                      onChange={handleItemChange(idx, 'quantity')}
+                      value={pricing.discount_qty ?? 1}
+                      onChange={handleChange('discount_qty')}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">
+                  <CTableDataCell>
                     <CFormInput
                       type="text"
-                      value={item.unit ?? ''}
-                      onChange={handleItemChange(idx, 'unit')}
+                      value={pricing.discount_unit || 'Lot'}
+                      onChange={handleChange('discount_unit')}
                     />
                   </CTableDataCell>
                   <CTableDataCell>
                     <CFormInput
                       type="number"
                       min="0"
-                      step="0.01"
-                      value={item.unit_price ?? ''}
-                      onChange={handleItemChange(idx, 'unit_price')}
+                      value={pricing.discount}
+                      onChange={handleChange('discount')}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    {(-Math.abs(discountQty * discountUnitPrice)).toFixed(2)}
+                  </CTableDataCell>
                 </CTableRow>
-              )
-            })}
-
-            <CTableRow>
-              <CTableDataCell className="text-center">{discountRowNum}</CTableDataCell>
-              <CTableDataCell>Discount (RM)</CTableDataCell>
-              <CTableDataCell className="text-center">
-                <CFormInput
-                  type="number"
-                  min="0"
-                  value={pricing.discount_qty ?? 1}
-                  onChange={handleChange('discount_qty')}
-                />
-              </CTableDataCell>
-              <CTableDataCell className="text-center">
-                <CFormInput
-                  type="text"
-                  value={pricing.discount_unit || 'Lot'}
-                  onChange={handleChange('discount_unit')}
-                />
-              </CTableDataCell>
-              <CTableDataCell className="text-end">
-                <CFormInput
-                  type="number"
-                  min="0"
-                  value={pricing.discount}
-                  onChange={handleChange('discount')}
-                />
-              </CTableDataCell>
-              <CTableDataCell className="text-end">
-                {(-Math.abs(discountQty * discountUnitPrice)).toFixed(2)}
-              </CTableDataCell>
-            </CTableRow>
-
-            <CTableRow>
-              <CTableDataCell colSpan={4} />
-              <CTableDataCell className="text-end fw-semibold align-middle">
-                Subtotal (RM)
-              </CTableDataCell>
-              <CTableDataCell className="text-end align-middle">
-                {(parseFloat(pricing.sub_total) || 0).toFixed(2)}
-              </CTableDataCell>
-            </CTableRow>
-            <CTableRow>
-              <CTableDataCell colSpan={4} />
-              <CTableDataCell className="text-end fw-semibold align-middle">
-                <div className="d-flex flex-nowrap justify-content-end align-items-center gap-2">
-                  <CFormInput
-                    type="number"
-                    value={pricing.sst_percent}
-                    onChange={handleChange('sst_percent')}
-                    style={{ width: '64px', minWidth: '64px' }}
-                  />
-                  <span className="text-nowrap">SST Rate (%)</span>
-                </div>
-              </CTableDataCell>
-              <CTableDataCell className="text-end align-middle">
-                {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
-              </CTableDataCell>
-            </CTableRow>
-            <CTableRow>
-              <CTableDataCell colSpan={4} />
-              <CTableDataCell className="text-end fw-bold align-middle">
-                Grand Total (RM)
-              </CTableDataCell>
-              <CTableDataCell className="text-end align-middle fw-bold">
-                {(parseFloat(pricing.grand_total) || 0).toFixed(2)}
-              </CTableDataCell>
-            </CTableRow>
-          </CTableBody>
-        </CTable>
+              </CTableBody>
+              <CTableFoot>
+                <CTableRow>
+                  <CTableDataCell colSpan={4} />
+                  <CTableDataCell className="text-end fw-semibold align-middle">
+                    Subtotal (RM)
+                  </CTableDataCell>
+                  <CTableDataCell className="text-end align-middle">
+                    {(parseFloat(pricing.sub_total) || 0).toFixed(2)}
+                  </CTableDataCell>
+                </CTableRow>
+                <CTableRow>
+                  <CTableDataCell colSpan={4} />
+                  <CTableDataCell className="text-end fw-semibold align-middle">
+                    <div className="d-flex flex-nowrap justify-content-end align-items-center gap-2">
+                      <CFormInput
+                        type="number"
+                        value={pricing.sst_percent}
+                        onChange={handleChange('sst_percent')}
+                        style={{ width: '64px', minWidth: '64px' }}
+                      />
+                      <span className="text-nowrap">SST Rate (%)</span>
+                    </div>
+                  </CTableDataCell>
+                  <CTableDataCell className="text-end align-middle">
+                    {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
+                  </CTableDataCell>
+                </CTableRow>
+                <CTableRow>
+                  <CTableDataCell colSpan={4} />
+                  <CTableDataCell className="text-end fw-bold align-middle">
+                    Grand Total (RM)
+                  </CTableDataCell>
+                  <CTableDataCell className="text-end align-middle fw-bold">
+                    {(parseFloat(pricing.grand_total) || 0).toFixed(2)}
+                  </CTableDataCell>
+                </CTableRow>
+              </CTableFoot>
+            </CTable>
+          </div>
+        </div>
 
         <div className="mb-3 d-flex justify-content-start">
           <CButton

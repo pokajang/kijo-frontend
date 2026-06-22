@@ -308,7 +308,7 @@ export const buildInvoiceCreatePayload = (
       const specialItems =
         Array.isArray(pricing.special_items) && pricing.special_items.length > 0
           ? pricing.special_items
-          : quoteDetails.special_items || []
+          : quoteDetails?.special_items || []
       payload.breakdown = specialItems.map((item) => ({
         id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
         item_description: item.item_description || item.line_item_title || '',

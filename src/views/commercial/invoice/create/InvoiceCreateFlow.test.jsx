@@ -35,9 +35,29 @@ vi.mock('../../../../components/dialog/dialogService', () => ({
 
 vi.mock('../../../../shared/invoice/InvoiceFormShell', async () => {
   const ReactModule = await vi.importActual('react')
-  const MockInvoiceFormShell = ({ pricing, setPricing }) => {
+  const MockInvoiceFormShell = ({ pricing, project, setPricing }) => {
     ReactModule.useEffect(() => {
       if (Number(pricing.sub_total) === 100) return
+      if (project?.project_type === 'Special') {
+        setPricing((prev) => ({
+          ...prev,
+          service_title: 'Special Project',
+          sub_total: 100,
+          grand_total: 100,
+          sst_amount: 0,
+          discount: 0,
+          special_items: [
+            {
+              item_description: 'Special service',
+              description: 'Manual scope',
+              quantity: 2,
+              unit: 'Lot',
+              unit_price: 50,
+            },
+          ],
+        }))
+        return
+      }
       setPricing((prev) => ({
         ...prev,
         service_title: 'Manpower Deployment',
@@ -52,7 +72,7 @@ vi.mock('../../../../shared/invoice/InvoiceFormShell', async () => {
         discount: 0,
         manpower_items: [],
       }))
-    }, [pricing.sub_total, setPricing])
+    }, [pricing.sub_total, project?.project_type, setPricing])
 
     return (
       <div>
@@ -95,33 +115,50 @@ const project = {
 }
 
 const renderFlow = ({ project: projectOverride, ...props } = {}) => {
+  const mergedProject = { ...project, ...(projectOverride || {}) }
+  const draftPricing =
+    mergedProject.project_type === 'Special'
+      ? {
+          service_title: 'Special Project',
+          sub_total: 100,
+          grand_total: 100,
+          sst_amount: 0,
+          discount: 0,
+          special_items: [
+            {
+              item_description: 'Special service',
+              description: 'Manual scope',
+              quantity: 2,
+              unit: 'Lot',
+              unit_price: 50,
+            },
+          ],
+        }
+      : {
+          service_title: 'Manpower Deployment',
+          sub_total: 100,
+          grand_total: 100,
+          sst_amount: 0,
+          quantity: 2,
+          duration: 1,
+          unit_cost: 50,
+          unit: 'pax-mth',
+          claim_type: 'single',
+          discount: 0,
+          manpower_items: [],
+        }
+
   localStorage.setItem(
-    'invoiceDraft:44',
+    `invoiceDraft:${mergedProject.id}`,
     JSON.stringify({
       version: 1,
-      pricing: {
-        service_title: 'Manpower Deployment',
-        sub_total: 100,
-        grand_total: 100,
-        sst_amount: 0,
-        quantity: 2,
-        duration: 1,
-        unit_cost: 50,
-        unit: 'pax-mth',
-        claim_type: 'single',
-        discount: 0,
-        manpower_items: [],
-      },
+      pricing: draftPricing,
     }),
   )
 
   return render(
     <MemoryRouter>
-      <InvoiceCreateFlow
-        project={{ ...project, ...(projectOverride || {}) }}
-        onBack={vi.fn()}
-        {...props}
-      />
+      <InvoiceCreateFlow project={mergedProject} onBack={vi.fn()} {...props} />
     </MemoryRouter>,
   )
 }
@@ -200,6 +237,25 @@ describe('InvoiceCreateFlow', () => {
     )
     expect(await screen.findAllByText('Invoice Created')).toHaveLength(2)
     expect(screen.getByText(/INV-123 was created successfully/i)).toBeInTheDocument()
+  })
+
+  it('allows manually created Special projects to review an invoice without a quote id', async () => {
+    renderFlow({
+      project: {
+        id: 45,
+        project_name: 'Special Project',
+        project_type: 'Special',
+        quote_id: null,
+        quote_value: 100,
+      },
+      origin: 'invoice-list',
+    })
+
+    await clickReviewInvoice()
+
+    expect(await screen.findByText(/Review the invoice details below/i)).toBeInTheDocument()
+    expect(screen.getByText('Special service')).toBeInTheDocument()
+    expect(submitInvoicePayload).not.toHaveBeenCalled()
   })
 
   it('success actions navigate to invoice list and manage project', async () => {

@@ -109,6 +109,60 @@ describe('buildInvoiceCreatePayload', () => {
     )
   })
 
+  it('builds a manual Special payload without quote details', () => {
+    const result = buildInvoiceCreatePayload('Special', {
+      ...baseArgs,
+      project: {
+        id: 22,
+        project_name: 'Special Project',
+        project_type: 'Special',
+      },
+      quoteDetails: null,
+      pricing: {
+        ...baseArgs.pricing,
+        service_title: 'Special Project',
+        sub_total: 5000,
+        grand_total: 5000,
+        sst_amount: 0,
+        discount: 0,
+        special_items: [
+          {
+            item_description: 'Special service',
+            description: 'Manual scope',
+            quantity: 1,
+            unit: 'Lot',
+            unit_price: 5000,
+          },
+        ],
+      },
+      projectMeta: { project_name: 'Special Project' },
+      allowWithoutQuote: true,
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload).toEqual(
+      expect.objectContaining({
+        project_id: 22,
+        service_type: 'Special',
+        quote_id: null,
+        invoice_purpose: 'Special Project',
+        amount: 5000,
+        grand_total: 5000,
+      }),
+    )
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: 'Special service',
+          description: 'Manual scope',
+          quantity: 1,
+          unit: 'Lot',
+          unit_price: 5000,
+        }),
+      ]),
+    )
+  })
+
   it('uses equipment marked-up price, not supplier unit price, in invoice breakdown', () => {
     const result = buildInvoiceCreatePayload('Equipment Supply', {
       ...baseArgs,

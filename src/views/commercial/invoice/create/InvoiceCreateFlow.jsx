@@ -179,7 +179,9 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const fetchedRef = useRef(false)
   const draftAppliedRef = useRef(false)
   const isSupportedType = Boolean(fetchersByType[project?.project_type])
-  const allowsManualInvoice = project?.project_type === 'Manpower Supply'
+  const allowsManualInvoice =
+    project?.project_type === 'Manpower Supply' ||
+    (project?.project_type === 'Special' && !project?.quote_id)
   const requiresQuote = isSupportedType && !allowsManualInvoice
 
   const [step, setStep] = useState('edit')
