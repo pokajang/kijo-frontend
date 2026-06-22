@@ -82,6 +82,50 @@ describe('SpecialInvoiceForm', () => {
     expect(within(bodyRows[1]).getByText('Discount (RM)')).toBeInTheDocument()
   })
 
+  it('uses project_value when manual project awarded value is exposed under the list field', async () => {
+    const { container } = renderForm({
+      project: {
+        id: 48,
+        project_type: 'Special',
+        quote_id: null,
+        project_name: 'List Field Special Project',
+        description: 'List field scope',
+        project_value: 7500,
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('List Field Special Project')).toBeInTheDocument()
+    })
+
+    expect(screen.getByDisplayValue('7500')).toBeInTheDocument()
+    expect(screen.getAllByText('7500.00').length).toBeGreaterThanOrEqual(3)
+
+    const bodyRows = container.querySelectorAll('tbody tr')
+    expect(within(bodyRows[0]).getByDisplayValue('List Field Special Project')).toBeInTheDocument()
+    expect(within(bodyRows[1]).getByText('Discount (RM)')).toBeInTheDocument()
+  })
+
+  it('still seeds the manual project line when the project value is missing', async () => {
+    const { container } = renderForm({
+      project: {
+        id: 49,
+        project_type: 'Special',
+        quote_id: null,
+        project_name: 'Zero Value Special Project',
+        description: 'Scope without value',
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Zero Value Special Project')).toBeInTheDocument()
+    })
+
+    const bodyRows = container.querySelectorAll('tbody tr')
+    expect(within(bodyRows[0]).getByDisplayValue('Zero Value Special Project')).toBeInTheDocument()
+    expect(within(bodyRows[1]).getByText('Discount (RM)')).toBeInTheDocument()
+  })
+
   it('does not show the manual project notice for quote-backed Special projects', () => {
     renderForm({
       project: {

@@ -42,6 +42,8 @@ const getManualProjectValue = (project = {}) => {
     project.currentProjectValue ??
     project.resolved_project_value ??
     project.resolvedProjectValue ??
+    project.project_value ??
+    project.projectValue ??
     project.quote_value ??
     project.quoteValue
 
@@ -87,12 +89,11 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
 
   useEffect(() => {
     const projectId = project?.id ?? project?.project_id
-    const seedKey = projectId ? String(projectId) : ''
+    const seedKey = projectId ? String(projectId) : project?.project_name || 'manual-special'
     const projectValue = getManualProjectValue(project)
     const canSeedManualProjectLine =
       mode === 'create' &&
       isManualSpecialProject(project, quoteDetails) &&
-      projectValue > 0 &&
       items.length === 0 &&
       seededProjectLineRef.current !== seedKey
 
