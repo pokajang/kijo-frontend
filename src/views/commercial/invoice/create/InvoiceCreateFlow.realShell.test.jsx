@@ -116,6 +116,30 @@ describe('InvoiceCreateFlow manual Special invoice seeding with real form shell'
     expect(within(rows[0]).getByDisplayValue('5000')).toBeInTheDocument()
   })
 
+  it('seeds a manual Special Service project line before Discount when no draft exists', async () => {
+    const { container } = renderFlow({
+      projectOverride: {
+        id: 502,
+        project_type: 'Special Service',
+        project_name: 'Manual Special Service Project',
+        quote_value: 6500,
+        description: 'Manual special service scope',
+      },
+    })
+
+    await waitFor(() => {
+      const rows = getSpecialBreakdownRows(container)
+      expect(
+        within(rows[0]).getByDisplayValue('Manual Special Service Project'),
+      ).toBeInTheDocument()
+      expect(within(rows[1]).getByText('Discount (RM)')).toBeInTheDocument()
+    })
+
+    const rows = getSpecialBreakdownRows(container)
+    expect(within(rows[0]).getByDisplayValue('Manual special service scope')).toBeInTheDocument()
+    expect(within(rows[0]).getByDisplayValue('6500')).toBeInTheDocument()
+  })
+
   it('seeds a manual Special project line after loading a stale empty draft', async () => {
     const { container } = renderFlow({
       draft: {

@@ -13,6 +13,7 @@ import { getCurrentProjectValue } from '../../../project/manage/projectApi'
 import { isProjectActive } from '../../../project/manage/projectStatus'
 import InvoiceFormShell from '../../../../shared/invoice/InvoiceFormShell'
 import { normalizePaymentTermsDays } from '../../../../shared/paymentTerms'
+import { isSpecialProjectType } from '../../../../shared/project/projectTypeUtils'
 import { buildInvoiceCreatePayload } from './invoiceCreatePayload'
 import {
   submitInvoicePayload,
@@ -181,7 +182,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const isSupportedType = Boolean(fetchersByType[project?.project_type])
   const allowsManualInvoice =
     project?.project_type === 'Manpower Supply' ||
-    (project?.project_type === 'Special' && !project?.quote_id)
+    (isSpecialProjectType(project?.project_type) && !project?.quote_id)
   const requiresQuote = isSupportedType && !allowsManualInvoice
 
   const [step, setStep] = useState('edit')

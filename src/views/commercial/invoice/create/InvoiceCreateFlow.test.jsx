@@ -18,6 +18,8 @@ const commercialDocsMock = vi.hoisted(() => ({
   hasExistingDocs: false,
 }))
 
+const isSpecialType = (value) => value === 'Special' || value === 'Special Service'
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
@@ -38,7 +40,7 @@ vi.mock('../../../../shared/invoice/InvoiceFormShell', async () => {
   const MockInvoiceFormShell = ({ pricing, project, setPricing }) => {
     ReactModule.useEffect(() => {
       if (Number(pricing.sub_total) === 100) return
-      if (project?.project_type === 'Special') {
+      if (isSpecialType(project?.project_type)) {
         setPricing((prev) => ({
           ...prev,
           service_title: 'Special Project',
@@ -116,37 +118,36 @@ const project = {
 
 const renderFlow = ({ project: projectOverride, ...props } = {}) => {
   const mergedProject = { ...project, ...(projectOverride || {}) }
-  const draftPricing =
-    mergedProject.project_type === 'Special'
-      ? {
-          service_title: 'Special Project',
-          sub_total: 100,
-          grand_total: 100,
-          sst_amount: 0,
-          discount: 0,
-          special_items: [
-            {
-              item_description: 'Special service',
-              description: 'Manual scope',
-              quantity: 2,
-              unit: 'Lot',
-              unit_price: 50,
-            },
-          ],
-        }
-      : {
-          service_title: 'Manpower Deployment',
-          sub_total: 100,
-          grand_total: 100,
-          sst_amount: 0,
-          quantity: 2,
-          duration: 1,
-          unit_cost: 50,
-          unit: 'pax-mth',
-          claim_type: 'single',
-          discount: 0,
-          manpower_items: [],
-        }
+  const draftPricing = isSpecialType(mergedProject.project_type)
+    ? {
+        service_title: 'Special Project',
+        sub_total: 100,
+        grand_total: 100,
+        sst_amount: 0,
+        discount: 0,
+        special_items: [
+          {
+            item_description: 'Special service',
+            description: 'Manual scope',
+            quantity: 2,
+            unit: 'Lot',
+            unit_price: 50,
+          },
+        ],
+      }
+    : {
+        service_title: 'Manpower Deployment',
+        sub_total: 100,
+        grand_total: 100,
+        sst_amount: 0,
+        quantity: 2,
+        duration: 1,
+        unit_cost: 50,
+        unit: 'pax-mth',
+        claim_type: 'single',
+        discount: 0,
+        manpower_items: [],
+      }
 
   localStorage.setItem(
     `invoiceDraft:${mergedProject.id}`,
@@ -245,6 +246,25 @@ describe('InvoiceCreateFlow', () => {
         id: 45,
         project_name: 'Special Project',
         project_type: 'Special',
+        quote_id: null,
+        quote_value: 100,
+      },
+      origin: 'invoice-list',
+    })
+
+    await clickReviewInvoice()
+
+    expect(await screen.findByText(/Review the invoice details below/i)).toBeInTheDocument()
+    expect(screen.getByText('Special service')).toBeInTheDocument()
+    expect(submitInvoicePayload).not.toHaveBeenCalled()
+  })
+
+  it('allows manually created Special Service projects to review an invoice without a quote id', async () => {
+    renderFlow({
+      project: {
+        id: 46,
+        project_name: 'Special Service Project',
+        project_type: 'Special Service',
         quote_id: null,
         quote_value: 100,
       },

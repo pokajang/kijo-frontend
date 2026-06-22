@@ -82,6 +82,32 @@ describe('SpecialInvoiceForm', () => {
     expect(within(bodyRows[1]).getByText('Discount (RM)')).toBeInTheDocument()
   })
 
+  it('treats Special Service as a manual Special project when no quote is linked', async () => {
+    const { container } = renderForm({
+      project: {
+        id: 50,
+        project_type: 'Special Service',
+        quote_id: null,
+        project_name: 'Manual Special Service Project',
+        description: 'Special service manual scope',
+        quote_value: 3000,
+      },
+    })
+
+    expect(screen.getByText(manualNotice)).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Manual Special Service Project')).toBeInTheDocument()
+    })
+
+    const bodyRows = container.querySelectorAll('tbody tr')
+    expect(
+      within(bodyRows[0]).getByDisplayValue('Special service manual scope'),
+    ).toBeInTheDocument()
+    expect(within(bodyRows[0]).getByDisplayValue('3000')).toBeInTheDocument()
+    expect(within(bodyRows[1]).getByText('Discount (RM)')).toBeInTheDocument()
+  })
+
   it('uses project_value when manual project awarded value is exposed under the list field', async () => {
     const { container } = renderForm({
       project: {
@@ -130,7 +156,7 @@ describe('SpecialInvoiceForm', () => {
     renderForm({
       project: {
         id: 46,
-        project_type: 'Special',
+        project_type: 'Special Service',
         quote_id: 99,
         project_name: 'Quote Backed Special',
         quote_value: 5000,

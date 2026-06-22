@@ -21,6 +21,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { isSpecialProjectType } from '../project/projectTypeUtils'
 
 /**
  * Special service invoice form with editable remarks.
@@ -51,7 +52,7 @@ const getManualProjectValue = (project = {}) => {
 }
 
 const isManualSpecialProject = (project = {}, quoteDetails) =>
-  project?.project_type === 'Special' && !project?.quote_id && !quoteDetails
+  isSpecialProjectType(project?.project_type) && !project?.quote_id && !quoteDetails
 
 const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode = 'create' }) => {
   const seededProjectLineRef = useRef('')

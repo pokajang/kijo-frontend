@@ -30,6 +30,7 @@ import { countByPredicate, formatCount, getTopGroupByCount } from '../../../util
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
+import { buildDeliveryOrderUpdatePayload } from './deliveryOrderUpdatePayload'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.delivery-orders.visible-columns.v3'
@@ -276,44 +277,7 @@ const DeliveryOrder = () => {
       return
     }
 
-    const itemRows = Array.isArray(updatedData?.breakdown)
-      ? updatedData.breakdown
-      : Array.isArray(updatedData?.items)
-        ? updatedData.items
-        : []
-
-    const payload = {
-      details: {
-        do_number: updatedData.do_number,
-        client_name: updatedData.client_name,
-        client_address: updatedData.client_address,
-        client_contact_name: updatedData.client_contact_name,
-        client_contact_position: updatedData.client_contact_position,
-        client_contact_email: updatedData.client_contact_email,
-        client_contact_phone: updatedData.client_contact_phone,
-        company_contact_name: updatedData.company_contact_name,
-        company_contact_email: updatedData.company_contact_email,
-        company_contact_phone: updatedData.company_contact_phone,
-        project_name: updatedData.project_name,
-        project_code: updatedData.project_code,
-        project_award_date: updatedData.project_award_date,
-        project_type: updatedData.project_type,
-        project_description: updatedData.project_description,
-        project_service_period: updatedData.project_service_period,
-      },
-      items: itemRows.map(({ item_name, name, description, quantity, unit }) => ({
-        item_name: item_name || name || '',
-        description,
-        quantity,
-        unit,
-      })),
-      breakdown: itemRows.map(({ item_name, name, description, quantity, unit }) => ({
-        item_name: item_name || name || '',
-        description,
-        quantity,
-        unit,
-      })),
-    }
+    const payload = buildDeliveryOrderUpdatePayload(updatedData, selectedDo)
 
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE}delivery-orders/${doId}`, {
