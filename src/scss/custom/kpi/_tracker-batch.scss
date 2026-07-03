@@ -113,12 +113,11 @@
 
 .kpi-tracker-batch-remarks-preview {
   min-width: 0;
-  overflow: hidden;
   color: var(--cui-secondary-color);
   font-size: 0.8125rem;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .kpi-tracker-batch-editor {

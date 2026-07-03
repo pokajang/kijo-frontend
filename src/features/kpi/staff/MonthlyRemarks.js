@@ -53,7 +53,10 @@ const MonthlyRemarks = ({ year, monthNames, allTrackerData }) => {
                   <CTableDataCell>
                     {items.length > 0
                       ? items.map((it, idx) => (
-                          <div key={idx}>
+                          <div
+                            key={idx}
+                            style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+                          >
                             <small className="text-muted">{it.label}:</small> {it.remarks || '-'}
                           </div>
                         ))

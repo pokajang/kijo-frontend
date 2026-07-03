@@ -7,6 +7,7 @@ import {
   CForm,
   CFormInput,
   CFormLabel,
+  CFormTextarea,
   CRow,
   CSpinner,
 } from '@coreui/react'
@@ -316,7 +317,7 @@ const KpiTracker = ({ closeModal, onSaved }) => {
                           <span className="kpi-tracker-batch-description">{row.description}</span>
                         )}
                         {!!normalizeText(row.remarks) && (
-                          <span className="kpi-tracker-batch-remarks-preview">{row.remarks}</span>
+                          <div className="kpi-tracker-batch-remarks-preview">{row.remarks}</div>
                         )}
                       </div>
                     </div>
@@ -369,15 +370,15 @@ const KpiTracker = ({ closeModal, onSaved }) => {
                           <CFormLabel htmlFor={`kpi-remarks-${row.kpiId}`} className="mb-1">
                             Remarks
                           </CFormLabel>
-                          <CFormInput
+                          <CFormTextarea
                             id={`kpi-remarks-${row.kpiId}`}
-                            type="text"
                             value={row.remarks}
                             onChange={(event) =>
                               updateRow(row.kpiId, 'remarks', event.target.value)
                             }
                             placeholder="Optional monthly remarks"
                             disabled={isSaving}
+                            rows={4}
                           />
                         </div>
                       </div>
