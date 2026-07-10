@@ -47,6 +47,8 @@ export const buildPricingFromInvoice = (invoice) => {
       let discountUnit = 'Lot'
       let hrdAmount = 0
       let hrdRate = 0
+      let hrdQty = 1
+      let hrdUnit = 'Lot'
 
       const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
       const isTrainingLine = (line) => isExactLabel(line, ['training fee', 'training total'])
@@ -69,7 +71,9 @@ export const buildPricingFromInvoice = (invoice) => {
           mobilizationQty = toNumber(line?.quantity, 1)
           mobilizationUnit = line?.unit || 'Lot'
         } else if (isHrdLine(line)) {
+          hrdQty = toNumber(line?.quantity, 1)
           hrdAmount = price
+          hrdUnit = line?.unit || 'Lot'
           hrdRate = parseHrdRateFromDescription(line?.item_description)
         } else if (isTrainingLine(line)) {
           trainingTotal = price
@@ -113,6 +117,8 @@ export const buildPricingFromInvoice = (invoice) => {
           grand_total: grandTotal,
           hrd_rate: hrdRate,
           hrd_amount: hrdAmount,
+          hrd_qty: hrdQty,
+          hrd_unit: hrdUnit,
           training_items: trainingItems,
         },
         quoteDetails,

@@ -1,5 +1,6 @@
 import dialog from '../../../../components/dialog/dialogService'
 import { normalizeEquipmentInvoiceItem } from '../../../../shared/invoice/equipmentInvoiceUtils'
+import { normalizeTrainingHrdCharge } from '../../../crm/quotes/training/trainingHrd'
 import { buildInvoiceCreatePayload } from './invoiceCreatePayload'
 
 const normalizeApiPayload = (json) => {
@@ -52,6 +53,7 @@ export const useTrainingQuoteData = (quoteId, setQuoteDetails, setPricing) => {
     controller.signal,
   )
     .then((data) => {
+      const hrdRate = normalizeTrainingHrdCharge(data.payment_method, data.hrd_charge)
       setQuoteDetails(data)
       setPricing((prev) => ({
         ...prev,
@@ -59,8 +61,10 @@ export const useTrainingQuoteData = (quoteId, setQuoteDetails, setPricing) => {
         meal_total: parseFloat(data.meal_total) || 0,
         mobilization_cost: parseFloat(data.mobilization_cost) || 0,
         discount_amount: parseFloat(data.discount_amount) || 0,
-        hrd_rate: parseFloat(data.hrd_charge) || 0,
+        hrd_rate: hrdRate,
         hrd_amount: parseFloat(data.hrd_amount) || 0,
+        hrd_qty: 1,
+        hrd_unit: 'Lot',
         subtotal: parseFloat(data.subtotal) || 0,
         sst_rate: parseFloat(data.sst_rate) || 0,
         sst_amount: parseFloat(data.sst_amount) || 0,

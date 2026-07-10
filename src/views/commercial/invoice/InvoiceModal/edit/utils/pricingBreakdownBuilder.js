@@ -8,7 +8,8 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
     case 'Training':
       const discountQty = toNumber(pricing.discount_qty ?? 1)
       const discountUnit = pricing.discount_unit || 'Lot'
-      const hrdAmount = toNumber(pricing.hrd_amount)
+      const hrdQty = toNumber(pricing.hrd_qty ?? 1)
+      const hrdUnitPrice = toNumber(pricing.hrd_amount)
       const hrdRate = toNumber(pricing.hrd_rate)
       return [
         {
@@ -51,14 +52,14 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
           unit_price: toNegative(pricing.discount_amount),
           description: '',
         },
-        ...(hrdAmount > 0
+        ...(hrdUnitPrice > 0
           ? [
               {
                 id: null,
                 item_description: hrdRate > 0 ? `${hrdRate}% HRD Charge` : 'HRD Charge',
-                unit: 'Lot',
-                quantity: 1,
-                unit_price: hrdAmount,
+                unit: pricing.hrd_unit || 'Lot',
+                quantity: hrdQty,
+                unit_price: hrdUnitPrice,
                 description: '',
               },
             ]

@@ -236,6 +236,8 @@ describe('buildInvoiceCreatePayload', () => {
         grand_total: 120,
         hrd_rate: 10,
         hrd_amount: 10,
+        hrd_qty: 1,
+        hrd_unit: 'Lot',
         sst_amount: 0,
         training_total: 100,
         training_qty: 1,
@@ -277,6 +279,104 @@ describe('buildInvoiceCreatePayload', () => {
     )
     expect(result.payload.amount).toBe(110)
     expect(result.payload.grand_total).toBe(120)
+  })
+
+  it('defaults a missing training HRD rate when the quote payment method is HRD Grant', () => {
+    const result = buildInvoiceCreatePayload('Training', {
+      ...baseArgs,
+      project: {
+        ...baseArgs.project,
+        project_type: 'Training',
+        quote_id: 78,
+        project_name: 'Safety Program',
+      },
+      quoteDetails: {
+        id: 78,
+        payment_method: 'HRD Grant',
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        subtotal: 4200,
+        grand_total: 4200,
+        hrd_rate: 0,
+        hrd_amount: 0,
+        sst_amount: 0,
+        training_total: 4500,
+        training_qty: 1,
+        meal_total: 0,
+        meal_qty: 1,
+        mobilization_cost: 0,
+        mobilization_qty: 1,
+        discount_amount: 300,
+        discount_qty: 1,
+        training_items: [],
+      },
+      paymentMethodOverride: 'HRD Grant',
+      grantApprovalNo: 'HRD-008',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.hrd_rate).toBe(4)
+    expect(result.payload.hrd_amount).toBe(168)
+    expect(result.payload.grand_total).toBe(4368)
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: '4% HRD Charge',
+          unit_price: 168,
+        }),
+      ]),
+    )
+  })
+
+  it('preserves editable training HRD quantity and unit in create payload', () => {
+    const result = buildInvoiceCreatePayload('Training', {
+      ...baseArgs,
+      project: {
+        ...baseArgs.project,
+        project_type: 'Training',
+        quote_id: 79,
+      },
+      quoteDetails: {
+        id: 79,
+        payment_method: 'HRD Grant',
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        subtotal: 1000,
+        grand_total: 1080,
+        hrd_rate: 4,
+        hrd_amount: 40,
+        hrd_qty: 2,
+        hrd_unit: 'claim',
+        sst_amount: 0,
+        training_total: 1000,
+        training_qty: 1,
+        meal_total: 0,
+        meal_qty: 1,
+        mobilization_cost: 0,
+        mobilization_qty: 1,
+        discount_amount: 0,
+        discount_qty: 1,
+        training_items: [],
+      },
+      paymentMethodOverride: 'HRD Grant',
+      grantApprovalNo: 'HRD-009',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.hrd_amount).toBe(80)
+    expect(result.payload.grand_total).toBe(1080)
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: '4% HRD Charge',
+          quantity: 2,
+          unit: 'claim',
+          unit_price: 40,
+        }),
+      ]),
+    )
   })
 
   it('does not include HRD row when training is created as direct payment', () => {

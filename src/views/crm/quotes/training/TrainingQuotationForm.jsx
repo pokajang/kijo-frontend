@@ -18,6 +18,7 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchPriceException } from '../priceException'
 import { getTrainingRateOption } from './trainingRates'
+import { DEFAULT_HRD_CHARGE_RATE, normalizeTrainingHrdCharge } from './trainingHrd'
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
@@ -78,7 +79,7 @@ const TrainingQuotationForm = ({
     discountType: 'No Discount',
     discountValue: 0,
     sstRate: 0,
-    hrdCharge: 0,
+    hrdCharge: DEFAULT_HRD_CHARGE_RATE,
     attachProposal: true,
     proposalLanguage,
   }
@@ -104,6 +105,11 @@ const TrainingQuotationForm = ({
   if (!hydratedDraft.trainingId && hydratedDraft.proposal_id) {
     hydratedDraft.trainingId = hydratedDraft.proposal_id
   }
+
+  hydratedDraft.hrdCharge = normalizeTrainingHrdCharge(
+    hydratedDraft.paymentMethod,
+    hydratedDraft.hrdCharge,
+  )
 
   const [formData, setFormData] = useState({
     ...hydratedDraft,
@@ -135,7 +141,7 @@ const TrainingQuotationForm = ({
         mealPrice: parseFloat(initialFormData.mealPrice) || '',
         discountValue: toNumberOrEmpty(initialFormData.discountValue),
         sstRate: parseFloat(initialFormData.sstRate) || 0,
-        hrdCharge: parseFloat(initialFormData.hrdCharge) || 0,
+        hrdCharge: normalizeTrainingHrdCharge(initialPaymentMethod, initialFormData.hrdCharge),
         toBeConfirmed:
           initialFormData.toBeConfirmed === true ||
           initialFormData.toBeConfirmed === '1' ||

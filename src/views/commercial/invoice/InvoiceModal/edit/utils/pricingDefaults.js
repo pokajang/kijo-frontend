@@ -18,6 +18,8 @@ export const defaultPricing = {
   grand_total: 0,
   hrd_rate: 0,
   hrd_amount: 0,
+  hrd_qty: 1,
+  hrd_unit: 'Lot',
   training_items: [],
   special_items: [],
   // Equipment

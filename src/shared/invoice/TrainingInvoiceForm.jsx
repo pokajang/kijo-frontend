@@ -19,6 +19,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { normalizeTrainingHrdCharge } from '../../views/crm/quotes/training/trainingHrd'
 
 const TrainingInvoiceForm = ({
   quoteDetails,
@@ -52,15 +53,20 @@ const TrainingInvoiceForm = ({
       meal_total: parseFloat(quoteDetails.meal_total ?? prev.meal_total ?? 0),
       mobilization_cost: parseFloat(quoteDetails.mobilization_cost ?? prev.mobilization_cost ?? 0),
       discount_amount: parseFloat(quoteDetails.discount_amount ?? prev.discount_amount ?? 0),
-      hrd_rate: parseFloat(quoteDetails.hrd_charge ?? prev.hrd_rate ?? 0),
+      hrd_rate: normalizeTrainingHrdCharge(
+        quoteDetails.payment_method ?? paymentMethod,
+        quoteDetails.hrd_charge ?? prev.hrd_rate ?? 0,
+      ),
       hrd_amount: parseFloat(quoteDetails.hrd_amount ?? prev.hrd_amount ?? 0),
+      hrd_qty: parseFloat(prev.hrd_qty ?? 1) || 1,
+      hrd_unit: prev.hrd_unit || 'Lot',
       subtotal: parseFloat(quoteDetails.subtotal ?? prev.subtotal ?? 0),
       sst_rate: parseFloat(quoteDetails.sst_rate ?? prev.sst_rate ?? 0),
       sst_amount: parseFloat(quoteDetails.sst_amount ?? prev.sst_amount ?? 0),
       grand_total: parseFloat(quoteDetails.grand_total ?? prev.grand_total ?? 0),
       remarks: quoteDetails.remarks ?? prev.remarks ?? '',
     }))
-  }, [quoteDetails, setPricing])
+  }, [paymentMethod, quoteDetails, setPricing])
 
   const trainingTotal = parseFloat(pricing.training_total) || 0
   const mealTotal = parseFloat(pricing.meal_total) || 0
@@ -71,6 +77,8 @@ const TrainingInvoiceForm = ({
   const discountAmount = Math.abs(discountAmountInput)
 
   const hrdRate = Math.max(0, parseFloat(pricing.hrd_rate) || 0)
+  const hrdQty = Math.max(0, parseFloat(pricing.hrd_qty ?? 1) || 0)
+  const hrdUnit = pricing.hrd_unit || 'Lot'
   const customTotal = items.reduce((sum, item) => {
     const qty = parseFloat(item.quantity) || 0
     const unitPrice = parseFloat(item.unit_price) || 0
@@ -81,9 +89,15 @@ const TrainingInvoiceForm = ({
     trainingTotal + mealTotal + mobilizationCost + customTotal - discountAmount * discountQty
   const hrdBase = Math.max(trainingTotal - discountAmount * discountQty, 0)
   const computedHrdAmount = isHrdPayment ? hrdBase * (hrdRate / 100) : 0
+  const hrdAmountInput = parseFloat(pricing.hrd_amount)
+  const hrdAmount =
+    isHrdPayment && Number.isFinite(hrdAmountInput) && hrdAmountInput > 0
+      ? hrdAmountInput
+      : computedHrdAmount
+  const hrdLineTotal = hrdQty * hrdAmount
   const sstPercent = parseFloat(pricing.sst_rate) || 0
   const sstAmount = subtotal * (sstPercent / 100)
-  const grandTotal = isHrdPayment ? subtotal + sstAmount + computedHrdAmount : subtotal + sstAmount
+  const grandTotal = isHrdPayment ? subtotal + sstAmount + hrdLineTotal : subtotal + sstAmount
 
   // Recompute summary
   useEffect(() => {
@@ -94,7 +108,7 @@ const TrainingInvoiceForm = ({
       grand_total: parseFloat(grandTotal.toFixed(2)),
     }
     if (isHrdPayment) {
-      nextPricing.hrd_amount = parseFloat(computedHrdAmount.toFixed(2))
+      nextPricing.hrd_amount = parseFloat(hrdAmount.toFixed(2))
     }
     setPricing((prev) => ({ ...prev, ...nextPricing }))
   }, [
@@ -103,7 +117,8 @@ const TrainingInvoiceForm = ({
     grandTotal,
     isHrdPayment,
     hrdRate,
-    computedHrdAmount,
+    hrdAmount,
+    paymentMethod,
     pricing,
     setPricing,
   ])
@@ -198,7 +213,6 @@ const TrainingInvoiceForm = ({
     parseFloat(newItem.unit_price) > 0
 
   const discountTotal = -(discountQty * discountAmount)
-  const hrdAmount = isHrdPayment ? computedHrdAmount : 0
   const sstRateWidth = Math.max(String(pricing.sst_rate || '').length, 2)
   const itemRowStart = 4
   const discountRowNum = itemRowStart + items.length
@@ -458,10 +472,44 @@ const TrainingInvoiceForm = ({
               <CTableRow>
                 <CTableDataCell className="text-center">{hrdRowNum}</CTableDataCell>
                 <CTableDataCell>HRD Charge ({hrdRate}% of training net)</CTableDataCell>
-                <CTableDataCell className="text-center" />
-                <CTableDataCell className="text-center" />
-                <CTableDataCell className="text-end">{hrdAmount.toFixed(2)}</CTableDataCell>
-                <CTableDataCell className="text-end">{hrdAmount.toFixed(2)}</CTableDataCell>
+                <CTableDataCell className="text-center">
+                  <CFormInput
+                    type="number"
+                    min="0"
+                    value={pricing.hrd_qty ?? 1}
+                    onChange={(e) =>
+                      setPricing((prev) => ({
+                        ...prev,
+                        hrd_qty: Number.isNaN(parseFloat(e.target.value))
+                          ? prev.hrd_qty
+                          : parseFloat(e.target.value),
+                      }))
+                    }
+                  />
+                </CTableDataCell>
+                <CTableDataCell className="text-center">
+                  <CFormInput
+                    type="text"
+                    value={hrdUnit}
+                    onChange={(e) => setPricing((prev) => ({ ...prev, hrd_unit: e.target.value }))}
+                  />
+                </CTableDataCell>
+                <CTableDataCell>
+                  <CFormInput
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={pricing.hrd_amount}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value)
+                      setPricing((prev) => ({
+                        ...prev,
+                        hrd_amount: Number.isNaN(value) ? 0 : Math.abs(value),
+                      }))
+                    }}
+                  />
+                </CTableDataCell>
+                <CTableDataCell className="text-end">{hrdLineTotal.toFixed(2)}</CTableDataCell>
               </CTableRow>
             )}
 

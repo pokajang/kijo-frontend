@@ -135,6 +135,8 @@ const getInitialPricing = () => ({
   grand_total: 0,
   hrd_rate: 0,
   hrd_amount: 0,
+  hrd_qty: 1,
+  hrd_unit: 'Lot',
   sub_total: 0,
   discount: 0,
   discount_unit_price: 0,

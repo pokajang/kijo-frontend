@@ -18,6 +18,8 @@ describe('buildBreakdownFromPricing Training', () => {
       discount_unit: 'Lot',
       hrd_rate: 10,
       hrd_amount: 90,
+      hrd_qty: 1,
+      hrd_unit: 'Lot',
       training_items: [
         {
           id: 11,
@@ -94,6 +96,26 @@ describe('buildBreakdownFromPricing Training', () => {
 
     expect(breakdown.map((line) => line.item_description)).not.toContain('10% HRD Charge')
     expect(breakdown[breakdown.length - 1].item_description).toBe('Discount')
+  })
+
+  it('preserves editable HRD row quantity and unit', () => {
+    const breakdown = buildBreakdownFromPricing('Training', {
+      training_total: 1000,
+      meal_total: 0,
+      mobilization_cost: 0,
+      discount_amount: 0,
+      hrd_rate: 4,
+      hrd_amount: 40,
+      hrd_qty: 2,
+      hrd_unit: 'claim',
+    })
+
+    expect(breakdown[breakdown.length - 1]).toMatchObject({
+      item_description: '4% HRD Charge',
+      quantity: 2,
+      unit: 'claim',
+      unit_price: 40,
+    })
   })
 })
 

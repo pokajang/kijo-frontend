@@ -1,4 +1,5 @@
 import { getEquipmentInvoiceUnitPrice } from '../../../../shared/invoice/equipmentInvoiceUtils'
+import { normalizeTrainingHrdCharge } from '../../../crm/quotes/training/trainingHrd'
 
 const toNumber = (value) => parseFloat(value) || 0
 const toNegative = (value) => -Math.abs(toNumber(value))
@@ -49,8 +50,21 @@ export const buildInvoiceCreatePayload = (
   if (serviceType === 'Training' && isHrdPayment && !grantApprovalNo?.trim()) {
     return { success: false, message: 'HRD Grant Approval No. is required for HRD payment.' }
   }
-  const hrdRate = toNumber(pricing.hrd_rate)
-  const hrdAmount = toNumber(pricing.hrd_amount)
+  const hrdRate =
+    serviceType === 'Training' ? normalizeTrainingHrdCharge(paymentMethod, pricing.hrd_rate) : 0
+  const trainingDiscountTotal =
+    toNumber(pricing.discount_amount) * toNumber(pricing.discount_qty ?? 1)
+  const computedHrdAmount =
+    serviceType === 'Training'
+      ? Math.max(toNumber(pricing.training_total) - trainingDiscountTotal, 0) * (hrdRate / 100)
+      : 0
+  const hrdQty = toNumber(pricing.hrd_qty ?? 1)
+  const hrdUnitPrice = isHrdPayment ? toNumber(pricing.hrd_amount) || computedHrdAmount : 0
+  const hrdAmount = hrdQty * hrdUnitPrice
+  const resolvedGrandTotal =
+    serviceType === 'Training' && isHrdPayment && hrdAmount > 0
+      ? baseAmount + toNumber(pricing.sst_amount) + hrdAmount
+      : toNumber(pricing.grand_total)
 
   if (allowWithoutQuote && !quoteDetails && baseAmount <= 0) {
     return {
@@ -90,7 +104,7 @@ export const buildInvoiceCreatePayload = (
     sst_amount: toNumber(pricing.sst_amount),
     hrd_rate: isHrdPayment ? hrdRate : 0,
     hrd_amount: isHrdPayment ? hrdAmount : 0,
-    grand_total: toNumber(pricing.grand_total),
+    grand_total: resolvedGrandTotal,
     breakdown: [],
   }
 
@@ -137,9 +151,9 @@ export const buildInvoiceCreatePayload = (
           ? [
               {
                 item_description: `${hrdRate}% HRD Charge`,
-                unit: 'Lot',
-                quantity: 1,
-                unit_price: hrdAmount,
+                unit: pricing.hrd_unit || 'Lot',
+                quantity: hrdQty,
+                unit_price: hrdUnitPrice,
                 description: '',
               },
             ]
