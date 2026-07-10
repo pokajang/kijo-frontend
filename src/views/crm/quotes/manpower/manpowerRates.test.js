@@ -50,6 +50,15 @@ describe('manpowerRates', () => {
     ).toBe(MANPOWER_RATE_TYPES.SHO)
   })
 
+  it('falls back to other manpower rate type for unmatched service names', () => {
+    expect(
+      inferManpowerRateType({
+        serviceTitle: 'Custom Rigging Technician',
+        serviceCode: 'MP-999',
+      }),
+    ).toBe(MANPOWER_RATE_TYPES.OTHER)
+  })
+
   it('uses hourly AESP totals', () => {
     expect(
       calculateManpowerTotals({

@@ -95,7 +95,7 @@ export const inferManpowerRateType = ({ serviceTitle = '', serviceCode = '', uni
     return MANPOWER_RATE_TYPES.THREE_S
   }
 
-  return ''
+  return MANPOWER_RATE_TYPES.OTHER || 'other_manpower'
 }
 
 export const calculateManpowerTotals = ({
