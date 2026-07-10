@@ -21,6 +21,12 @@ import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
 import { normalizeTrainingHrdCharge } from '../../views/crm/quotes/training/trainingHrd'
 
+const toNumber = (value, fallback = 0) => {
+  if (value === undefined || value === null || value === '') return fallback
+  const number = parseFloat(value)
+  return Number.isFinite(number) ? number : fallback
+}
+
 const TrainingInvoiceForm = ({
   quoteDetails,
   pricing,
@@ -49,79 +55,95 @@ const TrainingInvoiceForm = ({
 
     setPricing((prev) => ({
       ...prev,
-      training_total: parseFloat(quoteDetails.training_total ?? prev.training_total ?? 0),
-      meal_total: parseFloat(quoteDetails.meal_total ?? prev.meal_total ?? 0),
-      mobilization_cost: parseFloat(quoteDetails.mobilization_cost ?? prev.mobilization_cost ?? 0),
-      discount_amount: parseFloat(quoteDetails.discount_amount ?? prev.discount_amount ?? 0),
+      training_total: toNumber(quoteDetails.training_total, toNumber(prev.training_total)),
+      meal_total: toNumber(quoteDetails.meal_total, toNumber(prev.meal_total)),
+      mobilization_cost: toNumber(quoteDetails.mobilization_cost, toNumber(prev.mobilization_cost)),
+      discount_amount: toNumber(quoteDetails.discount_amount, toNumber(prev.discount_amount)),
       hrd_rate: normalizeTrainingHrdCharge(
         quoteDetails.payment_method ?? paymentMethod,
         quoteDetails.hrd_charge ?? prev.hrd_rate ?? 0,
       ),
-      hrd_amount: parseFloat(quoteDetails.hrd_amount ?? prev.hrd_amount ?? 0),
-      hrd_qty: parseFloat(prev.hrd_qty ?? 1) || 1,
+      hrd_amount: toNumber(quoteDetails.hrd_amount, toNumber(prev.hrd_amount)),
+      hrd_amount_manual: prev.hrd_amount_manual ?? false,
+      hrd_qty: toNumber(prev.hrd_qty, 1) || 1,
       hrd_unit: prev.hrd_unit || 'Lot',
-      subtotal: parseFloat(quoteDetails.subtotal ?? prev.subtotal ?? 0),
-      sst_rate: parseFloat(quoteDetails.sst_rate ?? prev.sst_rate ?? 0),
-      sst_amount: parseFloat(quoteDetails.sst_amount ?? prev.sst_amount ?? 0),
-      grand_total: parseFloat(quoteDetails.grand_total ?? prev.grand_total ?? 0),
+      subtotal: toNumber(quoteDetails.subtotal, toNumber(prev.subtotal)),
+      sst_rate: toNumber(quoteDetails.sst_rate, toNumber(prev.sst_rate)),
+      sst_amount: toNumber(quoteDetails.sst_amount, toNumber(prev.sst_amount)),
+      grand_total: toNumber(quoteDetails.grand_total, toNumber(prev.grand_total)),
       remarks: quoteDetails.remarks ?? prev.remarks ?? '',
     }))
   }, [paymentMethod, quoteDetails, setPricing])
 
-  const trainingTotal = parseFloat(pricing.training_total) || 0
-  const mealTotal = parseFloat(pricing.meal_total) || 0
-  const mobilizationCost = parseFloat(pricing.mobilization_cost) || 0
-  const discountQty = parseFloat(pricing.discount_qty) || 0
+  useEffect(() => {
+    if (!isHrdPayment) return
+
+    setPricing((prev) => {
+      const nextHrdRate = normalizeTrainingHrdCharge(paymentMethod, prev.hrd_rate)
+      return nextHrdRate === prev.hrd_rate ? prev : { ...prev, hrd_rate: nextHrdRate }
+    })
+  }, [isHrdPayment, paymentMethod, setPricing])
+
+  const trainingQty = toNumber(pricing.training_qty, 1)
+  const trainingUnitPrice = toNumber(pricing.training_total)
+  const trainingLineTotal = trainingQty * trainingUnitPrice
+  const mealQty = toNumber(pricing.meal_qty, 1)
+  const mealUnitPrice = toNumber(pricing.meal_total)
+  const mealLineTotal = mealQty * mealUnitPrice
+  const mobilizationQty = toNumber(pricing.mobilization_qty, 1)
+  const mobilizationUnitPrice = toNumber(pricing.mobilization_cost)
+  const mobilizationLineTotal = mobilizationQty * mobilizationUnitPrice
+  const discountQty = toNumber(pricing.discount_qty)
   const discountUnit = pricing.discount_unit || 'Lot'
-  const discountAmountInput = parseFloat(pricing.discount_amount) || 0
+  const discountAmountInput = toNumber(pricing.discount_amount)
   const discountAmount = Math.abs(discountAmountInput)
 
-  const hrdRate = Math.max(0, parseFloat(pricing.hrd_rate) || 0)
-  const hrdQty = Math.max(0, parseFloat(pricing.hrd_qty ?? 1) || 0)
+  const hrdRate = Math.max(0, toNumber(pricing.hrd_rate))
+  const hrdQty = Math.max(0, toNumber(pricing.hrd_qty, 1))
   const hrdUnit = pricing.hrd_unit || 'Lot'
   const customTotal = items.reduce((sum, item) => {
-    const qty = parseFloat(item.quantity) || 0
-    const unitPrice = parseFloat(item.unit_price) || 0
+    const qty = toNumber(item.quantity)
+    const unitPrice = toNumber(item.unit_price)
     return sum + qty * unitPrice
   }, 0)
 
   const subtotal =
-    trainingTotal + mealTotal + mobilizationCost + customTotal - discountAmount * discountQty
-  const hrdBase = Math.max(trainingTotal - discountAmount * discountQty, 0)
+    trainingLineTotal +
+    mealLineTotal +
+    mobilizationLineTotal +
+    customTotal -
+    discountAmount * discountQty
+  const hrdBase = Math.max(trainingLineTotal - discountAmount * discountQty, 0)
   const computedHrdAmount = isHrdPayment ? hrdBase * (hrdRate / 100) : 0
-  const hrdAmountInput = parseFloat(pricing.hrd_amount)
+  const hrdAmountInput = toNumber(pricing.hrd_amount, NaN)
   const hrdAmount =
     isHrdPayment && Number.isFinite(hrdAmountInput) && hrdAmountInput > 0
       ? hrdAmountInput
       : computedHrdAmount
   const hrdLineTotal = hrdQty * hrdAmount
-  const sstPercent = parseFloat(pricing.sst_rate) || 0
+  const sstPercent = toNumber(pricing.sst_rate)
   const sstAmount = subtotal * (sstPercent / 100)
   const grandTotal = isHrdPayment ? subtotal + sstAmount + hrdLineTotal : subtotal + sstAmount
 
   // Recompute summary
   useEffect(() => {
-    const nextPricing = {
-      ...pricing,
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      sst_amount: parseFloat(sstAmount.toFixed(2)),
-      grand_total: parseFloat(grandTotal.toFixed(2)),
-    }
-    if (isHrdPayment) {
-      nextPricing.hrd_amount = parseFloat(hrdAmount.toFixed(2))
-    }
-    setPricing((prev) => ({ ...prev, ...nextPricing }))
-  }, [
-    subtotal,
-    sstAmount,
-    grandTotal,
-    isHrdPayment,
-    hrdRate,
-    hrdAmount,
-    paymentMethod,
-    pricing,
-    setPricing,
-  ])
+    setPricing((prev) => {
+      const next = {
+        subtotal: toNumber(subtotal.toFixed(2)),
+        sst_amount: toNumber(sstAmount.toFixed(2)),
+        grand_total: toNumber(grandTotal.toFixed(2)),
+      }
+
+      const shouldAutofillHrdAmount =
+        isHrdPayment && !prev.hrd_amount_manual && toNumber(prev.hrd_amount) <= 0 && hrdAmount > 0
+      if (shouldAutofillHrdAmount) {
+        next.hrd_amount = toNumber(hrdAmount.toFixed(2))
+      }
+
+      const unchanged = Object.entries(next).every(([key, value]) => prev[key] === value)
+      return unchanged ? prev : { ...prev, ...next }
+    })
+  }, [subtotal, sstAmount, grandTotal, isHrdPayment, hrdAmount, setPricing])
 
   const handleChange = (field) => (e) => {
     const { value } = e.target
@@ -282,7 +304,7 @@ const TrainingInvoiceForm = ({
                   onChange={handleChange('training_total')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{trainingTotal.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">{trainingLineTotal.toFixed(2)}</CTableDataCell>
             </CTableRow>
 
             <CTableRow>
@@ -319,7 +341,7 @@ const TrainingInvoiceForm = ({
                   onChange={handleChange('meal_total')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{mealTotal.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">{mealLineTotal.toFixed(2)}</CTableDataCell>
             </CTableRow>
 
             <CTableRow>
@@ -358,12 +380,14 @@ const TrainingInvoiceForm = ({
                   onChange={handleChange('mobilization_cost')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{mobilizationCost.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {mobilizationLineTotal.toFixed(2)}
+              </CTableDataCell>
             </CTableRow>
 
             {items.map((item, idx) => {
-              const itemQty = parseFloat(item.quantity) || 0
-              const itemPrice = parseFloat(item.unit_price) || 0
+              const itemQty = toNumber(item.quantity)
+              const itemPrice = toNumber(item.unit_price)
               const rowNum = itemRowStart + idx
               const showRemove = mode === 'edit' || item.is_custom
               return (
@@ -504,6 +528,7 @@ const TrainingInvoiceForm = ({
                       const value = parseFloat(e.target.value)
                       setPricing((prev) => ({
                         ...prev,
+                        hrd_amount_manual: true,
                         hrd_amount: Number.isNaN(value) ? 0 : Math.abs(value),
                       }))
                     }}
