@@ -290,8 +290,29 @@ export default function ManpowerQuotationForm({
       return
     }
 
+    const normalizedManpowerRateType =
+      formData.manpowerRateType ||
+      inferManpowerRateType({
+        serviceTitle: formData.serviceTitle,
+        serviceCode: formData.serviceCode,
+      })
+
+    if (!normalizedManpowerRateType || !getManpowerRateOption(normalizedManpowerRateType)) {
+      dialog.alert(
+        'Unable to determine a valid manpower rate type for this service. Please reselect the service.',
+      )
+      return
+    }
+
+    if (formData.manpowerRateType !== normalizedManpowerRateType) {
+      setFormData((prev) => ({
+        ...prev,
+        manpowerRateType: normalizedManpowerRateType,
+      }))
+    }
+
     const stipulatedRate = getManpowerRate({
-      rateType: formData.manpowerRateType,
+      rateType: normalizedManpowerRateType,
       durationMonths: formData.durationMonths,
     })
     if (
@@ -329,7 +350,7 @@ export default function ManpowerQuotationForm({
       mp_id: formData.mpId,
       service_title: formData.serviceTitle,
       service_code: formData.serviceCode,
-      manpower_rate_type: formData.manpowerRateType,
+      manpower_rate_type: normalizedManpowerRateType,
       billing_unit: formData.billingUnit,
       duration_hours: formData.durationHours,
       requires_management_approval: formData.requiresManagementApproval ? 1 : 0,
