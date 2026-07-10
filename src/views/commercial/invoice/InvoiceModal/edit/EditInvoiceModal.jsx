@@ -205,9 +205,23 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
     if (!form || !pricing) return
     if (!(await dialog.confirm('Save changes to this invoice?'))) return
 
+    const isHrdPayment =
+      String(form.paymentMethod || '')
+        .trim()
+        .toLowerCase() === 'hrd grant'
+    const isTraining = form.serviceType === 'Training'
     const baseAmount =
       form.serviceType === 'Training' ? toNumber(pricing.subtotal) : toNumber(pricing.sub_total)
     const breakdown = buildBreakdownFromPricing(form.serviceType, pricing, quoteDetails)
+    const normalizedBreakdown =
+      isTraining && !isHrdPayment
+        ? breakdown.filter(
+            (line) =>
+              !/^\s*(\d+(?:\.\d+)?\s*%\s*)?hrd\s*charge\b/i.test(
+                String(line?.item_description || ''),
+              ),
+          )
+        : breakdown
 
     const purpose =
       form.serviceType === 'Manpower Supply' ? pricing.service_title || form.purpose : form.purpose
@@ -222,7 +236,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       sst_amount: toNumber(pricing.sst_amount),
       grand_total: toNumber(pricing.grand_total),
       payment_method: form.paymentMethod,
-      grant_approval_no: form.serviceType === 'Training' ? form.grantApprovalNo : null,
+      grant_approval_no: isTraining && isHrdPayment ? form.grantApprovalNo : null,
       remarks: pricing.remarks || '',
       paid_date: form.paidDate || null,
       paid_amount: form.paidAmount ? parseFloat(form.paidAmount) : null,
@@ -241,7 +255,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       invoice_pic_email: form.picEmail,
       invoice_pic_position: form.picPosition,
 
-      breakdown,
+      breakdown: normalizedBreakdown,
     }
 
     if (form.paymentTermsTouched) {

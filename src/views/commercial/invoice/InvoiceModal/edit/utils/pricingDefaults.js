@@ -16,6 +16,8 @@ export const defaultPricing = {
   sst_rate: 0,
   sst_amount: 0,
   grand_total: 0,
+  hrd_rate: 0,
+  hrd_amount: 0,
   training_items: [],
   special_items: [],
   // Equipment

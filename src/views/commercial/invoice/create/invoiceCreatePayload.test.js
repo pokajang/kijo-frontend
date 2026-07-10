@@ -217,6 +217,158 @@ describe('buildInvoiceCreatePayload', () => {
     )
   })
 
+  it('builds a training HRD payload with hrd grant approval and HRD row', () => {
+    const result = buildInvoiceCreatePayload('Training', {
+      ...baseArgs,
+      project: {
+        ...baseArgs.project,
+        project_type: 'Training',
+        quote_id: 77,
+        project_name: 'Safety Program',
+      },
+      quoteDetails: {
+        id: 77,
+        payment_method: 'hrd grant',
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        subtotal: 110,
+        grand_total: 120,
+        hrd_rate: 10,
+        hrd_amount: 10,
+        sst_amount: 0,
+        training_total: 100,
+        training_qty: 1,
+        meal_total: 10,
+        meal_qty: 1,
+        mobilization_cost: 0,
+        mobilization_qty: 1,
+        discount_amount: 0,
+        training_items: [
+          {
+            item_description: 'Bootcamp kit',
+            description: 'Manual material',
+            quantity: 2,
+            unit: 'Lot',
+            unit_price: 5,
+          },
+        ],
+      },
+      paymentMethodOverride: 'hrd grant',
+      grantApprovalNo: 'HRD-007',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.payment_method).toBe('hrd grant')
+    expect(result.payload.grant_approval_no).toBe('HRD-007')
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: '10% HRD Charge',
+          quantity: 1,
+          unit_price: 10,
+        }),
+        expect.objectContaining({
+          item_description: 'Bootcamp kit',
+          quantity: 2,
+          unit_price: 5,
+        }),
+      ]),
+    )
+    expect(result.payload.amount).toBe(110)
+    expect(result.payload.grand_total).toBe(120)
+  })
+
+  it('does not include HRD row when training is created as direct payment', () => {
+    const result = buildInvoiceCreatePayload('Training', {
+      ...baseArgs,
+      project: {
+        ...baseArgs.project,
+        project_type: 'Training',
+        quote_id: 77,
+      },
+      quoteDetails: {
+        id: 77,
+        payment_method: 'direct payment',
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        subtotal: 120,
+        grand_total: 120,
+        hrd_rate: 10,
+        hrd_amount: 10,
+        sst_amount: 0,
+        training_total: 100,
+        training_qty: 1,
+        meal_total: 10,
+        meal_qty: 1,
+        mobilization_cost: 10,
+        mobilization_qty: 1,
+        discount_amount: 0,
+        training_items: [
+          {
+            item_description: 'Bootcamp kit',
+            description: 'Manual material',
+            quantity: 2,
+            unit: 'Lot',
+            unit_price: 5,
+          },
+        ],
+      },
+      paymentMethodOverride: 'Direct Payment',
+      grantApprovalNo: 'IGNORED',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.payment_method).toBe('Direct Payment')
+    expect(result.payload.grant_approval_no).toBe(null)
+    expect(result.payload.breakdown.map((item) => item.item_description)).not.toContain(
+      '10% HRD Charge',
+    )
+    expect(result.payload.breakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          item_description: 'Bootcamp kit',
+          quantity: 2,
+          unit_price: 5,
+        }),
+      ]),
+    )
+  })
+
+  it('requires HRD grant approval number for HRD training payloads', () => {
+    const result = buildInvoiceCreatePayload('Training', {
+      ...baseArgs,
+      project: {
+        ...baseArgs.project,
+        project_type: 'Training',
+        quote_id: 77,
+      },
+      quoteDetails: {
+        id: 77,
+        payment_method: 'hrd grant',
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        subtotal: 100,
+        grand_total: 100,
+        hrd_rate: 5,
+        hrd_amount: 5,
+        sst_amount: 0,
+        training_total: 100,
+      },
+      paymentMethodOverride: 'hrd grant',
+      grantApprovalNo: '',
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: false,
+        message: expect.stringContaining('HRD Grant Approval No.'),
+      }),
+    )
+  })
+
   it('uses equipment marked-up price, not supplier unit price, in invoice breakdown', () => {
     const result = buildInvoiceCreatePayload('Equipment Supply', {
       ...baseArgs,

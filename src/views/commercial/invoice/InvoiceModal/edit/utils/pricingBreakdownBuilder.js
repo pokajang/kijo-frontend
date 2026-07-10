@@ -6,28 +6,32 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
   const toNegative = (value) => -Math.abs(toNumber(value))
   switch (serviceType) {
     case 'Training':
+      const discountQty = toNumber(pricing.discount_qty ?? 1)
+      const discountUnit = pricing.discount_unit || 'Lot'
+      const hrdAmount = toNumber(pricing.hrd_amount)
+      const hrdRate = toNumber(pricing.hrd_rate)
       return [
         {
           id: null,
           item_description: 'Training Fee',
-          unit: 'Lot',
-          quantity: 1,
+          quantity: toNumber(pricing.training_qty ?? 1),
+          unit: pricing.training_unit || 'Lot',
           unit_price: toNumber(pricing.training_total),
           description: '',
         },
         {
           id: null,
           item_description: 'Meal Total',
-          unit: 'Lot',
-          quantity: 1,
+          quantity: toNumber(pricing.meal_qty ?? 1),
+          unit: pricing.meal_unit || 'Lot',
           unit_price: toNumber(pricing.meal_total),
           description: '',
         },
         {
           id: null,
           item_description: 'Mobilization Charge',
-          unit: 'Lot',
-          quantity: 1,
+          quantity: toNumber(pricing.mobilization_qty ?? 1),
+          unit: pricing.mobilization_unit || 'Lot',
           unit_price: toNumber(pricing.mobilization_cost),
           description: '',
         },
@@ -42,11 +46,23 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         {
           id: null,
           item_description: 'Discount',
-          unit: 'Lot',
-          quantity: 1,
+          unit: discountUnit,
+          quantity: discountQty,
           unit_price: toNegative(pricing.discount_amount),
           description: '',
         },
+        ...(hrdAmount > 0
+          ? [
+              {
+                id: null,
+                item_description: hrdRate > 0 ? `${hrdRate}% HRD Charge` : 'HRD Charge',
+                unit: 'Lot',
+                quantity: 1,
+                unit_price: hrdAmount,
+                description: '',
+              },
+            ]
+          : []),
       ]
     case 'Equipment Supply': {
       const items = pricing.equipment_items || []

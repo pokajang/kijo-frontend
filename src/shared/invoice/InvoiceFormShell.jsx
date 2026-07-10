@@ -43,6 +43,7 @@ const InvoiceFormShell = ({
     <InvoiceFormLoader
       project={project}
       quoteDetails={quoteDetails}
+      paymentMethod={paymentMethod}
       pricing={pricing}
       setPricing={setPricing}
       mode={mode}

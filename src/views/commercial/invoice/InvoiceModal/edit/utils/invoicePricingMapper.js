@@ -4,6 +4,20 @@ import { defaultPricing } from './pricingDefaults'
 
 const getLines = (invoice) => (Array.isArray(invoice?.breakdown) ? invoice.breakdown : [])
 
+const parseHrdRateFromDescription = (description) => {
+  const raw = String(description || '').trim()
+  const percentMatch = raw.match(/(\d+(?:\.\d+)?)\s*%\s*hrd\s*charge/i)
+  if (percentMatch) {
+    return toNumber(percentMatch[1])
+  }
+  return 0
+}
+
+const isHrdLine = (line) => {
+  const raw = String(line?.item_description || '')
+  return /^\s*(\d+(?:\.\d+)?\s*%\s*)?hrd\s*charge\b/i.test(raw)
+}
+
 export const buildPricingFromInvoice = (invoice) => {
   const serviceType = invoice?.service_type || invoice?.serviceType || ''
   const lines = getLines(invoice)
@@ -20,11 +34,19 @@ export const buildPricingFromInvoice = (invoice) => {
     case 'Training': {
       const trainingItems = []
       let trainingTotal = 0
+      let trainingQty = 1
+      let trainingUnit = 'Lot'
       let mealTotal = 0
+      let mealQty = 1
+      let mealUnit = 'Lot'
       let mobilizationCost = 0
+      let mobilizationQty = 1
+      let mobilizationUnit = 'Lot'
       let discountAmount = 0
       let discountQty = 1
       let discountUnit = 'Lot'
+      let hrdAmount = 0
+      let hrdRate = 0
 
       const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
       const isTrainingLine = (line) => isExactLabel(line, ['training fee', 'training total'])
@@ -40,10 +62,19 @@ export const buildPricingFromInvoice = (invoice) => {
           discountUnit = line?.unit || 'Lot'
         } else if (isMealLine(line)) {
           mealTotal = price
+          mealQty = toNumber(line?.quantity, 1)
+          mealUnit = line?.unit || 'Lot'
         } else if (isMobilizationLine(line)) {
           mobilizationCost = price
+          mobilizationQty = toNumber(line?.quantity, 1)
+          mobilizationUnit = line?.unit || 'Lot'
+        } else if (isHrdLine(line)) {
+          hrdAmount = price
+          hrdRate = parseHrdRateFromDescription(line?.item_description)
         } else if (isTrainingLine(line)) {
           trainingTotal = price
+          trainingQty = toNumber(line?.quantity, 1)
+          trainingUnit = line?.unit || 'Lot'
         } else {
           trainingItems.push({
             id: line.id,
@@ -56,12 +87,23 @@ export const buildPricingFromInvoice = (invoice) => {
         }
       })
 
+      if (hrdRate <= 0 && hrdAmount > 0) {
+        const netTraining = trainingTotal - discountAmount * discountQty
+        hrdRate = netTraining > 0 ? (hrdAmount / netTraining) * 100 : 0
+      }
+
       return {
         pricing: {
           ...pricing,
           training_total: trainingTotal,
+          training_qty: trainingQty,
+          training_unit: trainingUnit,
           meal_total: mealTotal,
+          meal_qty: mealQty,
+          meal_unit: mealUnit,
           mobilization_cost: mobilizationCost,
+          mobilization_qty: mobilizationQty,
+          mobilization_unit: mobilizationUnit,
           discount_amount: discountAmount,
           discount_qty: discountQty,
           discount_unit: discountUnit,
@@ -69,6 +111,8 @@ export const buildPricingFromInvoice = (invoice) => {
           sst_rate: sstRate,
           sst_amount: sstAmount,
           grand_total: grandTotal,
+          hrd_rate: hrdRate,
+          hrd_amount: hrdAmount,
           training_items: trainingItems,
         },
         quoteDetails,

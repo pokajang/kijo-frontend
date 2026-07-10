@@ -9,9 +9,9 @@ import {
   CFormInput,
   CTable,
   CTableHead,
+  CTableBody,
   CTableRow,
   CTableHeaderCell,
-  CTableBody,
   CTableDataCell,
   CButton,
   CBadge,
@@ -20,25 +20,19 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
 
-/**
- * Training invoice form with editable remarks.
- *
- * Props:
- * - pricing: { training_total, training_qty, training_unit, meal_total, meal_qty, meal_unit,
- *     mobilization_cost, mobilization_qty, mobilization_unit, discount_amount, discount_qty,
- *     discount_unit, subtotal, sst_rate, sst_amount, grand_total, remarks }
- * - setPricing: setter for pricing state
- */
-const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
+const TrainingInvoiceForm = ({
+  quoteDetails,
+  pricing,
+  setPricing,
+  paymentMethod = '',
+  mode = 'create',
+}) => {
+  const isHrdPayment =
+    String(paymentMethod || '')
+      .trim()
+      .toLowerCase() === 'hrd grant'
+
   const items = Array.isArray(pricing.training_items) ? pricing.training_items : []
-  const itemRowStart = 4
-  const sstRateWidthCh = 6
-  const discountRowNum = itemRowStart + items.length
-  const unitPriceStyle = { maxWidth: '140px' }
-  const trainingQty = parseFloat(pricing.training_qty) || 0
-  const mealQty = parseFloat(pricing.meal_qty) || 0
-  const mobilizationQty = parseFloat(pricing.mobilization_qty) || 0
-  const discountQty = parseFloat(pricing.discount_qty) || 0
   const [showAddItemRow, setShowAddItemRow] = useState(false)
   const [newItem, setNewItem] = useState({
     item_description: '',
@@ -48,67 +42,98 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
     unit_price: '',
   })
 
-  const extraItemsTotal = items.reduce((sum, item) => {
-    const qty = parseFloat(item.quantity) || 0
-    const price = parseFloat(item.unit_price) || 0
-    return sum + qty * price
-  }, 0)
-
-  // 1) Recalculate derived fields whenever inputs change
+  // Seed from training quote where available
   useEffect(() => {
-    const tt = parseFloat(pricing.training_total) || 0
-    const mt = parseFloat(pricing.meal_total) || 0
-    const mob = parseFloat(pricing.mobilization_cost) || 0
-    const disc = parseFloat(pricing.discount_amount) || 0
-    const sstRt = parseFloat(pricing.sst_rate) || 0
-    const lineTraining = trainingQty * tt
-    const lineMeal = mealQty * mt
-    const lineMobilization = mobilizationQty * mob
-    const discountTotal = Math.abs(discountQty * disc)
-
-    const subtotal = lineTraining + lineMeal + lineMobilization + extraItemsTotal - discountTotal
-    const sst_amount = subtotal * (sstRt / 100)
-    const grand_total = subtotal + sst_amount
+    if (!quoteDetails) return
 
     setPricing((prev) => ({
       ...prev,
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      sst_amount: parseFloat(sst_amount.toFixed(2)),
-      grand_total: parseFloat(grand_total.toFixed(2)),
+      training_total: parseFloat(quoteDetails.training_total ?? prev.training_total ?? 0),
+      meal_total: parseFloat(quoteDetails.meal_total ?? prev.meal_total ?? 0),
+      mobilization_cost: parseFloat(quoteDetails.mobilization_cost ?? prev.mobilization_cost ?? 0),
+      discount_amount: parseFloat(quoteDetails.discount_amount ?? prev.discount_amount ?? 0),
+      hrd_rate: parseFloat(quoteDetails.hrd_charge ?? prev.hrd_rate ?? 0),
+      hrd_amount: parseFloat(quoteDetails.hrd_amount ?? prev.hrd_amount ?? 0),
+      subtotal: parseFloat(quoteDetails.subtotal ?? prev.subtotal ?? 0),
+      sst_rate: parseFloat(quoteDetails.sst_rate ?? prev.sst_rate ?? 0),
+      sst_amount: parseFloat(quoteDetails.sst_amount ?? prev.sst_amount ?? 0),
+      grand_total: parseFloat(quoteDetails.grand_total ?? prev.grand_total ?? 0),
+      remarks: quoteDetails.remarks ?? prev.remarks ?? '',
     }))
+  }, [quoteDetails, setPricing])
+
+  const trainingTotal = parseFloat(pricing.training_total) || 0
+  const mealTotal = parseFloat(pricing.meal_total) || 0
+  const mobilizationCost = parseFloat(pricing.mobilization_cost) || 0
+  const discountQty = parseFloat(pricing.discount_qty) || 0
+  const discountUnit = pricing.discount_unit || 'Lot'
+  const discountAmountInput = parseFloat(pricing.discount_amount) || 0
+  const discountAmount = Math.abs(discountAmountInput)
+
+  const hrdRate = Math.max(0, parseFloat(pricing.hrd_rate) || 0)
+  const customTotal = items.reduce((sum, item) => {
+    const qty = parseFloat(item.quantity) || 0
+    const unitPrice = parseFloat(item.unit_price) || 0
+    return sum + qty * unitPrice
+  }, 0)
+
+  const subtotal =
+    trainingTotal + mealTotal + mobilizationCost + customTotal - discountAmount * discountQty
+  const hrdBase = Math.max(trainingTotal - discountAmount * discountQty, 0)
+  const computedHrdAmount = isHrdPayment ? hrdBase * (hrdRate / 100) : 0
+  const sstPercent = parseFloat(pricing.sst_rate) || 0
+  const sstAmount = subtotal * (sstPercent / 100)
+  const grandTotal = isHrdPayment ? subtotal + sstAmount + computedHrdAmount : subtotal + sstAmount
+
+  // Recompute summary
+  useEffect(() => {
+    const nextPricing = {
+      ...pricing,
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      sst_amount: parseFloat(sstAmount.toFixed(2)),
+      grand_total: parseFloat(grandTotal.toFixed(2)),
+    }
+    if (isHrdPayment) {
+      nextPricing.hrd_amount = parseFloat(computedHrdAmount.toFixed(2))
+    }
+    setPricing((prev) => ({ ...prev, ...nextPricing }))
   }, [
-    pricing.training_total,
-    pricing.training_qty,
-    pricing.meal_total,
-    pricing.meal_qty,
-    pricing.mobilization_cost,
-    pricing.mobilization_qty,
-    pricing.discount_amount,
-    pricing.discount_qty,
-    pricing.sst_rate,
-    pricing.subtotal,
-    trainingQty,
-    mealQty,
-    mobilizationQty,
-    discountQty,
-    extraItemsTotal,
+    subtotal,
+    sstAmount,
+    grandTotal,
+    isHrdPayment,
+    hrdRate,
+    computedHrdAmount,
+    pricing,
     setPricing,
   ])
 
-  // 2) Handler for numeric and text inputs
   const handleChange = (field) => (e) => {
     const { value } = e.target
-    if (field === 'remarks') {
-      setPricing((prev) => ({ ...prev, remarks: value }))
-    } else {
-      const num = parseFloat(value)
-      setPricing((prev) => ({ ...prev, [field]: isNaN(num) ? 0 : num }))
-    }
+    const nextValue = [
+      'training_total',
+      'meal_total',
+      'mobilization_cost',
+      'sst_rate',
+      'hrd_rate',
+    ].includes(field)
+      ? parseFloat(value)
+      : value
+    setPricing((prev) => ({ ...prev, [field]: Number.isNaN(nextValue) ? 0 : nextValue }))
   }
 
-  const handleTextChange = (field) => (e) => {
-    const { value } = e.target
-    setPricing((prev) => ({ ...prev, [field]: value }))
+  const handleDiscountValueChange = (e) => {
+    const value = parseFloat(e.target.value)
+    setPricing((prev) => ({ ...prev, discount_amount: Number.isNaN(value) ? 0 : Math.abs(value) }))
+  }
+
+  const handleDiscountQtyChange = (e) => {
+    const value = parseFloat(e.target.value)
+    setPricing((prev) => ({ ...prev, discount_qty: Number.isNaN(value) ? 0 : value }))
+  }
+
+  const handleDiscountUnitChange = (e) => {
+    setPricing((prev) => ({ ...prev, discount_unit: e.target.value }))
   }
 
   const handleItemChange = (index, field) => (e) => {
@@ -116,10 +141,7 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
     setPricing((prev) => {
       const nextItems = Array.isArray(prev.training_items) ? [...prev.training_items] : []
       const current = nextItems[index] || {}
-      nextItems[index] = {
-        ...current,
-        [field]: value,
-      }
+      nextItems[index] = { ...current, [field]: value }
       return { ...prev, training_items: nextItems }
     })
   }
@@ -175,30 +197,36 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
     Number.isFinite(parseFloat(newItem.unit_price)) &&
     parseFloat(newItem.unit_price) > 0
 
+  const discountTotal = -(discountQty * discountAmount)
+  const hrdAmount = isHrdPayment ? computedHrdAmount : 0
+  const sstRateWidth = Math.max(String(pricing.sst_rate || '').length, 2)
+  const itemRowStart = 4
+  const discountRowNum = itemRowStart + items.length
+  const hrdRowNum = discountRowNum + 1
+
   return (
     <>
       <CCardHeader>
-        <strong>Invoice Breakdown</strong>
+        <strong>Invoice Breakdown (Training)</strong>
       </CCardHeader>
       <CCardBody>
-        {/* datatable-exempt: existing embedded/layout table */}
         <CTable striped responsive className="mb-3 data-table-compact embedded-data-table">
           <CTableHead>
             <CTableRow>
-              <CTableHeaderCell className="text-center" style={{ width: '60px' }}>
+              <CTableHeaderCell className="text-center" style={{ width: '50px' }}>
                 #
               </CTableHeaderCell>
               <CTableHeaderCell>Description</CTableHeaderCell>
-              <CTableHeaderCell className="text-center" style={{ width: '130px' }}>
+              <CTableHeaderCell className="text-center" style={{ width: '90px' }}>
                 Qty
               </CTableHeaderCell>
-              <CTableHeaderCell className="text-center" style={{ width: '130px' }}>
+              <CTableHeaderCell className="text-center" style={{ width: '90px' }}>
                 Unit
               </CTableHeaderCell>
-              <CTableHeaderCell className="text-end" style={{ width: '180px' }}>
+              <CTableHeaderCell className="text-end" style={{ width: '105px' }}>
                 Unit Price (RM)
               </CTableHeaderCell>
-              <CTableHeaderCell className="text-end" style={{ width: '180px' }}>
+              <CTableHeaderCell className="text-end" style={{ width: '120px' }}>
                 Line Total (RM)
               </CTableHeaderCell>
             </CTableRow>
@@ -206,100 +234,122 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
           <CTableBody>
             <CTableRow>
               <CTableDataCell className="text-center">1</CTableDataCell>
-              <CTableDataCell>Training Total (RM)</CTableDataCell>
+              <CTableDataCell>Training Fee</CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="number"
                   min="0"
-                  value={pricing.training_qty ?? ''}
-                  onChange={handleChange('training_qty')}
+                  value={pricing.training_qty ?? 1}
+                  onChange={(e) =>
+                    setPricing((prev) => ({
+                      ...prev,
+                      training_qty: Number.isNaN(parseFloat(e.target.value))
+                        ? prev.training_qty
+                        : parseFloat(e.target.value),
+                    }))
+                  }
                 />
               </CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="text"
-                  value={pricing.training_unit ?? ''}
-                  onChange={handleTextChange('training_unit')}
+                  value={pricing.training_unit || 'Lot'}
+                  onChange={(e) =>
+                    setPricing((prev) => ({ ...prev, training_unit: e.target.value }))
+                  }
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
+              <CTableDataCell>
                 <CFormInput
                   type="number"
-                  name="training_total"
+                  min="0"
+                  step="0.01"
                   value={pricing.training_total}
                   onChange={handleChange('training_total')}
-                  style={unitPriceStyle}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
-                {(trainingQty * (parseFloat(pricing.training_total) || 0)).toFixed(2)}
-              </CTableDataCell>
+              <CTableDataCell className="text-end">{trainingTotal.toFixed(2)}</CTableDataCell>
             </CTableRow>
+
             <CTableRow>
               <CTableDataCell className="text-center">2</CTableDataCell>
-              <CTableDataCell>Meal Total (RM)</CTableDataCell>
+              <CTableDataCell>Meal Total</CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="number"
                   min="0"
-                  value={pricing.meal_qty ?? ''}
-                  onChange={handleChange('meal_qty')}
+                  value={pricing.meal_qty ?? 1}
+                  onChange={(e) =>
+                    setPricing((prev) => ({
+                      ...prev,
+                      meal_qty: Number.isNaN(parseFloat(e.target.value))
+                        ? prev.meal_qty
+                        : parseFloat(e.target.value),
+                    }))
+                  }
                 />
               </CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="text"
-                  value={pricing.meal_unit ?? ''}
-                  onChange={handleTextChange('meal_unit')}
+                  value={pricing.meal_unit || 'Lot'}
+                  onChange={(e) => setPricing((prev) => ({ ...prev, meal_unit: e.target.value }))}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
+              <CTableDataCell>
                 <CFormInput
                   type="number"
-                  name="meal_total"
+                  min="0"
+                  step="0.01"
                   value={pricing.meal_total}
                   onChange={handleChange('meal_total')}
-                  style={unitPriceStyle}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
-                {(mealQty * (parseFloat(pricing.meal_total) || 0)).toFixed(2)}
-              </CTableDataCell>
+              <CTableDataCell className="text-end">{mealTotal.toFixed(2)}</CTableDataCell>
             </CTableRow>
+
             <CTableRow>
               <CTableDataCell className="text-center">3</CTableDataCell>
-              <CTableDataCell>Mobilization Cost (RM)</CTableDataCell>
+              <CTableDataCell>Mobilization Charge</CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="number"
                   min="0"
-                  value={pricing.mobilization_qty ?? ''}
-                  onChange={handleChange('mobilization_qty')}
+                  value={pricing.mobilization_qty ?? 1}
+                  onChange={(e) =>
+                    setPricing((prev) => ({
+                      ...prev,
+                      mobilization_qty: Number.isNaN(parseFloat(e.target.value))
+                        ? prev.mobilization_qty
+                        : parseFloat(e.target.value),
+                    }))
+                  }
                 />
               </CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="text"
-                  value={pricing.mobilization_unit ?? ''}
-                  onChange={handleTextChange('mobilization_unit')}
+                  value={pricing.mobilization_unit || 'Lot'}
+                  onChange={(e) =>
+                    setPricing((prev) => ({ ...prev, mobilization_unit: e.target.value }))
+                  }
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
+              <CTableDataCell>
                 <CFormInput
                   type="number"
-                  name="mobilization_cost"
+                  min="0"
+                  step="0.01"
                   value={pricing.mobilization_cost}
                   onChange={handleChange('mobilization_cost')}
-                  style={unitPriceStyle}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
-                {(mobilizationQty * (parseFloat(pricing.mobilization_cost) || 0)).toFixed(2)}
-              </CTableDataCell>
+              <CTableDataCell className="text-end">{mobilizationCost.toFixed(2)}</CTableDataCell>
             </CTableRow>
+
             {items.map((item, idx) => {
-              const qty = parseFloat(item.quantity) || 0
-              const price = parseFloat(item.unit_price) || 0
+              const itemQty = parseFloat(item.quantity) || 0
+              const itemPrice = parseFloat(item.unit_price) || 0
               const rowNum = itemRowStart + idx
               const showRemove = mode === 'edit' || item.is_custom
               return (
@@ -354,15 +404,13 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
                       min="0"
                       value={item.quantity ?? ''}
                       onChange={handleItemChange(idx, 'quantity')}
-                      style={{ maxWidth: '90px' }}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">
+                  <CTableDataCell className="text-center">
                     <CFormInput
                       type="text"
                       value={item.unit ?? ''}
                       onChange={handleItemChange(idx, 'unit')}
-                      style={{ maxWidth: '90px' }}
                     />
                   </CTableDataCell>
                   <CTableDataCell>
@@ -372,81 +420,81 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
                       step="0.01"
                       value={item.unit_price ?? ''}
                       onChange={handleItemChange(idx, 'unit_price')}
-                      style={unitPriceStyle}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    {(itemQty * itemPrice).toFixed(2)}
+                  </CTableDataCell>
                 </CTableRow>
               )
             })}
+
             <CTableRow>
               <CTableDataCell className="text-center">{discountRowNum}</CTableDataCell>
-              <CTableDataCell>Discount (RM)</CTableDataCell>
+              <CTableDataCell>Discount</CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="number"
                   min="0"
-                  value={pricing.discount_qty ?? 1}
-                  onChange={handleChange('discount_qty')}
-                  style={{ maxWidth: '90px' }}
+                  value={pricing.discount_qty}
+                  onChange={handleDiscountQtyChange}
                 />
               </CTableDataCell>
               <CTableDataCell className="text-center">
-                <CFormInput
-                  type="text"
-                  value={pricing.discount_unit ?? 'Lot'}
-                  onChange={handleTextChange('discount_unit')}
-                  style={{ maxWidth: '90px' }}
-                />
+                <CFormInput type="text" value={discountUnit} onChange={handleDiscountUnitChange} />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
+              <CTableDataCell>
                 <CFormInput
                   type="number"
                   min="0"
-                  step="0.01"
-                  value={pricing.discount_amount ?? ''}
-                  onChange={handleChange('discount_amount')}
-                  style={unitPriceStyle}
+                  value={pricing.discount_amount}
+                  onChange={handleDiscountValueChange}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">
-                {(-Math.abs(discountQty * (parseFloat(pricing.discount_amount) || 0))).toFixed(2)}
-              </CTableDataCell>
+              <CTableDataCell className="text-end">{discountTotal.toFixed(2)}</CTableDataCell>
             </CTableRow>
+
+            {isHrdPayment && (
+              <CTableRow>
+                <CTableDataCell className="text-center">{hrdRowNum}</CTableDataCell>
+                <CTableDataCell>HRD Charge ({hrdRate}% of training net)</CTableDataCell>
+                <CTableDataCell className="text-center" />
+                <CTableDataCell className="text-center" />
+                <CTableDataCell className="text-end">{hrdAmount.toFixed(2)}</CTableDataCell>
+                <CTableDataCell className="text-end">{hrdAmount.toFixed(2)}</CTableDataCell>
+              </CTableRow>
+            )}
+
             <CTableRow>
-              <CTableDataCell colSpan={4} />
-              <CTableDataCell className="text-end fw-semibold align-middle">
+              <CTableDataCell colSpan={5} className="text-end fw-semibold align-middle text-nowrap">
                 Subtotal (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {(parseFloat(pricing.subtotal) || 0).toFixed(2)}
+                {subtotal.toFixed(2)}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
-              <CTableDataCell colSpan={4} />
-              <CTableDataCell className="text-end fw-semibold align-middle">
+              <CTableDataCell colSpan={5} className="text-end fw-semibold align-middle text-nowrap">
                 <div className="d-flex flex-nowrap justify-content-end align-items-center gap-2">
                   <CFormInput
                     type="number"
-                    name="sst_rate"
                     value={pricing.sst_rate}
                     onChange={handleChange('sst_rate')}
-                    style={{ width: `${sstRateWidthCh}ch`, minWidth: '64px' }}
+                    style={{ width: `${sstRateWidth}ch`, minWidth: '64px' }}
                   />
                   <span className="text-nowrap">SST Rate (%)</span>
                 </div>
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
+                {sstAmount.toFixed(2)}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
-              <CTableDataCell colSpan={4} />
-              <CTableDataCell className="text-end fw-bold align-middle">
+              <CTableDataCell colSpan={5} className="text-end fw-bold align-middle text-nowrap">
                 Grand Total (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle fw-bold">
-                {(parseFloat(pricing.grand_total) || 0).toFixed(2)}
+                {grandTotal.toFixed(2)}
               </CTableDataCell>
             </CTableRow>
           </CTableBody>
@@ -509,7 +557,6 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
                 step="0.01"
                 value={newItem.unit_price}
                 onChange={handleNewItemChange('unit_price')}
-                style={unitPriceStyle}
               />
             </CCol>
             <CCol md={1} className="d-flex align-items-end">
@@ -526,16 +573,14 @@ const TrainingInvoiceForm = ({ pricing, setPricing, mode = 'create' }) => {
           </CRow>
         )}
 
-        {/* Remarks input */}
         <CRow className="mb-3">
           <CCol md={12}>
-            <CFormLabel>Invoice Remarks (if any)</CFormLabel>
+            <CFormLabel>Remarks</CFormLabel>
             <CFormInput
               type="text"
-              name="remarks"
-              placeholder="Leave any remarks for this invoice"
               value={pricing.remarks || ''}
               onChange={handleChange('remarks')}
+              placeholder="Leave any remarks for this invoice"
             />
           </CCol>
         </CRow>

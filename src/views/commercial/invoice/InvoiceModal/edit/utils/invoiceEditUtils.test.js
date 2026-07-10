@@ -4,6 +4,105 @@ import { buildBreakdownFromPricing } from './pricingBreakdownBuilder'
 import { normalizePaymentMethod } from './paymentUtils'
 
 describe('invoice edit utilities', () => {
+  it('maps training breakdown lines including HRD row and keeps HRD out of training items', () => {
+    const { pricing } = buildPricingFromInvoice({
+      service_type: 'Training',
+      amount: '1140',
+      sst_amount: '85.5',
+      grand_total: '1225.5',
+      breakdown: [
+        {
+          id: 101,
+          item_description: 'Training Fee',
+          description: '',
+          quantity: '2',
+          unit: 'Lot',
+          unit_price: '900',
+        },
+        {
+          id: 102,
+          item_description: 'Meal Total',
+          description: '',
+          quantity: '3',
+          unit: 'set',
+          unit_price: '120',
+        },
+        {
+          id: 103,
+          item_description: 'Mobilization Charge',
+          description: '',
+          quantity: '1.5',
+          unit: 'trip',
+          unit_price: '80',
+        },
+        {
+          id: 104,
+          item_description: 'Custom Item',
+          description: 'Lab set',
+          quantity: '2',
+          unit: 'set',
+          unit_price: '15',
+        },
+        {
+          id: 107,
+          item_description: 'Custom HRD Chargeback',
+          description: 'Not HRD fee row',
+          quantity: '1',
+          unit: 'Lot',
+          unit_price: '7',
+        },
+        {
+          id: 105,
+          item_description: 'Discount',
+          description: '',
+          quantity: '2',
+          unit: 'Lot',
+          unit_price: '-20',
+        },
+        {
+          id: 106,
+          item_description: '8% HRD Charge',
+          description: '',
+          quantity: '1',
+          unit: 'Lot',
+          unit_price: '78',
+        },
+      ],
+    })
+
+    expect(pricing.training_total).toBe(900)
+    expect(pricing.training_qty).toBe(2)
+    expect(pricing.training_unit).toBe('Lot')
+    expect(pricing.meal_total).toBe(120)
+    expect(pricing.meal_qty).toBe(3)
+    expect(pricing.meal_unit).toBe('set')
+    expect(pricing.mobilization_cost).toBe(80)
+    expect(pricing.mobilization_qty).toBe(1.5)
+    expect(pricing.mobilization_unit).toBe('trip')
+    expect(pricing.discount_amount).toBe(20)
+    expect(pricing.discount_qty).toBe(2)
+    expect(pricing.hrd_rate).toBe(8)
+    expect(pricing.hrd_amount).toBe(78)
+    expect(pricing.training_items).toEqual([
+      {
+        id: 104,
+        item_description: 'Custom Item',
+        description: 'Lab set',
+        unit: 'set',
+        quantity: 2,
+        unit_price: 15,
+      },
+      {
+        id: 107,
+        item_description: 'Custom HRD Chargeback',
+        description: 'Not HRD fee row',
+        unit: 'Lot',
+        quantity: 1,
+        unit_price: 7,
+      },
+    ])
+  })
+
   it('maps equipment invoice breakdown lines into editable pricing fields', () => {
     const { pricing } = buildPricingFromInvoice({
       service_type: 'Equipment Supply',

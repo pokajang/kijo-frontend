@@ -133,6 +133,8 @@ const getInitialPricing = () => ({
   sst_rate: 0,
   sst_amount: 0,
   grand_total: 0,
+  hrd_rate: 0,
+  hrd_amount: 0,
   sub_total: 0,
   discount: 0,
   discount_unit_price: 0,

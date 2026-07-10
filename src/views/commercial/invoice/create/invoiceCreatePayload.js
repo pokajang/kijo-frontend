@@ -49,6 +49,8 @@ export const buildInvoiceCreatePayload = (
   if (serviceType === 'Training' && isHrdPayment && !grantApprovalNo?.trim()) {
     return { success: false, message: 'HRD Grant Approval No. is required for HRD payment.' }
   }
+  const hrdRate = toNumber(pricing.hrd_rate)
+  const hrdAmount = toNumber(pricing.hrd_amount)
 
   if (allowWithoutQuote && !quoteDetails && baseAmount <= 0) {
     return {
@@ -86,6 +88,8 @@ export const buildInvoiceCreatePayload = (
     invoice_pic_position: clientOverrides.picPosition,
     amount: baseAmount,
     sst_amount: toNumber(pricing.sst_amount),
+    hrd_rate: isHrdPayment ? hrdRate : 0,
+    hrd_amount: isHrdPayment ? hrdAmount : 0,
     grand_total: toNumber(pricing.grand_total),
     breakdown: [],
   }
@@ -129,6 +133,17 @@ export const buildInvoiceCreatePayload = (
           unit_price: toNegative(pricing.discount_amount),
           description: '',
         },
+        ...(isHrdPayment && hrdAmount > 0
+          ? [
+              {
+                item_description: `${hrdRate}% HRD Charge`,
+                unit: 'Lot',
+                quantity: 1,
+                unit_price: hrdAmount,
+                description: '',
+              },
+            ]
+          : []),
       ]
       break
 

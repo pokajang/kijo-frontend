@@ -1,6 +1,102 @@
 import { describe, expect, it } from 'vitest'
 import { buildBreakdownFromPricing } from './pricingBreakdownBuilder'
 
+describe('buildBreakdownFromPricing Training', () => {
+  it('builds training rows with dynamic qty/unit, discount and HRD rows', () => {
+    const breakdown = buildBreakdownFromPricing('Training', {
+      training_total: 700,
+      training_qty: 2,
+      training_unit: 'course',
+      meal_total: 120,
+      meal_qty: 3,
+      meal_unit: 'set',
+      mobilization_cost: 80,
+      mobilization_qty: 1,
+      mobilization_unit: 'Lot',
+      discount_amount: 40,
+      discount_qty: 2,
+      discount_unit: 'Lot',
+      hrd_rate: 10,
+      hrd_amount: 90,
+      training_items: [
+        {
+          id: 11,
+          item_description: 'Manual pack',
+          description: 'Guide set',
+          quantity: 2,
+          unit: 'box',
+          unit_price: 15,
+        },
+      ],
+    })
+
+    expect(breakdown).toEqual([
+      {
+        id: null,
+        item_description: 'Training Fee',
+        unit: 'course',
+        quantity: 2,
+        unit_price: 700,
+        description: '',
+      },
+      {
+        id: null,
+        item_description: 'Meal Total',
+        unit: 'set',
+        quantity: 3,
+        unit_price: 120,
+        description: '',
+      },
+      {
+        id: null,
+        item_description: 'Mobilization Charge',
+        unit: 'Lot',
+        quantity: 1,
+        unit_price: 80,
+        description: '',
+      },
+      {
+        id: 11,
+        item_description: 'Manual pack',
+        description: 'Guide set',
+        unit: 'box',
+        quantity: 2,
+        unit_price: 15,
+      },
+      {
+        id: null,
+        item_description: 'Discount',
+        unit: 'Lot',
+        quantity: 2,
+        unit_price: -40,
+        description: '',
+      },
+      {
+        id: null,
+        item_description: '10% HRD Charge',
+        unit: 'Lot',
+        quantity: 1,
+        unit_price: 90,
+        description: '',
+      },
+    ])
+  })
+
+  it('omits HRD line when HRD amount is zero', () => {
+    const breakdown = buildBreakdownFromPricing('Training', {
+      training_total: 700,
+      meal_total: 120,
+      mobilization_cost: 80,
+      discount_amount: 40,
+      hrd_rate: 10,
+      hrd_amount: 0,
+    })
+
+    expect(breakdown.map((line) => line.item_description)).not.toContain('10% HRD Charge')
+    expect(breakdown[breakdown.length - 1].item_description).toBe('Discount')
+  })
+})
+
 describe('buildBreakdownFromPricing Industrial Hygiene', () => {
   it('builds service, travel, and discount rows from unit-price basis', () => {
     const breakdown = buildBreakdownFromPricing('Industrial Hygiene', {

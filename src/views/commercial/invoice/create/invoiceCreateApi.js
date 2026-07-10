@@ -59,6 +59,8 @@ export const useTrainingQuoteData = (quoteId, setQuoteDetails, setPricing) => {
         meal_total: parseFloat(data.meal_total) || 0,
         mobilization_cost: parseFloat(data.mobilization_cost) || 0,
         discount_amount: parseFloat(data.discount_amount) || 0,
+        hrd_rate: parseFloat(data.hrd_charge) || 0,
+        hrd_amount: parseFloat(data.hrd_amount) || 0,
         subtotal: parseFloat(data.subtotal) || 0,
         sst_rate: parseFloat(data.sst_rate) || 0,
         sst_amount: parseFloat(data.sst_amount) || 0,
