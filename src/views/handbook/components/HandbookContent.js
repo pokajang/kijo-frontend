@@ -17,7 +17,11 @@ import Editor from '../../../components/forms/ThemedTinyMCEEditor'
 import dialog from '../../../components/dialog/dialogService'
 import { saveHandbookDraftSection } from '../api/handbookApi'
 import { handbookEditorInit } from '../utils/handbookEditorConfig'
-import { normalizeHandbookContent, normalizeHandbookHtml } from '../utils/handbookContentUtils'
+import {
+  formatHandbookDisplayHtml,
+  normalizeHandbookContent,
+  normalizeHandbookHtml,
+} from '../utils/handbookContentUtils'
 import { sanitizeDisplayHtml } from '../../templates/shared/templateUtils'
 import {
   buildChangeSummary,
@@ -358,7 +362,9 @@ const HandbookContent = ({
                   <div
                     className="handbook-section-document"
                     dangerouslySetInnerHTML={{
-                      __html: sanitizeDisplayHtml(chapter.bodyHtml) || '<p>-</p>',
+                      __html:
+                        sanitizeDisplayHtml(formatHandbookDisplayHtml(chapter.bodyHtml)) ||
+                        '<p>-</p>',
                     }}
                   />
                 )}

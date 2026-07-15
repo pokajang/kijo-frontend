@@ -226,6 +226,111 @@ export const normalizeHandbookHtml = (html) => {
   return root.innerHTML.trim()
 }
 
+const pdfBulletPattern = /^\s*[•◦▪‣]\s*(.*)$/
+
+const appendInlineContent = (target, source) => {
+  if (target.childNodes.length > 0) {
+    target.append(source.ownerDocument.createTextNode(' '))
+  }
+
+  while (source.firstChild) {
+    target.append(source.firstChild)
+  }
+}
+
+// HR's PDF import preserves each visual PDF line as a paragraph. This formatter only
+// changes the browser representation, leaving the versioned snapshot content unchanged.
+export const formatHandbookDisplayHtml = (html) => {
+  if (typeof DOMParser === 'undefined') {
+    return normalizeHandbookHtml(html)
+  }
+
+  const document = new DOMParser().parseFromString(
+    `<div>${normalizeHandbookHtml(html)}</div>`,
+    'text/html',
+  )
+  const root = document.body.firstElementChild
+  const formattedRoot = document.createElement('div')
+  const nodes = Array.from(root.children)
+  const isPdfLineImport = nodes.some((node) => {
+    if (node.tagName !== 'P') {
+      return false
+    }
+
+    const text = node.textContent.trim()
+    return text === '' || pdfBulletPattern.test(text)
+  })
+
+  if (!isPdfLineImport) {
+    return root.innerHTML.trim()
+  }
+
+  let paragraph = null
+  let list = null
+  let listItem = null
+
+  const flushParagraph = () => {
+    paragraph = null
+  }
+
+  const flushList = () => {
+    list = null
+    listItem = null
+  }
+
+  for (const [index, node] of nodes.entries()) {
+    if (node.tagName !== 'P') {
+      flushParagraph()
+      flushList()
+      formattedRoot.append(node)
+      continue
+    }
+
+    const text = node.textContent.trim()
+    if (text === '') {
+      flushParagraph()
+      flushList()
+      continue
+    }
+
+    const bulletMatch = text.match(pdfBulletPattern)
+    if (bulletMatch) {
+      flushParagraph()
+      if (!list) {
+        list = document.createElement('ul')
+        formattedRoot.append(list)
+      }
+
+      listItem = document.createElement('li')
+      listItem.textContent = bulletMatch[1]
+      list.append(listItem)
+      continue
+    }
+
+    if (listItem) {
+      appendInlineContent(listItem, node)
+      continue
+    }
+
+    const nextText = nodes[index + 1]?.textContent.trim() || ''
+    const introducesList = text.endsWith(':') && pdfBulletPattern.test(nextText)
+    if (introducesList) {
+      flushParagraph()
+    }
+
+    if (!paragraph) {
+      paragraph = document.createElement('p')
+      formattedRoot.append(paragraph)
+    }
+    appendInlineContent(paragraph, node)
+    if (introducesList) {
+      flushParagraph()
+    }
+  }
+
+  return formattedRoot.innerHTML.trim()
+}
+
 export const normalizeHandbookContent = (content) => ({
   title: normalizeText(content?.title) || 'AMIOSH Employee Handbook',
   chapters: Array.isArray(content?.chapters)
