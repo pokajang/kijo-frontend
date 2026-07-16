@@ -40,6 +40,12 @@ const toFloat = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+const toFloatOrEmpty = (value) => {
+  if (value === '' || value === null || value === undefined) return ''
+  const parsed = parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : ''
+}
+
 const toBool = (value) => {
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value === 1
@@ -189,6 +195,9 @@ export const serviceConfig = {
         sstRate: toFloat(pick(row, 'sst_rate', 'sstRate'), 0),
         hrdCharge: toFloat(pick(row, 'hrd_charge', 'hrdCharge'), 0),
         targetGroups: pick(row, 'target_groups', 'targetGroups') || '',
+        estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
+        trafficLightRuleVersion:
+          pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
         attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
         proposal_id: pick(row, 'proposal_id', 'proposalId') || '',
         proposalLanguage: pick(row, 'proposal_language', 'proposalLanguage') || 'en',
@@ -210,6 +219,9 @@ export const serviceConfig = {
       sampleCounts: toInt(pick(row, 'sample_counts', 'sampleCounts'), 0),
       sampleUnit: pick(row, 'sample_unit', 'sampleUnit') || 'sample(s)',
       numWorkUnits: toInt(pick(row, 'num_work_units', 'numWorkUnits'), 0),
+      estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
+      trafficLightRuleVersion:
+        pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
       travelCharge: toFloat(pick(row, 'travel_charge', 'travelCharge'), 0),
       inquiryRemarks: pick(row, 'inquiry_remarks', 'inquiryRemarks') || '',
       unitPrice: toFloat(pick(row, 'unit_price', 'unitPrice'), 0),
@@ -280,6 +292,9 @@ export const serviceConfig = {
       sstAmount: toFloat(pick(row, 'sst_amount', 'sstAmount'), 0),
       subtotal: toFloat(pick(row, 'subtotal', 'sub_total', 'subTotal'), 0),
       grandTotal: toFloat(pick(row, 'grand_total', 'grandTotal'), 0),
+      estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
+      trafficLightRuleVersion:
+        pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
       attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
     }),
   },

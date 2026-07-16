@@ -13,12 +13,24 @@ import {
   readQuoteServiceDraft,
   writeQuoteServiceDraft,
 } from '../quoteMainDrafts'
+import TrafficLightCard from '../shared/TrafficLightCard'
 import { formatTrainingDurationLabel } from './trainingDuration'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchPriceException } from '../priceException'
 import { getTrainingRateOption } from './trainingRates'
 import { DEFAULT_HRD_CHARGE_RATE, normalizeTrainingHrdCharge } from './trainingHrd'
+import {
+  calculateTrainingTotal,
+  calculateMealTotal,
+  calculateDiscount,
+  calculateMobilization,
+  calculateSubtotal,
+  calculateSST,
+  calculateHRD,
+  calculateGrandTotal,
+} from './calculations'
+import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
@@ -80,6 +92,8 @@ const TrainingQuotationForm = ({
     discountValue: 0,
     sstRate: 0,
     hrdCharge: DEFAULT_HRD_CHARGE_RATE,
+    estimatedTotalCost: '',
+    trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
     attachProposal: true,
     proposalLanguage,
   }
@@ -152,6 +166,14 @@ const TrainingQuotationForm = ({
           ? new Date(initialFormData.selectedEndDate)
           : null,
         proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
+        estimatedTotalCost:
+          typeof initialFormData.estimatedTotalCost === 'number'
+            ? initialFormData.estimatedTotalCost
+            : toNumberOrEmpty(initialFormData.estimatedTotalCost),
+        trafficLightRuleVersion:
+          initialFormData.trafficLightRuleVersion ||
+          initialFormData.traffic_light_rule_version ||
+          TRAFFIC_LIGHT_RULE_VERSION,
       }))
     }
   }, [initialFormData, priceExceptionRequestId, proposalLanguage])
@@ -337,6 +359,40 @@ const TrainingQuotationForm = ({
     hasValidMealPrice &&
     isDiscountValid
 
+  const {
+    trainingQty,
+    trainingDuration,
+    unitPrice,
+    noOfPax,
+    mealsProvided,
+    mealPrice,
+    discountValue,
+    travelCharge,
+    sstRate,
+    hrdCharge,
+  } = formData
+
+  const trainingTotal = calculateTrainingTotal(
+    trainingQty,
+    trainingDuration,
+    unitPrice,
+    noOfPax,
+    formData.pricingBasis,
+  )
+  const mealTotal = calculateMealTotal(
+    mealsProvided,
+    mealPrice,
+    noOfPax,
+    trainingDuration,
+    trainingQty,
+  )
+  const discountAmount = calculateDiscount(discountValue)
+  const mobilizationCost = calculateMobilization(travelCharge)
+  const subtotal = calculateSubtotal(trainingTotal, mealTotal, mobilizationCost, discountAmount)
+  const sstAmount = calculateSST(subtotal, sstRate)
+  const hrdAmount = calculateHRD(trainingTotal, discountAmount, hrdCharge)
+  const quoteGrandTotal = calculateGrandTotal(subtotal, sstAmount, hrdAmount)
+
   const handleRequestOverride = () => {
     dialog.alert(
       'This pricing category can be saved with the configured reference rates. Negotiation requests remain available from quote records when a saved quote needs a discount approval.',
@@ -362,6 +418,20 @@ const TrainingQuotationForm = ({
             onRequestOverride={handleRequestOverride}
             appliedPriceException={appliedPriceException}
             proposalLanguage={proposalLanguage}
+          />
+        </CCol>
+      )}
+
+      {selectedClient?.company_name && isTrainingDetailsComplete && isPricingDetailsComplete && (
+        <CCol xs={12}>
+          <TrafficLightCard
+            serviceKey="training"
+            quoteTotal={quoteGrandTotal}
+            estimatedTotalCost={formData.estimatedTotalCost}
+            trafficLightRuleVersion={formData.trafficLightRuleVersion}
+            onEstimatedTotalCostChange={(value) =>
+              setFormData((prev) => ({ ...prev, estimatedTotalCost: value }))
+            }
           />
         </CCol>
       )}

@@ -188,6 +188,11 @@ const ReviewQuotationCard = ({
       sst_amount: sstAmount,
       hrd_amount: hrdAmount,
       grand_total: grandTotal,
+      estimated_total_cost:
+        formData.estimatedTotalCost !== '' && formData.estimatedTotalCost !== null
+          ? Number(formData.estimatedTotalCost)
+          : null,
+      traffic_light_rule_version: formData.trafficLightRuleVersion || 'v1',
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_id: formData.proposal_id,
       proposal_language: formData.proposalLanguage || proposalLanguage,

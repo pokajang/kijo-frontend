@@ -15,6 +15,7 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import dialog from '../../../../components/dialog/dialogService'
+import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -52,6 +53,7 @@ export function useEquipmentForm(
   })
 
   // ─── form data state ──────────────────────────────────────────────────────
+  // form data state
   const defaultForm = {
     items: [], // selectedItems.value objects
     quantities: {}, // { [itemId]: number }
@@ -62,6 +64,8 @@ export function useEquipmentForm(
     discount: 0,
     priceExceptionRequestId: '',
     sstPercent: 0,
+    estimatedTotalCost: '',
+    trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
     attachProposal: true,
     proposalLanguage,
   }
@@ -90,7 +94,7 @@ export function useEquipmentForm(
     }
   }, [draftContext, isEditMode, hasPriceExceptionRequestId])
 
-  // ─── catalog fetch & options ───────────────────────────────────────────────
+  // Catalog fetch + options.
   const [catalogItems, setCatalogItems] = useState([])
   useEffect(() => {
     fetch(quoteApiUrl('catalog/items'), { credentials: 'include' })
@@ -102,7 +106,6 @@ export function useEquipmentForm(
           console.error('Failed to load catalog items', json)
         }
       })
-      .catch((err) => console.error('Catalog fetch error', err))
   }, [])
 
   const selectOptions = catalogItems.map((item) => ({
@@ -110,7 +113,7 @@ export function useEquipmentForm(
     value: item,
   }))
 
-  // ─── preload data in edit mode ─────────────────────────────────────────────
+  // Preload edit data in edit mode.
   useEffect(() => {
     if (isEditMode && initialFormData) {
       // selections
@@ -152,6 +155,15 @@ export function useEquipmentForm(
         }
         return 0
       }
+      const getNullableNumber = (...keys) => {
+        for (const key of keys) {
+          const value = initialFormData[key]
+          if (value === '' || value === null || value === undefined) continue
+          const parsed = parseFloat(value)
+          if (Number.isFinite(parsed)) return parsed
+        }
+        return ''
+      }
       setFormData({
         items: sel,
         quantities: qs,
@@ -162,13 +174,17 @@ export function useEquipmentForm(
         discount: getNumber('discount'),
         priceExceptionRequestId: '',
         sstPercent: getNumber('sstPercent', 'sst_percent'),
+        estimatedTotalCost: getNullableNumber('estimatedTotalCost', 'estimated_total_cost'),
+        trafficLightRuleVersion:
+          pick(initialFormData, 'trafficLightRuleVersion', 'traffic_light_rule_version') ||
+          TRAFFIC_LIGHT_RULE_VERSION,
         attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
         proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
       })
     }
   }, [defaultForm.attachProposal, isEditMode, initialFormData, proposalLanguage])
 
-  // ─── handlers ───────────────────────────────────────────────────────────────
+  // Form handlers.
   const handleSelectChange = (opts) => {
     const list = opts || []
     const qs = {},
@@ -211,7 +227,7 @@ export function useEquipmentForm(
       markedUp: { ...f.markedUp, [id]: parseFloat(v) || 0 },
     }))
 
-  // ─── computed totals ───────────────────────────────────────────────────────
+  // Computed totals.
   const itemsTotal = Object.entries(formData.quantities).reduce(
     (sum, [id, q]) => sum + q * (formData.markedUp[id] || 0),
     0,
@@ -222,7 +238,7 @@ export function useEquipmentForm(
   const sstAmount = subtotal * (formData.sstPercent / 100)
   const grandTotal = subtotal + sstAmount
 
-  // ─── Save / Cancel handlers ───────────────────────────────────────────────
+  // Form handlers.
   const handleSaveQuote = async () => {
     if (!selectedClient) {
       console.warn('No client selected')
@@ -289,6 +305,11 @@ export function useEquipmentForm(
       subtotal: parseFloat(subtotal.toFixed(2)),
       sst_amount: parseFloat(sstAmount.toFixed(2)),
       grand_total: parseFloat(grandTotal.toFixed(2)),
+      estimated_total_cost:
+        formData.estimatedTotalCost === '' || formData.estimatedTotalCost == null
+          ? null
+          : Number(formData.estimatedTotalCost),
+      traffic_light_rule_version: formData.trafficLightRuleVersion || TRAFFIC_LIGHT_RULE_VERSION,
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -334,6 +355,9 @@ export function useEquipmentForm(
     setSstPercent: (v) => setFormData((f) => ({ ...f, sstPercent: v })),
     attachProposal: formData.attachProposal,
     setAttachProposal: (v) => setFormData((f) => ({ ...f, attachProposal: v })),
+    estimatedTotalCost: formData.estimatedTotalCost,
+    setEstimatedTotalCost: (value) => setFormData((f) => ({ ...f, estimatedTotalCost: value })),
+    trafficLightRuleVersion: formData.trafficLightRuleVersion,
 
     // totals
     itemsTotal,

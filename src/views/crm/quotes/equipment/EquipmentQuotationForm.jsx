@@ -6,6 +6,7 @@ import EquipmentSelection from './EquipmentSelection'
 import PricingInput from './PricingInput'
 import ReviewQuotation from './ReviewQuotation'
 import { useEquipmentForm } from './actionHandlers'
+import TrafficLightCard from '../shared/TrafficLightCard'
 
 export default function EquipmentQuotationForm({
   selectedClient,
@@ -33,6 +34,9 @@ export default function EquipmentQuotationForm({
     setSstPercent,
     attachProposal,
     setAttachProposal,
+    estimatedTotalCost,
+    setEstimatedTotalCost,
+    trafficLightRuleVersion,
     itemsTotal,
     subtotal,
     sstAmount,
@@ -76,6 +80,14 @@ export default function EquipmentQuotationForm({
           subtotal={subtotal}
           sstAmount={sstAmount}
           grandTotal={grandTotal}
+        />
+
+        <TrafficLightCard
+          serviceKey="equipment"
+          quoteTotal={grandTotal}
+          estimatedTotalCost={estimatedTotalCost}
+          trafficLightRuleVersion={trafficLightRuleVersion}
+          onEstimatedTotalCostChange={setEstimatedTotalCost}
         />
 
         <ReviewQuotation

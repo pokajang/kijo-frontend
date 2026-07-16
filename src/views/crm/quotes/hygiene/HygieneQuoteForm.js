@@ -14,6 +14,8 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+import TrafficLightCard from '../shared/TrafficLightCard'
+import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 export default function HygieneQuotationForm({
   selectedClient,
@@ -39,15 +41,21 @@ export default function HygieneQuotationForm({
     draftContext,
   })
 
-  const toNumber = (value, fallback = 0) => {
+  const toNumber = useCallback((value, fallback = 0) => {
     const n = Number(value)
     return Number.isFinite(n) ? n : fallback
+  }, [])
+
+  const toNumberOrEmpty = (value) => {
+    if (value === '' || value === null || value === undefined) return ''
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : ''
   }
 
-  const toInteger = (value, fallback = 0) => {
+  const toInteger = useCallback((value, fallback = 0) => {
     const n = parseInt(value, 10)
     return Number.isFinite(n) ? n : fallback
-  }
+  }, [])
 
   // Helper to build default address
   const buildSiteAddress = useCallback((client) => {
@@ -77,6 +85,8 @@ export default function HygieneQuotationForm({
       sstAmount: '0.00',
       subTotal: '0.00',
       grandTotal: '0.00',
+      estimatedTotalCost: '',
+      trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
       attachProposal: true,
       proposalLanguage,
     }),
@@ -128,6 +138,14 @@ export default function HygieneQuotationForm({
         sstAmount: initialFormData.sstAmount ?? defaultForm.sstAmount,
         subTotal: initialFormData.subTotal ?? defaultForm.subTotal,
         grandTotal: initialFormData.grandTotal ?? defaultForm.grandTotal,
+        estimatedTotalCost:
+          typeof initialFormData.estimatedTotalCost === 'number'
+            ? initialFormData.estimatedTotalCost
+            : toNumberOrEmpty(initialFormData.estimatedTotalCost),
+        trafficLightRuleVersion:
+          initialFormData.trafficLightRuleVersion ||
+          initialFormData.traffic_light_rule_version ||
+          TRAFFIC_LIGHT_RULE_VERSION,
         serviceTitle: initialFormData.serviceTitle ?? defaultForm.serviceTitle,
         serviceCode: initialFormData.serviceCode ?? defaultForm.serviceCode,
         attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
@@ -173,6 +191,33 @@ export default function HygieneQuotationForm({
     }))
   }, [defaultForm, proposalLanguage, isEditMode])
 
+  const quoteTotals = useMemo(
+    () =>
+      calculateHygieneTotals({
+        sampleCounts: toInteger(formData.sampleCounts, 0),
+        numWorkUnits:
+          String(formData.numWorkUnits || '').trim() !== ''
+            ? Math.max(1, toInteger(formData.numWorkUnits, 1))
+            : 0,
+        unitPrice: toNumber(formData.unitPrice, 0),
+        travelCharge: toNumber(formData.travelCharge, 0),
+        customItems: Array.isArray(formData.hygieneItems) ? formData.hygieneItems : [],
+        discount: toNumber(formData.discount, 0),
+        sstPercent: toNumber(formData.sstPercent, 0),
+      }),
+    [
+      formData.sampleCounts,
+      formData.numWorkUnits,
+      formData.unitPrice,
+      formData.travelCharge,
+      formData.hygieneItems,
+      formData.discount,
+      formData.sstPercent,
+      toInteger,
+      toNumber,
+    ],
+  )
+
   const handleSaveQuote = async () => {
     const { primaryPIC, pic_name, pic_email, pic_phone, pic_position } =
       buildPicPayload(selectedClient)
@@ -191,6 +236,12 @@ export default function HygieneQuotationForm({
     const normalizedNumWorkUnits = hasWorkUnitsInput
       ? Math.max(1, toInteger(formData.numWorkUnits, 1))
       : 0
+    const estimatedCost =
+      formData.estimatedTotalCost === '' || formData.estimatedTotalCost == null
+        ? null
+        : Number(formData.estimatedTotalCost)
+    const estimatedCostPayload = Number.isFinite(estimatedCost) ? estimatedCost : null
+
     const hygieneItems = Array.isArray(formData.hygieneItems)
       ? formData.hygieneItems
           .map((item, index) => {
@@ -209,15 +260,6 @@ export default function HygieneQuotationForm({
           })
           .filter((item) => item.item_description && item.quantity > 0 && item.unit_price > 0)
       : []
-    const totals = calculateHygieneTotals({
-      sampleCounts: normalizedSampleCounts,
-      numWorkUnits: normalizedNumWorkUnits,
-      unitPrice: formData.unitPrice,
-      travelCharge: formData.travelCharge,
-      customItems: hygieneItems,
-      discount: formData.discount,
-      sstPercent: formData.sstPercent,
-    })
     const payload = {
       ...(isEditMode && { id: quoteId }),
       isRevision,
@@ -246,9 +288,11 @@ export default function HygieneQuotationForm({
       hygiene_items: hygieneItems,
       price_exception_request_id: null,
       sst_percent: toNumber(formData.sstPercent, 0),
-      sst_amount: totals.sstAmount,
-      sub_total: totals.subtotalBeforeDiscount,
-      grand_total: totals.grandTotal,
+      sst_amount: quoteTotals.sstAmount,
+      sub_total: quoteTotals.subtotalBeforeDiscount,
+      grand_total: quoteTotals.grandTotal,
+      estimated_total_cost: estimatedCostPayload,
+      traffic_light_rule_version: formData.trafficLightRuleVersion || TRAFFIC_LIGHT_RULE_VERSION,
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -269,6 +313,19 @@ export default function HygieneQuotationForm({
       {toInteger(formData.sampleCounts, 0) > 0 && (
         <>
           <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
+
+          <TrafficLightCard
+            serviceKey="ih"
+            quoteTotal={quoteTotals.grandTotal}
+            estimatedTotalCost={formData.estimatedTotalCost}
+            trafficLightRuleVersion={formData.trafficLightRuleVersion}
+            onEstimatedTotalCostChange={(value) =>
+              setFormData((prev) => ({
+                ...prev,
+                estimatedTotalCost: value,
+              }))
+            }
+          />
 
           {selectedClient && formData.serviceId && formData.serviceCode && (
             <ReviewHygieneQuotationCard
