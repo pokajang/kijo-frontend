@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { CAlert, CButton, CContainer } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
@@ -16,12 +16,19 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
   const navigate = useNavigate()
   const [status, setStatus] = useState(STATUS.IDLE)
   const [versionLabel, setVersionLabel] = useState('')
+  const latestRequestRef = useRef(0)
 
   const loadStatus = useCallback(async (signal) => {
+    const requestId = latestRequestRef.current + 1
+    latestRequestRef.current = requestId
     setStatus(STATUS.LOADING)
 
     try {
       const result = await getHandbookAcknowledgementStatus({ signal })
+      if (requestId !== latestRequestRef.current) {
+        return
+      }
+
       if (!result.success) {
         throw new Error(result.message || 'Unable to verify handbook acknowledgement status.')
       }
@@ -29,7 +36,7 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
       setVersionLabel(result.data?.version_label || '')
       setStatus(result.data?.acknowledged ? STATUS.ACKNOWLEDGED : STATUS.REQUIRED)
     } catch (error) {
-      if (error?.name === 'AbortError') {
+      if (error?.name === 'AbortError' || requestId !== latestRequestRef.current) {
         return
       }
 
@@ -51,6 +58,7 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
     window.addEventListener('kijo:handbook-signed', refreshStatus)
 
     return () => {
+      latestRequestRef.current += 1
       controller.abort()
       window.removeEventListener('kijo:handbook-signed', refreshStatus)
     }
