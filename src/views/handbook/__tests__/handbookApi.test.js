@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  getHandbookAcknowledgementStatus,
   getCurrentHandbook,
   getHandbookChangeLogs,
   getHandbookSignatures,
@@ -113,6 +114,26 @@ describe('handbookApi', () => {
       credentials: 'include',
       signal: undefined,
     })
+  })
+
+  it('loads the current handbook acknowledgement status', async () => {
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue(
+      mockResponse({
+        body: JSON.stringify({
+          success: true,
+          data: { version_id: 12, version_label: 'REV02 - 2026-07', acknowledged: false },
+        }),
+      }),
+    )
+
+    const result = await getHandbookAcknowledgementStatus()
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({ version_id: 12, acknowledged: false })
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('hr/handbook/acknowledgement-status'),
+      { credentials: 'include', signal: undefined },
+    )
   })
 
   it('loads handbook change logs', async () => {

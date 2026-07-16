@@ -33,6 +33,7 @@ import {
 } from '@coreui/icons'
 import { AppHeaderDropdown, AppNotificationsDropdown } from './header/index'
 import AppModuleSearch from './search/AppModuleSearch'
+import HandbookAcknowledgementNotice from './handbook/HandbookAcknowledgementNotice'
 import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
@@ -388,6 +389,8 @@ const AppHeader = () => {
           </CContainer>
         </CAlert>
       )}
+
+      <HandbookAcknowledgementNotice staffId={sessionUser?.staff_id} />
 
       <CModal visible={ticketModalVisible} onClose={closeTicketModal} alignment="center">
         <CModalHeader closeButton>

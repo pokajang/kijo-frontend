@@ -85,6 +85,7 @@ const HandbookAcknowledgementForm = ({
         setModalVisible(false)
         setFullName('')
         setIcNumber('')
+        window.dispatchEvent(new Event('kijo:handbook-signed'))
         await onSigned({
           ...(json.data || {}),
           full_name: payload.fullName,

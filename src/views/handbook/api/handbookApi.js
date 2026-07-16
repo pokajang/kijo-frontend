@@ -54,6 +54,9 @@ const requestHandbookJson = async (path, options = {}) => {
 export const getCurrentHandbook = async ({ signal } = {}) =>
   requestHandbookJson('handbook/current', { signal })
 
+export const getHandbookAcknowledgementStatus = async ({ signal } = {}) =>
+  requestHandbookJson('handbook/acknowledgement-status', { signal })
+
 export const getHandbookChangeLogs = async ({ signal } = {}) =>
   requestHandbookJson('handbook/change-logs', { signal })
 
