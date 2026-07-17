@@ -11,6 +11,7 @@ import {
   CTableDataCell,
 } from '@coreui/react'
 import { QuoteReviewSection, QuoteReviewTable } from '../shared/QuoteReviewComponents'
+import TrafficLightDecisionBadge from '../shared/TrafficLightDecisionBadge'
 
 export default function ReviewQuotation({
   selectedItems,
@@ -23,6 +24,7 @@ export default function ReviewQuotation({
   subtotal,
   sstAmount,
   grandTotal,
+  estimatedTotalCost,
   attachProposal,
   onAttachProposalChange,
   onCancel,
@@ -122,7 +124,14 @@ export default function ReviewQuotation({
                   <strong>Grand Total</strong>
                 </CTableHeaderCell>
                 <CTableDataCell className="text-end">
-                  <strong>RM {grandTotal.toFixed(2)}</strong>
+                  <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
+                    <strong>RM {grandTotal.toFixed(2)}</strong>
+                    <TrafficLightDecisionBadge
+                      serviceKey="equipment"
+                      estimatedTotalCost={estimatedTotalCost}
+                      quoteTotal={grandTotal}
+                    />
+                  </div>
                 </CTableDataCell>
               </CTableRow>
             </CTableBody>

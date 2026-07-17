@@ -13,6 +13,7 @@ import {
   QuoteReviewCard,
   QuoteReviewTable,
 } from '../shared/QuoteReviewComponents'
+import TrafficLightDecisionBadge from '../shared/TrafficLightDecisionBadge'
 
 import {
   calculateTrainingTotal,
@@ -355,7 +356,16 @@ const ReviewQuotationCard = ({
           <CTableRow color="light">
             <CTableHeaderCell className="text-end">Grand Total</CTableHeaderCell>
             <CTableDataCell>
-              <strong>RM {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <strong>
+                  RM {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </strong>
+                <TrafficLightDecisionBadge
+                  serviceKey="training"
+                  estimatedTotalCost={formData.estimatedTotalCost}
+                  quoteTotal={grandTotal}
+                />
+              </div>
             </CTableDataCell>
           </CTableRow>
         </CTableBody>

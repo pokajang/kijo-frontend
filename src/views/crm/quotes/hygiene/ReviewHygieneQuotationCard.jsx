@@ -11,6 +11,7 @@ import {
   QuoteReviewCard,
   QuoteReviewTable,
 } from '../shared/QuoteReviewComponents'
+import TrafficLightDecisionBadge from '../shared/TrafficLightDecisionBadge'
 
 const toNumber = (value, fallback = 0) => {
   const n = Number(value)
@@ -176,7 +177,14 @@ const ReviewHygieneQuotationCard = ({
               <strong>Grand Total (RM)</strong>
             </CTableHeaderCell>
             <CTableDataCell>
-              <strong>{totals.grandTotal.toFixed(2)}</strong>
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <strong>{totals.grandTotal.toFixed(2)}</strong>
+                <TrafficLightDecisionBadge
+                  serviceKey="ih"
+                  estimatedTotalCost={formData.estimatedTotalCost}
+                  quoteTotal={totals.grandTotal}
+                />
+              </div>
             </CTableDataCell>
           </CTableRow>
         </CTableBody>

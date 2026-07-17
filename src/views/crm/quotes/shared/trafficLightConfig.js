@@ -29,6 +29,8 @@ const normalizePositiveNumber = (value) => {
   return parsed
 }
 
+export const normalizeTrafficLightAmount = (value) => normalizePositiveNumber(value)
+
 export const TRAFFIC_LIGHT_RULE_VERSION = 'v1'
 
 export const TRAFFIC_LIGHT_RULES_BY_SERVICE = {

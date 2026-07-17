@@ -99,6 +99,7 @@ export default function EquipmentQuotationForm({
           subtotal={subtotal}
           sstAmount={sstAmount}
           grandTotal={grandTotal}
+          estimatedTotalCost={estimatedTotalCost}
           attachProposal={attachProposal}
           onAttachProposalChange={setAttachProposal}
           onSave={handleSaveQuote}

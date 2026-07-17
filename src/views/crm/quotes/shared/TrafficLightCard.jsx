@@ -1,6 +1,7 @@
 import React from 'react'
 
 import {
+  CAlert,
   CCard,
   CCardBody,
   CCardHeader,
@@ -10,7 +11,7 @@ import {
   CInputGroupText,
 } from '@coreui/react'
 
-import { getTrafficLightRules } from './trafficLightConfig'
+import { getTrafficLightRules, normalizeTrafficLightAmount } from './trafficLightConfig'
 
 const money = (value) =>
   Number(value || 0).toLocaleString('en-US', {
@@ -24,15 +25,10 @@ const STATUS_COLORS = {
   red: 'danger',
 }
 
-const getEstimatedCost = (value) => {
-  const cost = Number(value)
-  return Number.isFinite(cost) && cost > 0 ? cost : null
-}
-
 const roundUpToCent = (value) => Math.ceil((value - Number.EPSILON) * 100) / 100
 
 const getGuidanceItems = (rules, estimatedTotalCost) => {
-  const cost = getEstimatedCost(estimatedTotalCost)
+  const cost = normalizeTrafficLightAmount(estimatedTotalCost)
   const greenPrice = cost ? roundUpToCent(cost * (1 + rules.green / 100)) : null
   const yellowPrice = cost ? roundUpToCent(cost * (1 + rules.yellow / 100)) : null
 
@@ -73,6 +69,10 @@ const TrafficLightCard = ({
           <strong>{title}</strong>
         </CCardHeader>
         <CCardBody>
+          <CAlert color="info" dismissible className="mb-2 py-2">
+            This is a traffic light guiding procedure. Please input estimated cost and ensure your
+            quoted price always stays in the Green zone.
+          </CAlert>
           <div className="d-flex flex-wrap align-items-center gap-2">
             <CInputGroup className="flex-nowrap" style={{ width: '12rem' }}>
               <CInputGroupText>Cost RM</CInputGroupText>
