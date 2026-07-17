@@ -412,18 +412,6 @@ const TrainingQuotationForm = ({
 
       {selectedClient?.company_name && isTrainingDetailsComplete && (
         <CCol xs={12}>
-          <PricingDetailsCard
-            formData={formData}
-            setFormData={setFormData}
-            onRequestOverride={handleRequestOverride}
-            appliedPriceException={appliedPriceException}
-            proposalLanguage={proposalLanguage}
-          />
-        </CCol>
-      )}
-
-      {selectedClient?.company_name && isTrainingDetailsComplete && isPricingDetailsComplete && (
-        <CCol xs={12}>
           <TrafficLightCard
             serviceKey="training"
             quoteTotal={quoteGrandTotal}
@@ -432,6 +420,18 @@ const TrainingQuotationForm = ({
             onEstimatedTotalCostChange={(value) =>
               setFormData((prev) => ({ ...prev, estimatedTotalCost: value }))
             }
+          />
+        </CCol>
+      )}
+
+      {selectedClient?.company_name && isTrainingDetailsComplete && (
+        <CCol xs={12}>
+          <PricingDetailsCard
+            formData={formData}
+            setFormData={setFormData}
+            onRequestOverride={handleRequestOverride}
+            appliedPriceException={appliedPriceException}
+            proposalLanguage={proposalLanguage}
           />
         </CCol>
       )}

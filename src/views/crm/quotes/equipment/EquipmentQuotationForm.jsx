@@ -61,6 +61,14 @@ export default function EquipmentQuotationForm({
           isDisabled={isEditMode}
         />
 
+        <TrafficLightCard
+          serviceKey="equipment"
+          quoteTotal={grandTotal}
+          estimatedTotalCost={estimatedTotalCost}
+          trafficLightRuleVersion={trafficLightRuleVersion}
+          onEstimatedTotalCostChange={setEstimatedTotalCost}
+        />
+
         <PricingInput
           selectedItems={selectedItems}
           quantities={quantities}
@@ -80,14 +88,6 @@ export default function EquipmentQuotationForm({
           subtotal={subtotal}
           sstAmount={sstAmount}
           grandTotal={grandTotal}
-        />
-
-        <TrafficLightCard
-          serviceKey="equipment"
-          quoteTotal={grandTotal}
-          estimatedTotalCost={estimatedTotalCost}
-          trafficLightRuleVersion={trafficLightRuleVersion}
-          onEstimatedTotalCostChange={setEstimatedTotalCost}
         />
 
         <ReviewQuotation

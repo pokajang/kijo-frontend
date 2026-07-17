@@ -312,8 +312,6 @@ export default function HygieneQuotationForm({
 
       {toInteger(formData.sampleCounts, 0) > 0 && (
         <>
-          <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
-
           <TrafficLightCard
             serviceKey="ih"
             quoteTotal={quoteTotals.grandTotal}
@@ -326,6 +324,8 @@ export default function HygieneQuotationForm({
               }))
             }
           />
+
+          <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
 
           {selectedClient && formData.serviceId && formData.serviceCode && (
             <ReviewHygieneQuotationCard
