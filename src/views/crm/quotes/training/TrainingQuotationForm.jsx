@@ -414,9 +414,7 @@ const TrainingQuotationForm = ({
         <CCol xs={12}>
           <TrafficLightCard
             serviceKey="training"
-            quoteTotal={quoteGrandTotal}
             estimatedTotalCost={formData.estimatedTotalCost}
-            trafficLightRuleVersion={formData.trafficLightRuleVersion}
             onEstimatedTotalCostChange={(value) =>
               setFormData((prev) => ({ ...prev, estimatedTotalCost: value }))
             }

@@ -314,9 +314,7 @@ export default function HygieneQuotationForm({
         <>
           <TrafficLightCard
             serviceKey="ih"
-            quoteTotal={quoteTotals.grandTotal}
             estimatedTotalCost={formData.estimatedTotalCost}
-            trafficLightRuleVersion={formData.trafficLightRuleVersion}
             onEstimatedTotalCostChange={(value) =>
               setFormData((prev) => ({
                 ...prev,

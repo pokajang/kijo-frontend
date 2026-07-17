@@ -63,9 +63,7 @@ export default function EquipmentQuotationForm({
 
         <TrafficLightCard
           serviceKey="equipment"
-          quoteTotal={grandTotal}
           estimatedTotalCost={estimatedTotalCost}
-          trafficLightRuleVersion={trafficLightRuleVersion}
           onEstimatedTotalCostChange={setEstimatedTotalCost}
         />
 
