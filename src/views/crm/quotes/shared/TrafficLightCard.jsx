@@ -11,6 +11,7 @@ import {
   CInputGroupText,
 } from '@coreui/react'
 
+import './TrafficLightCard.css'
 import { getTrafficLightRules, normalizeTrafficLightAmount } from './trafficLightConfig'
 
 const money = (value) =>
@@ -25,7 +26,7 @@ const STATUS_COLORS = {
   red: 'danger',
 }
 
-const roundUpToCent = (value) => Math.ceil((value - Number.EPSILON) * 100) / 100
+const roundUpToCent = (value) => Math.ceil(Number(value.toFixed(10)) * 100) / 100
 
 const getGuidanceItems = (rules, estimatedTotalCost) => {
   const cost = normalizeTrafficLightAmount(estimatedTotalCost)
@@ -36,16 +37,26 @@ const getGuidanceItems = (rules, estimatedTotalCost) => {
     {
       status: 'green',
       label: 'Green',
+      guidance: greenPrice
+        ? `Quote at least RM ${money(greenPrice)}`
+        : 'Enter cost to calculate the minimum quote',
       target: greenPrice ? `${money(greenPrice)}+` : '—',
     },
     {
       status: 'yellow',
       label: 'Yellow',
+      guidance:
+        yellowPrice && greenPrice
+          ? `Quote from RM ${money(yellowPrice)} to RM ${money(greenPrice - 0.01)}`
+          : 'Enter cost to calculate the quote range',
       target: yellowPrice && greenPrice ? `${money(yellowPrice)}–${money(greenPrice - 0.01)}` : '—',
     },
     {
       status: 'red',
       label: 'Red',
+      guidance: yellowPrice
+        ? `Quote below RM ${money(yellowPrice)}`
+        : 'Enter cost to calculate the maximum quote',
       target: yellowPrice ? `<${money(yellowPrice)}` : '—',
     },
   ]
@@ -69,12 +80,12 @@ const TrafficLightCard = ({
           <strong>{title}</strong>
         </CCardHeader>
         <CCardBody>
-          <CAlert color="info" dismissible className="mb-2 py-2">
+          <CAlert color="info" dismissible className="traffic-light-procedure-alert mb-2 py-2">
             This is a traffic light guiding procedure. Please input estimated cost and ensure your
             quoted price always stays in the Green zone.
           </CAlert>
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            <CInputGroup className="flex-nowrap" style={{ width: '12rem' }}>
+          <div className="traffic-light-guidance-row">
+            <CInputGroup className="traffic-light-cost-input flex-nowrap">
               <CInputGroupText>Cost RM</CInputGroupText>
               <CFormInput
                 id="estimatedTotalCost"
@@ -90,20 +101,19 @@ const TrafficLightCard = ({
               />
             </CInputGroup>
 
-            {guidanceItems.map((item) => (
-              <div
-                className="border rounded px-2 py-1 d-flex align-items-center gap-1 text-nowrap"
-                key={item.status}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`bg-${STATUS_COLORS[item.status]} rounded-circle flex-shrink-0`}
-                  style={{ width: '0.625rem', height: '0.625rem' }}
-                />
-                <strong>{item.label}</strong>
-                <span className="small text-body-secondary">{item.target}</span>
-              </div>
-            ))}
+            <div className="traffic-light-guidance-bands">
+              {guidanceItems.map((item) => (
+                <div className="traffic-light-guidance-band" key={item.status}>
+                  <span
+                    aria-hidden="true"
+                    className={`bg-${STATUS_COLORS[item.status]} rounded-circle flex-shrink-0`}
+                    style={{ width: '0.625rem', height: '0.625rem' }}
+                  />
+                  <strong>{item.label}</strong>
+                  <span className="small text-body-secondary">{item.guidance}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </CCardBody>
       </CCard>

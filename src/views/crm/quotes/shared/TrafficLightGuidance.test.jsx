@@ -20,6 +20,8 @@ describe('traffic-light guidance', () => {
 
     expect(screen.getByText(/This is a traffic light guiding procedure/i)).toBeInTheDocument()
 
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('btn-close')
+
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 
     await waitFor(() => {
@@ -27,6 +29,20 @@ describe('traffic-light guidance', () => {
         screen.queryByText(/This is a traffic light guiding procedure/i),
       ).not.toBeInTheDocument()
     })
+  })
+
+  it('fills the guidance bands with actionable quote ranges', () => {
+    render(
+      <TrafficLightCard
+        serviceKey="ih"
+        estimatedTotalCost="6000"
+        onEstimatedTotalCostChange={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('Quote at least RM 8,100.00')).toBeInTheDocument()
+    expect(screen.getByText('Quote from RM 7,200.00 to RM 8,099.99')).toBeInTheDocument()
+    expect(screen.getByText('Quote below RM 7,200.00')).toBeInTheDocument()
   })
 
   it.each([
