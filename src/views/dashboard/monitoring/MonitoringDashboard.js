@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilInfo, cilX } from '@coreui/icons'
-import { CButton } from '@coreui/react'
+import { CAlert, CButton } from '@coreui/react'
 import { Joyride, STATUS } from 'react-joyride'
 import MonitoringPipelineTools from './MonitoringPipelineTools'
 import MonitoringPipelineStatus from './MonitoringPipelineStatus'
@@ -227,10 +228,12 @@ const MonitoringDashboard = ({
   statusError,
   onManualEntrySaved,
 }) => {
+  const navigate = useNavigate()
   const [tourRunning, setTourRunning] = useState(false)
   const [tourKey, setTourKey] = useState(0)
   const [staffMatrixReloadKey, setStaffMatrixReloadKey] = useState(0)
   const [manualEntryOpenRequestKey, setManualEntryOpenRequestKey] = useState(0)
+  const [manualEntrySaveNoticeCount, setManualEntrySaveNoticeCount] = useState(null)
 
   const handleTourCallback = ({ status }) => {
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
@@ -238,9 +241,29 @@ const MonitoringDashboard = ({
     }
   }
 
-  const handleManualEntrySaved = () => {
+  const handleManualEntrySaved = ({ savedCount = 1 } = {}) => {
+    const normalizedSavedCount = Number(savedCount)
+    setManualEntrySaveNoticeCount(
+      Number.isInteger(normalizedSavedCount) && normalizedSavedCount > 0 ? normalizedSavedCount : 1,
+    )
     setStaffMatrixReloadKey((key) => key + 1)
     onManualEntrySaved?.()
+  }
+
+  const openPipelineEntries = (fromSaveNotice = false) => {
+    if (!fromSaveNotice) {
+      navigate('/pipeline/entries')
+      return
+    }
+
+    navigate('/pipeline/entries', {
+      state: {
+        pipelineMessage:
+          manualEntrySaveNoticeCount === 1
+            ? 'Manual entry saved. Use the row action menu to edit or delete it.'
+            : `${manualEntrySaveNoticeCount} manual entries saved. Use the row action menu to edit or delete them.`,
+      },
+    })
   }
 
   return (
@@ -323,7 +346,7 @@ const MonitoringDashboard = ({
       />
       <div className="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <div className="d-flex align-items-center gap-2">{staffSelector}</div>
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center justify-content-end flex-wrap gap-2">
           <CButton
             type="button"
             size="sm"
@@ -331,9 +354,23 @@ const MonitoringDashboard = ({
             className="rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1"
             style={{ lineHeight: 1.1 }}
             data-tour="monitoring-add-manual-entry"
-            onClick={() => setManualEntryOpenRequestKey((key) => key + 1)}
+            onClick={() => {
+              setManualEntrySaveNoticeCount(null)
+              setManualEntryOpenRequestKey((key) => key + 1)
+            }}
           >
             Add Manual Entry
+          </CButton>
+          <CButton
+            type="button"
+            size="sm"
+            color="primary"
+            variant="outline"
+            className="rounded-2 d-inline-flex align-items-center gap-1 px-2 py-1"
+            style={{ lineHeight: 1.1 }}
+            onClick={() => openPipelineEntries()}
+          >
+            Manage Entries
           </CButton>
           <CButton
             type="button"
@@ -353,6 +390,30 @@ const MonitoringDashboard = ({
           </CButton>
         </div>
       </div>
+      {manualEntrySaveNoticeCount !== null && (
+        <CAlert
+          color="success"
+          dismissible
+          className="mb-3 py-2"
+          role="status"
+          onClose={() => setManualEntrySaveNoticeCount(null)}
+        >
+          <span>
+            {manualEntrySaveNoticeCount === 1
+              ? 'Manual entry saved. You can edit or delete it from Pipeline Entries.'
+              : `${manualEntrySaveNoticeCount} manual entries saved. You can edit or delete them from Pipeline Entries.`}
+          </span>{' '}
+          <CButton
+            type="button"
+            color="link"
+            size="sm"
+            className="p-0 align-baseline fw-semibold"
+            onClick={() => openPipelineEntries(true)}
+          >
+            Manage Entries
+          </CButton>
+        </CAlert>
+      )}
       <MonitoringTrends
         period={period}
         startDate={startDate}

@@ -387,7 +387,7 @@ const MonitoringPipelineTools = ({
       setProofInputKey((key) => key + 1)
       setManualModalVisible(false)
       setReloadKey((key) => key + 1)
-      onManualEntrySaved?.()
+      onManualEntrySaved?.({ savedCount: entries.length })
     } catch (err) {
       setManualError(err?.message || 'Unable to save manual entry.')
     } finally {
