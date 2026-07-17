@@ -65,7 +65,6 @@ export default function EquipmentQuotationForm({
           serviceKey="equipment"
           estimatedTotalCost={estimatedTotalCost}
           onEstimatedTotalCostChange={setEstimatedTotalCost}
-          cardClassName="mb-2"
         />
 
         <PricingInput

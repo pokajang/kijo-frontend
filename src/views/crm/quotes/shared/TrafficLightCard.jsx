@@ -37,27 +37,23 @@ const getGuidanceItems = (rules, estimatedTotalCost) => {
     {
       status: 'green',
       label: 'Green',
-      guidance: greenPrice
-        ? `Quote at least RM ${money(greenPrice)}`
-        : 'Enter cost to calculate the minimum quote',
-      target: greenPrice ? `${money(greenPrice)}+` : '—',
+      action: 'Can quote this value',
+      target: greenPrice ? `RM ${money(greenPrice)}+` : 'Enter estimated cost',
     },
     {
       status: 'yellow',
       label: 'Yellow',
-      guidance:
+      action: 'HOD approval first',
+      target:
         yellowPrice && greenPrice
-          ? `Quote from RM ${money(yellowPrice)} to RM ${money(greenPrice - 0.01)}`
-          : 'Enter cost to calculate the quote range',
-      target: yellowPrice && greenPrice ? `${money(yellowPrice)}–${money(greenPrice - 0.01)}` : '—',
+          ? `RM ${money(yellowPrice)}–${money(greenPrice - 0.01)}`
+          : 'Enter estimated cost',
     },
     {
       status: 'red',
       label: 'Red',
-      guidance: yellowPrice
-        ? `Quote below RM ${money(yellowPrice)}`
-        : 'Enter cost to calculate the maximum quote',
-      target: yellowPrice ? `<${money(yellowPrice)}` : '—',
+      action: 'BD/MD approval first',
+      target: yellowPrice ? `< RM ${money(yellowPrice)}` : 'Enter estimated cost',
     },
   ]
 }
@@ -67,7 +63,7 @@ const TrafficLightCard = ({
   estimatedTotalCost,
   onEstimatedTotalCostChange,
   title = 'Traffic Light',
-  cardClassName = 'mb-2',
+  cardClassName = 'mb-4',
   inputPlaceholder = 'Enter estimated cost first',
 }) => {
   const rules = getTrafficLightRules(serviceKey)
@@ -104,13 +100,16 @@ const TrafficLightCard = ({
             <div className="traffic-light-guidance-bands">
               {guidanceItems.map((item) => (
                 <div className="traffic-light-guidance-band" key={item.status}>
-                  <span
-                    aria-hidden="true"
-                    className={`bg-${STATUS_COLORS[item.status]} rounded-circle flex-shrink-0`}
-                    style={{ width: '0.625rem', height: '0.625rem' }}
-                  />
-                  <strong>{item.label}</strong>
-                  <span className="small text-body-secondary">{item.guidance}</span>
+                  <div className="traffic-light-guidance-heading">
+                    <span
+                      aria-hidden="true"
+                      className={`bg-${STATUS_COLORS[item.status]} rounded-circle flex-shrink-0`}
+                      style={{ width: '0.625rem', height: '0.625rem' }}
+                    />
+                    <strong>{item.label}</strong>
+                    <span className="small text-body-secondary">— {item.action}</span>
+                  </div>
+                  <span className="traffic-light-guidance-value">{item.target}</span>
                 </div>
               ))}
             </div>

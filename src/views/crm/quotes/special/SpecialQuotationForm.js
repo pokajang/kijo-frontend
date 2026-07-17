@@ -270,7 +270,7 @@ export default function SpecialQuotationForm({
 
   return (
     <CCol xs={12}>
-      <div className="d-grid gap-3">
+      <div className="d-grid gap-4">
         <SpecialDetailsCard
           formData={formData}
           setFormData={setFormData}

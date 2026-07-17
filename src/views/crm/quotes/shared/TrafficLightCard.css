@@ -31,14 +31,29 @@
 }
 
 .traffic-light-guidance-band {
-  align-items: center;
+  align-items: flex-start;
   border: 1px solid var(--cui-border-color);
   border-radius: var(--cui-border-radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+}
+
+.traffic-light-guidance-heading {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
   min-width: 0;
-  padding: 0.35rem 0.5rem;
+}
+
+.traffic-light-guidance-value {
+  color: var(--cui-body-color);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
 }
 
 @media (max-width: 767.98px) {

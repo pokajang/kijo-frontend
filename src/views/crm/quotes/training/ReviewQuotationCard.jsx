@@ -225,7 +225,6 @@ const ReviewQuotationCard = ({
   return (
     <QuoteReviewCard
       wrapInCol={false}
-      cardClassName="mb-2"
       attachProposal={formData.attachProposal || false}
       onAttachProposalChange={(checked) =>
         setFormData((prev) => ({

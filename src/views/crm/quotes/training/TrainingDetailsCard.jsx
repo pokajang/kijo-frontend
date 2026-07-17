@@ -157,7 +157,7 @@ const TrainingDetailsCard = ({
 
   return (
     <CCol xs={12}>
-      <CCard className="mb-2">
+      <CCard className="mb-4">
         <CCardHeader>
           <strong>{text.title}</strong>
         </CCardHeader>

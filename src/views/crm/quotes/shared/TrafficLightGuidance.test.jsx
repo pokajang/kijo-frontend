@@ -40,9 +40,12 @@ describe('traffic-light guidance', () => {
       />,
     )
 
-    expect(screen.getByText('Quote at least RM 8,100.00')).toBeInTheDocument()
-    expect(screen.getByText('Quote from RM 7,200.00 to RM 8,099.99')).toBeInTheDocument()
-    expect(screen.getByText('Quote below RM 7,200.00')).toBeInTheDocument()
+    expect(screen.getByText(/Can quote this value/)).toBeInTheDocument()
+    expect(screen.getByText(/HOD approval first/)).toBeInTheDocument()
+    expect(screen.getByText(/BD\/MD approval first/)).toBeInTheDocument()
+    expect(screen.getByText('RM 8,100.00+')).toBeInTheDocument()
+    expect(screen.getByText('RM 7,200.00–8,099.99')).toBeInTheDocument()
+    expect(screen.getByText('< RM 7,200.00')).toBeInTheDocument()
   })
 
   it.each([
