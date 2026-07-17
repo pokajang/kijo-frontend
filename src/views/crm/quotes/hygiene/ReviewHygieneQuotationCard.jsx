@@ -59,6 +59,7 @@ const ReviewHygieneQuotationCard = ({
 
   return (
     <QuoteReviewCard
+      cardClassName="mb-2"
       attachProposal={!!formData.attachProposal}
       onAttachProposalChange={(checked) =>
         setFormData((prev) => ({

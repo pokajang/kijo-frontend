@@ -17,7 +17,7 @@ const HygieneDetailsCardMain = ({
 
   return (
     <CCol xs={12}>
-      <CCard className="mb-4">
+      <CCard className="mb-2">
         <CCardHeader>
           <strong>Industrial Hygiene Details</strong>
         </CCardHeader>

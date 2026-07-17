@@ -194,7 +194,7 @@ const PricingDetailsCard = ({
 
   return (
     <CCol xs={12}>
-      <CCard className="mb-4">
+      <CCard className="mb-2">
         <CCardHeader>
           <strong>{text.title}</strong>
         </CCardHeader>

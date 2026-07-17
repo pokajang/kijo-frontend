@@ -238,7 +238,7 @@ const PricingCard = ({ formData, setFormData }) => {
 
   return (
     <CCol>
-      <CCard className="mb-4">
+      <CCard className="mb-2">
         <CCardHeader>
           <strong>Pricing Details</strong>
         </CCardHeader>

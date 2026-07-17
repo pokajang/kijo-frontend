@@ -67,7 +67,7 @@ const TrafficLightCard = ({
   estimatedTotalCost,
   onEstimatedTotalCostChange,
   title = 'Traffic Light',
-  cardClassName = 'mb-4',
+  cardClassName = 'mb-2',
   inputPlaceholder = 'Enter estimated cost first',
 }) => {
   const rules = getTrafficLightRules(serviceKey)
