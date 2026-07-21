@@ -34,6 +34,10 @@ vi.mock('../modals/shared/NegotiationRequestModal.jsx', () => ({
   default: () => null,
 }))
 
+vi.mock('../modals/shared/QuoteApprovalReviewModal.jsx', () => ({
+  default: () => null,
+}))
+
 const EmptyModal = () => null
 
 const makeReportingTable = (scopeLabel) => {
@@ -127,6 +131,20 @@ afterEach(() => {
 })
 
 describe('RecordsPage', () => {
+  it('shows pending quotation approvals and opens the review from the same page', () => {
+    const openApprovalReview = vi.fn()
+    const approval = { id: 9, quote_ref_no: 'QTR-009' }
+    useRecordsController.mockReturnValue(
+      mockController({ pendingApprovals: [approval], openApprovalReview }),
+    )
+
+    renderPage()
+
+    expect(screen.getByText(/1 quotation requires your approval/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review Now' }))
+    expect(openApprovalReview).toHaveBeenCalledWith(approval)
+  })
+
   it('renders the active all-table scope label in the card header', async () => {
     useRecordsController.mockReturnValue(mockController())
 

@@ -7,7 +7,7 @@ import { getTrafficLightStatus, normalizeTrafficLightAmount } from './trafficLig
 const DECISIONS = {
   green: { color: 'success', label: 'Green — You can issue this' },
   yellow: { color: 'warning', label: 'Yellow — Need HOD approval first' },
-  red: { color: 'danger', label: 'Red — Need BD/MD approval first' },
+  red: { color: 'danger', label: 'Red — Need BD final approval first' },
 }
 
 const TrafficLightDecisionBadge = ({ serviceKey, estimatedTotalCost, quoteTotal }) => {

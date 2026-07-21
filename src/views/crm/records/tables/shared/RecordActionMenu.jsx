@@ -46,12 +46,40 @@ const RecordActionMenu = ({
   const hasEmail = Boolean(getRecordEmailAddress(record))
   const negotiationAllowed = canRequestNegotiation(record, user)
   const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
+  const approval = record?.approval
+  const issuanceBlocked = Boolean(approval && !approval.can_issue)
+  const approvalMessage = issuanceBlocked
+    ? approval.status === 'rejected'
+      ? 'Revise this rejected quotation before issuing it.'
+      : `${String(approval.required_step || 'required').toUpperCase()} approval is pending.`
+    : undefined
 
   const actions = [
     { key: 'view', label: 'View', onClick: onView, hidden: !onView },
     { key: 'open-tab', label: 'Open Tab', onClick: onOpenTab, hidden: !onOpenTab },
-    { key: 'email', label: 'Email', onClick: onEmail, hidden: !onEmail || !hasEmail },
-    { key: 'share-pdf', label: 'Share PDF', onClick: onSharePdf, hidden: !onSharePdf },
+    {
+      key: 'review-approval',
+      label: 'Review Approval',
+      onClick: () =>
+        window.dispatchEvent(new CustomEvent('quote-approval:review', { detail: approval })),
+      hidden: !approval?.can_decide || approval?.status !== 'pending',
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      onClick: onEmail,
+      hidden: !onEmail || !hasEmail,
+      disabled: issuanceBlocked,
+      tooltip: approvalMessage,
+    },
+    {
+      key: 'share-pdf',
+      label: 'Share PDF',
+      onClick: onSharePdf,
+      hidden: !onSharePdf,
+      disabled: issuanceBlocked,
+      tooltip: approvalMessage,
+    },
     { key: 'edit', label: 'Edit', onClick: onEdit, hidden: !onEdit },
     { key: 'revise', label: 'Revise', onClick: onRevise, hidden: !onRevise },
     {
@@ -65,6 +93,8 @@ const RecordActionMenu = ({
       label: 'Generate Quote',
       onClick: onGenerate,
       hidden: !onGenerate,
+      disabled: issuanceBlocked,
+      tooltip: approvalMessage,
     },
     { key: 'follow-up', label: 'Follow Up', onClick: onFollowUp, hidden: !onFollowUp },
     {
@@ -78,12 +108,16 @@ const RecordActionMenu = ({
       label: 'Re-Award',
       onClick: onReAward,
       hidden: !isAwarded || !onReAward,
+      disabled: issuanceBlocked,
+      tooltip: approvalMessage,
     },
     {
       key: 'awarded',
       label: 'Awarded',
       onClick: onChangeToSuccess,
       hidden: isAwarded || !onChangeToSuccess,
+      disabled: issuanceBlocked,
+      tooltip: approvalMessage,
     },
     { key: 'failed', label: 'Failed', onClick: onChangeToFail, hidden: !onChangeToFail },
     {

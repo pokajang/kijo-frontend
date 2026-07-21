@@ -44,6 +44,12 @@ export const workflowTabs = [
     to: '/workflows/quote-price-exception',
     workflowSetupKey: 'quote-price-exception',
   },
+  {
+    key: 'quote-approval',
+    label: 'Quotation Approval',
+    to: '/workflows/quote-approval',
+    workflowSetupKey: 'quote-approval',
+  },
 ]
 
 const workflowHeaderText = {
@@ -59,6 +65,9 @@ const workflowHeaderText = {
   'quote-price-exception': {
     title: 'Negotiation Approval Setup',
   },
+  'quote-approval': {
+    title: 'Quotation Traffic-Light Approval Setup',
+  },
 }
 
 const workflowIntroText = {
@@ -70,6 +79,8 @@ const workflowIntroText = {
     'Choose who handles staff leave applications. The first person reviews the leave request, the next person recommends it when needed, and the final approver confirms the leave decision.',
   'quote-price-exception':
     'Choose who approves negotiation or price exception requests. The approver checks the requested discount or price change before it can be used in the quotation.',
+  'quote-approval':
+    'Choose who receives Yellow HOD reviews and Red BD final approvals. If a step has no assigned recipients, the configured default email for that step is used.',
 }
 
 const staffLabel = (staff) =>

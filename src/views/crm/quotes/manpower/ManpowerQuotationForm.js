@@ -14,6 +14,8 @@ import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 import { getManpowerRate, getManpowerRateOption, inferManpowerRateType } from './manpowerRates'
 import { fetchPriceException } from '../priceException'
+import TrafficLightCard from '../shared/TrafficLightCard'
+import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 const getApprovedNegotiationDiscount = (row) =>
   Number(row?.approved_discount_amount || row?.requested_discount_amount || 0)
@@ -61,6 +63,7 @@ export default function ManpowerQuotationForm({
     subTotal: '0.00',
     sstAmount: '0.00',
     grandTotal: '0.00',
+    estimatedTotalCost: '',
     attachProposal: true,
     inquiryRemarks: '',
     proposalLanguage,
@@ -176,6 +179,7 @@ export default function ManpowerQuotationForm({
       subTotal: initialFormData.subTotal ?? '0.00',
       sstAmount: initialFormData.sstAmount ?? '0.00',
       grandTotal: initialFormData.grandTotal ?? '0.00',
+      estimatedTotalCost: initialFormData.estimatedTotalCost ?? '',
       attachProposal: initialFormData.attachProposal ?? true,
       proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
     })
@@ -370,6 +374,9 @@ export default function ManpowerQuotationForm({
       sub_total: formData.subTotal,
       sst_amount: formData.sstAmount,
       grand_total: formData.grandTotal,
+      estimated_total_cost:
+        formData.estimatedTotalCost === '' ? null : Number(formData.estimatedTotalCost),
+      traffic_light_rule_version: TRAFFIC_LIGHT_RULE_VERSION,
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -392,6 +399,16 @@ export default function ManpowerQuotationForm({
           )
         }}
       />
+
+      {selectedClient && formData.mpId && (
+        <TrafficLightCard
+          serviceKey="manpower"
+          estimatedTotalCost={formData.estimatedTotalCost}
+          onEstimatedTotalCostChange={(value) =>
+            setFormData((previous) => ({ ...previous, estimatedTotalCost: value }))
+          }
+        />
+      )}
 
       {selectedClient && formData.mpId && (
         <ReviewManpowerQuoteCard

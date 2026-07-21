@@ -3,6 +3,7 @@ import { CTableDataCell, CBadge, CTooltip } from '@coreui/react'
 import RemarksCell from '../shared/RemarksCell'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 import RecordActionMenu from '../shared/RecordActionMenu'
+import QuoteApprovalBadge from '../shared/QuoteApprovalBadge'
 import { getProjectOutcomeLabel, getStatusLabel } from '../../utils/allRecordsTableUtils'
 
 export const formatServiceRecordAmount = (value) =>
@@ -141,6 +142,7 @@ export const ServiceRecordStatusCell = ({ record, columnWidths }) => (
       >
         {getStatusLabel(record)}
       </CBadge>
+      <QuoteApprovalBadge approval={record?.approval} />
       {getProjectOutcomeLabel(record) && (
         <span className="small text-muted">{getProjectOutcomeLabel(record)}</span>
       )}

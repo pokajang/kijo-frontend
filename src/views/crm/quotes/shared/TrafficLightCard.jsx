@@ -52,7 +52,7 @@ const getGuidanceItems = (rules, estimatedTotalCost) => {
     {
       status: 'red',
       label: 'Red',
-      action: 'BD/MD approval first',
+      action: 'BD final approval first',
       target: yellowPrice ? `< RM ${money(yellowPrice)}` : 'Enter estimated cost',
     },
   ]

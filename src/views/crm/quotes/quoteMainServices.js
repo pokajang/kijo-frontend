@@ -261,6 +261,9 @@ export const serviceConfig = {
       subTotal: toFloat(pick(row, 'sub_total', 'subTotal'), 0),
       sstAmount: toFloat(pick(row, 'sst_amount', 'sstAmount'), 0),
       grandTotal: toFloat(pick(row, 'grand_total', 'grandTotal'), 0),
+      estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
+      trafficLightRuleVersion:
+        pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
       attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
       inquiryRemarks: pick(row, 'inquiry_remarks', 'inquiryRemarks') || '',
       proposalLanguage: pick(row, 'proposal_language', 'proposalLanguage') || 'en',

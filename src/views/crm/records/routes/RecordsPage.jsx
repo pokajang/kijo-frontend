@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CButton, CCard, CCardBody, CCol, CRow } from '@coreui/react'
+import { CAlert, CBadge, CButton, CCard, CCardBody, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
 import { DataTableCardHeader, DataTableStatsToggle } from '../../../../components/datatable'
@@ -10,6 +10,7 @@ import { getQuoteServiceFromRecordTab } from '../config/recordTabs.js'
 import { useRecordsController } from '../hooks/useRecordsController'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import NegotiationRequestModal from '../modals/shared/NegotiationRequestModal.jsx'
+import QuoteApprovalReviewModal from '../modals/shared/QuoteApprovalReviewModal.jsx'
 
 const RecordsPage = () => {
   const location = useLocation()
@@ -52,6 +53,14 @@ const RecordsPage = () => {
     closeNegotiationModal,
     handleNegotiationSubmit,
     isNegotiationSubmitting,
+    pendingApprovals = [],
+    approvalRecord,
+    approvalRemarks,
+    setApprovalRemarks,
+    openApprovalReview,
+    closeApprovalReview,
+    handleApprovalDecision,
+    isApprovalSubmitting,
   } = useRecordsController()
   const [headerScopeLabel, setHeaderScopeLabel] = useState('')
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
@@ -77,6 +86,46 @@ const RecordsPage = () => {
             onTabChange={handleRecordsTabChange}
             ariaLabel="Quotation record groups"
           />
+          {pendingApprovals.length > 0 && (
+            <CAlert
+              color="warning"
+              className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"
+            >
+              <div>
+                <strong>
+                  {pendingApprovals.length} quotation{pendingApprovals.length === 1 ? '' : 's'}{' '}
+                  {pendingApprovals.length === 1 ? 'requires' : 'require'} your approval.
+                </strong>{' '}
+                <span className="text-body-secondary">
+                  <CBadge color="warning" className="me-1">
+                    HOD
+                  </CBadge>
+                  and{' '}
+                  <CBadge color="danger" className="mx-1">
+                    BD
+                  </CBadge>
+                  decisions are handled here in Quotation Records.
+                </span>
+              </div>
+              <div className="d-flex gap-2">
+                <CButton
+                  color="warning"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/crm/records?approval_scope=mine')}
+                >
+                  Show Pending
+                </CButton>
+                <CButton
+                  color="warning"
+                  size="sm"
+                  onClick={() => openApprovalReview(pendingApprovals[0])}
+                >
+                  Review Now
+                </CButton>
+              </div>
+            </CAlert>
+          )}
           <CCard className="mb-4 records-page-card">
             <DataTableCardHeader title="Quotes" scopeLabel={headerScopeLabel}>
               <DataTableStatsToggle
@@ -203,6 +252,16 @@ const RecordsPage = () => {
           onCancel={closeNegotiationModal}
           onConfirm={handleNegotiationSubmit}
           isSubmitting={isNegotiationSubmitting}
+        />
+
+        <QuoteApprovalReviewModal
+          visible={Boolean(approvalRecord)}
+          approval={approvalRecord}
+          remarks={approvalRemarks}
+          onRemarksChange={setApprovalRemarks}
+          onCancel={closeApprovalReview}
+          onDecision={handleApprovalDecision}
+          isSubmitting={isApprovalSubmitting}
         />
       </CRow>
     </>

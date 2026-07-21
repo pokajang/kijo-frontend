@@ -111,6 +111,7 @@ export const workflowModuleTabs = [
   { key: 'vendor-payment', label: 'Vendor Payment', to: '/workflows/vendor-payment' },
   { key: 'leave-application', label: 'Leave Application', to: '/workflows/leave-application' },
   { key: 'quote-price-exception', label: 'Negotiation', to: '/workflows/quote-price-exception' },
+  { key: 'quote-approval', label: 'Quotation Approval', to: '/workflows/quote-approval' },
 ]
 
 export const financialModuleTabs = [

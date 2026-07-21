@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import dialog from '../../../../components/dialog/dialogService'
@@ -90,16 +90,108 @@ export const useRecordsController = () => {
     remarks: '',
   })
   const [isNegotiationSubmitting, setIsNegotiationSubmitting] = useState(false)
+  const [approvalItems, setApprovalItems] = useState([])
+  const [approvalRecord, setApprovalRecord] = useState(null)
+  const [approvalRemarks, setApprovalRemarks] = useState('')
+  const [isApprovalSubmitting, setIsApprovalSubmitting] = useState(false)
   const { quotes, setQuotes, quotesLoading, fetchQuotes } = useRecordsFetch(activeTab)
   const refreshQuotesInPlace = useCallback(
     (tabKey = activeTab) => fetchQuotes(tabKey, { showLoader: false }),
     [activeTab, fetchQuotes],
   )
-  const scopedQuotes = useMemo(
-    () =>
-      activeTab === 'my-tab' ? quotes.filter((quote) => isQuoteOwnedByUser(quote, user)) : quotes,
-    [activeTab, quotes, user],
+  const refreshApprovals = useCallback(async () => {
+    try {
+      const response = await fetch(quoteApiUrl('quote-approvals'), { credentials: 'include' })
+      const result = await response.json()
+      if (!response.ok || !isSuccess(result)) {
+        throw new Error(getMessage(result, 'Failed to load quotation approvals.'))
+      }
+      setApprovalItems(Array.isArray(result.data) ? result.data : [])
+    } catch (error) {
+      console.error('Failed to load quotation approvals:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshApprovals()
+  }, [activeTab, refreshApprovals])
+
+  const scopedQuotes = useMemo(() => {
+    const approvalByQuote = new Map(
+      approvalItems.map((approval) => [`${approval.service}:${approval.quote_id}`, approval]),
+    )
+    const enriched = quotes.map((quote) => {
+      const serviceTab = quote?.serviceTab || (!isAggregateTab ? activeTab : '')
+      const service = getQuoteServiceFromRecordTab(serviceTab)
+      return { ...quote, approval: approvalByQuote.get(`${service}:${quote.id}`) || null }
+    })
+    const owned =
+      activeTab === 'my-tab'
+        ? enriched.filter((quote) => isQuoteOwnedByUser(quote, user))
+        : enriched
+    const approvalScope = new URLSearchParams(location.search).get('approval_scope')
+    return approvalScope === 'mine'
+      ? owned.filter((quote) => quote.approval?.status === 'pending' && quote.approval?.can_decide)
+      : owned
+  }, [activeTab, approvalItems, isAggregateTab, location.search, quotes, user])
+
+  const pendingApprovals = useMemo(
+    () => approvalItems.filter((item) => item.status === 'pending' && item.can_decide),
+    [approvalItems],
   )
+
+  const openApprovalReview = useCallback((value) => {
+    const approval = value?.approval || value
+    if (!approval?.id) return
+    setApprovalRemarks('')
+    setApprovalRecord(approval)
+  }, [])
+
+  useEffect(() => {
+    const handleReview = (event) => openApprovalReview(event.detail)
+    window.addEventListener('quote-approval:review', handleReview)
+    return () => window.removeEventListener('quote-approval:review', handleReview)
+  }, [openApprovalReview])
+
+  useEffect(() => {
+    const approvalId = Number(new URLSearchParams(location.search).get('approvalId') || 0)
+    if (approvalId <= 0 || approvalRecord?.id === approvalId) return
+    const approval = approvalItems.find((item) => Number(item.id) === approvalId)
+    if (approval) openApprovalReview(approval)
+  }, [approvalItems, approvalRecord?.id, location.search, openApprovalReview])
+
+  const handleApprovalDecision = async (decision) => {
+    if (!approvalRecord?.id || isApprovalSubmitting) return
+    if (decision === 'reject' && !approvalRemarks.trim()) {
+      dialog.alert('Please provide remarks when rejecting a quotation.')
+      return
+    }
+    setIsApprovalSubmitting(true)
+    try {
+      const response = await fetch(
+        quoteApiUrl(`quote-approvals/${encodeURIComponent(approvalRecord.id)}/${decision}`),
+        {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ remarks: approvalRemarks.trim() || null }),
+        },
+      )
+      const result = await response.json()
+      if (!response.ok || !isSuccess(result)) {
+        throw new Error(getMessage(result, `Failed to ${decision} quotation.`))
+      }
+      showToast(result.message || `Quotation ${decision === 'approve' ? 'approved' : 'rejected'}.`)
+      setApprovalRecord(null)
+      setApprovalRemarks('')
+      await Promise.all([refreshApprovals(), refreshQuotesInPlace()])
+      dispatchAppNotificationsChanged()
+    } catch (error) {
+      dialog.alert(error?.message || `Failed to ${decision} quotation.`)
+    } finally {
+      setIsApprovalSubmitting(false)
+    }
+  }
   const EmptyTableState = () => <p>No records to display.</p>
   const ActiveTableComponent = recordTablesByTab[activeTab] || EmptyTableState
   const {
@@ -599,6 +691,16 @@ export const useRecordsController = () => {
     closeNegotiationModal,
     handleNegotiationSubmit,
     isNegotiationSubmitting,
+    pendingApprovals,
+    approvalRecord,
+    approvalRemarks,
+    setApprovalRemarks,
+    openApprovalReview,
+    closeApprovalReview: () => {
+      if (!isApprovalSubmitting) setApprovalRecord(null)
+    },
+    handleApprovalDecision,
+    isApprovalSubmitting,
     modalState,
     successRecord,
     dispatchModal,

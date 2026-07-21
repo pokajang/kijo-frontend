@@ -27,6 +27,7 @@ import { buildQuoteRecordStatsItems } from '../../utils/quoteRecordStats'
 import AllRecordsFilterPanel from './AllRecordsFilterPanel'
 import RemarksCell from '../shared/RemarksCell'
 import RecordActionMenu from '../shared/RecordActionMenu'
+import QuoteApprovalBadge from '../shared/QuoteApprovalBadge'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 
 const formatRecordAmount = (record) => {
@@ -496,6 +497,7 @@ const AllRecordsTable = ({
           <CBadge className={`records-status-badge records-status-badge--${statusTone}`}>
             {record?.__tableMeta?.statusLabel}
           </CBadge>
+          <QuoteApprovalBadge approval={record?.approval} />
           {outcomeLabel && <span className="small text-muted">{outcomeLabel}</span>}
         </div>
       )

@@ -1,6 +1,10 @@
 const notificationCountBadgeColor = 'warning'
 
 export const routeNotificationBadges = {
+  '/crm/records': {
+    color: notificationCountBadgeColor,
+    title: 'Quotations need approval',
+  },
   '/crm/price-exceptions': {
     color: notificationCountBadgeColor,
     title: 'Negotiations need attention',
@@ -44,6 +48,10 @@ export const routeNotificationBadges = {
 }
 
 export const tabNotificationBadges = {
+  'crm.quote-approvals': {
+    color: notificationCountBadgeColor,
+    title: 'Quotations need approval',
+  },
   'client.vendor-registration': {
     color: notificationCountBadgeColor,
     title: 'Vendor registrations need attention',

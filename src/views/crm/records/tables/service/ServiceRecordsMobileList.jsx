@@ -5,6 +5,7 @@ import { cilCaretLeft, cilCaretRight } from '@coreui/icons'
 import { PAGE_SIZE_OPTIONS } from '../../config/allRecordsTableConfig'
 import { getProjectOutcomeLabel, truncateFront } from '../../utils/allRecordsTableUtils'
 import RecordActionMenu from '../shared/RecordActionMenu'
+import QuoteApprovalBadge from '../shared/QuoteApprovalBadge'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 
 const ServiceRecordsMobileList = ({
@@ -124,6 +125,7 @@ const ServiceRecordsMobileList = ({
                       >
                         {meta.statusLabel || record?.status || '-'}
                       </CBadge>
+                      <QuoteApprovalBadge approval={record?.approval} />
                       {getProjectOutcomeLabel(record) && (
                         <CBadge color="secondary">{getProjectOutcomeLabel(record)}</CBadge>
                       )}
