@@ -78,32 +78,30 @@ const TrafficLightCard = ({
   return (
     <CCol xs={12}>
       <CCard className={cardClassName}>
-        <CCardHeader>
-          <div className="d-flex flex-column gap-2">
-            <strong>{title}</strong>
-            <div className="traffic-light-header-legend" aria-label="Traffic Light Legend">
-              <span className="traffic-light-legend-item">
-                <span
-                  className={`bg-${LEGEND_COLORS.green} traffic-light-legend-dot`}
-                  aria-hidden="true"
-                />
-                <span>Green</span>
-              </span>
-              <span className="traffic-light-legend-item">
-                <span
-                  className={`bg-${LEGEND_COLORS.yellow} traffic-light-legend-dot`}
-                  aria-hidden="true"
-                />
-                <span>Yellow</span>
-              </span>
-              <span className="traffic-light-legend-item">
-                <span
-                  className={`bg-${LEGEND_COLORS.red} traffic-light-legend-dot`}
-                  aria-hidden="true"
-                />
-                <span>Red</span>
-              </span>
-            </div>
+        <CCardHeader className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <strong>{title}</strong>
+          <div className="traffic-light-header-legend" aria-label="Traffic Light Legend">
+            <span className="traffic-light-legend-item">
+              <span
+                className={`bg-${LEGEND_COLORS.green} traffic-light-legend-dot`}
+                aria-hidden="true"
+              />
+              <span>Green</span>
+            </span>
+            <span className="traffic-light-legend-item">
+              <span
+                className={`bg-${LEGEND_COLORS.yellow} traffic-light-legend-dot`}
+                aria-hidden="true"
+              />
+              <span>Yellow</span>
+            </span>
+            <span className="traffic-light-legend-item">
+              <span
+                className={`bg-${LEGEND_COLORS.red} traffic-light-legend-dot`}
+                aria-hidden="true"
+              />
+              <span>Red</span>
+            </span>
           </div>
         </CCardHeader>
         <CCardBody>
