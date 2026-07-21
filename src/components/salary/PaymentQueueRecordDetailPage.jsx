@@ -19,6 +19,7 @@ import {
 } from './paymentQueueStorage'
 import { PaymentQueueActionModal } from './PaymentQueueRecords'
 import { getDetailReturnTo } from '../../utils/navigation/returnTo'
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 
 const todayValue = () => new Date().toLocaleDateString('en-CA')
 
@@ -36,6 +37,7 @@ const formatQueueMoney = (value, restricted) => {
 const PaymentQueueRecordDetailPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { consumeRouteGroup } = useAppNotifications()
   const { staffId, period } = useParams()
   const returnTo = getDetailReturnTo(
     location,
@@ -76,6 +78,14 @@ const PaymentQueueRecordDetailPage = () => {
     loadDetail()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffId, period])
+
+  useEffect(() => {
+    const isFinancial = location.pathname.startsWith('/financial')
+    consumeRouteGroup({
+      routePrefix: isFinancial ? '/financial/payment-queue' : '/my/salary/payment-queue',
+      moduleKeys: [isFinancial ? 'financial.payment-queue' : 'my.payment-queue'],
+    }).catch(() => {})
+  }, [consumeRouteGroup, location.pathname])
 
   const fields = useMemo(
     () => [

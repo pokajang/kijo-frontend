@@ -29,6 +29,10 @@ export const routeNotificationBadges = {
     color: notificationCountBadgeColor,
     title: 'Other claims need attention',
   },
+  '/financial/payment-queue': {
+    color: notificationCountBadgeColor,
+    title: 'Salary and claim payments need attention',
+  },
   '/my/leaves': {
     color: notificationCountBadgeColor,
     title: 'Leave updates available',
@@ -44,6 +48,10 @@ export const routeNotificationBadges = {
   '/my/salary/other-claims/records': {
     color: notificationCountBadgeColor,
     title: 'Other claim updates available',
+  },
+  '/my/salary/payment-queue': {
+    color: notificationCountBadgeColor,
+    title: 'Payment updates available',
   },
 }
 
@@ -72,6 +80,10 @@ export const tabNotificationBadges = {
     color: notificationCountBadgeColor,
     title: 'Other claim requests need attention',
   },
+  'financial.payment-queue': {
+    color: notificationCountBadgeColor,
+    title: 'Salary and claim payments need attention',
+  },
   'my.leaves': {
     color: notificationCountBadgeColor,
     title: 'Leave updates available',
@@ -83,6 +95,10 @@ export const tabNotificationBadges = {
   'my.salary.other-claim-records': {
     color: notificationCountBadgeColor,
     title: 'Other claim updates available',
+  },
+  'my.salary.payment-queue': {
+    color: notificationCountBadgeColor,
+    title: 'Payment updates available',
   },
   'crm.negotiations': {
     color: notificationCountBadgeColor,

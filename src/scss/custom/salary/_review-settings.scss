@@ -176,6 +176,17 @@
   padding: 1rem;
 }
 
+.salary-claim-month-control {
+  display: flex;
+  flex: 0 0 10.5rem;
+  flex-direction: column;
+  margin-left: auto;
+}
+
+.salary-claim-month-control .form-control {
+  min-height: 2rem;
+}
+
 .salary-settings-snapshot-meta {
   display: inline-flex;
   align-items: center;
@@ -203,4 +214,3 @@
 .salary-section-body > .salary-claim-draft-actions + .salary-table-shell {
   margin-top: 0.875rem;
 }
-

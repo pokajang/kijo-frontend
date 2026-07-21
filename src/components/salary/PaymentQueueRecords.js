@@ -30,6 +30,7 @@ import {
   undoPaymentQueuePaid,
 } from './paymentQueueStorage'
 import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 
 const todayValue = () => new Date().toLocaleDateString('en-CA')
 
@@ -165,6 +166,7 @@ const PaymentQueueRecords = ({
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { consumeRouteGroup } = useAppNotifications()
   const [records, setRecords] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -199,6 +201,14 @@ const PaymentQueueRecords = ({
   useEffect(() => {
     loadRecords()
   }, [loadRecords])
+
+  useEffect(() => {
+    const isFinancial = location.pathname.startsWith('/financial')
+    consumeRouteGroup({
+      routePrefix: isFinancial ? '/financial/payment-queue' : '/my/salary/payment-queue',
+      moduleKeys: [isFinancial ? 'financial.payment-queue' : 'my.payment-queue'],
+    }).catch(() => {})
+  }, [consumeRouteGroup, location.pathname])
 
   const filteredRecords = useMemo(() => {
     const query = searchText.trim().toLowerCase()

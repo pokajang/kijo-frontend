@@ -12,8 +12,8 @@ export const roundMoney = (value) => Math.round((toMoneyNumber(value) + Number.E
 
 export const formatMoney = (value) => `RM ${roundMoney(value).toFixed(2)}`
 
-export const calculateMileageAmount = (km, rate = MILEAGE_RATE) =>
-  roundMoney(toMoneyNumber(km) * 2 * rate)
+export const calculateMileageAmount = (km, rate = MILEAGE_RATE, tripMode = 'return') =>
+  roundMoney(toMoneyNumber(km) * (tripMode === 'one_way' ? 1 : 2) * rate)
 
 export const sumAmounts = (items = [], amountKey = 'amount') =>
   roundMoney(items.reduce((total, item) => total + toMoneyNumber(item?.[amountKey]), 0))

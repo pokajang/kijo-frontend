@@ -12,16 +12,24 @@ import {
   CFormLabel,
   CListGroup,
   CListGroupItem,
-  CModal,
-  CModalBody,
-  CModalHeader,
-  CModalTitle,
   CRow,
   CSpinner,
 } from '@coreui/react'
 import { DataTableLoadingState, DataTableStatusBadge } from '../datatable'
 import { useApplySalaryHandlers } from './actionHandlers'
-import { formatAttachmentSize, salaryAttachmentAccept } from './attachmentUtils'
+import { formatAttachmentSize } from './attachmentUtils'
+import {
+  AttachmentInput,
+  AttachmentPreviewModal,
+  ClaimDraftActions,
+  FormPanelHeading,
+} from './claim-ui/ClaimFormPrimitives'
+export {
+  AttachmentInput,
+  AttachmentPreviewModal,
+  ClaimDraftActions,
+  FormPanelHeading,
+} from './claim-ui/ClaimFormPrimitives'
 import { formatMoney, roundMoney } from './salaryCalculations'
 import {
   createSalaryPreviewColumns,
@@ -36,9 +44,6 @@ const colorByType = {
   info: 'info',
 }
 
-const attachmentUrl = (attachment) =>
-  attachment?.dataUrl || attachment?.url || attachment?.downloadUrl || ''
-
 const formatKm = (value) => {
   const number = Number(value || 0)
   if (!Number.isFinite(number)) return '0'
@@ -50,49 +55,6 @@ const formatMileageMeta = (item = {}) => {
   if (!oneWayKm) return null
 
   return `${formatKm(oneWayKm)} KM one-way / ${formatKm(oneWayKm * 2)} KM return`
-}
-
-const attachmentKind = (attachment) => {
-  const type = String(attachment?.type || '').toLowerCase()
-  const name = String(attachment?.name || attachment?.originalName || '').toLowerCase()
-  const url = attachmentUrl(attachment).toLowerCase()
-
-  if (type.includes('pdf') || name.endsWith('.pdf') || url.startsWith('data:application/pdf')) {
-    return 'pdf'
-  }
-
-  if (type.startsWith('image/') || /\.(png|jpe?g)$/.test(name) || url.startsWith('data:image/')) {
-    return 'image'
-  }
-
-  return 'file'
-}
-
-export const AttachmentPreviewModal = ({ attachment, onClose }) => {
-  const url = attachmentUrl(attachment)
-  const kind = attachmentKind(attachment)
-  const name = attachment?.name || attachment?.originalName || 'Attachment'
-
-  return (
-    <CModal visible={Boolean(attachment)} onClose={onClose} size="xl" scrollable>
-      <CModalHeader closeButton>
-        <CModalTitle>{name}</CModalTitle>
-      </CModalHeader>
-      <CModalBody className="salary-attachment-preview-body">
-        {kind === 'image' && url && (
-          <img className="salary-attachment-preview-image" src={url} alt={name} />
-        )}
-        {kind === 'pdf' && url && (
-          <iframe className="salary-attachment-preview-frame" src={url} title={name} />
-        )}
-        {kind === 'file' && url && (
-          <div className="salary-attachment-preview-fallback">
-            This attachment type cannot be previewed inline.
-          </div>
-        )}
-      </CModalBody>
-    </CModal>
-  )
 }
 
 export const ClaimList = ({
@@ -184,15 +146,6 @@ export const ClaimList = ({
   )
 }
 
-export const FormPanelHeading = ({ id, title, action }) => (
-  <div className="salary-form-panel-header">
-    <h3 className="salary-form-panel-heading" id={id}>
-      {title}
-    </h3>
-    {action}
-  </div>
-)
-
 export const formatSalaryPeriod = (salaryMonth) => {
   if (!salaryMonth) return 'Current period'
 
@@ -221,76 +174,6 @@ const buildSalaryMonthOptions = (baseDate = new Date()) =>
       label: formatSalaryPeriod(value),
     }
   })
-
-export const ClaimDraftActions = ({
-  onSave,
-  onCancel,
-  disabled = false,
-  isPreparing = false,
-  saveLabel = 'Save',
-}) => (
-  <div className="salary-claim-draft-actions">
-    <CButton
-      color="primary"
-      variant="outline"
-      size="sm"
-      type="button"
-      className="salary-claim-draft-button"
-      onClick={onSave}
-      disabled={disabled || isPreparing}
-    >
-      {isPreparing ? 'Preparing' : saveLabel}
-    </CButton>
-    <CButton
-      color="secondary"
-      variant="outline"
-      size="sm"
-      type="button"
-      className="salary-claim-draft-button"
-      onClick={onCancel}
-      disabled={isPreparing}
-    >
-      Cancel
-    </CButton>
-  </div>
-)
-
-export const AttachmentInput = ({
-  id,
-  label = 'Attachment',
-  attachment,
-  inputKey,
-  isPreparing,
-  onChange,
-}) => (
-  <div className="salary-attachment-field">
-    <label className="salary-attachment-label" htmlFor={id}>
-      {label}
-    </label>
-    <div className="salary-attachment-control">
-      <label className="btn btn-outline-secondary salary-attachment-choose" htmlFor={id}>
-        Choose File
-      </label>
-      {(isPreparing || attachment) && (
-        <div className="salary-attachment-meta">
-          {isPreparing
-            ? 'Preparing attachment...'
-            : `${attachment.name} (${formatAttachmentSize(attachment.size)})${
-                attachment.compressed ? ' - compressed' : ''
-              }`}
-        </div>
-      )}
-    </div>
-    <CFormInput
-      key={inputKey}
-      id={id}
-      type="file"
-      accept={salaryAttachmentAccept}
-      className="salary-attachment-input"
-      onChange={(event) => onChange(event.target.files?.[0] || null)}
-    />
-  </div>
-)
 
 export const adjustmentTypes = [{ key: 'allowance', label: 'Salary Adjustment' }]
 

@@ -1,7 +1,12 @@
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import ApplySalary from './ApplySalary'
+import ApplySalary, {
+  AttachmentInput,
+  AttachmentPreviewModal,
+  ClaimDraftActions,
+  FormPanelHeading,
+} from './ApplySalary'
 import { getSalaryRecords } from './salaryRecordStorage'
 
 const apiMock = vi.hoisted(() => ({
@@ -45,6 +50,13 @@ describe('ApplySalary', () => {
       </>
     )
   }
+
+  it('keeps the shared claim controls available from the legacy module exports', () => {
+    expect(AttachmentInput).toBeTypeOf('function')
+    expect(AttachmentPreviewModal).toBeTypeOf('function')
+    expect(ClaimDraftActions).toBeTypeOf('function')
+    expect(FormPanelHeading).toBeTypeOf('function')
+  })
 
   const renderApplySalary = async (ui = <ApplySalaryHarness />) => {
     const result = render(ui)

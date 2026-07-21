@@ -68,7 +68,15 @@
 
   .salary-section-header.card-header {
     align-items: flex-start;
+    flex-wrap: wrap;
     padding: 0.65rem 0.75rem;
+  }
+
+  .salary-claim-month-control {
+    flex: 1 1 100%;
+    order: 3;
+    width: 100%;
+    margin-left: 0;
   }
 
   .salary-section-heading-group {

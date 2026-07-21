@@ -55,6 +55,9 @@ export const normalizeOtherClaim = (claim = {}) => ({
   endLocation: claim.endLocation || '',
   source: claim.source || '',
   sourceLabel: claim.sourceLabel || '',
+  tripMode: claim.tripMode || (claim.type === 'Mileage' ? 'return' : ''),
+  travelGroupId: claim.travelGroupId || '',
+  expenseCategory: claim.expenseCategory || '',
   attachment: normalizeAttachment(claim.attachment),
 })
 
@@ -122,7 +125,7 @@ const isServerSafeAttachmentFile = (file) => {
   )
 }
 
-const isServerSafeDraftClaim = (claim = {}) => {
+const isServerSafeDraftClaim = (claim = {}, claims = []) => {
   const type = String(claim.type || '')
   const amount = Number(claim.amount || 0)
   const km = Number(claim.km || 0)
@@ -141,11 +144,18 @@ const isServerSafeDraftClaim = (claim = {}) => {
   }
 
   if (type === 'Mileage') {
+    const hasLinkedTravelExpense = claims.some(
+      (item) =>
+        item.type === 'Expense' &&
+        claim.travelGroupId &&
+        item.travelGroupId === claim.travelGroupId &&
+        Number(item.amount || 0) > 0,
+    )
     return Boolean(
       date &&
         String(claim.startLocation || '').trim() &&
         String(claim.endLocation || '').trim() &&
-        km > 0,
+        (km > 0 || hasLinkedTravelExpense),
     )
   }
 
@@ -164,6 +174,9 @@ const claimForPayload = (claim) => ({
   endLocation: claim.endLocation || '',
   source: claim.source || '',
   sourceLabel: claim.sourceLabel || '',
+  tripMode: claim.tripMode || '',
+  travelGroupId: claim.travelGroupId || '',
+  expenseCategory: claim.expenseCategory || '',
   attachmentId: claim.attachment?.id ?? null,
 })
 
@@ -267,7 +280,8 @@ export const fetchOtherClaimDraft = async (claimMonth) => {
 
 export const saveOtherClaimDraft = async (draft) => {
   const formData = new FormData()
-  const claims = Array.isArray(draft.claims) ? draft.claims.filter(isServerSafeDraftClaim) : []
+  const draftClaims = Array.isArray(draft.claims) ? draft.claims : []
+  const claims = draftClaims.filter((claim) => isServerSafeDraftClaim(claim, draftClaims))
   const claimMonth = draft.claimMonthValue || draft.draftPayload?.formData?.claimMonth || ''
 
   if (!/^\d{4}-\d{2}$/.test(claimMonth)) return null

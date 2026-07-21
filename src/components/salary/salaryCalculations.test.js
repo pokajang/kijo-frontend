@@ -21,6 +21,7 @@ describe('salaryCalculations', () => {
 
   it('calculates mileage claims at the configured rate', () => {
     expect(calculateMileageAmount(42)).toBe(50.4)
+    expect(calculateMileageAmount(42, 0.6, 'one_way')).toBe(25.2)
   })
 
   it('summarizes salary, claims, deductions, and payable salary', () => {
