@@ -23,6 +23,8 @@ export default function ReviewManpowerQuoteCard({
   formData,
   setFormData,
   onSave,
+  saveLabel,
+  requiresApproval = false,
   isEditMode = false,
   appliedPriceException = null,
 }) {
@@ -60,6 +62,8 @@ export default function ReviewManpowerQuoteCard({
       }
       onCancel={handleCancel}
       onSave={onSave}
+      saveLabel={saveLabel}
+      requiresApproval={requiresApproval}
       isEditMode={isEditMode}
     >
       {/* datatable-exempt: existing embedded/layout table */}

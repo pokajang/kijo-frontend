@@ -29,6 +29,8 @@ export default function ReviewQuotation({
   onAttachProposalChange,
   onCancel,
   onSave,
+  saveLabel,
+  requiresApproval = false,
   isEditMode = false,
 }) {
   return (
@@ -36,6 +38,8 @@ export default function ReviewQuotation({
       title="Review Price"
       onCancel={onCancel}
       onSave={onSave}
+      saveLabel={saveLabel}
+      requiresApproval={requiresApproval}
       isEditMode={isEditMode}
       attachProposal={attachProposal}
       attachProposalLabel="Attach Proposal PDF"

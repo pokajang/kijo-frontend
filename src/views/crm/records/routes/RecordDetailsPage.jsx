@@ -107,6 +107,7 @@ const RecordDetailsPage = () => {
             loading={loading}
             error={error}
             serviceLabel={serviceConfig?.label}
+            serviceTab={serviceTab}
             record={record}
             subject={subject}
             amountDisplay={amountDisplay}

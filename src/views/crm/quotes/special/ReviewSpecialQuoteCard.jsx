@@ -16,6 +16,8 @@ export default function ReviewSpecialQuoteCard({
   setFormData,
   onSave,
   isEditMode = false,
+  saveLabel,
+  requiresApproval = false,
 }) {
   const navigate = useNavigate()
 
@@ -65,6 +67,8 @@ export default function ReviewSpecialQuoteCard({
       onCancel={handleCancel}
       onSave={onSave}
       isEditMode={isEditMode}
+      saveLabel={saveLabel}
+      requiresApproval={requiresApproval}
     >
       <QuoteReviewTable>
         <CTableBody>
@@ -102,28 +106,27 @@ export default function ReviewSpecialQuoteCard({
       <QuoteReviewTable shellClassName="mt-4">
         <CTableHead>
           <CTableRow>
-            <CTableHeaderCell>#</CTableHeaderCell>
-            <CTableHeaderCell>Item</CTableHeaderCell>
-            <CTableHeaderCell>Description</CTableHeaderCell>
-            <CTableHeaderCell>Unit</CTableHeaderCell>
-            <CTableHeaderCell className="text-center">Qty</CTableHeaderCell>
-            <CTableHeaderCell className="text-end">Unit Price (RM)</CTableHeaderCell>
-            <CTableHeaderCell className="text-end">Amount (RM)</CTableHeaderCell>
+            <CTableHeaderCell className="fw-normal text-muted">#</CTableHeaderCell>
+            <CTableHeaderCell>Amount (RM)</CTableHeaderCell>
+            <CTableHeaderCell>Line Item</CTableHeaderCell>
           </CTableRow>
         </CTableHead>
         <CTableBody>
           {(formData.lineItems || []).map((it, i) => (
             <CTableRow key={i}>
-              <CTableHeaderCell>{i + 1}</CTableHeaderCell>
-              <CTableDataCell>{it.title || '-'}</CTableDataCell>
-              <CTableDataCell>{it.description || '-'}</CTableDataCell>
-              <CTableDataCell>{it.unit || '-'}</CTableDataCell>
-              <CTableDataCell className="text-center">{it.quantity}</CTableDataCell>
-              <CTableDataCell className="text-end">
-                {parseFloat(it.unitPrice || 0).toFixed(2)}
-              </CTableDataCell>
-              <CTableDataCell className="text-end">
-                {parseFloat(it.amount || 0).toFixed(2)}
+              <CTableDataCell className="fw-normal text-muted">{i + 1}</CTableDataCell>
+              <CTableDataCell>{parseFloat(it.amount || 0).toFixed(2)}</CTableDataCell>
+                  <CTableDataCell>
+                <div className="d-flex align-items-start gap-2 flex-wrap">
+                  <strong>{it.title || '-'}</strong>
+                  <small className="text-muted">
+                    ({Number(it.quantity || 0)} {it.unit || '-'} x{' '}
+                    {parseFloat(it.unitPrice || 0).toFixed(2)})
+                  </small>
+                  {it.description ? (
+                    <small className="text-muted">Notes: {it.description}</small>
+                  ) : null}
+                </div>
               </CTableDataCell>
             </CTableRow>
           ))}
@@ -131,39 +134,39 @@ export default function ReviewSpecialQuoteCard({
           {discount > 0 && (
             <>
               <CTableRow>
-                <CTableHeaderCell colSpan={6} className="text-end">
-                  Line Items Subtotal (RM)
-                </CTableHeaderCell>
-                <CTableDataCell className="text-end">
+              <CTableHeaderCell colSpan={2} className="text-end">
+                Line Items Subtotal (RM)
+              </CTableHeaderCell>
+                <CTableDataCell>
                   RM {lineItemsSubtotal.toFixed(2)}
                 </CTableDataCell>
               </CTableRow>
               <CTableRow>
-                <CTableHeaderCell colSpan={6} className="text-end">
+                <CTableHeaderCell colSpan={2} className="text-end">
                   Discount (RM)
                 </CTableHeaderCell>
-                <CTableDataCell className="text-end">- RM {discount.toFixed(2)}</CTableDataCell>
+                <CTableDataCell>- RM {discount.toFixed(2)}</CTableDataCell>
               </CTableRow>
             </>
           )}
 
           <CTableRow>
-            <CTableHeaderCell colSpan={6} className="text-end">
+            <CTableHeaderCell colSpan={2} className="text-end">
               Subtotal (RM)
             </CTableHeaderCell>
-            <CTableDataCell className="text-end">RM {subtotal.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>RM {subtotal.toFixed(2)}</CTableDataCell>
           </CTableRow>
           <CTableRow>
-            <CTableHeaderCell colSpan={6} className="text-end">
+            <CTableHeaderCell colSpan={2} className="text-end">
               {formData.sstPercent ?? 0}% SST
             </CTableHeaderCell>
-            <CTableDataCell className="text-end">RM {sstAmount.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>RM {sstAmount.toFixed(2)}</CTableDataCell>
           </CTableRow>
           <CTableRow>
-            <CTableHeaderCell colSpan={6} className="text-end">
+            <CTableHeaderCell colSpan={2} className="text-end">
               <strong>Grand Total (RM)</strong>
             </CTableHeaderCell>
-            <CTableDataCell className="text-end">
+            <CTableDataCell>
               <strong>RM {grandTotal}</strong>
             </CTableDataCell>
           </CTableRow>

@@ -2,7 +2,14 @@ import React from 'react'
 import { CButton, CCard, CCardBody, CCardHeader, CCol, CFormCheck, CTable } from '@coreui/react'
 import { formatContactSummary } from '../quoteContactUtils'
 
-const defaultSaveLabel = (isEditMode) => (isEditMode ? 'Update Quote' : 'Save Quote')
+const defaultSaveLabel = (isEditMode, requiresApproval = false) =>
+  requiresApproval
+    ? isEditMode
+      ? 'Update & Apply Approval'
+      : 'Save & Apply Approval'
+    : isEditMode
+      ? 'Update Quote'
+      : 'Save Quote'
 
 export const QuoteReviewTable = ({
   children,
@@ -57,6 +64,7 @@ export const QuoteReviewActions = ({
   onCancel,
   onSave,
   isEditMode = false,
+  requiresApproval = false,
   cancelLabel = 'Cancel',
   saveLabel,
   className = 'mt-4 d-flex justify-content-end gap-2 flex-wrap',
@@ -72,7 +80,7 @@ export const QuoteReviewActions = ({
       )}
       {typeof onSave === 'function' && (
         <CButton color="primary" size="sm" onClick={onSave}>
-          {saveLabel || defaultSaveLabel(isEditMode)}
+          {saveLabel || defaultSaveLabel(isEditMode, requiresApproval)}
         </CButton>
       )}
     </div>
@@ -89,6 +97,8 @@ export const QuoteReviewSection = ({
   onAttachProposalChange,
   onCancel,
   onSave,
+  saveLabel,
+  requiresApproval = false,
   isEditMode = false,
 }) => (
   <>
@@ -104,7 +114,13 @@ export const QuoteReviewSection = ({
         helpText={attachProposalHelpText}
         onChange={onAttachProposalChange}
       />
-      <QuoteReviewActions onCancel={onCancel} onSave={onSave} isEditMode={isEditMode} />
+      <QuoteReviewActions
+        onCancel={onCancel}
+        onSave={onSave}
+        isEditMode={isEditMode}
+        saveLabel={saveLabel}
+        requiresApproval={Boolean(requiresApproval)}
+      />
     </CCardBody>
   </>
 )

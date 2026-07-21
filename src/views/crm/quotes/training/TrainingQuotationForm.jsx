@@ -30,7 +30,7 @@ import {
   calculateHRD,
   calculateGrandTotal,
 } from './calculations'
-import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
@@ -392,6 +392,17 @@ const TrainingQuotationForm = ({
   const sstAmount = calculateSST(subtotal, sstRate)
   const hrdAmount = calculateHRD(trainingTotal, discountAmount, hrdCharge)
   const quoteGrandTotal = calculateGrandTotal(subtotal, sstAmount, hrdAmount)
+  const trafficStatus = getTrafficLightStatus({
+    serviceKey: 'training',
+    quoteTotal: quoteGrandTotal,
+    estimatedTotalCost: formData.estimatedTotalCost,
+  }).status
+  const requiresApproval = trafficStatus === 'yellow' || trafficStatus === 'red'
+  const saveLabel = requiresApproval
+    ? isEditMode
+      ? 'Update & Apply Approval'
+      : 'Save & Apply Approval'
+    : undefined
 
   const handleRequestOverride = () => {
     dialog.alert(
@@ -450,6 +461,8 @@ const TrainingQuotationForm = ({
               isEditMode={isEditMode}
               proposalLanguage={proposalLanguage}
               appliedPriceException={appliedPriceException}
+              saveLabel={saveLabel}
+              requiresApproval={requiresApproval}
             />
           </CCol>
         )}

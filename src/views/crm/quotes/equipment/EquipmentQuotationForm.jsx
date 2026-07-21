@@ -57,6 +57,12 @@ export default function EquipmentQuotationForm({
     estimatedTotalCost,
     quoteTotal: grandTotal,
   }).status
+  const requiresApproval = pricingCardStatus === 'yellow' || pricingCardStatus === 'red'
+  const saveLabel = requiresApproval
+    ? isEditMode
+      ? 'Update & Apply Approval'
+      : 'Save & Apply Approval'
+    : undefined
 
   return (
     <CCol md={12}>
@@ -117,6 +123,8 @@ export default function EquipmentQuotationForm({
             onSave={handleSaveQuote}
             onCancel={handleCancel}
             isEditMode={isEditMode}
+            saveLabel={saveLabel}
+            requiresApproval={requiresApproval}
           />
         )}
       </CCard>

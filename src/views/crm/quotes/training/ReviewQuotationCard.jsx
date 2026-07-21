@@ -61,6 +61,8 @@ const ReviewQuotationCard = ({
   quoteId,
   proposalLanguage = 'en',
   appliedPriceException = null,
+  saveLabel,
+  requiresApproval = false,
 }) => {
   const navigate = useNavigate()
   const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
@@ -240,6 +242,8 @@ const ReviewQuotationCard = ({
       onCancel={handleCancel}
       onSave={handleSaveQuote}
       isEditMode={isEditMode}
+      saveLabel={saveLabel}
+      requiresApproval={requiresApproval}
     >
       {/* datatable-exempt: existing embedded/layout table */}
       <QuoteReviewTable bordered>

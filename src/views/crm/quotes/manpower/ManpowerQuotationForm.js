@@ -15,7 +15,7 @@ import dialog from '../../../../components/dialog/dialogService'
 import { getManpowerRate, getManpowerRateOption, inferManpowerRateType } from './manpowerRates'
 import { fetchPriceException } from '../priceException'
 import TrafficLightCard from '../shared/TrafficLightCard'
-import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 const getApprovedNegotiationDiscount = (row) =>
   Number(row?.approved_discount_amount || row?.requested_discount_amount || 0)
@@ -390,6 +390,18 @@ export default function ManpowerQuotationForm({
   }
 
   const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+  const trafficLightStatus = getTrafficLightStatus({
+    serviceKey: 'manpower',
+    quoteTotal: formData.grandTotal,
+    estimatedTotalCost: formData.estimatedTotalCost,
+  }).status
+  const requiresApproval = trafficLightStatus === 'yellow' || trafficLightStatus === 'red'
+
+  const saveLabel = requiresApproval
+    ? isEditMode
+      ? 'Update & Apply Approval'
+      : 'Save & Apply Approval'
+    : undefined
 
   return (
     <>
@@ -427,6 +439,8 @@ export default function ManpowerQuotationForm({
           isEditMode={isEditMode}
           quoteId={quoteId}
           appliedPriceException={appliedPriceException}
+          saveLabel={saveLabel}
+          requiresApproval={requiresApproval}
         />
       )}
     </>

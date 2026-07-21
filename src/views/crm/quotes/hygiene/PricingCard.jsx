@@ -227,7 +227,7 @@ const PricingCard = ({ formData, setFormData }) => {
             onChange={(event) => setItem((prev) => ({ ...prev, unit_price: event.target.value }))}
           />
         </CTableDataCell>
-        <CTableDataCell className="text-end">{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
+        <CTableDataCell>{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
         <CTableDataCell className="record-action-cell text-center" />
       </CTableRow>
       <CTableRow>
@@ -318,7 +318,7 @@ const PricingCard = ({ formData, setFormData }) => {
                       <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
                       <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
                       <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
-                      <CTableHeaderCell className="text-end" style={{ width: '120px' }}>
+                      <CTableHeaderCell style={{ width: '120px' }}>
                         Total
                       </CTableHeaderCell>
                       <CTableHeaderCell
@@ -356,9 +356,7 @@ const PricingCard = ({ formData, setFormData }) => {
                           <CTableDataCell>{Number(item.quantity) || 0}</CTableDataCell>
                           <CTableDataCell>{item.unit || '-'}</CTableDataCell>
                           <CTableDataCell>{Number(item.unit_price || 0).toFixed(2)}</CTableDataCell>
-                          <CTableDataCell className="text-end">
-                            {getItemLineTotal(item).toFixed(2)}
-                          </CTableDataCell>
+                          <CTableDataCell>{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
                           <CTableDataCell
                             className="record-action-cell text-center"
                             data-no-row-open="true"

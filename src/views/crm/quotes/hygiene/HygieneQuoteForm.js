@@ -15,7 +15,7 @@ import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
 import TrafficLightCard from '../shared/TrafficLightCard'
-import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 export default function HygieneQuotationForm({
   selectedClient,
@@ -305,6 +305,17 @@ export default function HygieneQuotationForm({
   }
 
   const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+  const trafficLightStatus = getTrafficLightStatus({
+    serviceKey: 'ih',
+    estimatedTotalCost: formData.estimatedTotalCost,
+    quoteTotal: quoteTotals.grandTotal,
+  }).status
+  const requiresApproval = trafficLightStatus === 'yellow' || trafficLightStatus === 'red'
+  const saveLabel = requiresApproval
+    ? isEditMode
+      ? 'Update & Apply Approval'
+      : 'Save & Apply Approval'
+    : undefined
 
   return (
     <>
@@ -339,6 +350,8 @@ export default function HygieneQuotationForm({
               formData={formData}
               setFormData={setFormData}
               onSave={handleSaveQuote}
+              saveLabel={saveLabel}
+              requiresApproval={requiresApproval}
               isEditMode={isEditMode}
               quoteId={quoteId}
             />

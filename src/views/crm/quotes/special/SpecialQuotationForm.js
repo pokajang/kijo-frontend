@@ -267,6 +267,12 @@ export default function SpecialQuotationForm({
   const showPricing =
     isEditMode || (selectedClient && formData.specialId && formData.lineItems.length > 0)
   const showReview = isEditMode || parseFloat(formData.subTotal || 0) > 0
+  const requiresApproval = true
+  const saveLabel = requiresApproval
+    ? isEditMode
+      ? 'Update & Apply Approval'
+      : 'Save & Apply Approval'
+    : 'Save Quote'
 
   return (
     <CCol xs={12}>
@@ -290,6 +296,8 @@ export default function SpecialQuotationForm({
                 onSave={handleSaveQuote}
                 isEditMode={isEditMode}
                 quoteId={quoteId}
+                saveLabel={saveLabel}
+                requiresApproval={requiresApproval}
               />
             )}
           </>

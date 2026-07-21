@@ -1,7 +1,14 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { CTableBody, CTableRow, CTableHeaderCell, CTableDataCell } from '@coreui/react'
+import {
+  CTable,
+  CTableHead,
+  CTableBody,
+  CTableRow,
+  CTableHeaderCell,
+  CTableDataCell,
+} from '@coreui/react'
 import { clearQuoteMainDraft, clearQuoteServiceDraft } from '../quoteMainDrafts'
 import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { getRecordListPath } from '../../records/config/recordTabs'
@@ -23,6 +30,8 @@ const ReviewHygieneQuotationCard = ({
   formData,
   setFormData,
   onSave,
+  saveLabel,
+  requiresApproval = false,
   isEditMode = false,
 }) => {
   const navigate = useNavigate()
@@ -68,6 +77,8 @@ const ReviewHygieneQuotationCard = ({
       }
       onCancel={handleCancel}
       onSave={onSave}
+      saveLabel={saveLabel}
+      requiresApproval={requiresApproval}
       isEditMode={isEditMode}
     >
       {/* datatable-exempt: existing embedded/layout table */}
@@ -117,35 +128,45 @@ const ReviewHygieneQuotationCard = ({
           {hygieneItems.length > 0 && (
             <CTableRow>
               <CTableHeaderCell className="text-end">Additional Fees (RM)</CTableHeaderCell>
-              <CTableDataCell>
-                {hygieneItems.map((item, index) => {
-                  const quantity = toNumber(item.quantity, 0)
-                  const unitPrice = toNumber(item.unit_price, 0)
-                  const lineTotal = quantity * unitPrice
-                  const prefix = hygieneItems.length > 1 ? `${index + 1}. ` : ''
-                  return (
-                    <div key={item.id || index} className={index > 0 ? 'mt-2' : undefined}>
-                      <div className="d-flex justify-content-between gap-3 flex-wrap">
-                        <div>
-                          <strong>
-                            {prefix}
-                            {item.item_description}
-                          </strong>{' '}
-                          <small className="text-muted">
-                            ({quantity} {item.unit || 'Lot'} x {unitPrice.toFixed(2)})
-                          </small>
-                        </div>
-                        <span>{lineTotal.toFixed(2)}</span>
-                      </div>
-                      {item.description ? (
-                        <>
-                          <br />
-                          <small className="text-muted d-block">{item.description}</small>
-                        </>
-                      ) : null}
-                    </div>
-                  )
-                })}
+              <CTableDataCell className="p-0">
+                <CTable
+                  className="align-middle mb-0 records-table-compact"
+                  style={{ width: 'auto', minWidth: 0 }}
+                >
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell className="fw-normal text-muted">#</CTableHeaderCell>
+                      <CTableHeaderCell>Amount (RM)</CTableHeaderCell>
+                      <CTableHeaderCell>Line Item</CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {hygieneItems.map((item, index) => {
+                      const quantity = toNumber(item.quantity, 0)
+                      const unitPrice = toNumber(item.unit_price, 0)
+                      const lineTotal = quantity * unitPrice
+                      return (
+                        <CTableRow key={item.id || index}>
+                          <CTableDataCell className="fw-normal text-muted">
+                            {index + 1}
+                          </CTableDataCell>
+                          <CTableDataCell>{lineTotal.toFixed(2)}</CTableDataCell>
+                          <CTableDataCell>
+                            <div className="d-flex align-items-start gap-2 flex-wrap">
+                              <strong>{item.item_description || '-'}</strong>
+                              <small className="text-muted">
+                                ({quantity} {item.unit || 'Lot'} x {unitPrice.toFixed(2)})
+                              </small>
+                              {item.description ? (
+                                <small className="text-muted">Notes: {item.description}</small>
+                              ) : null}
+                            </div>
+                          </CTableDataCell>
+                        </CTableRow>
+                      )
+                    })}
+                  </CTableBody>
+                </CTable>
               </CTableDataCell>
             </CTableRow>
           )}
