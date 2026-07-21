@@ -150,6 +150,14 @@ const getProjectOutcomeFields = (awardHistory = []) => {
   }
 }
 
+const toNullableNumber = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : undefined
+}
+
+const getEstimatedCostValue = (row = {}) =>
+  toNullableNumber(row.estimated_total_cost ?? row.estimated_cost ?? row.formData?.estimated_cost ?? row.cost_total)
+
 export async function fetchTrainingQuotes() {
   try {
     const payload = await fetchJsonCompat(`${import.meta.env.VITE_API_BASE}quote-records/training`)
@@ -181,6 +189,7 @@ export async function fetchTrainingQuotes() {
       const followUps = fuMap[id] || []
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
+      const estimatedCost = getEstimatedCostValue(row)
 
       return {
         id,
@@ -263,6 +272,7 @@ export async function fetchTrainingQuotes() {
           travelCharge: parseFloat(row.travel_charge ?? 0),
           mealsProvided: row.meals_provided,
           mealPrice: parseFloat(row.meal_price ?? 0),
+          estimated_cost: estimatedCost,
 
           discountType: row.discount_type,
           discountValue: parseFloat(row.discount_value ?? 0),
@@ -274,6 +284,7 @@ export async function fetchTrainingQuotes() {
         },
 
         amount: row.grand_total != null ? Number(row.grand_total).toFixed(2) : '0.00',
+        estimatedCost,
         subtotal: parseFloat(row.subtotal ?? 0),
         sst_amount: parseFloat(row.sst_amount ?? 0),
         hrd_amount: parseFloat(row.hrd_amount ?? 0),
@@ -330,6 +341,7 @@ export async function fetchIHQuotes() {
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
       const lineItems = normalizeHygieneItems(row)
+      const estimatedCost = getEstimatedCostValue(row)
 
       return {
         // core fields
@@ -399,6 +411,7 @@ export async function fetchIHQuotes() {
 
           unitPrice: parseFloat(row.unit_price ?? 0),
           travelCharge: parseFloat(row.travel_charge ?? 0),
+          estimated_cost: estimatedCost,
           hygieneItems: lineItems.map((item) => ({
             id: item.id,
             item_description: item.item_description,
@@ -415,6 +428,7 @@ export async function fetchIHQuotes() {
 
         // totals
         amount: row.grand_total != null ? Number(row.grand_total).toFixed(2) : '0.00',
+        estimatedCost,
         subtotal: parseFloat(row.sub_total ?? 0),
         sst_amount: parseFloat(row.sst_amount ?? 0),
         discountAmount: parseFloat(row.discount ?? 0),
@@ -469,7 +483,8 @@ export async function fetchManpowerQuotes() {
       const followUps = fuMap[id] || []
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
-
+      const estimatedCost = getEstimatedCostValue(row)
+      
       return {
         // core fields
         id,
@@ -538,6 +553,7 @@ export async function fetchManpowerQuotes() {
           noOfPax: parseInt(row.no_of_pax ?? 0, 10),
           inquiryRemarks: row.inquiry_remarks || '',
           requiresManagementApproval: toBool(row.requires_management_approval),
+          estimated_cost: estimatedCost,
 
           unitCost: parseFloat(row.unit_cost ?? 0),
           discount: parseFloat(row.discount ?? 0),
@@ -546,6 +562,7 @@ export async function fetchManpowerQuotes() {
 
         // totals
         amount: row.grand_total != null ? Number(row.grand_total).toFixed(2) : '0.00',
+        estimatedCost,
         subtotal: parseFloat(row.sub_total ?? 0),
         sst_amount: parseFloat(row.sst_amount ?? 0),
         discountAmount: parseFloat(row.discount ?? 0),
@@ -599,6 +616,7 @@ export async function fetchSpecialQuotes() {
       const followUps = fuMap[id] || []
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
+      const estimatedCost = getEstimatedCostValue(row)
 
       return {
         // --- Core quote fields ---
@@ -659,11 +677,13 @@ export async function fetchSpecialQuotes() {
           proposalId: row.sp_id ? parseInt(row.sp_id, 10) : null,
           serviceTitle: row.service_title || '',
           serviceCode: row.service_code || '',
+          estimated_cost: estimatedCost,
           generalRemarks: row.general_remarks || '',
         },
 
         // --- Totals & pricing ---
         subtotal: parseFloat(row.sub_total ?? 0),
+        estimatedCost,
         sstAmount: parseFloat(row.sst_amount ?? 0),
         discount: parseFloat(row.discount ?? 0),
         amount: row.grand_total != null ? Number(row.grand_total).toFixed(2) : '0.00',
@@ -733,6 +753,7 @@ export async function fetchEquipmentQuotes() {
       const followUps = fuMap[id] || []
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
+      const estimatedCost = getEstimatedCostValue(row)
 
       return {
         // --- Core quote fields ---
@@ -788,9 +809,11 @@ export async function fetchEquipmentQuotes() {
         // --- Equipment‐specific form data ---
         formData: {
           inquiryRemarks: row.inquiry_remarks || '',
+          estimated_cost: estimatedCost,
         },
 
         // --- Charges & totals ---
+        estimatedCost,
         discount: parseFloat(row.discount ?? 0),
         deliveryCharge: parseFloat(row.delivery_charge ?? 0),
         miscCharge: parseFloat(row.misc_charge ?? 0),

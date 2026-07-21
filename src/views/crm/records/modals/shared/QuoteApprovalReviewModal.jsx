@@ -24,6 +24,7 @@ const money = (value) =>
 const QuoteApprovalReviewModal = ({
   visible,
   approval,
+  decisionNotice,
   remarks,
   onRemarksChange,
   onCancel,
@@ -32,12 +33,18 @@ const QuoteApprovalReviewModal = ({
 }) => {
   const zone = String(approval?.zone || '').toLowerCase()
   const status = String(approval?.status || '').toLowerCase()
-  const canDecide = status === 'pending' && Boolean(approval?.can_decide)
+  const isStaleNotice =
+    Boolean(decisionNotice) &&
+    status === 'pending' &&
+    Boolean(approval?.can_decide)
+  const canDecide = status === 'pending' && Boolean(approval?.can_decide) && !isStaleNotice
   const canPreview = status === 'approved' || canDecide
   const badgeColor = zone === 'red' ? 'danger' : zone === 'yellow' ? 'warning' : 'success'
   const previewUrl = approval
     ? `${quoteApiUrl(`quote-records/${approval.service}/${approval.quote_id}/pdf`)}?quote_id=${approval.quote_id}&approval_preview=1`
     : ''
+  const staleMessage =
+    decisionNotice?.message || (decisionNotice?.title ? `${decisionNotice.title}` : null)
 
   return (
     <CModal visible={visible} onClose={onCancel} alignment="center" size="lg">
@@ -82,6 +89,15 @@ const QuoteApprovalReviewModal = ({
             ))}
           </ul>
         </CAlert>
+
+        {isStaleNotice && (
+          <CAlert color="warning" className="py-2">
+            <div className="fw-semibold mb-1">
+              {decisionNotice?.title || 'Approval request is outdated'}
+            </div>
+            {staleMessage}
+          </CAlert>
+        )}
 
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="small text-muted">

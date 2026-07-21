@@ -55,6 +55,7 @@ const RecordsPage = () => {
     isNegotiationSubmitting,
     pendingApprovals = [],
     approvalRecord,
+    approvalDecisionNotice,
     approvalRemarks,
     setApprovalRemarks,
     openApprovalReview,
@@ -257,6 +258,7 @@ const RecordsPage = () => {
         <QuoteApprovalReviewModal
           visible={Boolean(approvalRecord)}
           approval={approvalRecord}
+          decisionNotice={approvalDecisionNotice}
           remarks={approvalRemarks}
           onRemarksChange={setApprovalRemarks}
           onCancel={closeApprovalReview}

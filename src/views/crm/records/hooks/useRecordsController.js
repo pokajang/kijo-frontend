@@ -92,6 +92,7 @@ export const useRecordsController = () => {
   const [isNegotiationSubmitting, setIsNegotiationSubmitting] = useState(false)
   const [approvalItems, setApprovalItems] = useState([])
   const [approvalRecord, setApprovalRecord] = useState(null)
+  const [approvalDecisionNotice, setApprovalDecisionNotice] = useState(null)
   const [approvalRemarks, setApprovalRemarks] = useState('')
   const [isApprovalSubmitting, setIsApprovalSubmitting] = useState(false)
   const { quotes, setQuotes, quotesLoading, fetchQuotes } = useRecordsFetch(activeTab)
@@ -144,6 +145,7 @@ export const useRecordsController = () => {
     const approval = value?.approval || value
     if (!approval?.id) return
     setApprovalRemarks('')
+    setApprovalDecisionNotice(null)
     setApprovalRecord(approval)
   }, [])
 
@@ -179,8 +181,21 @@ export const useRecordsController = () => {
       )
       const result = await response.json()
       if (!response.ok || !isSuccess(result)) {
+        if (
+          response.status === 409 &&
+          String(result?.code || '') === 'QUOTE_APPROVAL_STALE'
+        ) {
+          setApprovalDecisionNotice({
+            severity: 'warning',
+            title: 'Approval request is outdated',
+            message:
+              getMessage(result, `Approval request #${approvalRecord.id} is no longer current.`),
+          })
+          return
+        }
         throw new Error(getMessage(result, `Failed to ${decision} quotation.`))
       }
+      setApprovalDecisionNotice(null)
       showToast(result.message || `Quotation ${decision === 'approve' ? 'approved' : 'rejected'}.`)
       setApprovalRecord(null)
       setApprovalRemarks('')
@@ -697,9 +712,13 @@ export const useRecordsController = () => {
     setApprovalRemarks,
     openApprovalReview,
     closeApprovalReview: () => {
-      if (!isApprovalSubmitting) setApprovalRecord(null)
+      if (!isApprovalSubmitting) {
+        setApprovalRecord(null)
+        setApprovalDecisionNotice(null)
+      }
     },
     handleApprovalDecision,
+    approvalDecisionNotice,
     isApprovalSubmitting,
     modalState,
     successRecord,

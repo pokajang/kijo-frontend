@@ -61,4 +61,26 @@ describe('QuoteApprovalReviewModal', () => {
     ).toBe(true)
     expect(screen.getByRole('link', { name: 'Open Approved PDF' })).toBeInTheDocument()
   })
+
+  it('renders stale decision notice and blocks actions', () => {
+    render(
+      <QuoteApprovalReviewModal
+        visible
+        approval={{ ...baseApproval, status: 'pending', can_decide: true }}
+        decisionNotice={{
+          title: 'Approval request is outdated',
+          message: 'This quotation changed and needs re-review.',
+        }}
+        remarks=""
+        onRemarksChange={vi.fn()}
+        onCancel={vi.fn()}
+        onDecision={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument()
+    expect(screen.getByText(/outdated/i)).toBeInTheDocument()
+    expect(screen.getByText('This quotation changed and needs re-review.')).toBeInTheDocument()
+  })
 })
