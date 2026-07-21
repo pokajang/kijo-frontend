@@ -5,8 +5,6 @@ import {
   CCardBody,
   CCardHeader,
   CForm,
-  CFormInput,
-  CFormLabel,
   CSpinner,
 } from '@coreui/react'
 import { DataTableLoadingState } from '../datatable'
@@ -44,6 +42,131 @@ import {
   toPositiveNumber,
 } from './other-claim/model/otherClaimModel'
 import OtherClaimSummary from './other-claim/OtherClaimSummary'
+import { listActiveProjectOptions } from '../../views/project/manage/projectApi'
+
+const normalizeProjectOption = (project = {}) => {
+  const value = String(
+    project.id ??
+      project.value ??
+      project.projectId ??
+      project.project_id ??
+      project.projectID ??
+      '',
+  ).trim()
+  const label = String(
+    project.projectName ??
+      project.project_name ??
+      project.label ??
+      project.name ??
+      '',
+  ).trim()
+  const clientName = String(
+    project.clientName ?? project.client_name ?? project.clientNameDisplay ?? '',
+  ).trim()
+
+  if (!value || !label) return null
+
+  return {
+    value,
+    label: clientName ? `${label} (${clientName})` : label,
+    projectName: label,
+    clientName,
+  }
+}
+
+const mergeProjectOptionsWithMineFirst = (myProjects = [], allProjects = []) => {
+  const mineMap = new Map()
+  myProjects
+    .map(normalizeProjectOption)
+    .filter(Boolean)
+    .forEach((project) => {
+      mineMap.set(project.value, project)
+  })
+
+  const allMap = new Map()
+  allProjects
+    .map(normalizeProjectOption)
+    .filter(Boolean)
+    .forEach((project) => {
+      allMap.set(project.value, project)
+    })
+
+  const merged = []
+  const used = new Set()
+
+  mineMap.forEach((project) => {
+    merged.push(project)
+    used.add(project.value)
+  })
+
+  allMap.forEach((project) => {
+    if (!used.has(project.value)) {
+      merged.push(project)
+      used.add(project.value)
+    }
+  })
+
+  const sorted = [...merged].sort((a, b) => a.label.localeCompare(b.label))
+
+  return sorted.sort((a, b) => {
+    const aIsMine = mineMap.has(a.value)
+    const bIsMine = mineMap.has(b.value)
+    if (aIsMine === bIsMine) return 0
+    return aIsMine ? -1 : 1
+  })
+}
+
+const getProjectOptionByValue = (projectOptions, projectValue) =>
+  projectOptions.find((project) => String(project.value) === String(projectValue || ''))
+
+const getMileageChargeToFormState = (chargeToLabel, projectOptions = []) => {
+  const cleanedLabel = String(chargeToLabel || '').trim()
+  if (!cleanedLabel || cleanedLabel.toLowerCase() === 'company') {
+    return {
+      mileageChargeToMode: 'company',
+      mileageChargeToProjectId: '',
+      mileageChargeTo: cleanedLabel || '',
+    }
+  }
+
+  const selectedProjectOption =
+    getProjectOptionByValue(projectOptions, cleanedLabel) ||
+    projectOptions.find((project) => project.label === cleanedLabel) ||
+    projectOptions.find(
+      (project) =>
+        project.label && project.label.toLowerCase() === cleanedLabel.toLowerCase(),
+    ) ||
+    projectOptions.find(
+      (project) =>
+        project.projectName &&
+        project.projectName.toLowerCase() === cleanedLabel.toLowerCase(),
+    )
+
+  if (!selectedProjectOption) {
+    return {
+      mileageChargeToMode: 'company',
+      mileageChargeToProjectId: '',
+      mileageChargeTo: cleanedLabel,
+    }
+  }
+
+  return {
+    mileageChargeToMode: 'project',
+    mileageChargeToProjectId: selectedProjectOption.value,
+    mileageChargeTo: '',
+  }
+}
+
+const buildClaimMonthOptions = (baseDate = new Date()) =>
+  [0, 1, 2].map((offset) => {
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth() - offset, 1)
+    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+
+    return {
+      value,
+      label: formatClaimMonth(value),
+    }
+  })
 
 const colorByType = {
   success: 'success',
@@ -104,9 +227,37 @@ const OtherClaimApply = ({
   const [medicalItems, setMedicalItems] = useState(initialStateRef.current.medicalItems)
   const [editingClaim, setEditingClaim] = useState(null)
   const [activeRecordId, setActiveRecordIdState] = useState(editRecord?.id || null)
+  const [projectOptions, setProjectOptions] = useState([])
+  const [isProjectOptionsLoading, setIsProjectOptionsLoading] = useState(false)
 
   const setActiveRecordId = useCallback((recordId) => {
     setActiveRecordIdState(recordId || null)
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const loadProjectOptions = async () => {
+      setIsProjectOptionsLoading(true)
+      const [myProjects, allProjects] = await Promise.all([
+        listActiveProjectOptions({ signal: controller.signal, scope: 'mine' }).catch(() => []),
+        listActiveProjectOptions({ signal: controller.signal, scope: 'all' }).catch(() => []),
+      ])
+
+      if (controller.signal.aborted) return
+      setProjectOptions(mergeProjectOptionsWithMineFirst(myProjects, allProjects))
+      setIsProjectOptionsLoading(false)
+    }
+
+    loadProjectOptions().catch(() => {
+      if (!controller.signal.aborted) {
+        setProjectOptions([])
+        setIsProjectOptionsLoading(false)
+      }
+    })
+
+    return () => {
+      controller.abort()
+    }
   }, [])
 
   useEffect(() => {
@@ -178,6 +329,15 @@ const OtherClaimApply = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    if (name === 'mileageChargeToMode') {
+      setFormData((prev) => ({
+        ...prev,
+        mileageChargeToMode: value,
+        mileageChargeToProjectId: value === 'company' ? '' : prev.mileageChargeToProjectId || '',
+        mileageChargeTo: '',
+      }))
+      return
+    }
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -346,11 +506,29 @@ const OtherClaimApply = ({
     if (attachmentProcessingRef.current.mileage) return false
     const km = toPositiveNumber(formData.mileageKm)
     const travelExpenseAmount = toPositiveNumber(formData.travelExpenseAmount)
+    const chargeToMode = formData.mileageChargeToMode || 'company'
+    const selectedProjectOption =
+      chargeToMode === 'project'
+        ? getProjectOptionByValue(projectOptions, formData.mileageChargeToProjectId)
+        : null
+    const chargeTo =
+      chargeToMode === 'project'
+        ? selectedProjectOption
+          ? selectedProjectOption.label
+          : ''
+        : 'Company'
     const hasTravelExpenseDetails = Boolean(
       String(formData.travelExpenseAmount ?? '').trim() ||
         formData.travelExpenseCategory ||
         formData.mileageAttachment,
     )
+    if (
+      chargeToMode === 'project' &&
+      (!formData.mileageChargeToProjectId || !selectedProjectOption)
+    ) {
+      showNotice('warning', 'Select a project before saving travel & mileage.')
+      return false
+    }
     if (
       !formData.mileageDate ||
       !formData.startLocation.trim() ||
@@ -382,7 +560,6 @@ const OtherClaimApply = ({
     const startLocation = formData.startLocation.trim()
     const endLocation = formData.endLocation.trim()
     const purpose = formData.mileagePurpose.trim()
-    const chargeTo = formData.mileageChargeTo.trim()
     const editingMileage =
       editingClaim?.type === 'mileage'
         ? mileageItems.find((item) => item.id === editingClaim.id)
@@ -442,6 +619,8 @@ const OtherClaimApply = ({
       startLocation: '',
       endLocation: '',
       mileagePurpose: '',
+      mileageChargeToMode: 'company',
+      mileageChargeToProjectId: '',
       mileageChargeTo: '',
       mileageKm: '',
       mileageTripMode: 'return',
@@ -505,7 +684,7 @@ const OtherClaimApply = ({
             startLocation: linkedMileage.startLocation || locations.startLocation,
             endLocation: linkedMileage.endLocation || locations.endLocation,
             mileagePurpose: linkedMileage.description || '',
-            mileageChargeTo: linkedMileage.sourceLabel || '',
+            ...getMileageChargeToFormState(linkedMileage.sourceLabel, projectOptions),
             mileageKm: String(linkedMileage.km ?? ''),
             mileageTripMode: linkedMileage.tripMode || 'return',
             travelExpenseCategory: item.expenseCategory || '',
@@ -556,7 +735,7 @@ const OtherClaimApply = ({
           startLocation: item.startLocation || locations.startLocation,
           endLocation: item.endLocation || locations.endLocation,
           mileagePurpose: item.description || '',
-          mileageChargeTo: item.sourceLabel || '',
+          ...getMileageChargeToFormState(item.sourceLabel, projectOptions),
           mileageKm: String(item.km ?? ''),
           mileageTripMode: item.tripMode || 'return',
           travelExpenseCategory: travelExpense?.expenseCategory || '',
@@ -570,7 +749,7 @@ const OtherClaimApply = ({
       resetAttachmentInputs()
       return true
     },
-    [allowanceItems, expenseItems, medicalItems, mileageItems, resetAttachmentInputs],
+    [allowanceItems, expenseItems, medicalItems, mileageItems, projectOptions, resetAttachmentInputs],
   )
 
   const allClaims = useMemo(
@@ -729,6 +908,24 @@ const OtherClaimApply = ({
     }
   }
 
+  const selectedClaimMonth = formData.claimMonth || getCurrentClaimMonth()
+  const claimMonthOptions = useMemo(() => {
+    const baseOptions = buildClaimMonthOptions()
+    const hasSelectedInOptions = baseOptions.some((option) => option.value === selectedClaimMonth)
+    if (hasSelectedInOptions) return baseOptions
+
+    return [
+      { value: selectedClaimMonth, label: formatClaimMonth(selectedClaimMonth) },
+      ...baseOptions,
+    ]
+  }, [selectedClaimMonth])
+  const handleClaimMonthSelect = useCallback(
+    (claimMonth) => {
+      handleChange({ target: { name: 'claimMonth', value: claimMonth } })
+    },
+    [handleChange],
+  )
+
   const renderPanelAddAction = () =>
     showClaimDraft ? null : (
       <CButton
@@ -832,6 +1029,8 @@ const OtherClaimApply = ({
           addAction={renderPanelAddAction()}
           attachmentInputVersion={attachmentInputVersion}
           isPreparing={attachmentProcessing.mileage}
+          isProjectOptionsLoading={isProjectOptionsLoading}
+          projectOptions={projectOptions}
           onChange={handleChange}
           onAttachmentChange={(file) => handleAttachmentChange('mileage', file)}
           onSave={() => handleSaveClaimDraft(addMileage)}
@@ -893,19 +1092,6 @@ const OtherClaimApply = ({
             Other Claim Summary
           </h3>
         </div>
-        <div className="salary-claim-month-control">
-          <CFormLabel htmlFor="otherClaimMonth" className="mb-1">
-            Claim month
-          </CFormLabel>
-          <CFormInput
-            id="otherClaimMonth"
-            type="month"
-            name="claimMonth"
-            value={formData.claimMonth}
-            onChange={handleChange}
-            disabled={Boolean(activeRecordId)}
-          />
-        </div>
         {!isAdjusting && (
           <CButton
             color="primary"
@@ -921,6 +1107,35 @@ const OtherClaimApply = ({
           </CButton>
         )}
       </CCardHeader>
+      <CCardBody className="salary-section-body">
+        <input
+          id="otherClaimMonth"
+          type="hidden"
+          name="claimMonth"
+          value={formData.claimMonth}
+          readOnly
+        />
+        <div className="salary-month-picker salary-month-picker--body" aria-label="Claim month">
+          <span className="salary-month-picker-label">Claim month</span>
+          <div className="salary-month-picker-buttons" role="group">
+            {claimMonthOptions.map((option) => (
+              <CButton
+                key={option.value}
+                color="primary"
+                variant={selectedClaimMonth === option.value ? undefined : 'outline'}
+                size="sm"
+                type="button"
+                className="salary-month-picker-button"
+                aria-pressed={selectedClaimMonth === option.value}
+                disabled={Boolean(activeRecordId)}
+                onClick={() => handleClaimMonthSelect(option.value)}
+              >
+                {option.label}
+              </CButton>
+            ))}
+          </div>
+        </div>
+      </CCardBody>
       {isAdjusting && (
         <CCardBody className="salary-section-body">{renderAdjustmentForm()}</CCardBody>
       )}

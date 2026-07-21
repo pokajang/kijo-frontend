@@ -60,6 +60,8 @@ export const createEmptyClaimFields = () => ({
   startLocation: '',
   endLocation: '',
   mileagePurpose: '',
+  mileageChargeToMode: 'company',
+  mileageChargeToProjectId: '',
   mileageChargeTo: '',
   mileageKm: '',
   mileageTripMode: 'return',

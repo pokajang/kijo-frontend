@@ -10,6 +10,11 @@
   align-items: flex-end;
 }
 
+.salary-travel-editor-row {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
 .salary-claim-grow-col {
   min-width: 0;
 }
@@ -29,6 +34,11 @@
   max-width: 6rem;
 }
 
+.salary-claim-mileage-col {
+  flex: 0 0 7.5rem;
+  max-width: 7.5rem;
+}
+
 .salary-claim-attachment-col {
   min-width: 0;
 }
@@ -44,6 +54,10 @@
 }
 
 @media (min-width: 768px) {
+  .salary-travel-editor-row {
+    flex-wrap: wrap;
+  }
+
   .salary-claim-field-row {
     flex-wrap: nowrap;
   }
@@ -63,6 +77,12 @@
     max-width: none;
   }
 
+  .salary-claim-mileage-col {
+    flex: 0.85 1 0;
+    max-width: none;
+    min-width: 11rem;
+  }
+
   .salary-settings-month-col {
     flex: 0.9 1 0;
     max-width: none;
@@ -76,6 +96,15 @@
   .salary-claim-grow-col {
     flex: 1.7 1 0;
   }
+}
+
+.salary-travel-mileage-hint {
+  margin-bottom: 0;
+  margin-top: 0.25rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  max-width: 20rem;
 }
 
 .salary-claim-draft-actions {

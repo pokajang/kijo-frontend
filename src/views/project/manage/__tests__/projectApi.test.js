@@ -330,6 +330,26 @@ describe('projectApi normalizers', () => {
     )
   })
 
+  it('supports loading active project options for all scope', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 'success',
+          data: [{ id: 100, projectName: 'Active Project', status: 'Active' }],
+        }),
+    })
+
+    await expect(listActiveProjectOptions({ scope: 'all' })).resolves.toEqual([
+      { id: 100, projectName: 'Active Project', status: 'Active' },
+    ])
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('projects/options?status=active&scope=all'),
+      expect.objectContaining({ credentials: 'include' }),
+    )
+  })
+
   it('loads unbounded project records for all-time periods', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

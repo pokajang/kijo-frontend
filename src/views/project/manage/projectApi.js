@@ -146,8 +146,12 @@ export const listProjects = async ({ signal, periodRange } = {}) => {
 export const listAllProjects = ({ signal } = {}) =>
   requestJson('projects', { signal }).then(normalizeProjectList)
 
-export const listActiveProjectOptions = ({ signal } = {}) =>
-  requestJson('projects/options?status=active&scope=mine', { signal }).then(normalizeProjectOptions)
+export const listActiveProjectOptions = ({ signal, scope = 'mine' } = {}) => {
+  const scopeParam = String(scope || 'mine').trim() || 'mine'
+  return requestJson(`projects/options?status=active&scope=${encodeURIComponent(scopeParam)}`, {
+    signal,
+  }).then(normalizeProjectOptions)
+}
 
 export const getProjectDetails = (projectId, { signal } = {}) =>
   requestJson(`projects/${enc(projectId)}`, {

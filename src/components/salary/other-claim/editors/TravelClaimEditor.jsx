@@ -13,16 +13,26 @@ const TravelClaimEditor = ({
   addAction,
   attachmentInputVersion,
   isPreparing,
+  projectOptions,
+  isProjectOptionsLoading,
   onChange,
   onAttachmentChange,
   onSave,
   onCancel,
-}) => (
+}) => {
+  const mileageHint =
+    Number(formData.mileageKm || 0) > 0
+      ? `Mileage: ${formatMoney(
+          calculateMileageAmount(formData.mileageKm, formData.mileageRate, formData.mileageTripMode),
+        )}`
+      : 'Leave blank for taxi, parking, toll, or other travel without mileage.'
+
+  return (
   <section className="salary-adjustment-input-panel mt-3" aria-labelledby="otherMileageHeading">
     <FormPanelHeading id="otherMileageHeading" title="Travel & Mileage" action={addAction} />
     {showDraft && (
       <>
-        <CRow className="g-3 salary-claim-field-row">
+        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row">
           <CCol xs={12} md="auto" className="salary-claim-date-col">
             <CFormLabel htmlFor="otherMileageDate" className="mb-1">
               Date
@@ -57,7 +67,9 @@ const TravelClaimEditor = ({
               onChange={onChange}
             />
           </CCol>
-          <CCol xs={12} md="auto" className="salary-claim-km-col">
+        </CRow>
+        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
+          <CCol xs={12} md="auto" className="salary-claim-date-col">
             <CFormLabel htmlFor="otherMileageTripMode" className="mb-1">
               Trip type
             </CFormLabel>
@@ -71,7 +83,7 @@ const TravelClaimEditor = ({
               <option value="one_way">One-way</option>
             </CFormSelect>
           </CCol>
-          <CCol xs={12} md="auto" className="salary-claim-km-col">
+          <CCol xs={12} md="auto" className="salary-claim-mileage-col">
             <CFormLabel htmlFor="otherMileageKm" className="mb-1">
               Mileage KM (optional)
             </CFormLabel>
@@ -84,20 +96,10 @@ const TravelClaimEditor = ({
               value={formData.mileageKm}
               onChange={onChange}
             />
-            <div className="salary-field-help">
-              {Number(formData.mileageKm || 0) > 0
-                ? `Mileage: ${formatMoney(
-                    calculateMileageAmount(
-                      formData.mileageKm,
-                      formData.mileageRate,
-                      formData.mileageTripMode,
-                    ),
-                  )}`
-                : 'Leave blank for taxi, parking, toll, or other travel without mileage.'}
+            <div className="salary-travel-mileage-hint salary-field-help" role="note">
+              {mileageHint}
             </div>
           </CCol>
-        </CRow>
-        <CRow className="g-3 salary-claim-field-row mt-0">
           <CCol xs={12} md className="salary-claim-grow-col">
             <CFormLabel htmlFor="otherMileagePurpose" className="mb-1">
               Purpose
@@ -110,23 +112,48 @@ const TravelClaimEditor = ({
               placeholder="Site inspection or client meeting"
             />
           </CCol>
-          <CCol xs={12} md className="salary-claim-grow-col">
-            <CFormLabel htmlFor="otherMileageChargeTo" className="mb-1">
-              Charge to project/company
-            </CFormLabel>
-            <CFormInput
-              id="otherMileageChargeTo"
-              name="mileageChargeTo"
-              value={formData.mileageChargeTo}
-              onChange={onChange}
-              placeholder="Project or company"
-            />
-          </CCol>
         </CRow>
-        <CRow className="g-3 salary-claim-field-row mt-0">
+        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
+          <CCol xs={12} md="auto" className="salary-claim-grow-col">
+            <CFormLabel htmlFor="otherMileageChargeMode" className="mb-1">
+              Charge to
+            </CFormLabel>
+            <CFormSelect
+              id="otherMileageChargeMode"
+              name="mileageChargeToMode"
+              value={formData.mileageChargeToMode || 'company'}
+              onChange={onChange}
+            >
+              <option value="company">Company</option>
+              <option value="project">Project</option>
+            </CFormSelect>
+          </CCol>
+          {formData.mileageChargeToMode === 'project' && (
+            <CCol xs={12} md className="salary-claim-grow-col">
+              <CFormLabel htmlFor="otherMileageProject" className="mb-1">
+                Project
+              </CFormLabel>
+              <CFormSelect
+                id="otherMileageProject"
+                name="mileageChargeToProjectId"
+                value={formData.mileageChargeToProjectId || ''}
+                onChange={onChange}
+                disabled={isProjectOptionsLoading}
+              >
+                <option value="">
+                  {isProjectOptionsLoading ? 'Loading projects...' : 'Select project'}
+                </option>
+                {(projectOptions || []).map((project) => (
+                  <option key={project.value} value={project.value}>
+                    {project.label}
+                  </option>
+                ))}
+              </CFormSelect>
+            </CCol>
+          )}
           <CCol xs={12} md="auto" className="salary-claim-date-col">
             <CFormLabel htmlFor="otherTravelExpenseCategory" className="mb-1">
-              Parking / taxi / toll / others
+              Travel expense category
             </CFormLabel>
             <CFormSelect
               id="otherTravelExpenseCategory"
@@ -156,7 +183,9 @@ const TravelClaimEditor = ({
               onChange={onChange}
             />
           </CCol>
-          <CCol xs={12} md className="salary-claim-attachment-col">
+        </CRow>
+        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
+          <CCol xs={12} className="salary-claim-attachment-col">
             <AttachmentInput
               id="otherTravelExpenseAttachment"
               label="Travel expense receipt"
@@ -171,6 +200,7 @@ const TravelClaimEditor = ({
       </>
     )}
   </section>
-)
+  )
+}
 
 export default TravelClaimEditor
