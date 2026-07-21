@@ -49,7 +49,13 @@ const formatRecordMoneyValue = (value) =>
     : '-'
 
 const getEstimatedCostValue = (record) =>
-  Number(record?.approval?.estimated_cost ?? record?.estimatedCost ?? record?.estimated_cost ?? NaN)
+  Number(
+    record?.approval?.estimated_cost ??
+      record?.estimatedCost ??
+      record?.estimated_cost ??
+      record?.formData?.estimated_cost ??
+      NaN,
+  )
 
 const getAllRecordRowKey = (record, index) =>
   `${record?.serviceTab || 'unknown'}-${record?.id || index}`

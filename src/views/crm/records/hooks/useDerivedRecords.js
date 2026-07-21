@@ -26,7 +26,11 @@ export const useDerivedRecords = ({
 }) => {
   const getEstimatedCostValue = (record) =>
     Number(
-      record?.approval?.estimated_cost ?? record?.estimatedCost ?? record?.estimated_cost ?? NaN,
+      record?.approval?.estimated_cost ??
+        record?.estimatedCost ??
+        record?.estimated_cost ??
+        record?.formData?.estimated_cost ??
+        NaN,
     )
 
   const enrichedRecords = useMemo(
