@@ -103,6 +103,18 @@ export const ServiceRecordAmountCell = ({ columnWidths, children, amountValue })
   </CTableDataCell>
 )
 
+export const ServiceRecordEstimatedCostCell = ({ columnWidths, children, estimatedCostValue }) => (
+  <CTableDataCell
+    style={{ minWidth: columnWidths.estimatedCost }}
+    className="text-center text-nowrap"
+  >
+    {children ??
+      (Number.isFinite(Number(estimatedCostValue))
+        ? `RM ${formatServiceRecordAmount(estimatedCostValue)}`
+        : '-')}
+  </CTableDataCell>
+)
+
 export const ServiceRecordCreatedCell = ({ columnWidths, displayDate }) => (
   <CTableDataCell style={{ minWidth: columnWidths.created }} className="text-center text-nowrap">
     <span>{displayDate}</span>

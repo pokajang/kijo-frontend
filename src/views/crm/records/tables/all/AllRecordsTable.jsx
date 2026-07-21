@@ -40,6 +40,17 @@ const formatRecordAmount = (record) => {
     : '-'
 }
 
+const formatRecordMoneyValue = (value) =>
+  Number.isFinite(value)
+    ? `RM ${value.toLocaleString('en-MY', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`
+    : '-'
+
+const getEstimatedCostValue = (record) =>
+  Number(record?.approval?.estimated_cost ?? record?.estimatedCost ?? record?.estimated_cost ?? NaN)
+
 const getAllRecordRowKey = (record, index) =>
   `${record?.serviceTab || 'unknown'}-${record?.id || index}`
 
@@ -121,6 +132,15 @@ const AllRecordsTable = ({
         key: 'amount',
         label: COLUMN_LABELS.amount,
         width: columnWidths.amount,
+        sortable: true,
+        align: 'center',
+        noWrap: true,
+        sortType: 'number',
+      },
+      {
+        key: 'estimatedCost',
+        label: COLUMN_LABELS.estimatedCost,
+        width: columnWidths.estimatedCost,
         sortable: true,
         align: 'center',
         noWrap: true,
@@ -390,6 +410,14 @@ const AllRecordsTable = ({
         },
       },
       {
+        key: 'estimatedCost',
+        label: 'Est. Cost',
+        getValue: (record) => {
+          const estimatedCost = getEstimatedCostValue(record)
+          return Number.isFinite(estimatedCost) ? estimatedCost.toFixed(2) : ''
+        },
+      },
+      {
         key: 'created',
         label: 'Created',
         getValue: (record) => fmtDate(record?.dateCreated) || '',
@@ -513,6 +541,7 @@ const AllRecordsTable = ({
     }
 
     if (column.key === 'amount') return formatRecordAmount(record)
+    if (column.key === 'estimatedCost') return formatRecordMoneyValue(getEstimatedCostValue(record))
 
     if (column.key === 'created') return <span>{fmtDate(record?.dateCreated) || '-'}</span>
 
@@ -605,15 +634,18 @@ const AllRecordsTable = ({
       )
     },
     kv: (record) =>
-      isColumnVisible('amount')
-        ? [
-            {
-              key: 'amount',
-              label: COLUMN_LABELS.amount,
-              value: formatRecordAmount(record),
-            },
-          ]
-        : [],
+      [
+        isColumnVisible('amount') && {
+          key: 'amount',
+          label: COLUMN_LABELS.amount,
+          value: formatRecordAmount(record),
+        },
+        isColumnVisible('estimatedCost') && {
+          key: 'estimatedCost',
+          label: COLUMN_LABELS.estimatedCost,
+          value: formatRecordMoneyValue(getEstimatedCostValue(record)),
+        },
+      ].filter(Boolean),
   }
 
   const isLargeDataset = records.length > LARGE_DATASET_THRESHOLD

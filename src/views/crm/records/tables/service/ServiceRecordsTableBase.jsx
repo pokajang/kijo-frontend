@@ -337,6 +337,22 @@ const ServiceRecordsTableBase = ({
                     </button>
                   </CTableHeaderCell>
                 )}
+                {isColumnVisible('estimatedCost') && (
+                  <CTableHeaderCell
+                    style={{ ...headerCellBaseStyle, minWidth: columnWidths.estimatedCost }}
+                    className="text-center"
+                    aria-sort={getAriaSort('estimatedCost')}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 text-decoration-none text-center w-100 records-table-sort-btn"
+                      onClick={() => toggleSort('estimatedCost')}
+                    >
+                      Est. Cost
+                      {renderSortIcon('estimatedCost')}
+                    </button>
+                  </CTableHeaderCell>
+                )}
                 {isColumnVisible('created') && (
                   <CTableHeaderCell
                     style={{ ...headerCellBaseStyle, minWidth: columnWidths.created }}
@@ -409,6 +425,7 @@ const ServiceRecordsTableBase = ({
                         'status',
                         'subject',
                         'amount',
+                        'estimatedCost',
                         'created',
                         'age',
                         'pic',

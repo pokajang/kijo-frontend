@@ -24,6 +24,11 @@ export const useDerivedRecords = ({
   isColumnVisible,
   fmtDate,
 }) => {
+  const getEstimatedCostValue = (record) =>
+    Number(
+      record?.approval?.estimated_cost ?? record?.estimatedCost ?? record?.estimated_cost ?? NaN,
+    )
+
   const enrichedRecords = useMemo(
     () =>
       records.map((record) => {
@@ -35,6 +40,7 @@ export const useDerivedRecords = ({
             serviceLabel,
             subject,
             amountValue: getAmountValue(record),
+            estimatedCostValue: getEstimatedCostValue(record),
             createdTime: getCreatedTime(record),
             statusLabel: getStatusLabel(record),
             statusTone: getStatusTone(record?.status),
@@ -83,6 +89,12 @@ export const useDerivedRecords = ({
       }
       if (sortField === 'amount') {
         return Number(a?.__tableMeta?.amountValue ?? 0) - Number(b?.__tableMeta?.amountValue ?? 0)
+      }
+      if (sortField === 'estimatedCost') {
+        return (
+          Number(a?.__tableMeta?.estimatedCostValue ?? 0) -
+          Number(b?.__tableMeta?.estimatedCostValue ?? 0)
+        )
       }
       if (sortField === 'created') {
         return Number(a?.__tableMeta?.createdTime ?? 0) - Number(b?.__tableMeta?.createdTime ?? 0)

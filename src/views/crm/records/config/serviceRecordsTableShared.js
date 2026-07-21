@@ -4,6 +4,7 @@ export const serviceRecordColumnWidths = {
   email: '180px',
   subject: '220px',
   amount: '120px',
+  estimatedCost: '130px',
   created: '120px',
   age: '80px',
   pic: '150px',

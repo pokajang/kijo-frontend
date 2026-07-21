@@ -36,6 +36,7 @@ import {
   ServiceRecordActionCell,
   ServiceRecordAgeCell,
   ServiceRecordAmountCell,
+  ServiceRecordEstimatedCostCell,
   ServiceRecordClientCell,
   ServiceRecordCreatedCell,
   ServiceRecordEmailCell,
@@ -47,6 +48,15 @@ import {
   ServiceRecordSubjectCell,
   formatServiceRecordAmount,
 } from './ServiceRecordCells'
+
+const getEstimatedCostValue = (record) =>
+  Number(
+    record?.approval?.estimated_cost ??
+      record?.estimatedCost ??
+      record?.estimated_cost ??
+      record?.formData?.estimated_cost ??
+      NaN,
+  )
 
 const getRecordServiceTitle = (record) => record?.formData?.serviceTitle || ''
 
@@ -230,6 +240,7 @@ const ServiceConfiguredRecordsTable = ({
           typeof getSubjectTextArgs === 'function' ? getSubjectTextArgs(record) : undefined
         const subjectText = getSubjectText(record, subjectTextArgs)
         const amountValue = getAmountValue(record)
+        const estimatedCostValue = getEstimatedCostValue(record)
         const displayDate = fmtDate(record?.dateCreated) || '-'
         const quotationAgeDays = getQuotationAgeDays(record?.dateCreated)
 
@@ -240,6 +251,7 @@ const ServiceConfiguredRecordsTable = ({
             subjectText,
             subjectTooltip: getSubjectTooltip(record, subjectTextArgs),
             amountValue,
+            estimatedCostValue,
             displayDate,
             quotationAgeDays,
             clientName: record?.clientDetails?.companyName || '-',
@@ -307,6 +319,12 @@ const ServiceConfiguredRecordsTable = ({
         return (
           Number(a?.__serviceTableMeta?.amountValue ?? 0) -
           Number(b?.__serviceTableMeta?.amountValue ?? 0)
+        )
+      }
+      if (sortField === 'estimatedCost') {
+        return (
+          Number(a?.__serviceTableMeta?.estimatedCostValue ?? 0) -
+          Number(b?.__serviceTableMeta?.estimatedCostValue ?? 0)
         )
       }
       if (sortField === 'created') {
@@ -507,6 +525,14 @@ const ServiceConfiguredRecordsTable = ({
         },
       },
       {
+        key: 'estimatedCost',
+        label: 'Est. Cost',
+        getValue: (record) => {
+          const estimatedCost = record?.__serviceTableMeta?.estimatedCostValue
+          return Number.isFinite(estimatedCost) ? estimatedCost.toFixed(2) : ''
+        },
+      },
+      {
         key: 'created',
         label: 'Created',
         getValue: (record) => record?.__serviceTableMeta?.displayDate || '',
@@ -634,6 +660,12 @@ const ServiceConfiguredRecordsTable = ({
                 })
               : null}
           </ServiceRecordAmountCell>
+        )}
+        {rowUi.isColumnVisible?.('estimatedCost') && (
+          <ServiceRecordEstimatedCostCell
+            columnWidths={columnWidths}
+            estimatedCostValue={meta.estimatedCostValue}
+          />
         )}
         {rowUi.isColumnVisible?.('created') && (
           <ServiceRecordCreatedCell columnWidths={columnWidths} displayDate={meta.displayDate} />

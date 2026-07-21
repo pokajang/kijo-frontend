@@ -39,6 +39,16 @@ const ServiceRecordsMobileList = ({
   renderMobileSubjectExtra,
   renderMobileAmountSecondary,
 }) => {
+  const formatMoney = (value) => {
+    const amount = Number(value)
+    return Number.isFinite(amount)
+      ? `RM ${amount.toLocaleString('en-MY', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : '-'
+  }
+
   return (
     <div className={`d-${desktopBreakpoint}-none records-mobile-wrap`}>
       <div className="records-mobile-top-pager">
@@ -92,13 +102,8 @@ const ServiceRecordsMobileList = ({
         <div className="records-mobile-list">
           {pagedRecords.map((record, idx) => {
             const meta = record?.__serviceTableMeta || {}
-            const amount = Number(meta.amountValue ?? 0)
-            const amountDisplay = Number.isFinite(amount)
-              ? `RM ${amount.toLocaleString('en-MY', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}`
-              : '-'
+            const amountDisplay = formatMoney(meta.amountValue)
+            const estimatedCostDisplay = formatMoney(meta.estimatedCostValue)
             const rowActionKey = `${record?.serviceTab || 'service'}-${record?.id || idx}-mobile-list`
 
             return (
@@ -179,12 +184,20 @@ const ServiceRecordsMobileList = ({
                   <div className="mt-1">{renderMobileSubjectExtra(record)}</div>
                 )}
 
-                {isColumnVisible('amount') && (
+                {(isColumnVisible('amount') || isColumnVisible('estimatedCost')) && (
                   <div className="records-mobile-kv-grid mt-2">
-                    <div className="records-mobile-kv">
-                      <span className="records-mobile-k">Amount</span>
-                      <span className="records-mobile-v">{amountDisplay}</span>
-                    </div>
+                    {isColumnVisible('amount') && (
+                      <div className="records-mobile-kv">
+                        <span className="records-mobile-k">Amount</span>
+                        <span className="records-mobile-v">{amountDisplay}</span>
+                      </div>
+                    )}
+                    {isColumnVisible('estimatedCost') && (
+                      <div className="records-mobile-kv">
+                        <span className="records-mobile-k">Est. Cost</span>
+                        <span className="records-mobile-v">{estimatedCostDisplay}</span>
+                      </div>
+                    )}
                     {typeof renderMobileAmountSecondary === 'function' && (
                       <div className="records-mobile-kv">
                         <span className="records-mobile-k">&nbsp;</span>
