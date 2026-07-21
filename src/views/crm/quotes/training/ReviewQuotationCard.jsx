@@ -132,6 +132,11 @@ const ReviewQuotationCard = ({
       dialog.alert('Please select at least one client contact (PIC) before saving.')
       return
     }
+    const estimatedTotalCost = Number(formData.estimatedTotalCost)
+    if (!Number.isFinite(estimatedTotalCost) || estimatedTotalCost <= 0) {
+      dialog.alert('Please enter a traffic-light estimated cost greater than zero before saving.')
+      return
+    }
 
     const normalizedMealsProvided = toYesNo(formData.mealsProvided)
     const mealsProvidedFlag = normalizedMealsProvided === 'Yes' ? 1 : 0

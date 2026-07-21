@@ -34,9 +34,7 @@ const QuoteApprovalReviewModal = ({
   const zone = String(approval?.zone || '').toLowerCase()
   const status = String(approval?.status || '').toLowerCase()
   const isStaleNotice =
-    Boolean(decisionNotice) &&
-    status === 'pending' &&
-    Boolean(approval?.can_decide)
+    Boolean(decisionNotice) && status === 'pending' && Boolean(approval?.can_decide)
   const canDecide = status === 'pending' && Boolean(approval?.can_decide) && !isStaleNotice
   const canPreview = status === 'approved' || canDecide
   const badgeColor = zone === 'red' ? 'danger' : zone === 'yellow' ? 'warning' : 'success'

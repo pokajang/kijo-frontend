@@ -241,6 +241,10 @@ export default function HygieneQuotationForm({
         ? null
         : Number(formData.estimatedTotalCost)
     const estimatedCostPayload = Number.isFinite(estimatedCost) ? estimatedCost : null
+    if (!Number.isFinite(estimatedCostPayload) || estimatedCostPayload <= 0) {
+      dialog.alert('Please enter a traffic-light estimated cost greater than zero before saving.')
+      return
+    }
 
     const hygieneItems = Array.isArray(formData.hygieneItems)
       ? formData.hygieneItems
@@ -300,6 +304,8 @@ export default function HygieneQuotationForm({
     await saveQuote(payload)
   }
 
+  const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+
   return (
     <>
       <HygieneDetailsCard
@@ -323,9 +329,11 @@ export default function HygieneQuotationForm({
             }
           />
 
-          <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
+          {hasEstimatedCost && (
+            <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
+          )}
 
-          {selectedClient && formData.serviceId && formData.serviceCode && (
+          {selectedClient && formData.serviceId && formData.serviceCode && hasEstimatedCost && (
             <ReviewHygieneQuotationCard
               selectedClient={selectedClient}
               formData={formData}

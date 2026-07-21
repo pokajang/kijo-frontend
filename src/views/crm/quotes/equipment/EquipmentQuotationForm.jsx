@@ -7,6 +7,7 @@ import PricingInput from './PricingInput'
 import ReviewQuotation from './ReviewQuotation'
 import { useEquipmentForm } from './actionHandlers'
 import TrafficLightCard from '../shared/TrafficLightCard'
+import { getTrafficLightStatus } from '../shared/trafficLightConfig'
 
 export default function EquipmentQuotationForm({
   selectedClient,
@@ -50,6 +51,13 @@ export default function EquipmentQuotationForm({
     proposalLanguage,
   })
 
+  const hasEstimatedCost = Number(estimatedTotalCost) > 0
+  const pricingCardStatus = getTrafficLightStatus({
+    serviceKey: 'equipment',
+    estimatedTotalCost,
+    quoteTotal: grandTotal,
+  }).status
+
   return (
     <CCol md={12}>
       <CCard className="mb-4">
@@ -67,45 +75,50 @@ export default function EquipmentQuotationForm({
           onEstimatedTotalCostChange={setEstimatedTotalCost}
         />
 
-        <PricingInput
-          selectedItems={selectedItems}
-          quantities={quantities}
-          handleQtyChange={handleQtyChange}
-          unitPrices={unitPrices}
-          markedUp={markedUp}
-          handleMarkedUpChange={handleMarkedUpChange}
-          deliveryCharge={deliveryCharge}
-          setDeliveryCharge={setDeliveryCharge}
-          miscCharge={miscCharge}
-          setMiscCharge={setMiscCharge}
-          discount={discount}
-          setDiscount={setDiscount}
-          sstPercent={sstPercent}
-          setSstPercent={setSstPercent}
-          itemsTotal={itemsTotal}
-          subtotal={subtotal}
-          sstAmount={sstAmount}
-          grandTotal={grandTotal}
-        />
+        {hasEstimatedCost && (
+          <PricingInput
+            selectedItems={selectedItems}
+            quantities={quantities}
+            handleQtyChange={handleQtyChange}
+            unitPrices={unitPrices}
+            markedUp={markedUp}
+            trafficLightStatus={pricingCardStatus}
+            handleMarkedUpChange={handleMarkedUpChange}
+            deliveryCharge={deliveryCharge}
+            setDeliveryCharge={setDeliveryCharge}
+            miscCharge={miscCharge}
+            setMiscCharge={setMiscCharge}
+            discount={discount}
+            setDiscount={setDiscount}
+            sstPercent={sstPercent}
+            setSstPercent={setSstPercent}
+            itemsTotal={itemsTotal}
+            subtotal={subtotal}
+            sstAmount={sstAmount}
+            grandTotal={grandTotal}
+          />
+        )}
 
-        <ReviewQuotation
-          selectedItems={selectedItems}
-          quantities={quantities}
-          markedUp={markedUp}
-          deliveryCharge={deliveryCharge}
-          miscCharge={miscCharge}
-          discount={discount}
-          sstPercent={sstPercent}
-          subtotal={subtotal}
-          sstAmount={sstAmount}
-          grandTotal={grandTotal}
-          estimatedTotalCost={estimatedTotalCost}
-          attachProposal={attachProposal}
-          onAttachProposalChange={setAttachProposal}
-          onSave={handleSaveQuote}
-          onCancel={handleCancel}
-          isEditMode={isEditMode}
-        />
+        {hasEstimatedCost && (
+          <ReviewQuotation
+            selectedItems={selectedItems}
+            quantities={quantities}
+            markedUp={markedUp}
+            deliveryCharge={deliveryCharge}
+            miscCharge={miscCharge}
+            discount={discount}
+            sstPercent={sstPercent}
+            subtotal={subtotal}
+            sstAmount={sstAmount}
+            grandTotal={grandTotal}
+            estimatedTotalCost={estimatedTotalCost}
+            attachProposal={attachProposal}
+            onAttachProposalChange={setAttachProposal}
+            onSave={handleSaveQuote}
+            onCancel={handleCancel}
+            isEditMode={isEditMode}
+          />
+        )}
       </CCard>
     </CCol>
   )

@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import TrafficLightCard from './TrafficLightCard'
@@ -18,17 +18,34 @@ describe('traffic-light guidance', () => {
       />,
     )
 
-    expect(screen.getByText(/This is a traffic light guiding procedure/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /NEW: Set your estimated cost first\. Keep the quoted price in the Green zone\./i,
+      ),
+    ).toBeInTheDocument()
 
     expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('btn-close')
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
 
     await waitFor(() => {
-      expect(
-        screen.queryByText(/This is a traffic light guiding procedure/i),
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText(/NEW: Set your estimated cost first/i)).not.toBeInTheDocument()
     })
+  })
+
+  it('shows a traffic-light legend in the card header', () => {
+    render(
+      <TrafficLightCard
+        serviceKey="training"
+        estimatedTotalCost="6000"
+        onEstimatedTotalCostChange={() => {}}
+      />,
+    )
+
+    const legend = screen.getByLabelText('Traffic Light Legend')
+    expect(within(legend).getByText('Green')).toBeInTheDocument()
+    expect(within(legend).getByText('Yellow')).toBeInTheDocument()
+    expect(within(legend).getByText('Red')).toBeInTheDocument()
   })
 
   it('fills the guidance bands with actionable quote ranges', () => {
@@ -40,7 +57,9 @@ describe('traffic-light guidance', () => {
       />,
     )
 
-    expect(screen.getByText(/Can quote this value/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Value must be higher than this value \(quote above this\)/),
+    ).toBeInTheDocument()
     expect(screen.getByText(/HOD approval first/)).toBeInTheDocument()
     expect(screen.getByText(/BD final approval first/)).toBeInTheDocument()
     expect(screen.getByText('RM 8,100.00+')).toBeInTheDocument()

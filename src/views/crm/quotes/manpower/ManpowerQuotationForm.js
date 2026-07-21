@@ -293,6 +293,11 @@ export default function ManpowerQuotationForm({
       dialog.alert('Please enter a valid unit cost before saving.')
       return
     }
+    const estimatedTotalCost = Number(formData.estimatedTotalCost)
+    if (!Number.isFinite(estimatedTotalCost) || estimatedTotalCost <= 0) {
+      dialog.alert('Please enter a traffic-light estimated cost greater than zero before saving.')
+      return
+    }
 
     const normalizedManpowerRateType =
       formData.manpowerRateType ||
@@ -384,6 +389,8 @@ export default function ManpowerQuotationForm({
     await saveQuote(payload)
   }
 
+  const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+
   return (
     <>
       <ManpowerDetailsCard
@@ -392,6 +399,7 @@ export default function ManpowerQuotationForm({
         selectedClient={selectedClient}
         isEditMode={isEditMode}
         proposalLanguage={proposalLanguage}
+        showPricingSection={hasEstimatedCost}
         appliedPriceException={appliedPriceException}
         onRequestOverride={() => {
           dialog.alert(
@@ -410,7 +418,7 @@ export default function ManpowerQuotationForm({
         />
       )}
 
-      {selectedClient && formData.mpId && (
+      {selectedClient && formData.mpId && hasEstimatedCost && (
         <ReviewManpowerQuoteCard
           selectedClient={selectedClient}
           formData={formData}

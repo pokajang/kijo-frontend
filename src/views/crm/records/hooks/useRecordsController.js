@@ -181,15 +181,14 @@ export const useRecordsController = () => {
       )
       const result = await response.json()
       if (!response.ok || !isSuccess(result)) {
-        if (
-          response.status === 409 &&
-          String(result?.code || '') === 'QUOTE_APPROVAL_STALE'
-        ) {
+        if (response.status === 409 && String(result?.code || '') === 'QUOTE_APPROVAL_STALE') {
           setApprovalDecisionNotice({
             severity: 'warning',
             title: 'Approval request is outdated',
-            message:
-              getMessage(result, `Approval request #${approvalRecord.id} is no longer current.`),
+            message: getMessage(
+              result,
+              `Approval request #${approvalRecord.id} is no longer current.`,
+            ),
           })
           return
         }

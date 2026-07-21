@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CFormInput } from '@coreui/react'
+import '../shared/TrafficLightCard.css'
 
 export default function PricingInput({
   selectedItems,
@@ -22,14 +23,17 @@ export default function PricingInput({
   subtotal,
   sstAmount,
   grandTotal,
+  trafficLightStatus = 'unknown',
 }) {
+  const statusClass = `traffic-light-status-card traffic-light-status-card--${trafficLightStatus}`
+  const hasStatus = trafficLightStatus !== 'unknown'
   return (
     <>
       {/* 2) Pricing Details */}
-      <CCardHeader>
+      <CCardHeader className={hasStatus ? statusClass : ''}>
         <strong>Pricing Details</strong>
       </CCardHeader>
-      <CCardBody>
+      <CCardBody className={hasStatus ? statusClass : ''}>
         {selectedItems.map(({ value: item }) => {
           const description = String(item.description || '')
           const itemName = item.item_name || item.itemName || 'Selected item'

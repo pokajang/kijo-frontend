@@ -266,6 +266,13 @@ export function useEquipmentForm(
       dialog.alert('Please enter a valid quantity for each equipment item before saving.')
       return
     }
+    const estimatedTotalCost = Number(formData.estimatedTotalCost)
+    if (!Number.isFinite(estimatedTotalCost) || estimatedTotalCost <= 0) {
+      dialog.alert(
+        'Please enter a valid traffic-light estimated cost greater than zero before saving.',
+      )
+      return
+    }
     const itemsPayload = formData.items.map(({ value: item }) => {
       const qty = formData.quantities[item.id] || 0
       const price = parseFloat(formData.markedUp[item.id] || 0)

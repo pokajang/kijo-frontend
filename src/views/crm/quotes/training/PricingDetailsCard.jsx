@@ -17,6 +17,8 @@ import {
   CInputGroup,
   CInputGroupText,
 } from '@coreui/react'
+import { getTrafficLightStatus } from '../shared/trafficLightConfig'
+import '../shared/TrafficLightCard.css'
 import {
   getTrainingRateOption,
   getTrainingTravelRegion,
@@ -143,6 +145,7 @@ const PricingDetailsCard = ({
   onRequestOverride,
   appliedPriceException = null,
   proposalLanguage = 'en',
+  quoteGrandTotal,
 }) => {
   const text = proposalLanguage === 'ms-MY' ? labels.bm : labels.en
   const discountLabelMap = discountLabels(text)
@@ -191,14 +194,22 @@ const PricingDetailsCard = ({
       }
     })
   }
+  const pricingStatus = getTrafficLightStatus({
+    serviceKey: 'training',
+    quoteTotal: quoteGrandTotal,
+    estimatedTotalCost: formData.estimatedTotalCost,
+  }).status
+  const statusClass = `traffic-light-status-card traffic-light-status-card--${pricingStatus}`
+  const hasStatus = pricingStatus !== 'unknown'
+  const pricingThemeClass = hasStatus ? statusClass : ''
 
   return (
     <CCol xs={12}>
       <CCard className="mb-4">
-        <CCardHeader>
+        <CCardHeader className={pricingThemeClass}>
           <strong>{text.title}</strong>
         </CCardHeader>
-        <CCardBody>
+        <CCardBody className={pricingThemeClass}>
           <CForm className="row g-3">
             <CCol md={6}>
               <CFormLabel htmlFor="trainingRateType">{text.pricingCategory}</CFormLabel>

@@ -399,6 +399,8 @@ const TrainingQuotationForm = ({
     )
   }
 
+  const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+
   return (
     <>
       <TrainingDetailsCard
@@ -422,7 +424,7 @@ const TrainingQuotationForm = ({
         </CCol>
       )}
 
-      {selectedClient?.company_name && isTrainingDetailsComplete && (
+      {selectedClient?.company_name && isTrainingDetailsComplete && hasEstimatedCost && (
         <CCol xs={12}>
           <PricingDetailsCard
             formData={formData}
@@ -430,23 +432,27 @@ const TrainingQuotationForm = ({
             onRequestOverride={handleRequestOverride}
             appliedPriceException={appliedPriceException}
             proposalLanguage={proposalLanguage}
+            quoteGrandTotal={quoteGrandTotal}
           />
         </CCol>
       )}
 
-      {selectedClient?.company_name && isTrainingDetailsComplete && isPricingDetailsComplete && (
-        <CCol xs={12}>
-          <ReviewQuotationCard
-            clientDetails={selectedClient}
-            formData={formData}
-            setFormData={setFormData}
-            quoteId={quoteId}
-            isEditMode={isEditMode}
-            proposalLanguage={proposalLanguage}
-            appliedPriceException={appliedPriceException}
-          />
-        </CCol>
-      )}
+      {selectedClient?.company_name &&
+        isTrainingDetailsComplete &&
+        isPricingDetailsComplete &&
+        hasEstimatedCost && (
+          <CCol xs={12}>
+            <ReviewQuotationCard
+              clientDetails={selectedClient}
+              formData={formData}
+              setFormData={setFormData}
+              quoteId={quoteId}
+              isEditMode={isEditMode}
+              proposalLanguage={proposalLanguage}
+              appliedPriceException={appliedPriceException}
+            />
+          </CCol>
+        )}
     </>
   )
 }

@@ -26,6 +26,12 @@ const STATUS_COLORS = {
   red: 'danger',
 }
 
+const LEGEND_COLORS = {
+  green: 'success',
+  yellow: 'warning',
+  red: 'danger',
+}
+
 const roundUpToCent = (value) => Math.ceil(Number(value.toFixed(10)) * 100) / 100
 
 const getGuidanceItems = (rules, estimatedTotalCost) => {
@@ -37,7 +43,7 @@ const getGuidanceItems = (rules, estimatedTotalCost) => {
     {
       status: 'green',
       label: 'Green',
-      action: 'Can quote this value',
+      action: 'Value must be higher than this value (quote above this)',
       target: greenPrice ? `RM ${money(greenPrice)}+` : 'Enter estimated cost',
     },
     {
@@ -73,12 +79,36 @@ const TrafficLightCard = ({
     <CCol xs={12}>
       <CCard className={cardClassName}>
         <CCardHeader>
-          <strong>{title}</strong>
+          <div className="d-flex flex-column gap-2">
+            <strong>{title}</strong>
+            <div className="traffic-light-header-legend" aria-label="Traffic Light Legend">
+              <span className="traffic-light-legend-item">
+                <span
+                  className={`bg-${LEGEND_COLORS.green} traffic-light-legend-dot`}
+                  aria-hidden="true"
+                />
+                <span>Green</span>
+              </span>
+              <span className="traffic-light-legend-item">
+                <span
+                  className={`bg-${LEGEND_COLORS.yellow} traffic-light-legend-dot`}
+                  aria-hidden="true"
+                />
+                <span>Yellow</span>
+              </span>
+              <span className="traffic-light-legend-item">
+                <span
+                  className={`bg-${LEGEND_COLORS.red} traffic-light-legend-dot`}
+                  aria-hidden="true"
+                />
+                <span>Red</span>
+              </span>
+            </div>
+          </div>
         </CCardHeader>
         <CCardBody>
           <CAlert color="info" dismissible className="traffic-light-procedure-alert mb-2 py-2">
-            This is a traffic light guiding procedure. Please input estimated cost and ensure your
-            quoted price always stays in the Green zone.
+            NEW: Set your estimated cost first. Keep the quoted price in the Green zone.
           </CAlert>
           <div className="traffic-light-guidance-row">
             <CInputGroup className="traffic-light-cost-input flex-nowrap">

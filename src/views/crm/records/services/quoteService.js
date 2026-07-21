@@ -156,7 +156,12 @@ const toNullableNumber = (value) => {
 }
 
 const getEstimatedCostValue = (row = {}) =>
-  toNullableNumber(row.estimated_total_cost ?? row.estimated_cost ?? row.formData?.estimated_cost ?? row.cost_total)
+  toNullableNumber(
+    row.estimated_total_cost ??
+      row.estimated_cost ??
+      row.formData?.estimated_cost ??
+      row.cost_total,
+  )
 
 export async function fetchTrainingQuotes() {
   try {
@@ -484,7 +489,7 @@ export async function fetchManpowerQuotes() {
       const awardHistory = ahMap[id] || []
       const rawRemarks = (row.status_remarks || '').trim() // exact DB value
       const estimatedCost = getEstimatedCostValue(row)
-      
+
       return {
         // core fields
         id,

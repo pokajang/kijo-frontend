@@ -20,6 +20,8 @@ import {
 
 import DataTableActionMenu from '../../../../components/datatable/DataTableActionMenu'
 import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+import { getTrafficLightStatus } from '../shared/trafficLightConfig'
+import '../shared/TrafficLightCard.css'
 
 const createDefaultItem = () => ({
   item_description: '',
@@ -72,6 +74,13 @@ const PricingCard = ({ formData, setFormData }) => {
     discount,
     sstPercent,
   })
+  const pricingStatus = getTrafficLightStatus({
+    serviceKey: 'ih',
+    quoteTotal: totals.grandTotal,
+    estimatedTotalCost: formData.estimatedTotalCost,
+  }).status
+  const statusClass = `traffic-light-status-card traffic-light-status-card--${pricingStatus}`
+  const hasStatus = pricingStatus !== 'unknown'
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -239,10 +248,10 @@ const PricingCard = ({ formData, setFormData }) => {
   return (
     <CCol>
       <CCard className="mb-4">
-        <CCardHeader>
+        <CCardHeader className={hasStatus ? statusClass : ''}>
           <strong>Pricing Details</strong>
         </CCardHeader>
-        <CCardBody>
+        <CCardBody className={hasStatus ? statusClass : ''}>
           <CForm className="g-3">
             <CRow className="g-3">
               <CCol md={3}>

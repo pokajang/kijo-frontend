@@ -4,6 +4,45 @@
   min-height: 2.5rem;
 }
 
+.traffic-light-header-legend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.traffic-light-legend-item {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+.traffic-light-legend-dot {
+  border-radius: 50%;
+  display: inline-block;
+  height: 0.65rem;
+  width: 0.65rem;
+}
+
+.traffic-light-status-card--green .card-header,
+.traffic-light-status-card--green .card-body {
+  border-left: 4px solid var(--cui-success);
+  background-color: rgba(25, 135, 84, 0.08);
+}
+
+.traffic-light-status-card--yellow .card-header,
+.traffic-light-status-card--yellow .card-body {
+  border-left: 4px solid var(--cui-warning);
+  background-color: rgba(255, 193, 7, 0.08);
+}
+
+.traffic-light-status-card--red .card-header,
+.traffic-light-status-card--red .card-body {
+  border-left: 4px solid var(--cui-danger);
+  background-color: rgba(220, 53, 69, 0.08);
+}
+
 .traffic-light-procedure-alert .btn-close {
   padding: 0.5rem 1rem;
   top: 50%;

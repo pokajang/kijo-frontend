@@ -26,6 +26,7 @@ export default function ManpowerDetailsCard({
   proposalLanguage = 'en',
   onRequestOverride,
   appliedPriceException = null,
+  showPricingSection = false,
 }) {
   const [templates, setTemplates] = useState([])
   const navigate = useNavigate()
@@ -224,13 +225,15 @@ export default function ManpowerDetailsCard({
             <ProjectDetailsCard formData={formData} setFormData={setFormData} />
 
             {/* Pricing Inputs and Auto-Totals */}
-            <PricingCard
-              formData={formData}
-              setFormData={setFormData}
-              isEditMode={isEditMode}
-              onRequestOverride={onRequestOverride}
-              appliedPriceException={appliedPriceException}
-            />
+            {showPricingSection && (
+              <PricingCard
+                formData={formData}
+                setFormData={setFormData}
+                isEditMode={isEditMode}
+                onRequestOverride={onRequestOverride}
+                appliedPriceException={appliedPriceException}
+              />
+            )}
           </CForm>
         </CCardBody>
       </CCard>
