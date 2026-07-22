@@ -93,9 +93,7 @@ describe('OtherClaimApply', () => {
     fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '12' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(
-      screen.getByText('Select a project before saving travel & mileage.'),
-    ).toBeInTheDocument()
+    expect(screen.getByText('Select a project before saving travel & mileage.')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Project'), {
       target: { value: '101' },
     })
@@ -239,9 +237,7 @@ describe('OtherClaimApply', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    await waitFor(() =>
-      expect(screen.getAllByText(/Client arrival/).length).toBeGreaterThan(0),
-    )
+    await waitFor(() => expect(screen.getAllByText(/Client arrival/).length).toBeGreaterThan(0))
     expect((await screen.findAllByText(/Client arrival/)).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Company/).length).toBeGreaterThan(0)
   })

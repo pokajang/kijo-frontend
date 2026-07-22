@@ -36,27 +36,27 @@ export const useDerivedRecords = ({
   const enrichedRecords = useMemo(
     () =>
       records.map((record) => {
-    const serviceLabel = getServiceLabel(record)
-    const subject = getSubject(record)
-    const inquirySource = record?.inquirySource || ''
-    const inquirySourceRemarks = record?.inquirySourceRemarks || ''
-    return {
-      ...record,
-      __tableMeta: {
-        serviceLabel,
-        subject,
-        inquirySource,
-        inquirySourceRemarks,
-        amountValue: getAmountValue(record),
-        estimatedCostValue: getEstimatedCostValue(record),
-        createdTime: getCreatedTime(record),
-        statusLabel: getStatusLabel(record),
-        statusTone: getStatusTone(record?.status),
-        quotationAgeDays: getQuotationAgeDays(record?.dateCreated),
-        remarksPreview: getPrimaryRemarkText(record, fmtDate),
-        searchText: `${serviceLabel} ${subject} ${inquirySource} ${inquirySourceRemarks}`,
-      },
-    }
+        const serviceLabel = getServiceLabel(record)
+        const subject = getSubject(record)
+        const inquirySource = record?.inquirySource || ''
+        const inquirySourceRemarks = record?.inquirySourceRemarks || ''
+        return {
+          ...record,
+          __tableMeta: {
+            serviceLabel,
+            subject,
+            inquirySource,
+            inquirySourceRemarks,
+            amountValue: getAmountValue(record),
+            estimatedCostValue: getEstimatedCostValue(record),
+            createdTime: getCreatedTime(record),
+            statusLabel: getStatusLabel(record),
+            statusTone: getStatusTone(record?.status),
+            quotationAgeDays: getQuotationAgeDays(record?.dateCreated),
+            remarksPreview: getPrimaryRemarkText(record, fmtDate),
+            searchText: `${serviceLabel} ${subject} ${inquirySource} ${inquirySourceRemarks}`,
+          },
+        }
       }),
     [records, fmtDate],
   )
@@ -178,7 +178,10 @@ export const useDerivedRecords = ({
       label: `Period: ${getPeriodRangeLabel(filters.periodRange)}`,
     })
   if (filters.inquirySourceFilter && filters.inquirySourceFilter !== 'all')
-    activeChips.push({ key: 'inquirySource', label: `Inquiry Source: ${filters.inquirySourceFilter}` })
+    activeChips.push({
+      key: 'inquirySource',
+      label: `Inquiry Source: ${filters.inquirySourceFilter}`,
+    })
   if (filters.yearFilter !== currentYear && filters.yearFilter !== 'all')
     activeChips.push({ key: 'year', label: `Year: ${filters.yearFilter}` })
   if (filters.quotationAge !== 'all')

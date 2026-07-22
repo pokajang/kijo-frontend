@@ -131,7 +131,7 @@ const RecordsFilterPanelShared = ({
               <option value="Terminated">Terminated</option>
             </CFormSelect>
           </CCol>
-        <CCol xs={6} md={3} lg={2}>
+          <CCol xs={6} md={3} lg={2}>
             <CFormLabel>Issuer Code</CFormLabel>
             <CFormSelect
               value={createdByFilter}

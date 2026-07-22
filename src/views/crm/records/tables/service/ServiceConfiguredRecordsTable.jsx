@@ -652,7 +652,9 @@ const ServiceConfiguredRecordsTable = ({
         {rowUi.isColumnVisible?.('inquirySource') && (
           <CTableDataCell style={{ width: columnWidths.inquirySource }}>
             <CTooltip content={meta.inquirySource || '-'} placement="top">
-              <span style={{ ...truncateStyle, maxWidth: '100%' }}>{meta.inquirySource || '-'}</span>
+              <span style={{ ...truncateStyle, maxWidth: '100%' }}>
+                {meta.inquirySource || '-'}
+              </span>
             </CTooltip>
             {meta.inquirySourceRemarks && (
               <span className="small text-muted d-block mt-1">{meta.inquirySourceRemarks}</span>

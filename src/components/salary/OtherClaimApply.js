@@ -1,12 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  CAlert,
-  CButton,
-  CCardBody,
-  CCardHeader,
-  CForm,
-  CSpinner,
-} from '@coreui/react'
+import { CAlert, CButton, CCardBody, CCardHeader, CForm, CSpinner } from '@coreui/react'
 import { DataTableLoadingState } from '../datatable'
 import { prepareSalaryAttachment } from './attachmentUtils'
 import MoneyClaimEditor from './other-claim/editors/MoneyClaimEditor'
@@ -54,11 +47,7 @@ const normalizeProjectOption = (project = {}) => {
       '',
   ).trim()
   const label = String(
-    project.projectName ??
-      project.project_name ??
-      project.label ??
-      project.name ??
-      '',
+    project.projectName ?? project.project_name ?? project.label ?? project.name ?? '',
   ).trim()
   const clientName = String(
     project.clientName ?? project.client_name ?? project.clientNameDisplay ?? '',
@@ -81,7 +70,7 @@ const mergeProjectOptionsWithMineFirst = (myProjects = [], allProjects = []) => 
     .filter(Boolean)
     .forEach((project) => {
       mineMap.set(project.value, project)
-  })
+    })
 
   const allMap = new Map()
   allProjects
@@ -133,13 +122,11 @@ const getMileageChargeToFormState = (chargeToLabel, projectOptions = []) => {
     getProjectOptionByValue(projectOptions, cleanedLabel) ||
     projectOptions.find((project) => project.label === cleanedLabel) ||
     projectOptions.find(
-      (project) =>
-        project.label && project.label.toLowerCase() === cleanedLabel.toLowerCase(),
+      (project) => project.label && project.label.toLowerCase() === cleanedLabel.toLowerCase(),
     ) ||
     projectOptions.find(
       (project) =>
-        project.projectName &&
-        project.projectName.toLowerCase() === cleanedLabel.toLowerCase(),
+        project.projectName && project.projectName.toLowerCase() === cleanedLabel.toLowerCase(),
     )
 
   if (!selectedProjectOption) {
@@ -327,7 +314,7 @@ const OtherClaimApply = ({
     }
   }, [showNotice])
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target
     if (name === 'mileageChargeToMode') {
       setFormData((prev) => ({
@@ -339,7 +326,7 @@ const OtherClaimApply = ({
       return
     }
     setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  }, [])
 
   const resetAttachmentInputs = useCallback(() => setAttachmentInputVersion((prev) => prev + 1), [])
 
@@ -749,7 +736,14 @@ const OtherClaimApply = ({
       resetAttachmentInputs()
       return true
     },
-    [allowanceItems, expenseItems, medicalItems, mileageItems, projectOptions, resetAttachmentInputs],
+    [
+      allowanceItems,
+      expenseItems,
+      medicalItems,
+      mileageItems,
+      projectOptions,
+      resetAttachmentInputs,
+    ],
   )
 
   const allClaims = useMemo(

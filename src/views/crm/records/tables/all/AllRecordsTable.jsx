@@ -548,7 +548,9 @@ const AllRecordsTable = ({
     if (column.key === 'inquirySource') {
       return (
         <CTooltip content={record?.inquirySource || '-'} placement="top">
-          <span style={{ ...truncateStyle, maxWidth: '160px' }}>{record?.inquirySource || '-'}</span>
+          <span style={{ ...truncateStyle, maxWidth: '160px' }}>
+            {record?.inquirySource || '-'}
+          </span>
         </CTooltip>
       )
     }

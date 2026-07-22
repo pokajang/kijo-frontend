@@ -116,7 +116,7 @@ export default function ReviewSpecialQuoteCard({
             <CTableRow key={i}>
               <CTableDataCell className="fw-normal text-muted">{i + 1}</CTableDataCell>
               <CTableDataCell>{parseFloat(it.amount || 0).toFixed(2)}</CTableDataCell>
-                  <CTableDataCell>
+              <CTableDataCell>
                 <div className="d-flex align-items-start gap-2 flex-wrap">
                   <strong>{it.title || '-'}</strong>
                   <small className="text-muted">
@@ -134,12 +134,10 @@ export default function ReviewSpecialQuoteCard({
           {discount > 0 && (
             <>
               <CTableRow>
-              <CTableHeaderCell colSpan={2} className="text-end">
-                Line Items Subtotal (RM)
-              </CTableHeaderCell>
-                <CTableDataCell>
-                  RM {lineItemsSubtotal.toFixed(2)}
-                </CTableDataCell>
+                <CTableHeaderCell colSpan={2} className="text-end">
+                  Line Items Subtotal (RM)
+                </CTableHeaderCell>
+                <CTableDataCell>RM {lineItemsSubtotal.toFixed(2)}</CTableDataCell>
               </CTableRow>
               <CTableRow>
                 <CTableHeaderCell colSpan={2} className="text-end">

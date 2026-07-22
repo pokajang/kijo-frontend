@@ -131,16 +131,14 @@ const run = async () => {
     }
 
     if (expectSuccess && response.status() >= 400) {
-      throw new Error(
-        summarizeApiFailure(response, payload) + (label ? ` | ${label}` : ''),
-      )
+      throw new Error(summarizeApiFailure(response, payload) + (label ? ` | ${label}` : ''))
     }
 
     return { response, payload }
   }
 
   let createdClaimMonth = ''
-  const createdClaimAmount = ((10 + Math.floor(Math.random() * 89) + Math.random()).toFixed(2))
+  const createdClaimAmount = (10 + Math.floor(Math.random() * 89) + Math.random()).toFixed(2)
   let createdRecordId = null
   let userRoles = []
 
@@ -176,7 +174,10 @@ const run = async () => {
       path: 'notifications/summary',
       label: 'notification summary',
     })
-    if (notificationSummary.payload && typeof notificationSummary.payload?.csrf_token === 'string') {
+    if (
+      notificationSummary.payload &&
+      typeof notificationSummary.payload?.csrf_token === 'string'
+    ) {
       csrfToken = notificationSummary.payload.csrf_token
     }
     check('notification-summary', notificationSummary.response.status() === 200)
@@ -189,10 +190,7 @@ const run = async () => {
     await page.goto(`${baseUrl}/my/salary/other-claims/apply`, {
       waitUntil: 'domcontentloaded',
     })
-    check(
-      'other-claim-apply-route',
-      (await page.url()).includes('/my/salary/other-claims/apply'),
-    )
+    check('other-claim-apply-route', (await page.url()).includes('/my/salary/other-claims/apply'))
     const monthInput = page.locator('#otherClaimMonth')
     await monthInput.waitFor({ state: 'visible', timeout: 30_000 })
     await monthInput.fill(createdClaimMonth)
@@ -225,9 +223,15 @@ const run = async () => {
       // Non-fatal: some builds submit through a slightly different endpoint/path variant.
     })
     await page.waitForTimeout(500)
-    const submitSuccess = await page.locator('button', { hasText: 'Apply Another' }).isVisible().catch(() => false)
+    const submitSuccess = await page
+      .locator('button', { hasText: 'Apply Another' })
+      .isVisible()
+      .catch(() => false)
     check('other-claim-submit', submitSuccess)
-    await page.screenshot({ path: path.join(screenshotsDir, '02-other-claim-submitted.png'), fullPage: true })
+    await page.screenshot({
+      path: path.join(screenshotsDir, '02-other-claim-submitted.png'),
+      fullPage: true,
+    })
 
     const applicantRecordsResponse = await apiRequest({
       path: 'hr/salary/other-claims',
@@ -236,8 +240,8 @@ const run = async () => {
     const applicantRecords = Array.isArray(applicantRecordsResponse.payload?.records)
       ? applicantRecordsResponse.payload.records
       : []
-    const matchingApplicantRecord = applicantRecords.find((record) =>
-      String(record.claimMonthValue || '') === createdClaimMonth,
+    const matchingApplicantRecord = applicantRecords.find(
+      (record) => String(record.claimMonthValue || '') === createdClaimMonth,
     )
     check('applicant-record-created', Boolean(matchingApplicantRecord))
     if (matchingApplicantRecord?.id) {
@@ -249,17 +253,20 @@ const run = async () => {
     await page.goto(`${baseUrl}/my/salary/other-claims/records`, {
       waitUntil: 'domcontentloaded',
     })
-    await page.waitForFunction(
-      () => !document.body.innerText.includes('Loading other claim records...'),
-      { timeout: 30_000 },
-    ).catch(() => {})
-    await page.waitForFunction(
-      () => {
-        const rows = document.querySelectorAll('table tbody tr')
-        return rows.length > 0
-      },
-      { timeout: 30_000 },
-    ).catch(() => {})
+    await page
+      .waitForFunction(() => !document.body.innerText.includes('Loading other claim records...'), {
+        timeout: 30_000,
+      })
+      .catch(() => {})
+    await page
+      .waitForFunction(
+        () => {
+          const rows = document.querySelectorAll('table tbody tr')
+          return rows.length > 0
+        },
+        { timeout: 30_000 },
+      )
+      .catch(() => {})
     await page.waitForTimeout(100)
     const recordRows = page.locator('table tbody tr')
     const hasRecordRows = (await recordRows.count()) > 0
@@ -274,7 +281,10 @@ const run = async () => {
       : false
     check('applicant-record-visible-in-ui', hasRecordInUi, `rows=${rowContents.length}`)
     check('applicant-record-visible-in-ui', hasRecordInUi)
-    await page.screenshot({ path: path.join(screenshotsDir, '03-other-claim-records-list.png'), fullPage: true })
+    await page.screenshot({
+      path: path.join(screenshotsDir, '03-other-claim-records-list.png'),
+      fullPage: true,
+    })
 
     await page.goto(`${baseUrl}/financial/other-claim-records`, { waitUntil: 'domcontentloaded' })
     await page.waitForTimeout(700)
@@ -290,8 +300,8 @@ const run = async () => {
     const financeRecords = Array.isArray(financeRecordsResponse.payload?.records)
       ? financeRecordsResponse.payload.records
       : []
-    const financeRecord = financeRecords.find((record) =>
-      String(record.id || '') === String(createdRecordId || ''),
+    const financeRecord = financeRecords.find(
+      (record) => String(record.id || '') === String(createdRecordId || ''),
     )
     check('created-record-visible-in-financial', Boolean(financeRecord))
 
@@ -331,7 +341,9 @@ const run = async () => {
           path: 'hr/salary/other-claims/financial-records',
           label: `financial records refresh attempt ${actionAttempts + 1}`,
         })
-        const refreshedList = Array.isArray(refreshed.payload?.records) ? refreshed.payload.records : []
+        const refreshedList = Array.isArray(refreshed.payload?.records)
+          ? refreshed.payload.records
+          : []
         const updated = refreshedList.find((record) => String(record.id) === String(current.id))
 
         if (!updated) break
@@ -347,7 +359,7 @@ const run = async () => {
       check(
         'financial-action-loop-complete',
         actionAttempts <= maxAttempts,
-        `${actionAttempts}/${maxAttempts} workflow steps`
+        `${actionAttempts}/${maxAttempts} workflow steps`,
       )
     }
 
@@ -364,12 +376,17 @@ const run = async () => {
 
     check(
       'user-roles-available',
-      userRoles.includes('Manager') || userRoles.includes('System Admin') || userRoles.includes('HR'),
+      userRoles.includes('Manager') ||
+        userRoles.includes('System Admin') ||
+        userRoles.includes('HR'),
       `roles: ${myRoles || 'none'}`,
     )
     await page.goto(`${baseUrl}/workflows/salary-application`, { waitUntil: 'domcontentloaded' })
     check('workflow-setup-route', (await page.url()).includes('/workflows/salary-application'))
-    await page.screenshot({ path: path.join(screenshotsDir, '04-financial-workflow.png'), fullPage: true })
+    await page.screenshot({
+      path: path.join(screenshotsDir, '04-financial-workflow.png'),
+      fullPage: true,
+    })
 
     const noPageErrors = pageErrors.length === 0
     const noConsoleErrors = consoleErrors.length === 0
@@ -402,7 +419,9 @@ const run = async () => {
   }
   await fs.writeFile(path.join(outputDir, 'result.json'), JSON.stringify(result, null, 2))
   const failures = findings.filter((finding) => !finding.ok)
-  console.log(`\n${findings.length - failures.length}/${findings.length} checks passed; evidence: ${outputDir}`)
+  console.log(
+    `\n${findings.length - failures.length}/${findings.length} checks passed; evidence: ${outputDir}`,
+  )
   if (failures.length) process.exitCode = 1
 }
 

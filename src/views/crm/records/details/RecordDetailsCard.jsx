@@ -60,7 +60,9 @@ const normalizeRecordItemRows = (record, serviceTab) => {
   return items.map((item, index) => {
     const quantity = toNumber(item.quantity)
     const unitPrice = toNumber(item.unit_price ?? item.unitPrice ?? 0)
-    const lineTotal = toNumber(item.line_total ?? item.lineTotal ?? item.amount ?? quantity * unitPrice)
+    const lineTotal = toNumber(
+      item.line_total ?? item.lineTotal ?? item.amount ?? quantity * unitPrice,
+    )
     const title =
       serviceTab === 'ih-tab'
         ? item.item_description || item.itemName || item.title || '-'
@@ -172,8 +174,7 @@ const RecordDetailsCard = ({
                       <CTableDataCell>{item.lineTotal.toFixed(2)}</CTableDataCell>
                       <CTableDataCell>
                         <span>
-                          <strong>{item.title}</strong>
-                          {' '}
+                          <strong>{item.title}</strong>{' '}
                           <small className="text-muted">
                             ({item.quantity} {item.unit} x {item.unitPrice.toFixed(2)})
                           </small>

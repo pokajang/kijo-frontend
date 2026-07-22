@@ -318,9 +318,7 @@ const PricingCard = ({ formData, setFormData }) => {
                       <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
                       <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
                       <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '120px' }}>
-                        Total
-                      </CTableHeaderCell>
+                      <CTableHeaderCell style={{ width: '120px' }}>Total</CTableHeaderCell>
                       <CTableHeaderCell
                         className="text-end"
                         style={{ width: '48px' }}

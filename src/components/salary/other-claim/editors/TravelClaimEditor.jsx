@@ -23,183 +23,187 @@ const TravelClaimEditor = ({
   const mileageHint =
     Number(formData.mileageKm || 0) > 0
       ? `Mileage: ${formatMoney(
-          calculateMileageAmount(formData.mileageKm, formData.mileageRate, formData.mileageTripMode),
+          calculateMileageAmount(
+            formData.mileageKm,
+            formData.mileageRate,
+            formData.mileageTripMode,
+          ),
         )}`
       : 'Leave blank for taxi, parking, toll, or other travel without mileage.'
 
   return (
-  <section className="salary-adjustment-input-panel mt-3" aria-labelledby="otherMileageHeading">
-    <FormPanelHeading id="otherMileageHeading" title="Travel & Mileage" action={addAction} />
-    {showDraft && (
-      <>
-        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row">
-          <CCol xs={12} md="auto" className="salary-claim-date-col">
-            <CFormLabel htmlFor="otherMileageDate" className="mb-1">
-              Date
-            </CFormLabel>
-            <CFormInput
-              id="otherMileageDate"
-              type="date"
-              name="mileageDate"
-              value={formData.mileageDate}
-              onChange={onChange}
-            />
-          </CCol>
-          <CCol xs={12} md className="salary-claim-grow-col">
-            <CFormLabel htmlFor="otherStartLocation" className="mb-1">
-              From
-            </CFormLabel>
-            <CFormInput
-              id="otherStartLocation"
-              name="startLocation"
-              value={formData.startLocation}
-              onChange={onChange}
-            />
-          </CCol>
-          <CCol xs={12} md className="salary-claim-grow-col">
-            <CFormLabel htmlFor="otherEndLocation" className="mb-1">
-              To
-            </CFormLabel>
-            <CFormInput
-              id="otherEndLocation"
-              name="endLocation"
-              value={formData.endLocation}
-              onChange={onChange}
-            />
-          </CCol>
-        </CRow>
-        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
-          <CCol xs={12} md="auto" className="salary-claim-date-col">
-            <CFormLabel htmlFor="otherMileageTripMode" className="mb-1">
-              Trip type
-            </CFormLabel>
-            <CFormSelect
-              id="otherMileageTripMode"
-              name="mileageTripMode"
-              value={formData.mileageTripMode}
-              onChange={onChange}
-            >
-              <option value="return">Return</option>
-              <option value="one_way">One-way</option>
-            </CFormSelect>
-          </CCol>
-          <CCol xs={12} md="auto" className="salary-claim-mileage-col">
-            <CFormLabel htmlFor="otherMileageKm" className="mb-1">
-              Mileage KM (optional)
-            </CFormLabel>
-            <CFormInput
-              id="otherMileageKm"
-              type="number"
-              min="0"
-              step="0.1"
-              name="mileageKm"
-              value={formData.mileageKm}
-              onChange={onChange}
-            />
-            <div className="salary-travel-mileage-hint salary-field-help" role="note">
-              {mileageHint}
-            </div>
-          </CCol>
-          <CCol xs={12} md className="salary-claim-grow-col">
-            <CFormLabel htmlFor="otherMileagePurpose" className="mb-1">
-              Purpose
-            </CFormLabel>
-            <CFormInput
-              id="otherMileagePurpose"
-              name="mileagePurpose"
-              value={formData.mileagePurpose}
-              onChange={onChange}
-              placeholder="Site inspection or client meeting"
-            />
-          </CCol>
-        </CRow>
-        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
-          <CCol xs={12} md="auto" className="salary-claim-grow-col">
-            <CFormLabel htmlFor="otherMileageChargeMode" className="mb-1">
-              Charge to
-            </CFormLabel>
-            <CFormSelect
-              id="otherMileageChargeMode"
-              name="mileageChargeToMode"
-              value={formData.mileageChargeToMode || 'company'}
-              onChange={onChange}
-            >
-              <option value="company">Company</option>
-              <option value="project">Project</option>
-            </CFormSelect>
-          </CCol>
-          {formData.mileageChargeToMode === 'project' && (
+    <section className="salary-adjustment-input-panel mt-3" aria-labelledby="otherMileageHeading">
+      <FormPanelHeading id="otherMileageHeading" title="Travel & Mileage" action={addAction} />
+      {showDraft && (
+        <>
+          <CRow className="g-3 salary-claim-field-row salary-travel-editor-row">
+            <CCol xs={12} md="auto" className="salary-claim-date-col">
+              <CFormLabel htmlFor="otherMileageDate" className="mb-1">
+                Date
+              </CFormLabel>
+              <CFormInput
+                id="otherMileageDate"
+                type="date"
+                name="mileageDate"
+                value={formData.mileageDate}
+                onChange={onChange}
+              />
+            </CCol>
             <CCol xs={12} md className="salary-claim-grow-col">
-              <CFormLabel htmlFor="otherMileageProject" className="mb-1">
-                Project
+              <CFormLabel htmlFor="otherStartLocation" className="mb-1">
+                From
+              </CFormLabel>
+              <CFormInput
+                id="otherStartLocation"
+                name="startLocation"
+                value={formData.startLocation}
+                onChange={onChange}
+              />
+            </CCol>
+            <CCol xs={12} md className="salary-claim-grow-col">
+              <CFormLabel htmlFor="otherEndLocation" className="mb-1">
+                To
+              </CFormLabel>
+              <CFormInput
+                id="otherEndLocation"
+                name="endLocation"
+                value={formData.endLocation}
+                onChange={onChange}
+              />
+            </CCol>
+          </CRow>
+          <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
+            <CCol xs={12} md="auto" className="salary-claim-date-col">
+              <CFormLabel htmlFor="otherMileageTripMode" className="mb-1">
+                Trip type
               </CFormLabel>
               <CFormSelect
-                id="otherMileageProject"
-                name="mileageChargeToProjectId"
-                value={formData.mileageChargeToProjectId || ''}
+                id="otherMileageTripMode"
+                name="mileageTripMode"
+                value={formData.mileageTripMode}
                 onChange={onChange}
-                disabled={isProjectOptionsLoading}
               >
-                <option value="">
-                  {isProjectOptionsLoading ? 'Loading projects...' : 'Select project'}
-                </option>
-                {(projectOptions || []).map((project) => (
-                  <option key={project.value} value={project.value}>
-                    {project.label}
-                  </option>
-                ))}
+                <option value="return">Return</option>
+                <option value="one_way">One-way</option>
               </CFormSelect>
             </CCol>
-          )}
-          <CCol xs={12} md="auto" className="salary-claim-date-col">
-            <CFormLabel htmlFor="otherTravelExpenseCategory" className="mb-1">
-              Travel expense category
-            </CFormLabel>
-            <CFormSelect
-              id="otherTravelExpenseCategory"
-              name="travelExpenseCategory"
-              value={formData.travelExpenseCategory}
-              onChange={onChange}
-            >
-              <option value="">None</option>
-              <option value="combined">Combined travel expense</option>
-              <option value="parking">Parking</option>
-              <option value="toll">Toll</option>
-              <option value="taxi">Taxi</option>
-              <option value="other">Other</option>
-            </CFormSelect>
-          </CCol>
-          <CCol xs={12} md="auto" className="salary-claim-amount-col">
-            <CFormLabel htmlFor="otherTravelExpenseAmount" className="mb-1">
-              Expense amount
-            </CFormLabel>
-            <CFormInput
-              id="otherTravelExpenseAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              name="travelExpenseAmount"
-              value={formData.travelExpenseAmount}
-              onChange={onChange}
-            />
-          </CCol>
-        </CRow>
-        <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
-          <CCol xs={12} className="salary-claim-attachment-col">
-            <AttachmentInput
-              id="otherTravelExpenseAttachment"
-              label="Travel expense receipt"
-              attachment={formData.mileageAttachment}
-              inputKey={`other-travel-${attachmentInputVersion}`}
-              isPreparing={isPreparing}
-              onChange={onAttachmentChange}
-            />
-          </CCol>
-        </CRow>
-        <ClaimDraftActions onSave={onSave} onCancel={onCancel} isPreparing={isPreparing} />
-      </>
-    )}
-  </section>
+            <CCol xs={12} md="auto" className="salary-claim-mileage-col">
+              <CFormLabel htmlFor="otherMileageKm" className="mb-1">
+                Mileage KM (optional)
+              </CFormLabel>
+              <CFormInput
+                id="otherMileageKm"
+                type="number"
+                min="0"
+                step="0.1"
+                name="mileageKm"
+                value={formData.mileageKm}
+                onChange={onChange}
+              />
+              <div className="salary-travel-mileage-hint salary-field-help" role="note">
+                {mileageHint}
+              </div>
+            </CCol>
+            <CCol xs={12} md className="salary-claim-grow-col">
+              <CFormLabel htmlFor="otherMileagePurpose" className="mb-1">
+                Purpose
+              </CFormLabel>
+              <CFormInput
+                id="otherMileagePurpose"
+                name="mileagePurpose"
+                value={formData.mileagePurpose}
+                onChange={onChange}
+                placeholder="Site inspection or client meeting"
+              />
+            </CCol>
+          </CRow>
+          <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
+            <CCol xs={12} md="auto" className="salary-claim-grow-col">
+              <CFormLabel htmlFor="otherMileageChargeMode" className="mb-1">
+                Charge to
+              </CFormLabel>
+              <CFormSelect
+                id="otherMileageChargeMode"
+                name="mileageChargeToMode"
+                value={formData.mileageChargeToMode || 'company'}
+                onChange={onChange}
+              >
+                <option value="company">Company</option>
+                <option value="project">Project</option>
+              </CFormSelect>
+            </CCol>
+            {formData.mileageChargeToMode === 'project' && (
+              <CCol xs={12} md className="salary-claim-grow-col">
+                <CFormLabel htmlFor="otherMileageProject" className="mb-1">
+                  Project
+                </CFormLabel>
+                <CFormSelect
+                  id="otherMileageProject"
+                  name="mileageChargeToProjectId"
+                  value={formData.mileageChargeToProjectId || ''}
+                  onChange={onChange}
+                  disabled={isProjectOptionsLoading}
+                >
+                  <option value="">
+                    {isProjectOptionsLoading ? 'Loading projects...' : 'Select project'}
+                  </option>
+                  {(projectOptions || []).map((project) => (
+                    <option key={project.value} value={project.value}>
+                      {project.label}
+                    </option>
+                  ))}
+                </CFormSelect>
+              </CCol>
+            )}
+            <CCol xs={12} md="auto" className="salary-claim-date-col">
+              <CFormLabel htmlFor="otherTravelExpenseCategory" className="mb-1">
+                Travel expense category
+              </CFormLabel>
+              <CFormSelect
+                id="otherTravelExpenseCategory"
+                name="travelExpenseCategory"
+                value={formData.travelExpenseCategory}
+                onChange={onChange}
+              >
+                <option value="">None</option>
+                <option value="combined">Combined travel expense</option>
+                <option value="parking">Parking</option>
+                <option value="toll">Toll</option>
+                <option value="taxi">Taxi</option>
+                <option value="other">Other</option>
+              </CFormSelect>
+            </CCol>
+            <CCol xs={12} md="auto" className="salary-claim-amount-col">
+              <CFormLabel htmlFor="otherTravelExpenseAmount" className="mb-1">
+                Expense amount
+              </CFormLabel>
+              <CFormInput
+                id="otherTravelExpenseAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                name="travelExpenseAmount"
+                value={formData.travelExpenseAmount}
+                onChange={onChange}
+              />
+            </CCol>
+          </CRow>
+          <CRow className="g-3 salary-claim-field-row salary-travel-editor-row mt-0">
+            <CCol xs={12} className="salary-claim-attachment-col">
+              <AttachmentInput
+                id="otherTravelExpenseAttachment"
+                label="Travel expense receipt"
+                attachment={formData.mileageAttachment}
+                inputKey={`other-travel-${attachmentInputVersion}`}
+                isPreparing={isPreparing}
+                onChange={onAttachmentChange}
+              />
+            </CCol>
+          </CRow>
+          <ClaimDraftActions onSave={onSave} onCancel={onCancel} isPreparing={isPreparing} />
+        </>
+      )}
+    </section>
   )
 }
 
