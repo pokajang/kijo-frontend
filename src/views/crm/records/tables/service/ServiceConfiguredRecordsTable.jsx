@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { CTableRow } from '@coreui/react'
+import { CTableDataCell, CTableRow, CTooltip } from '@coreui/react'
 import { LARGE_DATASET_THRESHOLD, PAGE_SIZE_OPTIONS } from '../../config/allRecordsTableConfig'
 import {
   getServiceTableColumnPreferenceApiKey,
@@ -179,6 +179,8 @@ const ServiceConfiguredRecordsTable = ({
     setFollowUpRecency,
     createdByFilter,
     setCreatedByFilter,
+    inquirySourceFilter,
+    setInquirySourceFilter,
     minAmount,
     setMinAmount,
     maxAmount,
@@ -196,6 +198,7 @@ const ServiceConfiguredRecordsTable = ({
     currentPage,
     setCurrentPage,
     creatorOptions,
+    inquirySourceOptions,
     yearOptions,
     resetFilters,
     clearChip,
@@ -243,6 +246,8 @@ const ServiceConfiguredRecordsTable = ({
         const estimatedCostValue = getEstimatedCostValue(record)
         const displayDate = fmtDate(record?.dateCreated) || '-'
         const quotationAgeDays = getQuotationAgeDays(record?.dateCreated)
+        const inquirySource = record?.inquirySource || ''
+        const inquirySourceRemarks = record?.inquirySourceRemarks || ''
 
         return {
           ...record,
@@ -254,13 +259,15 @@ const ServiceConfiguredRecordsTable = ({
             estimatedCostValue,
             displayDate,
             quotationAgeDays,
+            inquirySource,
+            inquirySourceRemarks,
             clientName: record?.clientDetails?.companyName || '-',
             email: record?.clientDetails?.email || '',
             pic: record?.personInCharge || record?.clientDetails?.fullName || 'Unknown',
             statusLabel: getStatusLabel(record),
             statusTone: getStatusTone(record?.status),
             remarksPreview: getPrimaryRemarkText(record, fmtDate),
-            searchText: getSearchText(record),
+            searchText: `${getSearchText(record)} ${inquirySource} ${inquirySourceRemarks}`,
           },
         }
       }),
@@ -288,6 +295,7 @@ const ServiceConfiguredRecordsTable = ({
           followUpFilter,
           followUpRecency,
           createdByFilter,
+          inquirySourceFilter,
           minAmount,
           maxAmount,
         },
@@ -304,6 +312,7 @@ const ServiceConfiguredRecordsTable = ({
       followUpFilter,
       followUpRecency,
       createdByFilter,
+      inquirySourceFilter,
       minAmount,
       maxAmount,
     ],
@@ -325,6 +334,11 @@ const ServiceConfiguredRecordsTable = ({
         return (
           Number(a?.__serviceTableMeta?.estimatedCostValue ?? 0) -
           Number(b?.__serviceTableMeta?.estimatedCostValue ?? 0)
+        )
+      }
+      if (sortField === 'inquirySource') {
+        return String(a?.__serviceTableMeta?.inquirySource || '').localeCompare(
+          String(b?.__serviceTableMeta?.inquirySource || ''),
         )
       }
       if (sortField === 'created') {
@@ -418,6 +432,7 @@ const ServiceConfiguredRecordsTable = ({
     searchTerm,
     statusFilter,
     createdByFilter,
+    inquirySourceFilter,
     yearFilter,
     periodRange,
     quotationAge,
@@ -454,6 +469,9 @@ const ServiceConfiguredRecordsTable = ({
   }
   if (createdByFilter !== 'all') {
     activeChips.push({ key: 'issuer', label: `Issuer: ${createdByFilter}` })
+  }
+  if (inquirySourceFilter !== 'all') {
+    activeChips.push({ key: 'inquirySource', label: `Inquiry Source: ${inquirySourceFilter}` })
   }
   if (periodRange && !isDefaultPeriodRange(periodRange)) {
     activeChips.push({ key: 'period', label: `Period: ${getPeriodRangeLabel(periodRange)}` })
@@ -505,6 +523,11 @@ const ServiceConfiguredRecordsTable = ({
         key: 'email',
         label: 'Email',
         getValue: (record) => record?.__serviceTableMeta?.email || '',
+      },
+      {
+        key: 'inquirySource',
+        label: 'Inquiry Source',
+        getValue: (record) => record?.__serviceTableMeta?.inquirySource || '',
       },
       {
         key: 'status',
@@ -626,6 +649,16 @@ const ServiceConfiguredRecordsTable = ({
             onCopyEmail={handleCopyEmail}
           />
         )}
+        {rowUi.isColumnVisible?.('inquirySource') && (
+          <CTableDataCell style={{ width: columnWidths.inquirySource }}>
+            <CTooltip content={meta.inquirySource || '-'} placement="top">
+              <span style={{ ...truncateStyle, maxWidth: '100%' }}>{meta.inquirySource || '-'}</span>
+            </CTooltip>
+            {meta.inquirySourceRemarks && (
+              <span className="small text-muted d-block mt-1">{meta.inquirySourceRemarks}</span>
+            )}
+          </CTableDataCell>
+        )}
         {rowUi.isColumnVisible?.('status') && (
           <ServiceRecordStatusCell record={record} columnWidths={columnWidths} />
         )}
@@ -722,7 +755,10 @@ const ServiceConfiguredRecordsTable = ({
       setStatusFilter={setStatusFilter}
       createdByFilter={createdByFilter}
       setCreatedByFilter={setCreatedByFilter}
+      inquirySourceFilter={inquirySourceFilter}
+      setInquirySourceFilter={setInquirySourceFilter}
       creatorOptions={creatorOptions}
+      inquirySourceOptions={inquirySourceOptions}
       yearFilter={yearFilter}
       setYearFilter={setYearFilter}
       periodRange={periodRange}

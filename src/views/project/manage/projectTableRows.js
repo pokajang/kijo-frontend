@@ -41,6 +41,9 @@ export const normalizeProjectTableRows = (projects = []) =>
       client: project.client_name || emptyProjectTableValue,
       project: project.project_name || emptyProjectTableValue,
       projectType: project.project_type || emptyProjectTableValue,
+      inquirySource: project.inquiry_source || project.inquirySource || '',
+      inquirySourceRemarks:
+        project.inquiry_source_remarks || project.inquirySourceRemarks || emptyProjectTableValue,
       value: valueNumber,
       valueDisplay: formatProjectValue(valueNumber),
       update: latest?.progress_date || latest?.updated_on || '',

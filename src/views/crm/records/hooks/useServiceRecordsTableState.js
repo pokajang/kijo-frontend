@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getPeriodRangePreset } from '../../../../components/filters'
 import { getInitialPageSize } from '../utils/allRecordsTableUtils'
-import { getIssuerCodeOptions, getYearOptions } from '../utils/recordFilters'
+import {
+  getInquirySourceOptions,
+  getIssuerCodeOptions,
+  getYearOptions,
+} from '../utils/recordFilters'
 
 const readStoredState = (storageKey) => {
   if (!storageKey || typeof window === 'undefined') return {}
@@ -46,6 +50,9 @@ export const useServiceRecordsTableState = (
   const [yearFilter, setYearFilter] = useState(() =>
     getStoredString(storedState, 'yearFilter', 'all'),
   )
+  const [inquirySourceFilter, setInquirySourceFilter] = useState(() =>
+    getStoredString(storedState, 'inquirySourceFilter', 'all'),
+  )
   const [periodRange, setPeriodRange] = useState(
     () => storedState.periodRange || getPeriodRangePreset('ytd'),
   )
@@ -82,6 +89,7 @@ export const useServiceRecordsTableState = (
   )
 
   const creatorOptions = useMemo(() => getIssuerCodeOptions(records), [records])
+  const inquirySourceOptions = useMemo(() => getInquirySourceOptions(records), [records])
   const yearOptions = useMemo(() => getYearOptions(records, currentYear), [records, currentYear])
 
   useEffect(() => {
@@ -89,6 +97,7 @@ export const useServiceRecordsTableState = (
       searchInput,
       searchTerm,
       yearFilter,
+      inquirySourceFilter,
       periodRange,
       quotationAge,
       statusFilter,
@@ -108,6 +117,7 @@ export const useServiceRecordsTableState = (
     currentPage,
     followUpFilter,
     followUpRecency,
+    inquirySourceFilter,
     maxAmount,
     minAmount,
     pageSize,
@@ -127,6 +137,7 @@ export const useServiceRecordsTableState = (
     setSearchInput('')
     setSearchTerm('')
     setYearFilter('all')
+    setInquirySourceFilter('all')
     setPeriodRange(getPeriodRangePreset('ytd'))
     setQuotationAge('all')
     setStatusFilter('all')
@@ -145,6 +156,7 @@ export const useServiceRecordsTableState = (
     }
     if (key === 'status') setStatusFilter('all')
     if (key === 'issuer') setCreatedByFilter('all')
+    if (key === 'inquirySource') setInquirySourceFilter('all')
     if (key === 'year') setYearFilter('all')
     if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
     if (key === 'qage') setQuotationAge('all')
@@ -162,6 +174,8 @@ export const useServiceRecordsTableState = (
     setSearchTerm,
     yearFilter,
     setYearFilter,
+    inquirySourceFilter,
+    setInquirySourceFilter,
     periodRange,
     setPeriodRange,
     quotationAge,
@@ -191,6 +205,7 @@ export const useServiceRecordsTableState = (
     currentPage,
     setCurrentPage,
     creatorOptions,
+    inquirySourceOptions,
     yearOptions,
     resetFilters,
     clearChip,

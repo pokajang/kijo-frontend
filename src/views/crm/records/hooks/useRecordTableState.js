@@ -50,6 +50,9 @@ export const useRecordTableState = (storageKey = 'crm.records.all.table-state.v1
   const [yearFilter, setYearFilter] = useState(() =>
     getStoredString(storedState, 'yearFilter', 'all'),
   )
+  const [inquirySourceFilter, setInquirySourceFilter] = useState(() =>
+    getStoredString(storedState, 'inquirySourceFilter', 'all'),
+  )
   const [periodRange, setPeriodRange] = useState(
     () => storedState.periodRange || getPeriodRangePreset('ytd'),
   )
@@ -87,6 +90,7 @@ export const useRecordTableState = (storageKey = 'crm.records.all.table-state.v1
       serviceFilter,
       createdByFilter,
       yearFilter,
+      inquirySourceFilter,
       periodRange,
       quotationAge,
       followUpFilter,
@@ -113,6 +117,7 @@ export const useRecordTableState = (storageKey = 'crm.records.all.table-state.v1
     searchTerm,
     serviceFilter,
     showAdvancedFilters,
+    inquirySourceFilter,
     sortDir,
     sortField,
     statusFilter,
@@ -127,6 +132,7 @@ export const useRecordTableState = (storageKey = 'crm.records.all.table-state.v1
     setServiceFilter('all')
     setCreatedByFilter('all')
     setYearFilter('all')
+    setInquirySourceFilter('all')
     setPeriodRange(getPeriodRangePreset('ytd'))
     setQuotationAge('all')
     setFollowUpFilter('all')
@@ -144,6 +150,7 @@ export const useRecordTableState = (storageKey = 'crm.records.all.table-state.v1
     if (key === 'status') setStatusFilter('all')
     if (key === 'service') setServiceFilter('all')
     if (key === 'issuer') setCreatedByFilter('all')
+    if (key === 'inquirySource') setInquirySourceFilter('all')
     if (key === 'year') setYearFilter('all')
     if (key === 'period') setPeriodRange(getPeriodRangePreset('ytd'))
     if (key === 'qage') setQuotationAge('all')
@@ -172,6 +179,8 @@ export const useRecordTableState = (storageKey = 'crm.records.all.table-state.v1
     setPeriodRange,
     quotationAge,
     setQuotationAge,
+    inquirySourceFilter,
+    setInquirySourceFilter,
     followUpFilter,
     setFollowUpFilter,
     followUpRecency,

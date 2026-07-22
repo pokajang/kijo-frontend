@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyProjectFilters,
   getLatestProgressUpdate,
+  getInquirySourceOptions,
   getOwnerOptions,
   getProjectTypeOptions,
   getYearOptions,
@@ -28,6 +29,8 @@ const projects = [
     client_name: 'Acme',
     project_type: 'Training',
     status: 'Active',
+    inquiry_source: 'Website',
+    inquiry_source_remarks: 'Client requested follow-up after webinar',
     award_date: '2026-01-15',
     quote_value: 1000,
     assigned_staff: [
@@ -45,6 +48,7 @@ const projects = [
     client_name: 'Bravo',
     project_type: 'Equipment Supply',
     status: 'Completed',
+    inquirySource: 'Referral',
     award_date: '2025-11-10',
     quote_value: 5000,
     assigned_staff: [
@@ -63,6 +67,13 @@ describe('projectFilters', () => {
 
     expect(
       applyProjectFilters({ projects, filters: { ...defaultFilters, searchTerm: 'vendor one' } }),
+    ).toEqual([projects[0]])
+
+    expect(
+      applyProjectFilters({
+        projects,
+        filters: { ...defaultFilters, searchTerm: 'webinar' },
+      }),
     ).toEqual([projects[0]])
   })
 
@@ -103,6 +114,13 @@ describe('projectFilters', () => {
     expect(
       applyProjectFilters({ projects, filters: { ...defaultFilters, yearFilter: '2026' } }),
     ).toEqual([projects[0]])
+
+    expect(
+      applyProjectFilters({
+        projects,
+        filters: { ...defaultFilters, inquirySourceFilter: 'Referral' },
+      }),
+    ).toEqual([projects[1]])
   })
 
   it('filters amounts by current project value when present', () => {
@@ -123,6 +141,7 @@ describe('projectFilters', () => {
   it('builds stable filter option lists and latest update values', () => {
     expect(getProjectTypeOptions(projects)).toEqual(['Equipment Supply', 'Training'])
     expect(getOwnerOptions(projects)).toEqual(['AL', 'BY'])
+    expect(getInquirySourceOptions(projects)).toEqual(['Referral', 'Website'])
     expect(getYearOptions(projects, 2026)).toEqual(['2026', '2025'])
     expect(getLatestProgressUpdate(projects[0])).toEqual(
       expect.objectContaining({ progress_text: 'Materials ready' }),

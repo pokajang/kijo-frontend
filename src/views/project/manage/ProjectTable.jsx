@@ -46,6 +46,7 @@ import {
   applyProjectFilters,
   getOwnerOptions,
   getProjectTypeOptions,
+  getInquirySourceOptions,
   isProjectOwnedByUser,
 } from './projectFilters'
 import { getCurrentProjectValue } from './projectApi'
@@ -269,6 +270,7 @@ export default function ProjectTable({
   const [statusFilter, setStatusFilter] = useState('all')
   const [projectTypeFilter, setProjectTypeFilter] = useState('all')
   const [ownerFilter, setOwnerFilter] = useState('all')
+  const [inquirySourceFilter, setInquirySourceFilter] = useState('all')
   const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const selectedPeriodRange = periodRange || localPeriodRange
   const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
@@ -292,12 +294,14 @@ export default function ProjectTable({
 
   const projectTypeOptions = useMemo(() => getProjectTypeOptions(projects), [projects])
   const ownerOptions = useMemo(() => getOwnerOptions(projects), [projects])
+  const inquirySourceOptions = useMemo(() => getInquirySourceOptions(projects), [projects])
 
   const resetFilters = () => {
     setSearchTerm('')
     setStatusFilter('all')
     setProjectTypeFilter('all')
     setOwnerFilter('all')
+    setInquirySourceFilter('all')
     handlePeriodRangeChange(getPeriodRangePreset('ytd'))
     setHasUpdateFilter('all')
     setHasVendorFilter('all')
@@ -311,6 +315,7 @@ export default function ProjectTable({
     if (key === 'type') setProjectTypeFilter('all')
     if (key === 'owner') setOwnerFilter('all')
     if (key === 'status') setStatusFilter('all')
+    if (key === 'inquirySource') setInquirySourceFilter('all')
     if (key === 'updates') setHasUpdateFilter('all')
     if (key === 'vendors') setHasVendorFilter('all')
     if (key === 'minAmount') setMinAmount('')
@@ -327,6 +332,9 @@ export default function ProjectTable({
       : null,
     ownerFilter !== 'all' ? { key: 'owner', label: `Project Leader: ${ownerFilter}` } : null,
     statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
+    inquirySourceFilter !== 'all'
+      ? { key: 'inquirySource', label: `Inquiry Source: ${inquirySourceFilter}` }
+      : null,
     hasUpdateFilter !== 'all'
       ? { key: 'updates', label: `Has Update: ${hasUpdateFilter === 'yes' ? 'Yes' : 'No'}` }
       : null,
@@ -352,6 +360,7 @@ export default function ProjectTable({
         hasVendorFilter,
         minAmount,
         maxAmount,
+        inquirySourceFilter,
       },
     })
 
@@ -370,6 +379,7 @@ export default function ProjectTable({
     statusFilter,
     projectTypeFilter,
     ownerFilter,
+    inquirySourceFilter,
     selectedPeriodRange,
     hasUpdateFilter,
     hasVendorFilter,
@@ -587,6 +597,21 @@ export default function ProjectTable({
                 </CFormSelect>
               </CCol>
               <CCol xs={12} md={4} lg={2}>
+                <CFormLabel htmlFor="projectInquirySourceFilter">Inquiry Source</CFormLabel>
+                <CFormSelect
+                  id="projectInquirySourceFilter"
+                  value={inquirySourceFilter}
+                  onChange={(e) => setInquirySourceFilter(e.target.value)}
+                >
+                  <option value="all">All</option>
+                  {inquirySourceOptions.map((source) => (
+                    <option key={source} value={source}>
+                      {source}
+                    </option>
+                  ))}
+                </CFormSelect>
+              </CCol>
+              <CCol xs={12} md={4} lg={2}>
                 <CFormLabel htmlFor="projectHasUpdateFilter">Has Progress Update</CFormLabel>
                 <CFormSelect
                   id="projectHasUpdateFilter"
@@ -711,6 +736,7 @@ export default function ProjectTable({
                 statusFilter,
                 projectTypeFilter,
                 ownerFilter,
+                inquirySourceFilter,
                 selectedPeriodRange,
                 hasUpdateFilter,
                 hasVendorFilter,

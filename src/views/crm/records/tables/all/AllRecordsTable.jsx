@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useRef } from 'react'
 import { CBadge, CTooltip } from '@coreui/react'
-import { getDateOnly, getIssuerCodeOptions, getYearOptions } from '../../utils/recordFilters'
+import {
+  getDateOnly,
+  getInquirySourceOptions,
+  getIssuerCodeOptions,
+  getYearOptions,
+} from '../../utils/recordFilters'
 import {
   COLUMN_LABELS,
   COLUMN_PREFERENCE_API_KEY,
@@ -120,6 +125,13 @@ const AllRecordsTable = ({
         cellMaxWidth: '200px',
       },
       {
+        key: 'inquirySource',
+        label: COLUMN_LABELS.inquirySource,
+        width: columnWidths.inquirySource,
+        sortable: true,
+        noWrap: true,
+      },
+      {
         key: 'status',
         label: COLUMN_LABELS.status,
         width: columnWidths.status,
@@ -200,6 +212,8 @@ const AllRecordsTable = ({
     setServiceFilter,
     createdByFilter,
     setCreatedByFilter,
+    inquirySourceFilter,
+    setInquirySourceFilter,
     yearFilter,
     setYearFilter,
     periodRange,
@@ -237,6 +251,7 @@ const AllRecordsTable = ({
     requiredColumns: REQUIRED_COLUMNS,
   })
   const creatorOptions = useMemo(() => getIssuerCodeOptions(records), [records])
+  const inquirySourceOptions = useMemo(() => getInquirySourceOptions(records), [records])
   const yearOptions = useMemo(() => getYearOptions(records, currentYear), [records, currentYear])
 
   useEffect(() => {
@@ -254,6 +269,7 @@ const AllRecordsTable = ({
       statusFilter,
       serviceFilter,
       createdByFilter,
+      inquirySourceFilter,
       yearFilter,
       periodRange,
       quotationAge,
@@ -352,6 +368,7 @@ const AllRecordsTable = ({
     statusFilter,
     serviceFilter,
     createdByFilter,
+    inquirySourceFilter,
     yearFilter,
     periodRange,
     quotationAge,
@@ -396,6 +413,11 @@ const AllRecordsTable = ({
         key: 'email',
         label: 'Email',
         getValue: (record) => record?.clientDetails?.email || '',
+      },
+      {
+        key: 'inquirySource',
+        label: 'Inquiry Source',
+        getValue: (record) => record?.inquirySource || '',
       },
       {
         key: 'status',
@@ -519,6 +541,14 @@ const AllRecordsTable = ({
           >
             {email}
           </span>
+        </CTooltip>
+      )
+    }
+
+    if (column.key === 'inquirySource') {
+      return (
+        <CTooltip content={record?.inquirySource || '-'} placement="top">
+          <span style={{ ...truncateStyle, maxWidth: '160px' }}>{record?.inquirySource || '-'}</span>
         </CTooltip>
       )
     }
@@ -669,6 +699,8 @@ const AllRecordsTable = ({
         setStatusFilter={setStatusFilter}
         createdByFilter={createdByFilter}
         setCreatedByFilter={setCreatedByFilter}
+        inquirySourceFilter={inquirySourceFilter}
+        setInquirySourceFilter={setInquirySourceFilter}
         yearFilter={yearFilter}
         setYearFilter={setYearFilter}
         serviceFilter={serviceFilter}
@@ -693,6 +725,7 @@ const AllRecordsTable = ({
         resetFilters={resetFilters}
         handleExportCsv={handleExportCsv}
         sortedRecordsLength={sortedRecords.length}
+        inquirySourceOptions={inquirySourceOptions}
         isColumnVisible={isColumnVisible}
         toggleColumnVisibility={toggleColumnVisibility}
         resetColumnVisibility={resetColumnVisibility}
@@ -742,6 +775,7 @@ const AllRecordsTable = ({
           showAdvancedFilters,
           searchInput,
           statusFilter,
+          inquirySourceFilter,
           serviceFilter,
           createdByFilter,
           yearFilter,

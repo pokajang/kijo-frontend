@@ -36,23 +36,27 @@ export const useDerivedRecords = ({
   const enrichedRecords = useMemo(
     () =>
       records.map((record) => {
-        const serviceLabel = getServiceLabel(record)
-        const subject = getSubject(record)
-        return {
-          ...record,
-          __tableMeta: {
-            serviceLabel,
-            subject,
-            amountValue: getAmountValue(record),
-            estimatedCostValue: getEstimatedCostValue(record),
-            createdTime: getCreatedTime(record),
-            statusLabel: getStatusLabel(record),
-            statusTone: getStatusTone(record?.status),
-            quotationAgeDays: getQuotationAgeDays(record?.dateCreated),
-            remarksPreview: getPrimaryRemarkText(record, fmtDate),
-            searchText: `${serviceLabel} ${subject}`,
-          },
-        }
+    const serviceLabel = getServiceLabel(record)
+    const subject = getSubject(record)
+    const inquirySource = record?.inquirySource || ''
+    const inquirySourceRemarks = record?.inquirySourceRemarks || ''
+    return {
+      ...record,
+      __tableMeta: {
+        serviceLabel,
+        subject,
+        inquirySource,
+        inquirySourceRemarks,
+        amountValue: getAmountValue(record),
+        estimatedCostValue: getEstimatedCostValue(record),
+        createdTime: getCreatedTime(record),
+        statusLabel: getStatusLabel(record),
+        statusTone: getStatusTone(record?.status),
+        quotationAgeDays: getQuotationAgeDays(record?.dateCreated),
+        remarksPreview: getPrimaryRemarkText(record, fmtDate),
+        searchText: `${serviceLabel} ${subject} ${inquirySource} ${inquirySourceRemarks}`,
+      },
+    }
       }),
     [records, fmtDate],
   )
@@ -69,6 +73,7 @@ export const useDerivedRecords = ({
         followUpFilter: filters.followUpFilter,
         followUpRecency: filters.followUpRecency,
         createdByFilter: filters.createdByFilter,
+        inquirySourceFilter: filters.inquirySourceFilter,
         minAmount: filters.minAmount,
         maxAmount: filters.maxAmount,
       },
@@ -86,6 +91,11 @@ export const useDerivedRecords = ({
       if (sortField === 'service') {
         return String(a?.__tableMeta?.serviceLabel || '').localeCompare(
           String(b?.__tableMeta?.serviceLabel || ''),
+        )
+      }
+      if (sortField === 'inquirySource') {
+        return String(a?.__tableMeta?.inquirySource || '').localeCompare(
+          String(b?.__tableMeta?.inquirySource || ''),
         )
       }
       if (sortField === 'quotationId') {
@@ -167,6 +177,8 @@ export const useDerivedRecords = ({
       key: 'period',
       label: `Period: ${getPeriodRangeLabel(filters.periodRange)}`,
     })
+  if (filters.inquirySourceFilter && filters.inquirySourceFilter !== 'all')
+    activeChips.push({ key: 'inquirySource', label: `Inquiry Source: ${filters.inquirySourceFilter}` })
   if (filters.yearFilter !== currentYear && filters.yearFilter !== 'all')
     activeChips.push({ key: 'year', label: `Year: ${filters.yearFilter}` })
   if (filters.quotationAge !== 'all')

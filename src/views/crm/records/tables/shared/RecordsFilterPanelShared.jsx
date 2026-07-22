@@ -28,6 +28,8 @@ const RecordsFilterPanelShared = ({
   setStatusFilter,
   createdByFilter,
   setCreatedByFilter,
+  inquirySourceFilter = 'all',
+  setInquirySourceFilter = () => {},
   yearFilter,
   setYearFilter,
   followUpFilter,
@@ -43,8 +45,9 @@ const RecordsFilterPanelShared = ({
   showAdvancedFilters,
   setShowAdvancedFilters,
   activeFilterCount,
-  creatorOptions,
-  yearOptions,
+  creatorOptions = [],
+  inquirySourceOptions = [],
+  yearOptions = [],
   activeChips,
   clearChip,
   resetFilters,
@@ -128,7 +131,7 @@ const RecordsFilterPanelShared = ({
               <option value="Terminated">Terminated</option>
             </CFormSelect>
           </CCol>
-          <CCol xs={6} md={3} lg={2}>
+        <CCol xs={6} md={3} lg={2}>
             <CFormLabel>Issuer Code</CFormLabel>
             <CFormSelect
               value={createdByFilter}
@@ -138,6 +141,20 @@ const RecordsFilterPanelShared = ({
               {creatorOptions.map((code) => (
                 <option key={code} value={code}>
                   {code}
+                </option>
+              ))}
+            </CFormSelect>
+          </CCol>
+          <CCol xs={6} md={3} lg={2}>
+            <CFormLabel>Inquiry Source</CFormLabel>
+            <CFormSelect
+              value={inquirySourceFilter}
+              onChange={(e) => setInquirySourceFilter(e.target.value)}
+            >
+              <option value="all">All</option>
+              {inquirySourceOptions.map((source) => (
+                <option key={source} value={source}>
+                  {source}
                 </option>
               ))}
             </CFormSelect>

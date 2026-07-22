@@ -118,6 +118,18 @@ export const getYearOptions = (projects = [], currentYear) => {
   return Array.from(years).sort((a, b) => Number(b) - Number(a))
 }
 
+export const getInquirySourceOptions = (projects = []) => {
+  const sources = new Set()
+
+  projects.forEach((project) => {
+    const source = String(project?.inquiry_source || project?.inquirySource || '').trim()
+    if (!source) return
+    sources.add(source)
+  })
+
+  return Array.from(sources).sort((a, b) => a.localeCompare(b))
+}
+
 export const applyProjectFilters = ({ projects = [], filters = {} }) => {
   const term = String(filters?.searchTerm || '')
     .trim()
@@ -145,6 +157,15 @@ export const applyProjectFilters = ({ projects = [], filters = {} }) => {
     const ownerCode = getProjectLeaderCode(project)
     if (filters?.ownerFilter !== 'all' && ownerCode !== filters?.ownerFilter) return false
 
+    const inquirySource = String(project?.inquiry_source || project?.inquirySource || '').trim()
+    if (
+      filters?.inquirySourceFilter &&
+      filters.inquirySourceFilter !== 'all' &&
+      inquirySource !== filters.inquirySourceFilter
+    ) {
+      return false
+    }
+
     const hasUpdates =
       Array.isArray(project?.progress_updates) && project.progress_updates.length > 0
     if (filters?.hasUpdateFilter === 'yes' && !hasUpdates) return false
@@ -166,7 +187,9 @@ export const applyProjectFilters = ({ projects = [], filters = {} }) => {
       project?.status,
       project?.po_loa_number,
       ownerCode,
+      inquirySource,
       getAllStaffText(project),
+      project?.inquiry_source_remarks || project?.inquirySourceRemarks || '',
       getVendorsText(project),
       getProgressText(project),
       latestUpdate?.progress_text,

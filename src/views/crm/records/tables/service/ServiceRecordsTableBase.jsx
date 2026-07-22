@@ -35,7 +35,10 @@ const ServiceRecordsTableBase = ({
   setStatusFilter,
   createdByFilter,
   setCreatedByFilter,
+  inquirySourceFilter,
+  setInquirySourceFilter,
   creatorOptions = [],
+  inquirySourceOptions = [],
   yearFilter,
   setYearFilter,
   periodRange,
@@ -115,6 +118,7 @@ const ServiceRecordsTableBase = ({
     searchInput,
     statusFilter,
     createdByFilter,
+    inquirySourceFilter,
     yearFilter,
     periodRange,
     followUpFilter,
@@ -165,6 +169,8 @@ const ServiceRecordsTableBase = ({
         setStatusFilter={setStatusFilter}
         createdByFilter={createdByFilter}
         setCreatedByFilter={setCreatedByFilter}
+        inquirySourceFilter={inquirySourceFilter}
+        setInquirySourceFilter={setInquirySourceFilter}
         yearFilter={yearFilter}
         setYearFilter={setYearFilter}
         periodRange={periodRange}
@@ -183,6 +189,7 @@ const ServiceRecordsTableBase = ({
         setShowAdvancedFilters={setShowAdvancedFilters}
         activeFilterCount={activeFilterCount}
         creatorOptions={creatorOptions}
+        inquirySourceOptions={inquirySourceOptions}
         yearOptions={yearOptions}
         activeChips={activeChips}
         clearChip={clearChip}
@@ -287,6 +294,21 @@ const ServiceRecordsTableBase = ({
                     >
                       Email
                       {renderSortIcon('email')}
+                    </button>
+                  </CTableHeaderCell>
+                )}
+                {isColumnVisible('inquirySource') && (
+                  <CTableHeaderCell
+                    style={{ ...headerCellBaseStyle, minWidth: columnWidths.inquirySource }}
+                    aria-sort={getAriaSort('inquirySource')}
+                  >
+                    <button
+                      type="button"
+                      className="btn btn-link p-0 text-decoration-none records-table-sort-btn"
+                      onClick={() => toggleSort('inquirySource')}
+                    >
+                      Inquiry Source
+                      {renderSortIcon('inquirySource')}
                     </button>
                   </CTableHeaderCell>
                 )}
@@ -422,6 +444,7 @@ const ServiceRecordsTableBase = ({
                         'quotationId',
                         'client',
                         'email',
+                        'inquirySource',
                         'status',
                         'subject',
                         'amount',

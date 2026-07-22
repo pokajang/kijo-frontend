@@ -20,6 +20,18 @@ export const getIssuerCodeOptions = (records = []) => {
   return Array.from(uniqueCodes).sort((a, b) => a.localeCompare(b))
 }
 
+export const getInquirySourceOptions = (records = []) => {
+  const uniqueSources = new Set()
+
+  records.forEach((record) => {
+    const source = String(record?.inquirySource || '').trim()
+    if (!source || source === '-') return
+    uniqueSources.add(source)
+  })
+
+  return Array.from(uniqueSources).sort((a, b) => a.localeCompare(b))
+}
+
 export const getYearOptions = (records = [], currentYear) => {
   const uniqueYears = new Set([String(currentYear)])
 
@@ -120,6 +132,8 @@ export const applyRecordFilters = ({
       record?.quotationId,
       record?.clientDetails?.companyName,
       getSearchText?.(record) || '',
+      record?.inquirySource,
+      record?.inquirySourceRemarks,
       record?.status,
       record?.statusRemarks,
       record?.createdByName,
@@ -158,6 +172,15 @@ export const applyRecordFilters = ({
 
     const issuerCode = String(record?.createdByCode || '').trim()
     if (filters?.createdByFilter !== 'all' && issuerCode !== filters?.createdByFilter) return false
+
+    const inquirySource = String(record?.inquirySource || '').trim()
+    if (
+      filters?.inquirySourceFilter &&
+      filters?.inquirySourceFilter !== 'all' &&
+      inquirySource !== filters.inquirySourceFilter
+    ) {
+      return false
+    }
 
     const amount = Number(getAmount(record) ?? 0)
     if (parsedMin != null && !Number.isNaN(parsedMin) && amount < parsedMin) return false

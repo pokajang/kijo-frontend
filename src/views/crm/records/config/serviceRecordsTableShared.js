@@ -2,6 +2,7 @@ export const serviceRecordColumnWidths = {
   id: '140px',
   client: '220px',
   email: '180px',
+  inquirySource: '160px',
   subject: '220px',
   amount: '120px',
   estimatedCost: '130px',

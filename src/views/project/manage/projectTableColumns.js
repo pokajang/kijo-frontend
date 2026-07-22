@@ -5,6 +5,7 @@ export const defaultVisibleColumns = {
   client: true,
   projectType: true,
   project: true,
+  inquirySource: false,
   value: true,
   update: true,
   owner: true,
@@ -30,6 +31,13 @@ export const dataColumns = [
     textMode: 'expandable',
     cellMaxWidth: '220px',
     previewCharThreshold: 34,
+  },
+  {
+    key: 'inquirySource',
+    label: 'Inquiry Source',
+    width: '170px',
+    sortable: true,
+    sortType: 'string',
   },
   {
     key: 'value',
