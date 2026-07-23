@@ -6,6 +6,7 @@ const fetchJsonCompat = async (url) => {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
+    cache: 'no-cache',
   })
   const payload = await res.json()
   if (

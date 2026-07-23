@@ -67,7 +67,7 @@ describe('ReviewHygieneQuotationCard', () => {
 
     expect(within(additionalFeesRow).getByText('Blank sample')).toBeInTheDocument()
     expect(within(additionalFeesRow).getByText('(1 Lot x 200.00)')).toBeInTheDocument()
-    expect(within(additionalFeesRow).getByText('Lab blank')).toBeInTheDocument()
+    expect(within(additionalFeesRow).getByText('Notes: Lab blank')).toBeInTheDocument()
     expect(within(additionalFeesRow).getByText('Report writing')).toBeInTheDocument()
     expect(within(additionalFeesRow).getByText('(2 Hour x 150.00)')).toBeInTheDocument()
 
