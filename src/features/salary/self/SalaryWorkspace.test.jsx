@@ -78,7 +78,7 @@ describe('SalaryWorkspace', () => {
       .getAllByRole('tab')
       .map((tab) => tab.textContent)
     expect(tabLabels).toEqual([
-      'Payment Queue',
+      'My Payments',
       'Apply Salary',
       'Salary Records',
       'Apply Other Claim',

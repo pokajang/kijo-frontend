@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { CButton, CFormInput, CModal, CModalBody, CModalHeader, CModalTitle } from '@coreui/react'
 import { formatAttachmentSize, salaryAttachmentAccept } from '../attachmentUtils'
 
@@ -94,35 +94,127 @@ export const AttachmentInput = ({
   id,
   label = 'Attachment',
   attachment,
+  attachments,
   inputKey,
   isPreparing,
+  multiple = false,
+  required = false,
+  helpText = 'PDF, JPG, or PNG up to 5 MB.',
   onChange,
+  onRemove,
 }) => (
-  <div className="salary-attachment-field">
-    <label className="salary-attachment-label" htmlFor={id}>
-      {label}
-    </label>
-    <div className="salary-attachment-control">
-      <label className="btn btn-outline-secondary salary-attachment-choose" htmlFor={id}>
-        Choose File
-      </label>
-      {(isPreparing || attachment) && (
-        <div className="salary-attachment-meta">
-          {isPreparing
-            ? 'Preparing attachment...'
-            : `${attachment.name} (${formatAttachmentSize(attachment.size)})${
-                attachment.compressed ? ' - compressed' : ''
-              }`}
+  <AttachmentField
+    id={id}
+    label={label}
+    attachment={attachment}
+    attachments={attachments}
+    inputKey={inputKey}
+    isPreparing={isPreparing}
+    multiple={multiple}
+    required={required}
+    helpText={helpText}
+    onChange={onChange}
+    onRemove={onRemove}
+  />
+)
+
+const AttachmentField = ({
+  id,
+  label,
+  attachment,
+  attachments,
+  inputKey,
+  isPreparing,
+  multiple,
+  required,
+  helpText,
+  onChange,
+  onRemove,
+}) => {
+  const inputRef = useRef(null)
+  const selectedAttachments = Array.isArray(attachments)
+    ? attachments.filter(Boolean)
+    : attachment
+      ? [attachment]
+      : []
+  const helpId = `${id}Help`
+
+  return (
+    <div className="salary-attachment-field">
+      <div className="salary-attachment-label" id={`${id}Label`}>
+        {label}
+        {required && <span className="salary-attachment-required"> (required)</span>}
+      </div>
+      <div className="salary-attachment-control">
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          type="button"
+          className="salary-attachment-choose"
+          onClick={() => inputRef.current?.click()}
+          aria-label={`Choose ${multiple ? 'files' : 'a file'} for ${label}`}
+        >
+          Choose File{multiple ? 's' : ''}
+        </CButton>
+        {isPreparing && (
+          <div className="salary-attachment-meta" role="status" aria-live="polite">
+            Preparing attachment...
+          </div>
+        )}
+      </div>
+      <CFormInput
+        key={inputKey}
+        ref={inputRef}
+        id={id}
+        type="file"
+        accept={salaryAttachmentAccept}
+        multiple={multiple}
+        className="salary-attachment-input"
+        tabIndex={-1}
+        aria-labelledby={`${id}Label`}
+        aria-describedby={helpId}
+        onChange={(event) => {
+          const files = Array.from(event.target.files || [])
+          onChange(multiple ? files : files[0] || null)
+        }}
+      />
+      {helpText && (
+        <div className="salary-field-help" id={helpId}>
+          {helpText}
+        </div>
+      )}
+      {selectedAttachments.length > 0 && (
+        <div className="salary-attachment-list" aria-live="polite">
+          {selectedAttachments.map((selectedAttachment, index) => (
+            <div
+              className="salary-attachment-meta salary-attachment-meta--selected"
+              key={
+                selectedAttachment.clientId ||
+                selectedAttachment.id ||
+                `${selectedAttachment.name}-${index}`
+              }
+            >
+              <span>
+                {selectedAttachment.name} ({formatAttachmentSize(selectedAttachment.size)})
+                {selectedAttachment.compressed ? ' - compressed' : ''}
+              </span>
+              {onRemove && (
+                <CButton
+                  color="secondary"
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => onRemove(index)}
+                  aria-label={`Remove ${selectedAttachment.name || 'attachment'}`}
+                >
+                  Remove
+                </CButton>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
-    <CFormInput
-      key={inputKey}
-      id={id}
-      type="file"
-      accept={salaryAttachmentAccept}
-      className="salary-attachment-input"
-      onChange={(event) => onChange(event.target.files?.[0] || null)}
-    />
-  </div>
-)
+  )
+}

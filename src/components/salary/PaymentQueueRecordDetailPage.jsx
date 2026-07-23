@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   CAlert,
+  CButton,
   CSpinner,
   CTable,
   CTableBody,
@@ -45,6 +46,7 @@ const PaymentQueueRecordDetailPage = () => {
       ? '/financial/payment-queue'
       : '/my/salary/payment-queue',
   )
+  const isFinancial = location.pathname.startsWith('/financial')
   const [record, setRecord] = useState(location.state?.record || null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -80,12 +82,11 @@ const PaymentQueueRecordDetailPage = () => {
   }, [staffId, period])
 
   useEffect(() => {
-    const isFinancial = location.pathname.startsWith('/financial')
     consumeRouteGroup({
       routePrefix: isFinancial ? '/financial/payment-queue' : '/my/salary/payment-queue',
       moduleKeys: [isFinancial ? 'financial.payment-queue' : 'my.payment-queue'],
     }).catch(() => {})
-  }, [consumeRouteGroup, location.pathname])
+  }, [consumeRouteGroup, isFinancial, location.pathname])
 
   const fields = useMemo(
     () => [
@@ -164,35 +165,36 @@ const PaymentQueueRecordDetailPage = () => {
     }
   }
 
-  const actions = record
-    ? [
-        {
-          key: 'mark-paid',
-          label: 'Mark Paid',
-          hidden: record.status === 'Paid',
-          disabled: !record.canMarkPaid,
-          tooltip:
-            record.blockReason || (!record.canMarkPaid ? 'This row cannot be marked paid.' : ''),
-          buttonColor: 'success',
-          onClick: () => openActionModal('mark-paid'),
-        },
-        {
-          key: 'undo-paid',
-          label: 'Undo Paid',
-          hidden: record.status !== 'Paid',
-          disabled: !record.canUndoPaid,
-          tooltip: !record.canUndoPaid ? 'You cannot undo this payment.' : '',
-          buttonColor: 'warning',
-          onClick: () => openActionModal('undo-paid'),
-        },
-      ]
-    : []
+  const actions =
+    record && isFinancial
+      ? [
+          {
+            key: 'mark-paid',
+            label: 'Mark Paid',
+            hidden: record.status === 'Paid',
+            disabled: !record.canMarkPaid,
+            tooltip:
+              record.blockReason || (!record.canMarkPaid ? 'This row cannot be marked paid.' : ''),
+            buttonColor: 'success',
+            onClick: () => openActionModal('mark-paid'),
+          },
+          {
+            key: 'undo-paid',
+            label: 'Undo Paid',
+            hidden: record.status !== 'Paid',
+            disabled: !record.canUndoPaid,
+            tooltip: !record.canUndoPaid ? 'You cannot undo this payment.' : '',
+            buttonColor: 'warning',
+            onClick: () => openActionModal('undo-paid'),
+          },
+        ]
+      : []
 
   const isUndoAction = actionContext?.type === 'undo-paid'
 
   return (
     <DataTableDetailShell
-      title="Payment Queue Details"
+      title={isFinancial ? 'Payment Queue Details' : 'My Payment Details'}
       onBack={() => navigate(returnTo)}
       loading={loading}
       error={error}
@@ -241,7 +243,27 @@ const PaymentQueueRecordDetailPage = () => {
               ) : (
                 items.map((item) => (
                   <CTableRow key={`${item.subjectType}-${item.subjectId}`}>
-                    <CTableDataCell>{item.label || '-'}</CTableDataCell>
+                    <CTableDataCell>
+                      {!isFinancial &&
+                      item.subjectType === 'other_claim_application' &&
+                      item.subjectId ? (
+                        <CButton
+                          type="button"
+                          color="link"
+                          className="p-0 text-start"
+                          onClick={() =>
+                            navigate(
+                              `/my/salary/other-claims/records/${encodeURIComponent(item.subjectId)}`,
+                              { state: { returnTo } },
+                            )
+                          }
+                        >
+                          {item.label || '-'}
+                        </CButton>
+                      ) : (
+                        item.label || '-'
+                      )}
+                    </CTableDataCell>
                     <CTableDataCell>{item.status || '-'}</CTableDataCell>
                     <CTableDataCell className="text-end">
                       {formatQueueMoney(item.amount, false)}
@@ -263,7 +285,15 @@ const PaymentQueueRecordDetailPage = () => {
         undoReason={undoReason}
         setUndoReason={setUndoReason}
         isSubmitting={isSubmitting}
-        canSubmit={!isUndoAction || undoReason.trim().length > 0}
+        canSubmit={
+          isUndoAction
+            ? undoReason.trim().length > 0
+            : Boolean(
+                paymentForm.paymentDate &&
+                  paymentForm.paymentReference.trim() &&
+                  paymentForm.paymentMethod.trim(),
+              )
+        }
         onClose={closeActionModal}
         onSubmit={handleSubmitAction}
       />

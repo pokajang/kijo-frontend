@@ -166,6 +166,7 @@ const PaymentQueueRecords = ({
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const isSelfService = location.pathname.startsWith('/my/salary')
   const { consumeRouteGroup } = useAppNotifications()
   const [records, setRecords] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -417,6 +418,15 @@ const PaymentQueueRecords = ({
   )
 
   const renderEmployee = (record) => {
+    if (isSelfService) {
+      return (
+        <div className="min-w-0">
+          <strong>{record.staffName || 'My payment'}</strong>
+          {record.staffCode && <div className="text-body-secondary">{record.staffCode}</div>}
+        </div>
+      )
+    }
+
     const checkbox = (
       <CFormCheck
         checked={selectedIds.has(record.id)}
@@ -459,6 +469,7 @@ const PaymentQueueRecords = ({
   }
 
   const renderActions = (record) => {
+    if (isSelfService) return null
     const action = getQueueAction(record)
     const button = (
       <CButton
@@ -524,7 +535,12 @@ const PaymentQueueRecords = ({
     actionContext?.type === 'undo-paid' || actionContext?.type === 'bulk-undo-paid'
   const isBulkAction =
     actionContext?.type === 'bulk-mark-paid' || actionContext?.type === 'bulk-undo-paid'
-  const canSubmitAction = !isUndoAction || undoReason.trim().length > 0
+  const paymentDetailsComplete = Boolean(
+    paymentForm.paymentDate &&
+      paymentForm.paymentReference.trim() &&
+      paymentForm.paymentMethod.trim(),
+  )
+  const canSubmitAction = isUndoAction ? undoReason.trim().length > 0 : paymentDetailsComplete
 
   return (
     <>
@@ -545,8 +561,10 @@ const PaymentQueueRecords = ({
         visible={controlsVisible}
         searchValue={searchText}
         onSearchChange={setSearchText}
-        searchPlaceholder="Search staff, month, or status"
-        searchAriaLabel="Search payment queue"
+        searchPlaceholder={
+          isSelfService ? 'Search month or status' : 'Search staff, month, or status'
+        }
+        searchAriaLabel={isSelfService ? 'Search my payments' : 'Search payment queue'}
         showAdvancedFilters={showAdvancedFilters}
         setShowAdvancedFilters={setShowAdvancedFilters}
         activeFilterCount={statusFilter !== 'all' ? 1 : 0}
@@ -577,7 +595,7 @@ const PaymentQueueRecords = ({
         </CCol>
       </DataTableRecordControls>
 
-      {controlsVisible && (
+      {controlsVisible && !isSelfService && (
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
           <div className="small text-body-secondary">
             {selectedRecords.length} selected
@@ -633,7 +651,7 @@ const PaymentQueueRecords = ({
         mobileUtilityPortalId="payment-queue-mobile-table-tools"
         getRowKey={(record, index) => record.id || index}
         renderCell={renderCell}
-        renderActions={renderActions}
+        renderActions={isSelfService ? undefined : renderActions}
         onRowOpen={openDetailPage}
         getRowOpenDisabled={(record) => record.restricted || !record.staffId}
         mobileRecord={mobileRecord}
@@ -703,10 +721,11 @@ export const PaymentQueueActionModal = ({
       ) : (
         <div className="row g-3">
           <div className="col-12 col-md-4">
-            <CFormLabel htmlFor="paymentQueueDate">Payment Date</CFormLabel>
+            <CFormLabel htmlFor="paymentQueueDate">Payment Date (required)</CFormLabel>
             <CFormInput
               id="paymentQueueDate"
               type="date"
+              required
               value={paymentForm.paymentDate}
               disabled={isSubmitting}
               onChange={(event) =>
@@ -715,10 +734,11 @@ export const PaymentQueueActionModal = ({
             />
           </div>
           <div className="col-12 col-md-4">
-            <CFormLabel htmlFor="paymentQueueReference">Reference</CFormLabel>
+            <CFormLabel htmlFor="paymentQueueReference">Reference (required)</CFormLabel>
             <CFormInput
               id="paymentQueueReference"
               value={paymentForm.paymentReference}
+              required
               disabled={isSubmitting}
               onChange={(event) =>
                 setPaymentForm((prev) => ({ ...prev, paymentReference: event.target.value }))
@@ -726,10 +746,11 @@ export const PaymentQueueActionModal = ({
             />
           </div>
           <div className="col-12 col-md-4">
-            <CFormLabel htmlFor="paymentQueueMethod">Method</CFormLabel>
+            <CFormLabel htmlFor="paymentQueueMethod">Method (required)</CFormLabel>
             <CFormInput
               id="paymentQueueMethod"
               value={paymentForm.paymentMethod}
+              required
               disabled={isSubmitting}
               onChange={(event) =>
                 setPaymentForm((prev) => ({ ...prev, paymentMethod: event.target.value }))

@@ -55,7 +55,7 @@ export const accountModuleTabs = [
 export const salarySelfModuleTabs = [
   {
     key: 'payment-queue',
-    label: 'Payment Queue',
+    label: 'My Payments',
     to: '/my/salary/payment-queue',
     notificationTabKey: 'my.salary.payment-queue',
   },

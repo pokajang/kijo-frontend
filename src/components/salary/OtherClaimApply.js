@@ -20,6 +20,7 @@ import { fetchSalaryProfile } from './salaryProfileStorage'
 import { calculateMileageAmount, roundMoney } from './salaryCalculations'
 import {
   buildClaimId,
+  claimTravelCategory,
   createAttachmentProcessingState,
   createDraftPayload,
   createEmptyClaimFields,
@@ -29,7 +30,6 @@ import {
   isCompleteClaim,
   mapClaimItems,
   otherClaimTypes,
-  parseMileageDescription,
   stateFromDraft,
   stateFromRecord,
   toPositiveNumber,
@@ -61,6 +61,37 @@ const normalizeProjectOption = (project = {}) => {
     projectName: label,
     clientName,
   }
+}
+
+const mergeCanonicalClaimItems = (items, type, canonicalClaims = []) => {
+  const canonicalById = new Map(
+    canonicalClaims
+      .filter((claim) => claim.type === type && claim.id)
+      .map((claim) => [String(claim.id), claim]),
+  )
+  let changed = false
+  const nextItems = items.map((item) => {
+    const canonical = canonicalById.get(String(item.id))
+    if (!canonical) return item
+
+    const attachments = Array.isArray(canonical.attachments)
+      ? canonical.attachments
+      : canonical.attachment
+        ? [canonical.attachment]
+        : []
+    const nextItem = {
+      ...item,
+      ...canonical,
+      attachments,
+      attachment: attachments[0] || null,
+    }
+    if (JSON.stringify(item) === JSON.stringify(nextItem)) return item
+
+    changed = true
+    return nextItem
+  })
+
+  return changed ? nextItems : items
 }
 
 const mergeProjectOptionsWithMineFirst = (myProjects = [], allProjects = []) => {
@@ -108,8 +139,20 @@ const mergeProjectOptionsWithMineFirst = (myProjects = [], allProjects = []) => 
 const getProjectOptionByValue = (projectOptions, projectValue) =>
   projectOptions.find((project) => String(project.value) === String(projectValue || ''))
 
-const getMileageChargeToFormState = (chargeToLabel, projectOptions = []) => {
+const getMileageChargeToFormState = (
+  chargeToLabel,
+  projectOptions = [],
+  chargeToProjectId = '',
+) => {
   const cleanedLabel = String(chargeToLabel || '').trim()
+  const savedProjectId = String(chargeToProjectId || '').trim()
+  if (savedProjectId) {
+    return {
+      mileageChargeToMode: 'project',
+      mileageChargeToProjectId: savedProjectId,
+      mileageChargeTo: '',
+    }
+  }
   if (!cleanedLabel || cleanedLabel.toLowerCase() === 'company') {
     return {
       mileageChargeToMode: 'company',
@@ -187,6 +230,12 @@ const OtherClaimApply = ({
   const [attachmentProcessing, setAttachmentProcessing] = useState(createAttachmentProcessingState)
   const attachmentProcessingRef = useRef(attachmentProcessing)
   const draftSaveTimerRef = useRef(null)
+  const draftRecordRef = useRef(
+    editRecord?.status === 'Draft' && editRecord?.id
+      ? { id: editRecord.id, claimMonth: editRecord.claimMonthValue }
+      : null,
+  )
+  const draftSaveRevisionRef = useRef(0)
   const initialRecordRef = useRef(editRecord)
   const amendmentReasonRef = useRef(String(amendmentReason || '').trim())
   const hasPersistedDraftRef = useRef(false)
@@ -276,6 +325,12 @@ const OtherClaimApply = ({
       .then(([profile, serverDraft]) => {
         if (!isMounted) return
         setSalaryProfile(profile)
+        if (serverDraft?.id && serverDraft?.claimMonthValue) {
+          draftRecordRef.current = {
+            id: serverDraft.id,
+            claimMonth: serverDraft.claimMonthValue,
+          }
+        }
         const serverDraftPayload = serverDraft?.draftPayload
         const shouldUseServerDraft =
           !initialRecordRef.current &&
@@ -316,6 +371,9 @@ const OtherClaimApply = ({
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target
+    if (name === 'claimMonth') {
+      draftRecordRef.current = null
+    }
     if (name === 'mileageChargeToMode') {
       setFormData((prev) => ({
         ...prev,
@@ -378,6 +436,62 @@ const OtherClaimApply = ({
       setAttachmentProcessingForType(type, false)
     }
   }
+
+  const travelAttachmentPurpose = (category) =>
+    ({
+      mileage: 'route_proof',
+      taxi: 'taxi_receipt',
+      toll: 'toll_proof',
+      parking: 'parking_receipt',
+      other: 'other_travel_proof',
+    })[category] || 'other_travel_proof'
+
+  const handleTravelAttachmentChange = async (files) => {
+    const selectedFiles = Array.isArray(files) ? files : files ? [files] : []
+    if (!selectedFiles.length) return
+
+    setAttachmentProcessingForType('mileage', true)
+    try {
+      const preparedAttachments = await Promise.all(selectedFiles.map(prepareSalaryAttachment))
+      setFormData((prev) => {
+        const nextAttachments = [
+          ...(Array.isArray(prev.travelAttachments) ? prev.travelAttachments : []),
+          ...preparedAttachments.map((attachment) => ({
+            ...attachment,
+            clientId: buildClaimId(),
+            purpose: travelAttachmentPurpose(prev.travelCategory),
+          })),
+        ]
+        return {
+          ...prev,
+          travelAttachments: nextAttachments,
+          mileageAttachment: nextAttachments[0] || null,
+        }
+      })
+    } catch (err) {
+      resetAttachmentInputs()
+      showNotice('warning', err?.message || 'Could not attach that file.')
+    } finally {
+      setAttachmentProcessingForType('mileage', false)
+    }
+  }
+
+  const removeTravelAttachment = useCallback(
+    (index) => {
+      setFormData((prev) => {
+        const nextAttachments = (prev.travelAttachments || []).filter(
+          (_, attachmentIndex) => attachmentIndex !== index,
+        )
+        return {
+          ...prev,
+          travelAttachments: nextAttachments,
+          mileageAttachment: nextAttachments[0] || null,
+        }
+      })
+      resetAttachmentInputs()
+    },
+    [resetAttachmentInputs],
+  )
 
   const resetClaimDrafts = () => {
     setFormData((prev) => ({ ...prev, ...createEmptyClaimFields() }))
@@ -489,117 +603,145 @@ const OtherClaimApply = ({
     return true
   }
 
-  const addMileage = () => {
+  const addTravelClaim = () => {
     if (attachmentProcessingRef.current.mileage) return false
+
+    const category = formData.travelCategory || 'mileage'
     const km = toPositiveNumber(formData.mileageKm)
-    const travelExpenseAmount = toPositiveNumber(formData.travelExpenseAmount)
+    const amount = toPositiveNumber(formData.travelExpenseAmount)
+    const purpose = formData.mileagePurpose.trim()
+    const startLocation = formData.startLocation.trim()
+    const endLocation = formData.endLocation.trim()
+    const locationDetail = formData.travelLocationDetail.trim()
+    const expenseType = formData.travelExpenseType.trim()
+    const attachments = Array.isArray(formData.travelAttachments) ? formData.travelAttachments : []
     const chargeToMode = formData.mileageChargeToMode || 'company'
     const selectedProjectOption =
       chargeToMode === 'project'
         ? getProjectOptionByValue(projectOptions, formData.mileageChargeToProjectId)
         : null
-    const chargeTo =
-      chargeToMode === 'project'
-        ? selectedProjectOption
-          ? selectedProjectOption.label
-          : ''
-        : 'Company'
-    const hasTravelExpenseDetails = Boolean(
-      String(formData.travelExpenseAmount ?? '').trim() ||
-        formData.travelExpenseCategory ||
-        formData.mileageAttachment,
-    )
+    const chargeTo = chargeToMode === 'project' ? selectedProjectOption?.label || '' : 'Company'
+    const targetItemType = category === 'mileage' ? 'mileage' : 'expense'
+    const editingMileageItem =
+      editingClaim?.type === 'mileage'
+        ? mileageItems.find((item) => item.id === editingClaim.id)
+        : null
+    const editingExpenseItem =
+      editingClaim?.type === 'expense'
+        ? expenseItems.find((item) => item.id === editingClaim.id)
+        : null
+
     if (
       chargeToMode === 'project' &&
       (!formData.mileageChargeToProjectId || !selectedProjectOption)
     ) {
-      showNotice('warning', 'Select a project before saving travel & mileage.')
+      showNotice('warning', 'Select a project before saving this travel claim.')
+      return false
+    }
+    if (!formData.mileageDate || !purpose) {
+      showNotice('warning', 'Enter the travel date and business purpose.')
+      return false
+    }
+
+    const requiresEvidence = category !== 'mileage'
+    if (requiresEvidence && !attachments.length) {
+      showNotice('warning', 'Attach the required travel supporting evidence before saving.')
+      return false
+    }
+
+    if (category === 'mileage' && (!startLocation || !endLocation || !km)) {
+      showNotice('warning', 'Enter the route and a valid distance for the mileage claim.')
+      return false
+    }
+    if (category === 'taxi' && (!startLocation || !endLocation || !amount)) {
+      showNotice('warning', 'Enter pickup, drop-off, and a valid taxi amount.')
+      return false
+    }
+    if (category === 'toll' && (!amount || (!startLocation && !endLocation && !locationDetail))) {
+      showNotice('warning', 'Enter the toll amount and either the route or from/to locations.')
+      return false
+    }
+    if (category === 'parking' && (!amount || !locationDetail)) {
+      showNotice('warning', 'Enter the parking location and a valid amount.')
+      return false
+    }
+    if (category === 'other' && (!amount || !expenseType)) {
+      showNotice('warning', 'Enter what was paid for and a valid amount.')
       return false
     }
     if (
-      !formData.mileageDate ||
-      !formData.startLocation.trim() ||
-      !formData.endLocation.trim() ||
-      !formData.mileagePurpose.trim() ||
-      (!km && !hasTravelExpenseDetails)
+      editingClaim?.type &&
+      editingClaim.type !== targetItemType &&
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        'Changing this travel claim category will replace the current claim type. Continue?',
+      )
     ) {
-      showNotice(
-        'warning',
-        'Enter travel date, route, purpose, and either mileage KM or travel expense details.',
-      )
       return false
     }
-    if (hasTravelExpenseDetails && !travelExpenseAmount) {
-      showNotice('warning', 'Enter a valid travel expense amount or clear the expense details.')
-      return false
-    }
-    if (hasTravelExpenseDetails && !formData.travelExpenseCategory) {
-      showNotice(
-        'warning',
-        'Select the combined, parking, toll, taxi, or other travel expense type.',
-      )
-      return false
-    }
-    if (hasTravelExpenseDetails && !formData.mileageAttachment) {
-      showNotice('warning', 'Attach the travel expense receipt before saving.')
-      return false
-    }
-    const startLocation = formData.startLocation.trim()
-    const endLocation = formData.endLocation.trim()
-    const purpose = formData.mileagePurpose.trim()
-    const editingMileage =
-      editingClaim?.type === 'mileage'
-        ? mileageItems.find((item) => item.id === editingClaim.id)
-        : null
-    const travelGroupId = editingMileage?.travelGroupId || buildClaimId()
+
     const nextItem = {
-      id: editingClaim?.type === 'mileage' ? editingClaim.id : buildClaimId(),
+      id:
+        editingClaim?.type === (category === 'mileage' ? 'mileage' : 'expense')
+          ? editingClaim.id
+          : buildClaimId(),
       date: formData.mileageDate,
       description: purpose,
       startLocation,
       endLocation,
-      km: roundMoney(km),
-      tripMode: formData.mileageTripMode || 'return',
-      travelGroupId,
       source: chargeTo ? 'manual-allocation' : '',
       sourceLabel: chargeTo,
-      amount: calculateMileageAmount(km, formData.mileageRate, formData.mileageTripMode),
-      attachment: null,
+      chargeToProjectId: chargeToMode === 'project' ? formData.mileageChargeToProjectId : '',
+      locationDetail,
+      expenseType,
+      travelCategory: category,
+      travelGroupId: '',
+      attachments,
+      attachment: attachments[0] || null,
     }
-    setMileageItems((prev) =>
-      editingClaim?.type === 'mileage'
-        ? prev.map((item) => (item.id === editingClaim.id ? nextItem : item))
-        : [...prev, nextItem],
-    )
-    setExpenseItems((prev) => {
-      const previousTravelExpense = prev.find((item) => item.travelGroupId === travelGroupId)
-      const withoutCurrentTravelExpense = prev.filter(
-        (item) => item.travelGroupId !== travelGroupId,
-      )
-      if (!travelExpenseAmount) return withoutCurrentTravelExpense
 
-      const categoryLabel = {
-        combined: 'Parking / taxi / toll / others',
-        parking: 'Parking',
-        toll: 'Toll',
-        taxi: 'Taxi',
-        other: 'Other travel expense',
-      }[formData.travelExpenseCategory]
-      return [
-        ...withoutCurrentTravelExpense,
-        {
-          id: previousTravelExpense?.id || buildClaimId(),
-          date: formData.mileageDate,
-          description: `${categoryLabel}: ${purpose}`,
-          amount: roundMoney(travelExpenseAmount),
-          source: chargeTo ? 'manual-allocation' : '',
-          sourceLabel: chargeTo,
-          travelGroupId,
-          expenseCategory: formData.travelExpenseCategory,
-          attachment: formData.mileageAttachment,
-        },
-      ]
-    })
+    if (category === 'mileage') {
+      const distanceMethod = formData.travelDistanceMethod || 'return_same_route'
+      nextItem.km = roundMoney(km)
+      nextItem.distanceMethod = distanceMethod
+      nextItem.tripMode = distanceMethod === 'return_same_route' ? 'return' : 'one_way'
+      nextItem.mileageRate = Number(formData.mileageRate || 0)
+      nextItem.amount = calculateMileageAmount(km, formData.mileageRate, distanceMethod)
+      setMileageItems((prev) => {
+        const withoutLegacyAnchor = editingExpenseItem?.travelGroupId
+          ? prev.filter(
+              (item) =>
+                item.travelGroupId !== editingExpenseItem.travelGroupId || Number(item.km || 0) > 0,
+            )
+          : prev
+
+        return editingClaim?.type === 'mileage'
+          ? withoutLegacyAnchor.map((item) => (item.id === editingClaim.id ? nextItem : item))
+          : [...withoutLegacyAnchor, nextItem]
+      })
+      if (editingClaim?.type === 'expense') {
+        setExpenseItems((prev) => prev.filter((item) => item.id !== editingClaim.id))
+      }
+    } else {
+      nextItem.amount = roundMoney(amount)
+      nextItem.expenseCategory = category
+      setExpenseItems((prev) => {
+        if (editingClaim?.type === 'expense') {
+          return prev.map((item) => (item.id === editingClaim.id ? nextItem : item))
+        }
+
+        return editingMileageItem?.travelGroupId
+          ? [
+              ...prev.filter((item) => item.travelGroupId !== editingMileageItem.travelGroupId),
+              nextItem,
+            ]
+          : [...prev, nextItem]
+      })
+      if (editingClaim?.type === 'mileage') {
+        setMileageItems((prev) => prev.filter((item) => item.id !== editingClaim.id))
+      }
+    }
+
     setFormData((prev) => ({
       ...prev,
       mileageDate: '',
@@ -611,8 +753,12 @@ const OtherClaimApply = ({
       mileageChargeTo: '',
       mileageKm: '',
       mileageTripMode: 'return',
-      travelExpenseCategory: '',
+      travelCategory: 'mileage',
+      travelDistanceMethod: 'return_same_route',
+      travelLocationDetail: '',
+      travelExpenseType: '',
       travelExpenseAmount: '',
+      travelAttachments: [],
       mileageAttachment: null,
     }))
     setEditingClaim(null)
@@ -628,15 +774,23 @@ const OtherClaimApply = ({
         medical: setMedicalItems,
         mileage: setMileageItems,
       }
-      setters[type]?.((prev) => prev.filter((item) => item.id !== id))
       if (type === 'mileage') {
         const removedMileage = mileageItems.find((item) => item.id === id)
         if (removedMileage?.travelGroupId) {
+          if (
+            typeof window !== 'undefined' &&
+            !window.confirm(
+              'This legacy mileage item has linked travel expenses and their evidence. Remove all linked items?',
+            )
+          ) {
+            return
+          }
           setExpenseItems((prev) =>
             prev.filter((item) => item.travelGroupId !== removedMileage.travelGroupId),
           )
         }
       }
+      setters[type]?.((prev) => prev.filter((item) => item.id !== id))
       if (editingClaim?.type === type && editingClaim.id === id) {
         setEditingClaim(null)
         setFormData((prev) => ({ ...prev, ...createEmptyClaimFields() }))
@@ -658,34 +812,6 @@ const OtherClaimApply = ({
       const item = itemsByType[type]?.find((claimItem) => claimItem.id === id)
       if (!item) return false
 
-      if (type === 'expense' && item.travelGroupId) {
-        const linkedMileage = mileageItems.find(
-          (mileageItem) => mileageItem.travelGroupId === item.travelGroupId,
-        )
-        if (linkedMileage) {
-          setEditingClaim({ type: 'mileage', id: linkedMileage.id })
-          const locations = parseMileageDescription(linkedMileage.description)
-          setFormData((prev) => ({
-            ...prev,
-            mileageDate: linkedMileage.date || '',
-            startLocation: linkedMileage.startLocation || locations.startLocation,
-            endLocation: linkedMileage.endLocation || locations.endLocation,
-            mileagePurpose: linkedMileage.description || '',
-            ...getMileageChargeToFormState(linkedMileage.sourceLabel, projectOptions),
-            mileageKm: String(linkedMileage.km ?? ''),
-            mileageTripMode: linkedMileage.tripMode || 'return',
-            travelExpenseCategory: item.expenseCategory || '',
-            travelExpenseAmount: String(item.amount ?? ''),
-            mileageAttachment: item.attachment || null,
-          }))
-          setIsAdjusting(true)
-          setActiveAdjustmentType('mileage')
-          setShowClaimDraft(true)
-          resetAttachmentInputs()
-          return true
-        }
-      }
-
       setEditingClaim({ type, id })
       if (type === 'allowance') {
         setFormData((prev) => ({
@@ -696,13 +822,43 @@ const OtherClaimApply = ({
           allowanceAttachment: item.attachment || null,
         }))
       } else if (type === 'expense') {
-        setFormData((prev) => ({
-          ...prev,
-          expenseDate: item.date || '',
-          expenseDescription: item.description || '',
-          expenseAmount: String(item.amount ?? ''),
-          expenseAttachment: item.attachment || null,
-        }))
+        const category = claimTravelCategory(item)
+        if (category) {
+          const linkedMileage = mileageItems.find(
+            (mileageItem) => item.travelGroupId && mileageItem.travelGroupId === item.travelGroupId,
+          )
+          const attachments = item.attachments || (item.attachment ? [item.attachment] : [])
+          setFormData((prev) => ({
+            ...prev,
+            mileageDate: item.date || linkedMileage?.date || '',
+            startLocation: item.startLocation || linkedMileage?.startLocation || '',
+            endLocation: item.endLocation || linkedMileage?.endLocation || '',
+            mileagePurpose: item.description || linkedMileage?.description || '',
+            ...getMileageChargeToFormState(
+              item.sourceLabel || linkedMileage?.sourceLabel,
+              projectOptions,
+              item.chargeToProjectId || linkedMileage?.chargeToProjectId,
+            ),
+            mileageKm: '',
+            mileageTripMode: 'return',
+            travelCategory: category === 'legacy_combined' ? 'other' : category,
+            travelDistanceMethod: 'return_same_route',
+            travelLocationDetail: item.locationDetail || '',
+            travelExpenseType: item.expenseType || '',
+            travelExpenseAmount: String(item.amount ?? ''),
+            travelAttachments: attachments,
+            mileageAttachment: attachments[0] || null,
+          }))
+          setActiveAdjustmentType('mileage')
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            expenseDate: item.date || '',
+            expenseDescription: item.description || '',
+            expenseAmount: String(item.amount ?? ''),
+            expenseAttachment: item.attachment || null,
+          }))
+        }
       } else if (type === 'medical') {
         setFormData((prev) => ({
           ...prev,
@@ -712,26 +868,31 @@ const OtherClaimApply = ({
           medicalAttachment: item.attachment || null,
         }))
       } else if (type === 'mileage') {
-        const locations = parseMileageDescription(item.description)
-        const travelExpense = expenseItems.find(
-          (expenseItem) => item.travelGroupId && expenseItem.travelGroupId === item.travelGroupId,
-        )
+        const attachments = item.attachments || (item.attachment ? [item.attachment] : [])
         setFormData((prev) => ({
           ...prev,
           mileageDate: item.date || '',
-          startLocation: item.startLocation || locations.startLocation,
-          endLocation: item.endLocation || locations.endLocation,
+          startLocation: item.startLocation || '',
+          endLocation: item.endLocation || '',
           mileagePurpose: item.description || '',
-          ...getMileageChargeToFormState(item.sourceLabel, projectOptions),
+          ...getMileageChargeToFormState(item.sourceLabel, projectOptions, item.chargeToProjectId),
           mileageKm: String(item.km ?? ''),
           mileageTripMode: item.tripMode || 'return',
-          travelExpenseCategory: travelExpense?.expenseCategory || '',
-          travelExpenseAmount: travelExpense ? String(travelExpense.amount ?? '') : '',
-          mileageAttachment: travelExpense?.attachment || null,
+          travelCategory: 'mileage',
+          travelDistanceMethod:
+            item.distanceMethod || (item.tripMode === 'one_way' ? 'one_way' : 'return_same_route'),
+          travelLocationDetail: item.locationDetail || '',
+          travelExpenseType: '',
+          travelExpenseAmount: '',
+          travelAttachments: attachments,
+          mileageAttachment: attachments[0] || null,
         }))
+        setActiveAdjustmentType('mileage')
       }
       setIsAdjusting(true)
-      setActiveAdjustmentType(type)
+      if (!(type === 'expense' && claimTravelCategory(item))) {
+        setActiveAdjustmentType(type)
+      }
       setShowClaimDraft(true)
       resetAttachmentInputs()
       return true
@@ -777,6 +938,7 @@ const OtherClaimApply = ({
       return undefined
     }
     const claimMonth = draftPayload.formData.claimMonth || getCurrentClaimMonth()
+    const saveRevision = ++draftSaveRevisionRef.current
     if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
 
     if (!hasDraftContent) {
@@ -785,10 +947,14 @@ const OtherClaimApply = ({
         draftSaveTimerRef.current = window.setTimeout(() => {
           clearOtherClaimServerDraft(claimMonth)
             .then(() => {
+              if (saveRevision !== draftSaveRevisionRef.current) return
               hasPersistedDraftRef.current = false
+              draftRecordRef.current = null
               setDraftSaveState('idle')
             })
-            .catch(() => setDraftSaveState('error'))
+            .catch(() => {
+              if (saveRevision === draftSaveRevisionRef.current) setDraftSaveState('error')
+            })
         }, 800)
       } else {
         setDraftSaveState('idle')
@@ -807,11 +973,31 @@ const OtherClaimApply = ({
         claims: allClaims.filter((claim) => isCompleteClaim(claim, allClaims)),
         draftPayload,
       })
-        .then(() => {
+        .then((savedDraft) => {
+          if (saveRevision !== draftSaveRevisionRef.current || hasSubmittedRef.current) return
           hasPersistedDraftRef.current = true
+          if (savedDraft?.id) {
+            draftRecordRef.current = { id: savedDraft.id, claimMonth }
+          }
+          if (Array.isArray(savedDraft?.claims)) {
+            setAllowanceItems((items) =>
+              mergeCanonicalClaimItems(items, 'Allowance', savedDraft.claims),
+            )
+            setExpenseItems((items) =>
+              mergeCanonicalClaimItems(items, 'Expense', savedDraft.claims),
+            )
+            setMileageItems((items) =>
+              mergeCanonicalClaimItems(items, 'Mileage', savedDraft.claims),
+            )
+            setMedicalItems((items) =>
+              mergeCanonicalClaimItems(items, 'Medical', savedDraft.claims),
+            )
+          }
           setDraftSaveState('saved')
         })
-        .catch(() => setDraftSaveState('error'))
+        .catch(() => {
+          if (saveRevision === draftSaveRevisionRef.current) setDraftSaveState('error')
+        })
     }, 1200)
 
     return () => {
@@ -835,6 +1021,8 @@ const OtherClaimApply = ({
     const claimMonth = getCurrentClaimMonth()
     initialRecordRef.current = null
     hasSubmittedRef.current = false
+    draftSaveRevisionRef.current += 1
+    draftRecordRef.current = null
     setActiveRecordId(null)
     setFormData({
       claimMonth,
@@ -860,8 +1048,11 @@ const OtherClaimApply = ({
     }
     try {
       setIsSubmitting(true)
+      draftSaveRevisionRef.current += 1
+      const draftRecordId =
+        draftRecordRef.current?.claimMonth === claimMonth ? draftRecordRef.current.id : null
       const savedRecord = await saveOtherClaimRecord({
-        id: activeRecordId || `other-claim-${claimMonth}`,
+        id: activeRecordId || draftRecordId || `other-claim-${claimMonth}`,
         claimMonth: formatClaimMonth(claimMonth),
         claimMonthValue: claimMonth,
         claimsTotal,
@@ -869,8 +1060,10 @@ const OtherClaimApply = ({
         claims: allClaims,
         submittedAt: new Date().toISOString(),
         amendmentReason: amendmentReasonRef.current,
+        recordVersion: initialRecordRef.current?.recordVersion || null,
       })
       setActiveRecordId(savedRecord.id || null)
+      draftRecordRef.current = null
       hasSubmittedRef.current = true
       if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
       clearOtherClaimDraft({ claimMonth })
@@ -937,6 +1130,24 @@ const OtherClaimApply = ({
       </CButton>
     )
 
+  const handleAdjustmentTypeSelect = (type) => {
+    if (
+      editingClaim &&
+      activeAdjustmentType !== type &&
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        'Switching claim types will discard the unsaved changes in the current editor. Continue?',
+      )
+    ) {
+      return
+    }
+    if (editingClaim && activeAdjustmentType !== type) {
+      resetClaimDrafts()
+    }
+    setActiveAdjustmentType(type)
+    setShowClaimDraft(true)
+  }
+
   const renderAdjustmentForm = () => (
     <section className="salary-form-panel mb-3" aria-labelledby="otherClaimAdjustmentTypeHeading">
       <div className="salary-form-panel-header">
@@ -954,10 +1165,7 @@ const OtherClaimApply = ({
             size="sm"
             type="button"
             aria-pressed={activeAdjustmentType === type.key}
-            onClick={() => {
-              setActiveAdjustmentType(type.key)
-              setShowClaimDraft(true)
-            }}
+            onClick={() => handleAdjustmentTypeSelect(type.key)}
           >
             {type.label}
           </CButton>
@@ -987,7 +1195,7 @@ const OtherClaimApply = ({
           idPrefix="otherExpense"
           title="Expense"
           fieldPrefix="expense"
-          placeholder="Parking, toll, or meal claim"
+          placeholder="Office supplies or professional fee"
           formData={formData}
           showDraft={showClaimDraft}
           addAction={renderPanelAddAction()}
@@ -1026,8 +1234,9 @@ const OtherClaimApply = ({
           isProjectOptionsLoading={isProjectOptionsLoading}
           projectOptions={projectOptions}
           onChange={handleChange}
-          onAttachmentChange={(file) => handleAttachmentChange('mileage', file)}
-          onSave={() => handleSaveClaimDraft(addMileage)}
+          onAttachmentChange={handleTravelAttachmentChange}
+          onAttachmentRemove={removeTravelAttachment}
+          onSave={() => handleSaveClaimDraft(addTravelClaim)}
           onCancel={handleCancelClaimDraft}
         />
       )}

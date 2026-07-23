@@ -2,8 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilExternalLink } from '@coreui/icons'
-import { CAlert, CButton, CSpinner } from '@coreui/react'
-import { DataTableDetailShell } from '../datatable'
+import {
+  CAlert,
+  CButton,
+  CSpinner,
+  CTable,
+  CTableBody,
+  CTableDataCell,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
+} from '@coreui/react'
+import { DataTableDetailShell, DataTableStatusBadge } from '../datatable'
 import dialog from '../dialog/dialogService'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { formatMoney } from './salaryCalculations'
@@ -14,8 +24,14 @@ import { SalaryPayablePreviewTable } from './SalaryTables'
 import { openPreparingPdfTab } from './salaryFileUtils'
 import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
-const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
-const paidStatuses = new Set(['Paid'])
+const statusTone = {
+  Submitted: 'info',
+  Checked: 'primary',
+  Approved: 'success',
+  Paid: 'success',
+  Rejected: 'danger',
+  Cancelled: 'warning',
+}
 
 const AttachmentActions = ({ attachment, onPreviewAttachment }) => {
   if (!attachment) return '-'
@@ -47,8 +63,26 @@ const sumClaims = (claims = [], type) =>
     .filter((claim) => claim.type === type)
     .reduce((total, claim) => total + Number(claim.amount || 0), 0)
 
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 const claimReference = (claim = {}) =>
-  [claim.date, claim.meta || claim.sourceLabel].filter(Boolean).join(' - ')
+  [
+    claim.date,
+    claim.startLocation || claim.endLocation
+      ? `${claim.startLocation || '-'} to ${claim.endLocation || '-'}`
+      : '',
+    claim.meta,
+    claim.mileageRate ? `${formatMoney(claim.mileageRate)} per KM` : '',
+    claim.sourceLabel ? `Charge to: ${claim.sourceLabel}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
 const buildClaimGroupRows = ({ key, label, total, items, onPreviewAttachment }) => {
   if (Number(total || 0) <= 0 && !items.some((item) => Number(item.amount || 0) > 0)) return []
@@ -69,12 +103,13 @@ const buildClaimGroupRows = ({ key, label, total, items, onPreviewAttachment }) 
           {claimReference(item) && (
             <span className="salary-preview-inline-note">{claimReference(item)}</span>
           )}
-          {item.attachment && (
+          {(item.attachments || (item.attachment ? [item.attachment] : [])).map((attachment) => (
             <AttachmentActions
-              attachment={item.attachment}
+              key={attachment.id || attachment.clientId || attachment.name}
+              attachment={attachment}
               onPreviewAttachment={onPreviewAttachment}
             />
-          )}
+          ))}
         </>
       ),
       amount: item.amount,
@@ -135,15 +170,7 @@ const OtherClaimRecordDetailPage = () => {
     const expenseClaims = claims.filter((claim) => claim.type === 'Expense')
     const mileageClaims = claims.filter((claim) => claim.type === 'Mileage')
     const medicalClaims = claims.filter((claim) => claim.type === 'Medical')
-    const claimsTotal = Number(record?.claimsTotal || 0)
-
     return [
-      {
-        id: 'claims-total',
-        item: 'Claims Total',
-        amount: claimsTotal,
-        isSubtotal: true,
-      },
       ...buildClaimGroupRows({
         key: 'allowance',
         label: 'Allowance',
@@ -176,7 +203,9 @@ const OtherClaimRecordDetailPage = () => {
   }, [record])
 
   const actions = useMemo(() => {
-    const isPaid = paidStatuses.has(record?.status)
+    const canRevise = record?.status === 'Rejected'
+    const canEditDraft = record?.status === 'Draft'
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved'].includes(record?.status)
     return [
       {
         key: 'export-claims',
@@ -189,7 +218,7 @@ const OtherClaimRecordDetailPage = () => {
         ) : (
           'Export Claims'
         ),
-        hidden: record?.status === 'Draft',
+        hidden: ['Draft', 'Cancelled'].includes(record?.status),
         disabled: exportingPdf,
         onClick: async (otherClaimRecord) => {
           if (exportingPdf) return
@@ -207,78 +236,67 @@ const OtherClaimRecordDetailPage = () => {
           }
         },
       },
-      {
-        key: 'edit',
-        label: 'Edit',
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
-        onClick: async (otherClaimRecord) => {
-          if (paidStatuses.has(otherClaimRecord?.status)) return
-          let amendmentReason = ''
-          if (reviewedMutableStatuses.has(otherClaimRecord.status)) {
-            const reason = await dialog.prompt(
-              `This other claim has already been ${otherClaimRecord.status.toLowerCase()}. Enter a reason to restart the workflow.`,
-              {
-                title: 'Edit Reviewed Other Claim',
-                confirmText: 'Continue',
-                required: true,
-                multiline: true,
-                rows: 4,
-                placeholder: 'Reason for amending this other claim',
-              },
-            )
-            if (reason === null) return
-            amendmentReason = String(reason || '').trim()
-            if (!amendmentReason) return
+      canEditDraft || canRevise
+        ? {
+            key: 'edit',
+            label: canRevise ? 'Create Revision' : 'Edit Draft',
+            onClick: async (otherClaimRecord) => {
+              let amendmentReason = ''
+              if (otherClaimRecord.status === 'Rejected') {
+                const reason = await dialog.prompt(
+                  'Enter a reason for revising this rejected other claim. The original claim will remain in the audit history.',
+                  {
+                    title: 'Create Other Claim Revision',
+                    confirmText: 'Create Revision',
+                    required: true,
+                    multiline: true,
+                    rows: 4,
+                    placeholder: 'Reason for amending this other claim',
+                  },
+                )
+                if (reason === null) return
+                amendmentReason = String(reason || '').trim()
+                if (!amendmentReason) return
+              }
+              navigate('/my/salary/other-claims/apply', {
+                state: { editRecord: otherClaimRecord, amendmentReason },
+              })
+            },
           }
-          navigate('/my/salary/other-claims/apply', {
-            state: { editRecord: otherClaimRecord, amendmentReason },
-          })
-        },
-      },
-      {
-        key: 'delete',
-        label: 'Delete',
-        danger: true,
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
-        onClick: async (otherClaimRecord) => {
-          if (paidStatuses.has(otherClaimRecord?.status)) return
-          let cancellationReason = ''
-          if (reviewedMutableStatuses.has(otherClaimRecord.status)) {
-            const reason = await dialog.prompt(
-              `This other claim has already been ${otherClaimRecord.status.toLowerCase()}. Enter a reason to cancel it.`,
-              {
-                title: 'Cancel Reviewed Other Claim',
-                confirmText: 'Cancel Claim',
-                confirmColor: 'danger',
-                required: true,
-                multiline: true,
-                rows: 4,
-                placeholder: 'Reason for cancelling this other claim',
-              },
-            )
-            if (reason === null) return
-            cancellationReason = String(reason || '').trim()
-            if (!cancellationReason) return
-          } else if (
-            !(await dialog.confirm('Delete this other claim?', {
-              title: 'Delete Other Claim',
-              confirmText: 'Delete',
-              confirmColor: 'danger',
-            }))
-          ) {
-            return
+        : null,
+      canWithdraw
+        ? {
+            key: 'withdraw',
+            label: 'Withdraw Claim',
+            danger: true,
+            onClick: async (otherClaimRecord) => {
+              const reason = await dialog.prompt(
+                'This will withdraw the claim from review and retain its audit history.',
+                {
+                  title: 'Withdraw Other Claim',
+                  confirmText: 'Withdraw Claim',
+                  confirmColor: 'danger',
+                  required: true,
+                  multiline: true,
+                  rows: 4,
+                  placeholder: 'Reason for withdrawing this claim',
+                },
+              )
+              if (reason === null || !String(reason).trim()) return
+              try {
+                await removeOtherClaimRecord(
+                  otherClaimRecord.id,
+                  String(reason).trim(),
+                  otherClaimRecord.recordVersion,
+                )
+                navigate(returnTo)
+              } catch (err) {
+                setError(err?.message || 'Unable to delete other claim record.')
+              }
+            },
           }
-          try {
-            await removeOtherClaimRecord(otherClaimRecord.id, cancellationReason)
-            navigate(returnTo)
-          } catch (err) {
-            setError(err?.message || 'Unable to delete other claim record.')
-          }
-        },
-      },
-    ]
+        : null,
+    ].filter(Boolean)
   }, [exportingPdf, navigate, record?.status, returnTo])
 
   return (
@@ -291,6 +309,26 @@ const OtherClaimRecordDetailPage = () => {
       actions={record ? actions : []}
       emptyMessage="Other claim record not found."
     >
+      <CAlert color={statusTone[record?.status] || 'secondary'} className="py-2">
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <strong>{record?.claimReference || '-'}</strong>
+          <span>Revision {record?.revisionNo || 1}</span>
+          <span>Submitted {formatDateTime(record?.submittedAt)}</span>
+          <DataTableStatusBadge tone={statusTone[record?.status] || 'secondary'}>
+            {record?.status === 'Cancelled' ? 'Withdrawn' : record?.status || '-'}
+          </DataTableStatusBadge>
+        </div>
+      </CAlert>
+      {record?.status === 'Rejected' && (record.checkedRemarks || record.approvedRemarks) && (
+        <CAlert color="danger" className="py-2">
+          <strong>Rejection reason:</strong> {record.approvedRemarks || record.checkedRemarks}
+        </CAlert>
+      )}
+      {record?.status === 'Cancelled' && record?.cancelReason && (
+        <CAlert color="warning" className="py-2">
+          <strong>Withdrawal reason:</strong> {record.cancelReason}
+        </CAlert>
+      )}
       {exportingPdf && (
         <CAlert color="info" className="py-2 d-flex align-items-center gap-2">
           <CSpinner size="sm" />
@@ -324,6 +362,83 @@ const OtherClaimRecordDetailPage = () => {
             },
           ]}
         />
+      </section>
+      <section className="mt-4" aria-labelledby="otherClaimWorkflowHeading">
+        <h3 className="salary-form-panel-heading mb-3" id="otherClaimWorkflowHeading">
+          Workflow history
+        </h3>
+        <CTable responsive small>
+          <CTableHead>
+            <CTableRow>
+              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              <CTableHeaderCell scope="col">By</CTableHeaderCell>
+              <CTableHeaderCell scope="col">When</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Remarks</CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {(record?.workflow?.history || []).length ? (
+              record.workflow.history.map((entry) => (
+                <CTableRow key={entry.id}>
+                  <CTableDataCell>{entry.label || entry.action}</CTableDataCell>
+                  <CTableDataCell>{entry.actorName || entry.actorCode || '-'}</CTableDataCell>
+                  <CTableDataCell>{formatDateTime(entry.actedAt)}</CTableDataCell>
+                  <CTableDataCell>{entry.remarks || '-'}</CTableDataCell>
+                </CTableRow>
+              ))
+            ) : (
+              <CTableRow>
+                <CTableDataCell colSpan={4} className="text-center text-body-secondary">
+                  No workflow events recorded.
+                </CTableDataCell>
+              </CTableRow>
+            )}
+          </CTableBody>
+        </CTable>
+      </section>
+      <section className="mt-4" aria-labelledby="otherClaimPaymentHeading">
+        <h3 className="salary-form-panel-heading mb-3" id="otherClaimPaymentHeading">
+          Payment history
+        </h3>
+        <CTable responsive small>
+          <CTableHead>
+            <CTableRow>
+              <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Payment date</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Reference</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Method</CTableHeaderCell>
+              <CTableHeaderCell scope="col" className="text-end">
+                Amount
+              </CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {(record?.paymentHistory || []).length ? (
+              record.paymentHistory.map((payment) => (
+                <CTableRow key={payment.id}>
+                  <CTableDataCell>
+                    {payment.status}
+                    {payment.reversalReason && (
+                      <div className="small text-body-secondary">{payment.reversalReason}</div>
+                    )}
+                  </CTableDataCell>
+                  <CTableDataCell>{payment.paymentDate || '-'}</CTableDataCell>
+                  <CTableDataCell>{payment.paymentReference || '-'}</CTableDataCell>
+                  <CTableDataCell>{payment.paymentMethod || '-'}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    <strong>{formatMoney(payment.amount)}</strong>
+                  </CTableDataCell>
+                </CTableRow>
+              ))
+            ) : (
+              <CTableRow>
+                <CTableDataCell colSpan={5} className="text-center text-body-secondary">
+                  No payment has been recorded for this claim.
+                </CTableDataCell>
+              </CTableRow>
+            )}
+          </CTableBody>
+        </CTable>
       </section>
       <AttachmentPreviewModal
         attachment={previewAttachment}

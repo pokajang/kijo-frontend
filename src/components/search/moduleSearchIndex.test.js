@@ -334,7 +334,7 @@ describe('module search index', () => {
   it('finds salary self-service tabs', () => {
     const labels = searchModuleItems('my salary', ['Staff'], 20).map((item) => item.label)
 
-    expect(labels).toContain('Payment Queue')
+    expect(labels).toContain('My Payments')
     expect(labels).toContain('Apply Salary')
     expect(labels).toContain('Salary Records')
     expect(labels).toContain('Apply Other Claim')

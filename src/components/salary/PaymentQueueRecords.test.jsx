@@ -95,14 +95,19 @@ const rows = [
   },
 ]
 
-const renderPaymentQueue = () =>
+const renderPaymentQueue = (initialPath = '/financial/payment-queue') =>
   render(
-    <MemoryRouter initialEntries={['/financial/payment-queue']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
         <Route path="/financial/payment-queue" element={<PaymentQueueRecords />} />
+        <Route path="/my/salary/payment-queue" element={<PaymentQueueRecords />} />
         <Route
           path="/financial/payment-queue/:staffId/:period"
           element={<div>Payment queue detail route</div>}
+        />
+        <Route
+          path="/my/salary/payment-queue/:staffId/:period"
+          element={<div>My payment detail route</div>}
         />
       </Routes>
     </MemoryRouter>,
@@ -218,6 +223,12 @@ describe('PaymentQueueRecords', () => {
     fireEvent.click(screen.getByLabelText('Select Pending Staff'))
     fireEvent.click(screen.getByLabelText('Select Paid Staff'))
     fireEvent.click(screen.getByRole('button', { name: /mark paid selected/i }))
+    fireEvent.change(screen.getByLabelText('Reference (required)'), {
+      target: { value: 'BANK-2026-06-01' },
+    })
+    fireEvent.change(screen.getByLabelText('Method (required)'), {
+      target: { value: 'Bank transfer' },
+    })
     fireEvent.click(screen.getAllByRole('button', { name: /^mark paid$/i }).at(-1))
 
     await waitFor(() => {
@@ -252,5 +263,24 @@ describe('PaymentQueueRecords', () => {
       ]),
     )
     expect(storageMock.bulkUndoPaymentQueuePaid.mock.calls[0][0]).toHaveLength(2)
+  })
+
+  it('presents the staff route as read-only My Payments', async () => {
+    storageMock.fetchPaymentQueue.mockResolvedValue([rows[1]])
+    renderPaymentQueue('/my/salary/payment-queue')
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Paid Staff').length).toBeGreaterThan(0)
+    })
+
+    expect(screen.getByPlaceholderText('Search month or status')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Select Paid Staff')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /undo paid/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /mark paid/i })).not.toBeInTheDocument()
+
+    fireEvent.click(within(getDesktopRow('Paid Staff')).getByText('Paid Staff'))
+    await waitFor(() => {
+      expect(screen.getByText('My payment detail route')).toBeInTheDocument()
+    })
   })
 })

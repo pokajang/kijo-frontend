@@ -188,7 +188,6 @@
   width: 1px;
   height: 1px;
   opacity: 0;
-  pointer-events: none;
 }
 
 .salary-attachment-meta {
@@ -197,6 +196,26 @@
   color: var(--cui-secondary-color);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
+}
+
+.salary-attachment-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.salary-attachment-meta--selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: var(--app-radius-sm, 0.25rem);
+}
+
+.salary-attachment-required {
+  color: var(--cui-danger);
 }
 
 .salary-attachment-preview-body {

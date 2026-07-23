@@ -17,6 +17,19 @@ vi.mock('../../views/project/manage/projectApi', () => ({
   listActiveProjectOptions: projectApiMock.listActiveProjectOptions,
 }))
 
+const openTravelClaim = async () => {
+  await screen.findByText('Other Claim Summary')
+  fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
+}
+
+const completeMileage = ({ date = '2026-07-20', purpose = 'Site inspection' } = {}) => {
+  fireEvent.change(screen.getByLabelText('Date'), { target: { value: date } })
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Client site' } })
+  fireEvent.change(screen.getByLabelText('Business purpose'), { target: { value: purpose } })
+}
+
 describe('OtherClaimApply', () => {
   beforeEach(() => {
     window.localStorage.clear()
@@ -63,58 +76,45 @@ describe('OtherClaimApply', () => {
     expect(screen.getByLabelText('Claim month')).toBeInTheDocument()
   })
 
-  it('defaults mileage charge target to company and hides project selection', async () => {
+  it('defaults travel claims to mileage charged to the company', async () => {
     render(<OtherClaimApply />)
+    await openTravelClaim()
 
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
-
-    const chargeModeSelect = screen.getByRole('combobox', { name: 'Charge to' })
-    expect(chargeModeSelect).toHaveValue('company')
+    expect(screen.getByRole('combobox', { name: 'What are you claiming?' })).toHaveValue('mileage')
+    expect(screen.getByRole('combobox', { name: 'Charge to' })).toHaveValue('company')
+    expect(screen.getByRole('combobox', { name: 'Distance method' })).toHaveValue(
+      'return_same_route',
+    )
     expect(screen.queryByLabelText('Project')).not.toBeInTheDocument()
   })
 
-  it('requires project selection when charge target mode is project', async () => {
+  it('requires a project before saving a project-charged mileage claim', async () => {
     render(<OtherClaimApply />)
-
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
+    await openTravelClaim()
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Charge to' }), {
       target: { value: 'project' },
     })
-
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-20' } })
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Client site' } })
-    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Site inspection' } })
-    fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '12' } })
+    completeMileage()
+    fireEvent.change(screen.getByLabelText('One-way distance (KM)'), { target: { value: '12' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByText('Select a project before saving travel & mileage.')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Project'), {
-      target: { value: '101' },
-    })
+    expect(
+      screen.getByText('Select a project before saving this travel claim.'),
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Project'), { target: { value: '101' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect((await screen.findAllByText(/Site inspection/)).length).toBeGreaterThan(0)
   })
 
-  it('captures travel purpose and supports one-way mileage without forced doubling', async () => {
+  it('calculates a one-way mileage claim without doubling the entered distance', async () => {
     render(<OtherClaimApply />)
+    await openTravelClaim()
 
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
-
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-20' } })
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Client site' } })
-    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Site inspection' } })
-    fireEvent.change(screen.getByLabelText('Trip type'), { target: { value: 'one_way' } })
-    fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '12' } })
+    completeMileage()
+    fireEvent.change(screen.getByLabelText('Distance method'), { target: { value: 'one_way' } })
+    fireEvent.change(screen.getByLabelText('One-way distance (KM)'), { target: { value: '12' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect((await screen.findAllByText(/Site inspection/)).length).toBeGreaterThan(0)
@@ -122,124 +122,93 @@ describe('OtherClaimApply', () => {
     expect(screen.getAllByText('RM 7.20').length).toBeGreaterThan(0)
   })
 
-  it('shows selected project label in travel summary when saving with project charge mode', async () => {
+  it('uses the entered total when return legs use different routes', async () => {
     render(<OtherClaimApply />)
+    await openTravelClaim()
 
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
-    fireEvent.change(screen.getByRole('combobox', { name: 'Charge to' }), {
-      target: { value: 'project' },
+    completeMileage()
+    fireEvent.change(screen.getByLabelText('Distance method'), {
+      target: { value: 'total_distance' },
+    })
+    fireEvent.change(screen.getByLabelText('Total distance travelled (KM)'), {
+      target: { value: '30' },
     })
 
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-22' } })
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Airport' } })
-    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Client arrival' } })
-    fireEvent.change(screen.getByLabelText('Project'), {
-      target: { value: '101' },
-    })
-    fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '8' } })
+    expect(screen.getByText(/30 KM x RM 0\.60 = RM 18\.00/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-
-    const summaryText = await screen.findAllByText(/Project Alpha/)
-    expect(summaryText.length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/30 KM total distance travelled/).length).toBeGreaterThan(0)
   })
 
-  it('does not silently discard partial travel expense details', async () => {
+  it('shows only taxi fields and requires taxi evidence instead of mileage input', async () => {
     render(<OtherClaimApply />)
+    await openTravelClaim()
 
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
+    fireEvent.change(screen.getByLabelText('What are you claiming?'), { target: { value: 'taxi' } })
+    expect(screen.getByLabelText('Pickup')).toBeInTheDocument()
+    expect(screen.getByLabelText('Drop-off')).toBeInTheDocument()
+    expect(screen.getByLabelText('Amount')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Choose files for Taxi / e-hailing receipt' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('One-way distance (KM)')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Distance method')).not.toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-20' } })
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Client site' } })
-    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Site inspection' } })
-    fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '12' } })
-    fireEvent.change(screen.getByLabelText('Travel expense category'), {
-      target: { value: 'parking' },
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-22' } })
+    fireEvent.change(screen.getByLabelText('Pickup'), { target: { value: 'Office' } })
+    fireEvent.change(screen.getByLabelText('Drop-off'), { target: { value: 'Airport' } })
+    fireEvent.change(screen.getByLabelText('Business purpose'), {
+      target: { value: 'Client arrival' },
     })
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '24' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(
-      screen.getByText('Enter a valid travel expense amount or clear the expense details.'),
+      screen.getByText('Attach the required travel supporting evidence before saving.'),
     ).toBeInTheDocument()
-    expect(screen.getByLabelText('Purpose')).toHaveValue('Site inspection')
-  })
 
-  it('supports an expense-only travel row from the workbook without requiring mileage', async () => {
-    render(<OtherClaimApply />)
-
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
-
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-22' } })
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Airport' } })
-    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Client arrival' } })
-    fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '6' } })
-    fireEvent.change(screen.getByLabelText('Charge to'), {
-      target: { value: 'project' },
-    })
-    fireEvent.change(await screen.findByLabelText('Project'), {
-      target: { value: '101' },
-    })
-    fireEvent.change(screen.getByLabelText('Travel expense category'), {
-      target: { value: 'combined' },
-    })
-    fireEvent.change(screen.getByLabelText('Expense amount'), { target: { value: '18' } })
-    fireEvent.change(screen.getByLabelText('Travel expense receipt'), {
+    fireEvent.change(document.getElementById('otherTravelEvidence'), {
       target: {
-        files: [new File(['receipt'], 'travel-receipt.pdf', { type: 'application/pdf' })],
+        files: [new File(['receipt'], 'taxi-receipt.pdf', { type: 'application/pdf' })],
       },
     })
-
-    await waitFor(() => expect(screen.getByText(/travel-receipt\.pdf/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/taxi-receipt\.pdf/)).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect((await screen.findAllByText(/Client arrival/)).length).toBeGreaterThan(0)
-    expect(
-      screen.getAllByText(/Parking \/ taxi \/ toll \/ others RM 18\.00/).length,
-    ).toBeGreaterThan(0)
-    expect(screen.getAllByText(/RM 18\.00/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Taxi \/ e-hailing/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('RM 24.00').length).toBeGreaterThan(0)
   })
 
-  it('edits a saved mileage row and preserves travel charge mode values', async () => {
+  it('shows the selected project label in the travel summary', async () => {
     render(<OtherClaimApply />)
-
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
+    await openTravelClaim()
     fireEvent.change(screen.getByRole('combobox', { name: 'Charge to' }), {
       target: { value: 'project' },
     })
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-22' } })
-    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Office' } })
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Airport' } })
-    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Client arrival' } })
-    fireEvent.change(screen.getByLabelText('Mileage KM (optional)'), { target: { value: '2' } })
-    fireEvent.change(screen.getByLabelText('Project'), {
-      target: { value: '101' },
+    completeMileage({ date: '2026-07-22', purpose: 'Client arrival' })
+    fireEvent.change(screen.getByLabelText('Project'), { target: { value: '101' } })
+    fireEvent.change(screen.getByLabelText('One-way distance (KM)'), { target: { value: '8' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect((await screen.findAllByText(/Project Alpha/)).length).toBeGreaterThan(0)
+  })
+
+  it('edits a mileage claim and preserves its project charge selection', async () => {
+    render(<OtherClaimApply />)
+    await openTravelClaim()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Charge to' }), {
+      target: { value: 'project' },
     })
+    completeMileage({ date: '2026-07-22', purpose: 'Client arrival' })
+    fireEvent.change(screen.getByLabelText('Project'), { target: { value: '101' } })
+    fireEvent.change(screen.getByLabelText('One-way distance (KM)'), { target: { value: '2' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     const [editButton] = await screen.findAllByRole('button', { name: /Edit Client arrival/ })
     fireEvent.click(editButton)
 
-    const chargeModeSelect = await screen.findByRole('combobox', { name: 'Charge to' })
-    expect(chargeModeSelect).toHaveValue('project')
-    expect(screen.getByLabelText('Project')).toBeInTheDocument()
-    fireEvent.change(chargeModeSelect, {
-      target: { value: 'company' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-
-    await waitFor(() => expect(screen.getAllByText(/Client arrival/).length).toBeGreaterThan(0))
-    expect((await screen.findAllByText(/Client arrival/)).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/Company/).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('combobox', { name: 'Charge to' })).toHaveValue('project')
+    expect(screen.getByLabelText('Project')).toHaveValue('101')
   })
 
   it('loads and prioritizes my projects first when listing charge projects', async () => {
@@ -251,10 +220,7 @@ describe('OtherClaimApply', () => {
       .mockResolvedValueOnce([{ id: 201, projectName: 'My Project', status: 'Active' }])
 
     render(<OtherClaimApply />)
-
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
+    await openTravelClaim()
     fireEvent.change(screen.getByRole('combobox', { name: 'Charge to' }), {
       target: { value: 'project' },
     })

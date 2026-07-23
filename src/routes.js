@@ -187,6 +187,9 @@ const FinancialSalaryRecordsPage = React.lazy(
 const FinancialOtherClaimRecordsPage = React.lazy(
   () => import('./views/internal-operations/financial/FinancialOtherClaimRecordsPage'),
 )
+const FinancialOtherClaimRecordDetailPage = React.lazy(
+  () => import('./views/internal-operations/financial/FinancialOtherClaimRecordDetailPage'),
+)
 const FinancialPaymentQueuePage = React.lazy(
   () => import('./views/internal-operations/financial/FinancialPaymentQueuePage'),
 )
@@ -928,6 +931,15 @@ const routes = [
     element: (
       <ProtectedRoute allowedRoles={financialAllowedRoles}>
         <FinancialOtherClaimRecordsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/financial/other-claim-records/:id',
+    name: 'Other Claim Review',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <FinancialOtherClaimRecordDetailPage />
       </ProtectedRoute>
     ),
   },

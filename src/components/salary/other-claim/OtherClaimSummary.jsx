@@ -10,30 +10,29 @@ import {
   SalaryPayablePreviewTable,
 } from '../SalaryTables'
 import { AttachmentPreviewModal } from '../claim-ui/ClaimFormPrimitives'
-import { formatMileageMeta } from './model/otherClaimModel'
+import { claimTravelCategory, formatMileageMeta } from './model/otherClaimModel'
 
-const expenseLabels = {
-  combined: 'Parking / taxi / toll / others',
-  parking: 'Parking',
+const travelCategoryLabels = {
+  mileage: 'Mileage',
+  taxi: 'Taxi / e-hailing',
   toll: 'Toll',
-  taxi: 'Taxi',
+  parking: 'Parking',
   other: 'Other travel expense',
+  legacy_combined: 'Legacy combined travel expense',
 }
 
-const ClaimLabel = ({ item, index, showKm }) => {
+const ClaimLabel = ({ item, index, showMileageMeta = false, showTravelCategory = false }) => {
+  const attachments = item.attachments || (item.attachment ? [item.attachment] : [])
   const meta = [
     item.date,
     item.sourceLabel,
-    showKm ? formatMileageMeta(item) : null,
-    item.travelExpenseNote,
+    showTravelCategory ? travelCategoryLabels[claimTravelCategory(item)] : null,
+    showMileageMeta ? formatMileageMeta(item) : null,
+    item.locationDetail,
+    item.expenseType,
   ]
     .filter(Boolean)
     .join(' - ')
-  const attachmentName = item.attachment
-    ? `${item.attachment.name || item.attachment.originalName || 'attachment'}${
-        item.attachment.size ? ` (${formatAttachmentSize(item.attachment.size)})` : ''
-      }`
-    : ''
 
   return (
     <>
@@ -41,9 +40,15 @@ const ClaimLabel = ({ item, index, showKm }) => {
         {index + 1}. {item.description}
       </span>
       {meta && <span className="salary-preview-note salary-preview-note--inline">{meta}</span>}
-      {attachmentName && (
-        <span className="salary-preview-note salary-preview-note--inline">{attachmentName}</span>
-      )}
+      {attachments.map((attachment, attachmentIndex) => (
+        <span
+          className="salary-preview-note salary-preview-note--inline"
+          key={attachment.clientId || attachment.id || `${attachment.name}-${attachmentIndex}`}
+        >
+          {attachment.name || attachment.originalName || 'attachment'}
+          {attachment.size ? ` (${formatAttachmentSize(attachment.size)})` : ''}
+        </span>
+      ))}
     </>
   )
 }
@@ -59,33 +64,48 @@ const OtherClaimSummary = ({
 }) => {
   const [previewAttachment, setPreviewAttachment] = useState(null)
   const standaloneExpenseItems = useMemo(
-    () => expenseItems.filter((item) => !item.travelGroupId),
+    () => expenseItems.filter((item) => !claimTravelCategory(item)),
     [expenseItems],
   )
-  const travelPreviewItems = useMemo(
+  const travelExpenseItems = useMemo(
     () =>
-      mileageItems.map((item) => {
-        const travelExpense = expenseItems.find(
+      expenseItems
+        .filter((item) => Boolean(claimTravelCategory(item)))
+        .map((item) => {
+          const linkedMileage = mileageItems.find(
+            (mileageItem) => item.travelGroupId && mileageItem.travelGroupId === item.travelGroupId,
+          )
+          return {
+            ...item,
+            startLocation: item.startLocation || linkedMileage?.startLocation || '',
+            endLocation: item.endLocation || linkedMileage?.endLocation || '',
+          }
+        }),
+    [expenseItems, mileageItems],
+  )
+  const visibleMileageItems = useMemo(
+    () =>
+      mileageItems.filter((item) => {
+        const hasLinkedExpense = expenseItems.some(
           (expenseItem) => item.travelGroupId && expenseItem.travelGroupId === item.travelGroupId,
         )
-        return {
-          ...item,
-          amount: roundMoney(Number(item.amount || 0) + Number(travelExpense?.amount || 0)),
-          attachment: travelExpense?.attachment || null,
-          travelExpenseNote: travelExpense
-            ? `${expenseLabels[travelExpense.expenseCategory] || 'Travel expense'} ${formatMoney(travelExpense.amount)}`
-            : '',
-        }
+        return Number(item.km || 0) > 0 || !hasLinkedExpense
       }),
     [expenseItems, mileageItems],
   )
-  const rows = useMemo(
+  const travelItems = useMemo(
     () => [
-      { id: 'claims-total', item: 'Claims Total', amount: claimsTotal, isSubtotal: true },
-      ...[
+      ...visibleMileageItems.map((item) => ({ ...item, claimType: 'mileage' })),
+      ...travelExpenseItems.map((item) => ({ ...item, claimType: 'expense' })),
+    ],
+    [travelExpenseItems, visibleMileageItems],
+  )
+  const rows = useMemo(
+    () =>
+      [
         ['allowance', 'Allowance', allowanceItems],
         ['expense', 'Expense', standaloneExpenseItems],
-        ['mileage', 'Travel & Mileage', travelPreviewItems],
+        ['travel', 'Travel', travelItems],
         ['medical', 'Medical', medicalItems],
       ].flatMap(([key, label, items]) => {
         const total = roundMoney(items.reduce((sum, item) => sum + Number(item.amount || 0), 0))
@@ -94,39 +114,46 @@ const OtherClaimSummary = ({
           { id: key, item: label, amount: total, isClaimGroup: true },
           ...items.map((item, index) => ({
             id: `${key}-${item.id}`,
-            item: <ClaimLabel item={item} index={index} showKm={key === 'mileage'} />,
+            item: (
+              <ClaimLabel
+                item={item}
+                index={index}
+                showMileageMeta={key === 'travel' && item.claimType === 'mileage'}
+                showTravelCategory={key === 'travel'}
+              />
+            ),
             actionLabel: item.description,
             amount: item.amount,
             isClaimItem: true,
             canEditClaim: true,
-            claimType: key,
+            claimType: item.claimType || key,
             claimId: item.id,
-            attachment: item.attachment,
+            attachments: item.attachments || (item.attachment ? [item.attachment] : []),
           })),
         ]
       }),
-    ],
-    [allowanceItems, claimsTotal, medicalItems, standaloneExpenseItems, travelPreviewItems],
+    [allowanceItems, medicalItems, standaloneExpenseItems, travelItems],
   )
 
   const ClaimActions = ({ row, amount }) => (
     <span className="salary-summary-claim-actions">
       <span>{amount}</span>
       <span className="salary-claim-row-controls salary-summary-claim-row-controls">
-        {(row.attachment?.dataUrl || row.attachment?.url || row.attachment?.downloadUrl) && (
+        {(row.attachments || []).map((attachment, index) => (
           <CButton
             color="secondary"
             variant="ghost"
             size="sm"
             className="salary-claim-icon-button"
             type="button"
-            title="Open attachment"
-            aria-label={`Open ${row.attachment.name || row.attachment.originalName || 'attachment'}`}
-            onClick={() => setPreviewAttachment(row.attachment)}
+            title={`Open attachment ${index + 1}`}
+            aria-label={`Open ${attachment.name || attachment.originalName || 'attachment'}`}
+            key={attachment.clientId || attachment.id || `${attachment.name}-${index}`}
+            onClick={() => setPreviewAttachment(attachment)}
           >
             <CIcon icon={cilExternalLink} size="sm" />
           </CButton>
-        )}
+        ))}
         <CButton
           color="secondary"
           variant="ghost"
@@ -174,7 +201,7 @@ const OtherClaimSummary = ({
   const renderMobileItem = (row) => {
     const className = [
       'salary-preview-mobile-row',
-      (row.isSubtotal || row.isClaimGroup) && 'salary-preview-mobile-row--group',
+      row.isClaimGroup && 'salary-preview-mobile-row--group',
       row.isClaimItem && 'salary-preview-mobile-row--deep',
     ]
       .filter(Boolean)

@@ -40,32 +40,64 @@ const normalizeAttachment = (attachment) => {
     originalName: attachment.originalName || attachment.name || '',
     originalSize: Number(attachment.originalSize || attachment.size || 0),
     compressed: Boolean(attachment.compressed),
+    clientId: String(attachment.clientId || attachment.id || attachment.name || 'attachment'),
+    purpose: attachment.purpose || '',
   }
 }
 
-export const normalizeOtherClaim = (claim = {}) => ({
-  id: claim.id,
-  type: claim.type,
-  date: claim.date || '',
-  description: claim.description || '',
-  amount: Number(claim.amount || 0),
-  meta: claim.meta || '',
-  km: claim.km,
-  startLocation: claim.startLocation || '',
-  endLocation: claim.endLocation || '',
-  source: claim.source || '',
-  sourceLabel: claim.sourceLabel || '',
-  tripMode: claim.tripMode || (claim.type === 'Mileage' ? 'return' : ''),
-  travelGroupId: claim.travelGroupId || '',
-  expenseCategory: claim.expenseCategory || '',
-  attachment: normalizeAttachment(claim.attachment),
-})
+const normalizeAttachments = (claim = {}) => {
+  const attachments = Array.isArray(claim.attachments)
+    ? claim.attachments
+    : claim.attachment
+      ? [claim.attachment]
+      : []
+  return attachments.map(normalizeAttachment).filter(Boolean)
+}
+
+export const normalizeOtherClaim = (claim = {}) => {
+  const attachments = normalizeAttachments(claim)
+
+  return {
+    id: claim.id,
+    recordItemId: claim.recordItemId ?? null,
+    type: claim.type,
+    date: claim.date || '',
+    description: claim.description || '',
+    amount: Number(claim.amount || 0),
+    meta: claim.meta || '',
+    km: claim.km,
+    startLocation: claim.startLocation || '',
+    endLocation: claim.endLocation || '',
+    source: claim.source || '',
+    sourceLabel: claim.sourceLabel || '',
+    tripMode: claim.tripMode || (claim.type === 'Mileage' ? 'return' : ''),
+    travelGroupId: claim.travelGroupId || '',
+    expenseCategory: claim.expenseCategory || '',
+    travelCategory:
+      claim.travelCategory ||
+      (claim.type === 'Mileage'
+        ? 'mileage'
+        : claim.expenseCategory === 'combined'
+          ? 'legacy_combined'
+          : claim.expenseCategory || ''),
+    distanceMethod:
+      claim.distanceMethod || (claim.tripMode === 'one_way' ? 'one_way' : 'return_same_route'),
+    mileageRate: claim.mileageRate ?? null,
+    chargeToProjectId: claim.chargeToProjectId || '',
+    locationDetail: claim.locationDetail || '',
+    expenseType: claim.expenseType || '',
+    attachments,
+    attachment: attachments[0] || null,
+  }
+}
 
 export const normalizeOtherClaimRecord = (record = {}) => ({
   id: record.id,
   staffId: record.staffId,
   staffName: record.staffName || '',
   staffCode: record.staffCode || '',
+  staffPosition: record.staffPosition || '',
+  staffDepartment: record.staffDepartment || '',
   claimMonth: record.claimMonth || formatClaimMonth(record.claimMonthValue),
   claimMonthValue: record.claimMonthValue || '',
   claimsTotal: Number(record.claimsTotal || 0),
@@ -92,6 +124,22 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
   approvedRemarks: record.approvedRemarks || '',
   approverName: record.approverName || '',
   approverCode: record.approverCode || '',
+  cancelledAt: record.cancelledAt || '',
+  cancelledBy: record.cancelledBy || null,
+  cancelReason: record.cancelReason || '',
+  claimReference:
+    record.claimReference || (record.id ? `OC-${String(record.id).padStart(6, '0')}` : ''),
+  revisionNo: Number(record.revisionNo || 1),
+  parentApplicationId: record.parentApplicationId || null,
+  supersededByApplicationId: record.supersededByApplicationId || null,
+  supersededAt: record.supersededAt || '',
+  recordVersion: Number(record.recordVersion || 1),
+  paymentHistory: Array.isArray(record.paymentHistory)
+    ? record.paymentHistory.map((payment) => ({
+        ...payment,
+        amount: Number(payment.amount || 0),
+      }))
+    : [],
   workflow: record.workflow || null,
 })
 
@@ -144,18 +192,11 @@ const isServerSafeDraftClaim = (claim = {}, claims = []) => {
   }
 
   if (type === 'Mileage') {
-    const hasLinkedTravelExpense = claims.some(
-      (item) =>
-        item.type === 'Expense' &&
-        claim.travelGroupId &&
-        item.travelGroupId === claim.travelGroupId &&
-        Number(item.amount || 0) > 0,
-    )
     return Boolean(
       date &&
         String(claim.startLocation || '').trim() &&
         String(claim.endLocation || '').trim() &&
-        (km > 0 || hasLinkedTravelExpense),
+        km > 0,
     )
   }
 
@@ -177,6 +218,19 @@ const claimForPayload = (claim) => ({
   tripMode: claim.tripMode || '',
   travelGroupId: claim.travelGroupId || '',
   expenseCategory: claim.expenseCategory || '',
+  travelCategory: claim.travelCategory || '',
+  distanceMethod: claim.distanceMethod || '',
+  mileageRate: claim.mileageRate ?? null,
+  chargeToProjectId: claim.chargeToProjectId || '',
+  locationDetail: claim.locationDetail || '',
+  expenseType: claim.expenseType || '',
+  attachments: (claim.attachments || (claim.attachment ? [claim.attachment] : []))
+    .filter(Boolean)
+    .map((attachment) => ({
+      id: attachment.id ?? null,
+      clientId: attachment.clientId || attachment.id || attachment.name,
+      purpose: attachment.purpose || '',
+    })),
   attachmentId: claim.attachment?.id ?? null,
 })
 
@@ -205,12 +259,16 @@ const attachmentFileFromDataUrl = (attachment) => {
 
 const appendClaimAttachments = (formData, claims) => {
   claims.forEach((claim) => {
-    if (claim.attachment?.id) return
+    const attachments = claim.attachments || (claim.attachment ? [claim.attachment] : [])
+    attachments.forEach((attachment, index) => {
+      if (attachment?.id) return
 
-    const file = attachmentFileFromDataUrl(claim.attachment)
-    if (isServerSafeAttachmentFile(file)) {
-      formData.append(`attachments[${claim.id}]`, file, claim.attachment.name || file.name)
-    }
+      const file = attachmentFileFromDataUrl(attachment)
+      if (isServerSafeAttachmentFile(file)) {
+        const clientId = attachment.clientId || `attachment-${index}`
+        formData.append(`attachments[${claim.id}][${clientId}]`, file, attachment.name || file.name)
+      }
+    })
   })
 }
 
@@ -252,6 +310,7 @@ export const saveOtherClaimRecord = async (record) => {
   if (record.id && !String(record.id).startsWith('other-claim-')) {
     formData.append('application_id', String(record.id))
   }
+  if (record.recordVersion) formData.append('record_version', String(record.recordVersion))
   formData.append('claim_month', record.claimMonthValue)
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
   if (String(record.amendmentReason || '').trim()) {
@@ -313,16 +372,15 @@ export const clearOtherClaimServerDraft = async (claimMonth) => {
   dispatchRecordsChanged()
 }
 
-export const removeOtherClaimRecord = async (id, reason = '') => {
+export const removeOtherClaimRecord = async (id, reason = '', recordVersion = null) => {
   const trimmedReason = String(reason || '').trim()
   await apiJson(`${API_BASE}hr/salary/other-claims/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    ...(trimmedReason
-      ? {
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: trimmedReason }),
-        }
-      : {}),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      reason: trimmedReason || undefined,
+      record_version: Number(recordVersion || 0) || undefined,
+    }),
   })
   dispatchRecordsChanged()
   dispatchAppNotificationsChanged()

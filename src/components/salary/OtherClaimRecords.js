@@ -26,6 +26,7 @@ const statusTone = {
   Submitted: 'info',
   Pending: 'warning',
   Rejected: 'danger',
+  Cancelled: 'warning',
 }
 
 const statusSortPriority = {
@@ -35,6 +36,7 @@ const statusSortPriority = {
   Checked: 1,
   Approved: 2,
   Rejected: 4,
+  Withdrawn: 5,
 }
 
 const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
@@ -52,6 +54,7 @@ const claimDateFormatter = new Intl.DateTimeFormat('en-US', {
 
 const displayStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
+  if (status === 'Cancelled') return 'Withdrawn'
   return status
 }
 
@@ -110,7 +113,6 @@ const defaultVisibleColumns = {
 }
 
 const requiredColumns = new Set(['claimDate', 'claimsTotal', 'status'])
-const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
 const paidStatuses = new Set(['Paid'])
 const submittedStatuses = new Set(['Submitted', 'Prepared'])
 
@@ -288,18 +290,16 @@ const OtherClaimRecords = ({
   }
 
   const editRecord = async (record) => {
-    if (paidStatuses.has(record?.status)) return
+    if (!['Draft', 'Rejected'].includes(record?.status)) return
     const detailRecord = await loadRecordDetail(record)
     if (!detailRecord) return
     let amendmentReason = ''
-    if (reviewedMutableStatuses.has(detailRecord.status)) {
+    if (detailRecord.status === 'Rejected') {
       const reason = await dialog.prompt(
-        `This other claim has already been ${displayStatus(
-          detailRecord.status,
-        ).toLowerCase()}. Enter a reason to restart the workflow.`,
+        'Enter a reason for revising this rejected other claim. The original claim will remain in the audit history.',
         {
-          title: 'Edit Reviewed Other Claim',
-          confirmText: 'Continue',
+          title: 'Create Other Claim Revision',
+          confirmText: 'Create Revision',
           required: true,
           multiline: true,
           rows: 4,
@@ -318,28 +318,29 @@ const OtherClaimRecords = ({
   const deleteRecord = async (record) => {
     if (!record?.id) return
     if (paidStatuses.has(record.status)) return
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
+      record.status,
+    )
     let cancellationReason = ''
-    if (reviewedMutableStatuses.has(record.status)) {
+    if (canWithdraw) {
       const reason = await dialog.prompt(
-        `This other claim has already been ${displayStatus(
-          record.status,
-        ).toLowerCase()}. Enter a reason to cancel it.`,
+        'This will withdraw the claim and retain its workflow history.',
         {
-          title: 'Cancel Reviewed Other Claim',
-          confirmText: 'Cancel Claim',
+          title: 'Withdraw Other Claim',
+          confirmText: 'Withdraw Claim',
           confirmColor: 'danger',
           required: true,
           multiline: true,
           rows: 4,
-          placeholder: 'Reason for cancelling this other claim',
+          placeholder: 'Reason for withdrawing this other claim',
         },
       )
       if (reason === null) return
       cancellationReason = String(reason || '').trim()
       if (!cancellationReason) return
     } else if (
-      !(await dialog.confirm(`Delete this other claim from ${formatClaimDate(record)}?`, {
-        title: 'Delete Other Claim',
+      !(await dialog.confirm(`Delete this other claim draft from ${formatClaimDate(record)}?`, {
+        title: 'Delete Other Claim Draft',
         confirmText: 'Delete',
         confirmColor: 'danger',
       }))
@@ -348,7 +349,7 @@ const OtherClaimRecords = ({
     }
 
     try {
-      await removeOtherClaimRecord(record.id, cancellationReason)
+      await removeOtherClaimRecord(record.id, cancellationReason, record.recordVersion)
       await refreshRecords()
     } catch (err) {
       setError(err?.message || 'Unable to delete other claim record.')
@@ -374,30 +375,35 @@ const OtherClaimRecords = ({
   const getActions = (record) => {
     const isPaid = paidStatuses.has(record.status)
     const isExporting = exportingRecordId === record.id
+    const canEdit = ['Draft', 'Rejected'].includes(record.status)
+    const canDeleteDraft = record.status === 'Draft'
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
+      record.status,
+    )
     return [
       {
         key: 'export-claims',
         label: isExporting ? 'Preparing PDF...' : 'Export Claims',
-        hidden: record.status === 'Draft',
+        hidden: ['Draft', 'Cancelled'].includes(record.status),
         disabled: Boolean(exportingRecordId),
         onClick: exportClaim,
       },
-      {
-        key: 'edit',
-        label: 'Edit',
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
-        onClick: editRecord,
-      },
-      {
-        key: 'delete',
-        label: 'Delete',
-        danger: true,
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
-        onClick: deleteRecord,
-      },
-    ]
+      canEdit
+        ? {
+            key: 'edit',
+            label: record.status === 'Rejected' ? 'Create Revision' : 'Edit Draft',
+            onClick: editRecord,
+          }
+        : null,
+      !isPaid && (canWithdraw || canDeleteDraft)
+        ? {
+            key: canWithdraw ? 'withdraw' : 'delete',
+            label: canWithdraw ? 'Withdraw Claim' : 'Delete Draft',
+            danger: true,
+            onClick: deleteRecord,
+          }
+        : null,
+    ].filter(Boolean)
   }
 
   const renderCell = (record, column) => {

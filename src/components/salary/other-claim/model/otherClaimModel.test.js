@@ -54,7 +54,7 @@ describe('otherClaimModel', () => {
     const restored = stateFromDraft(draft)
     const apiClaim = mapClaimItems(restored.mileageItems, 'Mileage')[0]
 
-    expect(draft.schemaVersion).toBe(4)
+    expect(draft.schemaVersion).toBe(5)
     expect(apiClaim).toMatchObject({
       tripMode: 'one_way',
       travelGroupId: 'group-1',
@@ -63,7 +63,7 @@ describe('otherClaimModel', () => {
     })
   })
 
-  it('treats a routed travel expense as complete when mileage is not claimed', () => {
+  it('keeps a zero-distance mileage draft incomplete while allowing an expense-only trip', () => {
     const travelAnchor = {
       id: 'travel-anchor',
       type: 'Mileage',
@@ -77,12 +77,13 @@ describe('otherClaimModel', () => {
     const linkedExpense = {
       id: 'travel-expense',
       type: 'Expense',
+      date: '2026-07-22',
       description: 'Taxi: Client arrival',
       amount: 18,
       travelGroupId: 'travel-group',
     }
 
-    expect(isCompleteClaim(travelAnchor, [travelAnchor, linkedExpense])).toBe(true)
-    expect(isCompleteClaim(travelAnchor, [travelAnchor])).toBe(false)
+    expect(isCompleteClaim(travelAnchor)).toBe(false)
+    expect(isCompleteClaim(linkedExpense)).toBe(true)
   })
 })

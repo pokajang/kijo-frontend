@@ -1,12 +1,26 @@
 import { roundMoney } from '../../salaryCalculations'
 
-export const OTHER_CLAIM_DRAFT_SCHEMA_VERSION = 4
+export const OTHER_CLAIM_DRAFT_SCHEMA_VERSION = 5
 
 export const otherClaimTypes = [
   { key: 'allowance', label: 'Non-Recurring Allowance' },
   { key: 'expense', label: 'Expense' },
   { key: 'medical', label: 'Medical' },
   { key: 'mileage', label: 'Travel & Mileage' },
+]
+
+export const travelCategories = [
+  { value: 'mileage', label: 'Mileage' },
+  { value: 'taxi', label: 'Taxi / e-hailing' },
+  { value: 'toll', label: 'Toll' },
+  { value: 'parking', label: 'Parking' },
+  { value: 'other', label: 'Other travel expense' },
+]
+
+export const distanceMethods = [
+  { value: 'one_way', label: 'One-way trip' },
+  { value: 'return_same_route', label: 'Return trip, same route' },
+  { value: 'total_distance', label: 'Return trip, different routes' },
 ]
 
 export const createAttachmentProcessingState = () => ({
@@ -31,16 +45,33 @@ export const formatKm = (value) => {
   return Number.isInteger(number) ? String(number) : String(roundMoney(number))
 }
 
+export const claimTravelCategory = (claim = {}) => {
+  if (claim.travelCategory) return claim.travelCategory
+  if (claim.type === 'Mileage') return 'mileage'
+  if (claim.expenseCategory === 'combined') return 'legacy_combined'
+  return claim.expenseCategory || ''
+}
+
+export const claimDistanceMethod = (claim = {}) =>
+  claim.distanceMethod || (claim.tripMode === 'one_way' ? 'one_way' : 'return_same_route')
+
 export const tripDistanceKm = (item = {}) => {
   const routeKm = Number(item.km || 0)
-  return item.tripMode === 'one_way' ? routeKm : routeKm * 2
+  return claimDistanceMethod(item) === 'return_same_route' ? routeKm * 2 : routeKm
 }
 
 export const formatMileageMeta = (item = {}) => {
-  const oneWayKm = Number(item.km || 0)
-  if (!oneWayKm) return ''
-  if (item.tripMode === 'one_way') return `${formatKm(oneWayKm)} KM one-way`
-  return `${formatKm(oneWayKm)} KM one-way / ${formatKm(oneWayKm * 2)} KM return`
+  const km = Number(item.km || 0)
+  if (!km) return ''
+
+  switch (claimDistanceMethod(item)) {
+    case 'one_way':
+      return `${formatKm(km)} KM one-way`
+    case 'total_distance':
+      return `${formatKm(km)} KM total distance travelled`
+    default:
+      return `${formatKm(km)} KM one-way / ${formatKm(km * 2)} KM return`
+  }
 }
 
 export const createEmptyClaimFields = () => ({
@@ -65,26 +96,64 @@ export const createEmptyClaimFields = () => ({
   mileageChargeTo: '',
   mileageKm: '',
   mileageTripMode: 'return',
-  travelExpenseCategory: '',
+  travelCategory: 'mileage',
+  travelDistanceMethod: 'return_same_route',
+  travelLocationDetail: '',
+  travelExpenseType: '',
   travelExpenseAmount: '',
+  travelAttachments: [],
   mileageAttachment: null,
 })
 
-export const normalizeEditableClaim = (claim = {}) => ({
-  id: claim.id || buildClaimId(),
-  date: claim.date || '',
-  description: claim.description || '',
-  amount: Number(claim.amount || 0),
-  source: claim.source || '',
-  sourceLabel: claim.sourceLabel || '',
-  km: claim.km,
-  startLocation: claim.startLocation || '',
-  endLocation: claim.endLocation || '',
-  tripMode: claim.tripMode || (claim.type === 'Mileage' ? 'return' : ''),
-  travelGroupId: claim.travelGroupId || '',
-  expenseCategory: claim.expenseCategory || '',
-  attachment: claim.attachment || null,
-})
+const attachmentClientId = (attachment = {}, index = 0) =>
+  String(attachment.clientId || attachment.id || `attachment-${index}-${attachment.name || 'file'}`)
+
+export const normalizeAttachment = (attachment = {}, index = 0) => {
+  if (!attachment) return null
+
+  return {
+    ...attachment,
+    clientId: attachmentClientId(attachment, index),
+    purpose: attachment.purpose || '',
+  }
+}
+
+export const normalizeAttachments = (claim = {}) => {
+  const attachments = Array.isArray(claim.attachments)
+    ? claim.attachments
+    : claim.attachment
+      ? [claim.attachment]
+      : []
+
+  return attachments.map(normalizeAttachment).filter(Boolean)
+}
+
+export const normalizeEditableClaim = (claim = {}) => {
+  const attachments = normalizeAttachments(claim)
+
+  return {
+    id: claim.id || buildClaimId(),
+    date: claim.date || '',
+    description: claim.description || '',
+    amount: Number(claim.amount || 0),
+    source: claim.source || '',
+    sourceLabel: claim.sourceLabel || '',
+    km: claim.km,
+    startLocation: claim.startLocation || '',
+    endLocation: claim.endLocation || '',
+    tripMode: claim.tripMode || (claim.type === 'Mileage' ? 'return' : ''),
+    travelGroupId: claim.travelGroupId || '',
+    expenseCategory: claim.expenseCategory || '',
+    travelCategory: claimTravelCategory(claim),
+    distanceMethod: claimDistanceMethod(claim),
+    mileageRate: claim.mileageRate ?? null,
+    chargeToProjectId: claim.chargeToProjectId || '',
+    locationDetail: claim.locationDetail || '',
+    expenseType: claim.expenseType || '',
+    attachments,
+    attachment: attachments[0] || null,
+  }
+}
 
 export const serializeDraftAttachment = (attachment) => {
   if (!attachment) return null
@@ -100,6 +169,8 @@ export const serializeDraftAttachment = (attachment) => {
     originalName: attachment.originalName,
     originalSize: attachment.originalSize,
     compressed: attachment.compressed,
+    clientId: attachment.clientId,
+    purpose: attachment.purpose,
   }
 }
 
@@ -107,6 +178,12 @@ export const serializeAttachment = (attachment) => {
   if (!attachment) return null
   return { ...serializeDraftAttachment(attachment), file: attachment.file }
 }
+
+export const serializeAttachments = (attachments = []) =>
+  (Array.isArray(attachments) ? attachments : []).map(serializeAttachment).filter(Boolean)
+
+export const serializeDraftAttachments = (attachments = []) =>
+  (Array.isArray(attachments) ? attachments : []).map(serializeDraftAttachment).filter(Boolean)
 
 export const serializeDraftItem = (item) => ({
   id: item.id,
@@ -121,6 +198,15 @@ export const serializeDraftItem = (item) => ({
   tripMode: item.tripMode || '',
   travelGroupId: item.travelGroupId || '',
   expenseCategory: item.expenseCategory || '',
+  travelCategory: item.travelCategory || '',
+  distanceMethod: item.distanceMethod || '',
+  mileageRate: item.mileageRate ?? null,
+  chargeToProjectId: item.chargeToProjectId || '',
+  locationDetail: item.locationDetail || '',
+  expenseType: item.expenseType || '',
+  attachments: serializeDraftAttachments(
+    item.attachments || (item.attachment ? [item.attachment] : []),
+  ),
   attachment: serializeDraftAttachment(item.attachment),
 })
 
@@ -138,8 +224,17 @@ export const mapClaimItems = (items = [], type) =>
     tripMode: item.tripMode,
     travelGroupId: item.travelGroupId,
     expenseCategory: item.expenseCategory,
+    travelCategory: item.travelCategory || claimTravelCategory({ ...item, type }),
+    distanceMethod: item.distanceMethod || claimDistanceMethod(item),
+    mileageRate: item.mileageRate ?? null,
+    chargeToProjectId: item.chargeToProjectId || '',
+    locationDetail: item.locationDetail || '',
+    expenseType: item.expenseType || '',
     source: item.source,
     sourceLabel: item.sourceLabel,
+    attachments: serializeAttachments(
+      item.attachments || (item.attachment ? [item.attachment] : []),
+    ),
     attachment: serializeAttachment(item.attachment),
   }))
 
@@ -159,6 +254,7 @@ export const createDraftPayload = ({
     allowanceAttachment: serializeDraftAttachment(formData.allowanceAttachment),
     expenseAttachment: serializeDraftAttachment(formData.expenseAttachment),
     medicalAttachment: serializeDraftAttachment(formData.medicalAttachment),
+    travelAttachments: serializeDraftAttachments(formData.travelAttachments),
     mileageAttachment: serializeDraftAttachment(formData.mileageAttachment),
   },
   allowanceItems: allowanceItems.map(serializeDraftItem),
@@ -178,26 +274,38 @@ export const draftHasContent = (draft) => {
   }
 
   const fields = draft.formData || {}
-  return Object.entries(createEmptyClaimFields()).some(
-    ([key, defaultValue]) => Boolean(fields[key]) && fields[key] !== defaultValue,
-  )
+  return Object.entries(createEmptyClaimFields()).some(([key, defaultValue]) => {
+    if (Array.isArray(defaultValue)) return Array.isArray(fields[key]) && fields[key].length > 0
+    return Boolean(fields[key]) && fields[key] !== defaultValue
+  })
 }
 
 const normalizeDraftItems = (items) =>
   Array.isArray(items) ? items.map((item) => normalizeEditableClaim(item)) : []
 
-export const stateFromDraft = (draft = {}, fallbackMonth = getCurrentClaimMonth()) => ({
-  formData: {
-    claimMonth: draft.formData?.claimMonth || fallbackMonth,
-    mileageRate: String(draft.formData?.mileageRate || ''),
-    ...createEmptyClaimFields(),
-    ...(draft.formData || {}),
-  },
-  allowanceItems: normalizeDraftItems(draft.allowanceItems),
-  expenseItems: normalizeDraftItems(draft.expenseItems),
-  mileageItems: normalizeDraftItems(draft.mileageItems),
-  medicalItems: normalizeDraftItems(draft.medicalItems),
-})
+export const stateFromDraft = (draft = {}, fallbackMonth = getCurrentClaimMonth()) => {
+  const fields = draft.formData || {}
+  const travelAttachments = Array.isArray(fields.travelAttachments)
+    ? fields.travelAttachments.map(normalizeAttachment).filter(Boolean)
+    : fields.mileageAttachment
+      ? [normalizeAttachment(fields.mileageAttachment)]
+      : []
+
+  return {
+    formData: {
+      claimMonth: fields.claimMonth || fallbackMonth,
+      mileageRate: String(fields.mileageRate || ''),
+      ...createEmptyClaimFields(),
+      ...fields,
+      travelAttachments,
+      mileageAttachment: travelAttachments[0] || null,
+    },
+    allowanceItems: normalizeDraftItems(draft.allowanceItems),
+    expenseItems: normalizeDraftItems(draft.expenseItems),
+    mileageItems: normalizeDraftItems(draft.mileageItems),
+    medicalItems: normalizeDraftItems(draft.medicalItems),
+  }
+}
 
 export const stateFromRecord = (record = null) => {
   const claimMonth = record?.claimMonthValue || getCurrentClaimMonth()
@@ -226,21 +334,14 @@ export const parseMileageDescription = (description = '') => {
   return { startLocation, endLocation }
 }
 
-export const isCompleteClaim = (claim, claims = []) => {
+export const isCompleteClaim = (claim) => {
   if (!claim?.id || !claim?.type || !claim?.description?.trim()) return false
   if (claim.type === 'Mileage') {
-    const hasLinkedTravelExpense = claims.some(
-      (item) =>
-        item.type === 'Expense' &&
-        claim.travelGroupId &&
-        item.travelGroupId === claim.travelGroupId &&
-        Number(item.amount || 0) > 0,
-    )
     return Boolean(
       claim.date &&
         claim.startLocation?.trim() &&
         claim.endLocation?.trim() &&
-        (Number(claim.km || 0) > 0 || hasLinkedTravelExpense),
+        Number(claim.km || 0) > 0,
     )
   }
   return Number(claim.amount || 0) > 0

@@ -160,11 +160,11 @@ describe('financialModuleTabs', () => {
 })
 
 describe('salarySelfModuleTabs', () => {
-  it('shows payment queue, salary application, records, other claim, and settings tabs', () => {
+  it('shows my payments, salary application, records, other claim, and settings tabs', () => {
     expect(salarySelfModuleTabs).toEqual([
       {
         key: 'payment-queue',
-        label: 'Payment Queue',
+        label: 'My Payments',
         to: '/my/salary/payment-queue',
         notificationTabKey: 'my.salary.payment-queue',
       },

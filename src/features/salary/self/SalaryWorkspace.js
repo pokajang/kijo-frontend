@@ -17,7 +17,7 @@ import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 const sections = [
   {
     key: 'payment-queue',
-    title: 'Payment Queue',
+    title: 'My Payments',
     component: PaymentQueueRecords,
   },
   {

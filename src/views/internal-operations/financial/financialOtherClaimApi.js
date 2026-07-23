@@ -9,11 +9,19 @@ export const fetchFinancialOtherClaimRecords = async () => {
   return Array.isArray(payload.records) ? payload.records.map(normalizeOtherClaimRecord) : []
 }
 
+export const fetchFinancialOtherClaimRecord = async (id) => {
+  const payload = await apiJson(
+    `${API_BASE}hr/salary/other-claims/financial-records/${encodeURIComponent(id)}`,
+  )
+  return payload.record ? normalizeOtherClaimRecord(payload.record) : null
+}
+
 export const submitFinancialOtherClaimAction = async (
   id,
   action,
   remarks = '',
   workflowInstanceId = null,
+  recordVersion = null,
 ) => {
   if (workflowInstanceId) {
     const payload = await apiJson(
@@ -21,7 +29,7 @@ export const submitFinancialOtherClaimAction = async (
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, remarks }),
+        body: JSON.stringify({ action, remarks, record_version: recordVersion || undefined }),
       },
     )
 
@@ -34,7 +42,7 @@ export const submitFinancialOtherClaimAction = async (
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, remarks }),
+      body: JSON.stringify({ action, remarks, record_version: recordVersion || undefined }),
     },
   )
 

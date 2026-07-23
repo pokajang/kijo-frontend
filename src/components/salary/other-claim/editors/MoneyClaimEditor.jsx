@@ -79,7 +79,9 @@ const MoneyClaimEditor = ({
                 attachment={formData[attachmentField]}
                 inputKey={`${idPrefix}-${attachmentInputVersion}`}
                 isPreparing={isPreparing}
+                required={!attachmentOptional}
                 onChange={onAttachmentChange}
+                onRemove={() => onAttachmentChange(null)}
               />
             </CCol>
           </CRow>

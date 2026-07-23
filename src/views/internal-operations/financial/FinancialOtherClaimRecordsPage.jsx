@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -7,12 +8,6 @@ import {
   CCol,
   CFormLabel,
   CFormSelect,
-  CFormTextarea,
-  CModal,
-  CModalBody,
-  CModalFooter,
-  CModalHeader,
-  CModalTitle,
   CRow,
   CSpinner,
 } from '@coreui/react'
@@ -29,39 +24,27 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { financialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
-import { showToast } from '../../../components/toast/toastService'
 import { formatMoney, roundMoney } from '../../../components/salary/salaryCalculations'
 import { SalaryRecordTable } from '../../../components/salary/SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from '../../../components/salary/salaryFileUtils'
 import {
   exportFinancialOtherClaimPdf,
   fetchFinancialOtherClaimRecords,
-  submitFinancialOtherClaimAction,
 } from './financialOtherClaimApi'
 
 const submittedStatuses = new Set(['Submitted', 'Prepared'])
 const displayStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
-  if (status === 'Paid') return 'Approved'
+  if (status === 'Cancelled') return 'Withdrawn'
   return status
 }
 const getStatusTone = (status) => {
   if (displayStatus(status) === 'Approved') return 'success'
+  if (status === 'Paid') return 'success'
   if (status === 'Checked') return 'primary'
   if (submittedStatuses.has(status)) return 'info'
   if (status === 'Rejected') return 'danger'
   return 'secondary'
-}
-const getWorkflowActionColor = (action = {}) => {
-  if (action.tone === 'danger' || action.action === 'reject') return 'danger'
-  if (action.tone === 'success' || action.action === 'approve') return 'success'
-  return 'info'
-}
-const getPastActionLabel = (action) => {
-  if (action === 'check') return 'checked'
-  if (action === 'approve') return 'approved'
-  if (action === 'reject') return 'rejected'
-  return 'updated'
 }
 const formatSubmittedAt = (value) => {
   if (!value) return '-'
@@ -91,6 +74,14 @@ const dataColumns = [
     sortType: 'string',
     align: 'center',
     getExportValue: (record) => displayStatus(record.status),
+  },
+  {
+    key: 'claimReference',
+    label: 'Claim',
+    width: '145px',
+    sortable: true,
+    sortType: 'string',
+    getExportValue: (record) => `${record.claimReference || '-'} rev ${record.revisionNo || 1}`,
   },
   {
     key: 'workflow',
@@ -137,24 +128,34 @@ const dataColumns = [
 ]
 const defaultVisibleColumns = {
   status: true,
+  claimReference: true,
   workflow: true,
   staff: true,
   claimMonth: true,
   submittedAt: true,
   claimsTotal: true,
 }
-const requiredColumns = new Set(['workflow', 'staff', 'claimMonth', 'claimsTotal', 'status'])
+const requiredColumns = new Set([
+  'workflow',
+  'staff',
+  'claimReference',
+  'claimMonth',
+  'claimsTotal',
+  'status',
+])
 const statusSortPriority = {
   Submitted: 0,
   Prepared: 0,
   Checked: 1,
   Approved: 2,
+  Paid: 3,
   Rejected: 4,
 }
 
 const FinancialOtherClaimRecordsPage = () => {
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('financial.other-claim-records')
+  const navigate = useNavigate()
   const { consumeRouteGroup } = useAppNotifications()
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
@@ -163,21 +164,6 @@ const FinancialOtherClaimRecordsPage = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [exportingRecordId, setExportingRecordId] = useState(null)
-  const [actionModal, setActionModal] = useState({
-    visible: false,
-    recordId: null,
-    workflowInstanceId: null,
-    action: '',
-    label: '',
-  })
-  const [remarks, setRemarks] = useState('')
-  const [isSubmittingAction, setIsSubmittingAction] = useState(false)
-  const [responseModal, setResponseModal] = useState({
-    visible: false,
-    title: '',
-    message: '',
-    color: 'info',
-  })
 
   const loadRecords = useCallback(async () => {
     setLoading(true)
@@ -221,11 +207,16 @@ const FinancialOtherClaimRecordsPage = () => {
     return normalizedRecords.filter(
       (record) =>
         (!query ||
-          [record.staffLabel, record.claimMonth, record.claimMonthValue, record.status].some(
-            (value) =>
-              String(value || '')
-                .toLowerCase()
-                .includes(query),
+          [
+            record.claimReference,
+            record.staffLabel,
+            record.claimMonth,
+            record.claimMonthValue,
+            record.status,
+          ].some((value) =>
+            String(value || '')
+              .toLowerCase()
+              .includes(query),
           )) &&
         (statusFilter === 'all' || record.status === statusFilter),
     )
@@ -261,6 +252,8 @@ const FinancialOtherClaimRecordsPage = () => {
     const approved = filteredRecords.filter(
       (record) => displayStatus(record.status) === 'Approved',
     ).length
+    const paid = filteredRecords.filter((record) => record.status === 'Paid').length
+    const rejected = filteredRecords.filter((record) => record.status === 'Rejected').length
     const claimsTotal = filteredRecords.reduce(
       (sum, record) => sum + Number(record.claimsTotal || 0),
       0,
@@ -288,6 +281,20 @@ const FinancialOtherClaimRecordsPage = () => {
         tone: 'success',
       },
       {
+        key: 'paid',
+        label: 'Paid',
+        value: paid,
+        sublabel: 'payment completed',
+        tone: 'success',
+      },
+      {
+        key: 'rejected',
+        label: 'Rejected',
+        value: rejected,
+        sublabel: 'needs revision',
+        tone: 'danger',
+      },
+      {
         key: 'claims',
         label: 'Claims Total',
         value: formatMoney(roundMoney(claimsTotal)),
@@ -296,67 +303,6 @@ const FinancialOtherClaimRecordsPage = () => {
       },
     ]
   }, [filteredRecords])
-
-  const openActionModal = (record, action) => {
-    setRemarks('')
-    setActionModal({
-      visible: true,
-      recordId: record.id,
-      workflowInstanceId: record.workflow?.instanceId || null,
-      action: action.action,
-      label: action.label || action.action,
-    })
-  }
-
-  const closeActionModal = (force = false) => {
-    if (isSubmittingAction && !force) return
-    setActionModal({
-      visible: false,
-      recordId: null,
-      workflowInstanceId: null,
-      action: '',
-      label: '',
-    })
-    setRemarks('')
-  }
-
-  const submitAction = async () => {
-    if (!actionModal.recordId || !actionModal.action) return
-
-    setIsSubmittingAction(true)
-    try {
-      const updatedRecord = await submitFinancialOtherClaimAction(
-        actionModal.recordId,
-        actionModal.action,
-        remarks,
-        actionModal.workflowInstanceId,
-      )
-      if (updatedRecord) {
-        setRecords((currentRecords) =>
-          currentRecords.map((record) =>
-            record.id === updatedRecord.id ? { ...record, ...updatedRecord } : record,
-          ),
-        )
-      } else {
-        await loadRecords()
-      }
-      const successMessage = `Other claim record successfully ${getPastActionLabel(
-        actionModal.action,
-      )}.`
-      closeActionModal(true)
-      showToast(successMessage)
-    } catch (err) {
-      closeActionModal(true)
-      setResponseModal({
-        visible: true,
-        title: 'Action Failed',
-        message: err?.message || `Failed to ${actionModal.action} other claim record.`,
-        color: 'danger',
-      })
-    } finally {
-      setIsSubmittingAction(false)
-    }
-  }
 
   const exportClaim = async (record) => {
     if (!record?.id || exportingRecordId) return
@@ -375,7 +321,15 @@ const FinancialOtherClaimRecordsPage = () => {
     }
   }
 
+  const openDetail = (record) => {
+    if (!record?.id) return
+    navigate(`/financial/other-claim-records/${encodeURIComponent(record.id)}`, {
+      state: { record },
+    })
+  }
+
   const getActions = (record) => [
+    { key: 'review-details', label: 'Review Details', onClick: openDetail },
     {
       key: 'export-claims',
       label: exportingRecordId === record.id ? 'Preparing PDF...' : 'Export Claims',
@@ -388,10 +342,6 @@ const FinancialOtherClaimRecordsPage = () => {
     const actions = Array.isArray(record.workflow?.availableActions)
       ? record.workflow.availableActions
       : []
-    const openPendingAction = (event, action) => {
-      event.stopPropagation()
-      openActionModal(record, action)
-    }
 
     return (
       <div className="small text-muted" style={{ maxWidth: '250px' }}>
@@ -407,22 +357,24 @@ const FinancialOtherClaimRecordsPage = () => {
             />
           </div>
         )}
-        <div className="d-flex align-items-center flex-wrap gap-1">
-          {actions.map((action) => (
+        {actions.length > 0 && (
+          <div className="d-flex align-items-center flex-wrap gap-1">
             <CButton
-              key={action.action}
               size="sm"
-              color={getWorkflowActionColor(action)}
+              color="primary"
               variant="outline"
               className="py-0 px-2"
               data-no-row-open="true"
               onMouseDown={(event) => event.stopPropagation()}
-              onClick={(event) => openPendingAction(event, action)}
+              onClick={(event) => {
+                event.stopPropagation()
+                openDetail(record)
+              }}
             >
-              {action.label}
+              Review details to continue
             </CButton>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -436,6 +388,12 @@ const FinancialOtherClaimRecordsPage = () => {
       )
     }
     if (column.key === 'workflow') return renderWorkflow(record)
+    if (column.key === 'claimReference')
+      return (
+        <strong>
+          {record.claimReference || '-'} rev {record.revisionNo || 1}
+        </strong>
+      )
     if (column.key === 'staff') return record.staffLabel
     if (column.key === 'claimMonth') return <strong>{record.claimMonth}</strong>
     if (column.key === 'submittedAt') return record.submittedDisplay
@@ -478,7 +436,7 @@ const FinancialOtherClaimRecordsPage = () => {
                 visible={controlsVisible}
                 searchValue={searchText}
                 onSearchChange={setSearchText}
-                searchPlaceholder="Search staff, claim month, or status"
+                searchPlaceholder="Search claim reference, staff, month, or status"
                 searchAriaLabel="Search other claim records"
                 showAdvancedFilters={showAdvancedFilters}
                 setShowAdvancedFilters={setShowAdvancedFilters}
@@ -535,15 +493,17 @@ const FinancialOtherClaimRecordsPage = () => {
                   return record[field]
                 }}
                 getActions={getActions}
+                onRowOpen={openDetail}
                 renderMobileItem={(record, index) => (
                   <div className="data-table-mobile-item records-mobile-item salary-record-mobile-card">
                     <div className="records-mobile-item-head">
                       <div className="records-mobile-item-main text-start">
                         <div className="records-mobile-quote-id text-truncate">
-                          {record.staffLabel}
+                          {record.claimReference || '-'} rev {record.revisionNo || 1}
                         </div>
                         <div className="records-mobile-client mt-1">
-                          {record.claimMonth} | Claims {formatMoney(record.claimsTotal)}
+                          {record.staffLabel} · {record.claimMonth} · Claims{' '}
+                          {formatMoney(record.claimsTotal)}
                         </div>
                       </div>
                       <div className="salary-record-mobile-card-actions">
@@ -575,71 +535,6 @@ const FinancialOtherClaimRecordsPage = () => {
           </CCard>
         </CCol>
       </CRow>
-      <CModal
-        visible={actionModal.visible}
-        onClose={closeActionModal}
-        alignment="center"
-        backdrop="static"
-      >
-        <CModalHeader>
-          <CModalTitle>{actionModal.label} Other Claim</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <p className="mb-3">
-            Confirm to {actionModal.label.toLowerCase()} this other claim record and provide
-            remarks.
-          </p>
-          <CFormTextarea
-            rows={4}
-            value={remarks}
-            onChange={(event) => setRemarks(event.target.value)}
-            placeholder="Enter remarks"
-            disabled={isSubmittingAction}
-          />
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            onClick={closeActionModal}
-            disabled={isSubmittingAction}
-          >
-            Cancel
-          </CButton>
-          <CButton
-            color={getWorkflowActionColor({ action: actionModal.action })}
-            size="sm"
-            onClick={submitAction}
-            disabled={isSubmittingAction}
-          >
-            {isSubmittingAction ? 'Submitting...' : actionModal.label || 'Confirm'}
-          </CButton>
-        </CModalFooter>
-      </CModal>
-      <CModal
-        visible={responseModal.visible}
-        onClose={() => setResponseModal((prev) => ({ ...prev, visible: false }))}
-        alignment="center"
-      >
-        <CModalHeader>
-          <CModalTitle>{responseModal.title}</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <CAlert color={responseModal.color} className="mb-0">
-            {responseModal.message}
-          </CAlert>
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="primary"
-            size="sm"
-            onClick={() => setResponseModal((prev) => ({ ...prev, visible: false }))}
-          >
-            OK
-          </CButton>
-        </CModalFooter>
-      </CModal>
     </>
   )
 }
