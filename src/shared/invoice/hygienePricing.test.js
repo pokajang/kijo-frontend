@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { calculateHygieneTotals } from './hygienePricing'
+import {
+  calculateHygieneTotals,
+  LEGACY_HYGIENE_PRICING_RULE,
+  STANDARD_HYGIENE_PRICING_RULE,
+} from './hygienePricing'
 
 describe('calculateHygieneTotals', () => {
   it('calculates service, travel, subtotal, and grand total without discount or SST', () => {
@@ -93,5 +97,39 @@ describe('calculateHygieneTotals', () => {
     expect(totals.taxableTotal).toBe(0)
     expect(totals.sstAmount).toBe(0)
     expect(totals.grandTotal).toBe(0)
+  })
+
+  it('applies the archived complexity multiplier for legacy quotations', () => {
+    const totals = calculateHygieneTotals({
+      sampleCounts: 10,
+      numWorkUnits: 2,
+      unitPrice: 500,
+      travelCharge: 200,
+      discount: 300,
+      sstPercent: 8,
+      pricingRuleVersion: LEGACY_HYGIENE_PRICING_RULE,
+      complexityRating: 4,
+      customItems: [{ quantity: 1, unit_price: 999 }],
+    })
+
+    expect(totals.pricingRuleVersion).toBe(LEGACY_HYGIENE_PRICING_RULE)
+    expect(totals.complexityMultiplier).toBe(1.3)
+    expect(totals.serviceTotal).toBe(13000)
+    expect(totals.customTotal).toBe(0)
+    expect(totals.taxableTotal).toBe(12900)
+    expect(totals.grandTotal).toBe(13932)
+  })
+
+  it('keeps complexity disabled for standard V2 quotations', () => {
+    const totals = calculateHygieneTotals({
+      sampleCounts: 2,
+      numWorkUnits: 1,
+      unitPrice: 500,
+      pricingRuleVersion: STANDARD_HYGIENE_PRICING_RULE,
+      complexityRating: 5,
+    })
+
+    expect(totals.complexityMultiplier).toBe(1)
+    expect(totals.serviceTotal).toBe(1000)
   })
 })

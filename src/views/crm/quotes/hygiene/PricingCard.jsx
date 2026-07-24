@@ -19,7 +19,10 @@ import {
 } from '@coreui/react'
 
 import DataTableActionMenu from '../../../../components/datatable/DataTableActionMenu'
-import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+import {
+  calculateHygieneTotals,
+  LEGACY_HYGIENE_PRICING_RULE,
+} from '../../../../shared/invoice/hygienePricing'
 import { getTrafficLightStatus } from '../shared/trafficLightConfig'
 import '../shared/TrafficLightCard.css'
 
@@ -60,6 +63,7 @@ const PricingCard = ({ formData, setFormData }) => {
     () => (Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []),
     [formData.hygieneItems],
   )
+  const isLegacyPricing = formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
   const [isAddingFee, setIsAddingFee] = useState(false)
   const [newItem, setNewItem] = useState(createDefaultItem)
   const [editingIndex, setEditingIndex] = useState(null)
@@ -73,6 +77,8 @@ const PricingCard = ({ formData, setFormData }) => {
     customItems: hygieneItems,
     discount,
     sstPercent,
+    pricingRuleVersion: formData.pricingRuleVersion,
+    complexityRating: formData.complexityRating,
   })
   const pricingStatus = getTrafficLightStatus({
     serviceKey: 'ih',
@@ -85,7 +91,7 @@ const PricingCard = ({ formData, setFormData }) => {
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      subTotal: totals.subtotalBeforeDiscount.toFixed(2),
+      subTotal: (isLegacyPricing ? totals.taxableTotal : totals.subtotalBeforeDiscount).toFixed(2),
       sstAmount: totals.sstAmount.toFixed(2),
       grandTotal: totals.grandTotal.toFixed(2),
     }))
@@ -98,8 +104,10 @@ const PricingCard = ({ formData, setFormData }) => {
     discount,
     sstPercent,
     totals.subtotalBeforeDiscount,
+    totals.taxableTotal,
     totals.sstAmount,
     totals.grandTotal,
+    isLegacyPricing,
     setFormData,
   ])
 
@@ -297,112 +305,116 @@ const PricingCard = ({ formData, setFormData }) => {
               </CCol>
             </CRow>
 
-            <div className="mt-4">
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <strong>Additional Fees</strong>
-                {!isAddingFee && (
-                  <CButton color="primary" size="sm" onClick={handleStartAddItem}>
-                    Add Miscellaneous Fee
-                  </CButton>
-                )}
-              </div>
+            {!isLegacyPricing && (
+              <div className="mt-4">
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <strong>Additional Fees</strong>
+                  {!isAddingFee && (
+                    <CButton color="primary" size="sm" onClick={handleStartAddItem}>
+                      Add Miscellaneous Fee
+                    </CButton>
+                  )}
+                </div>
 
-              <div className="records-table-shell quote-line-items-table-shell overflow-hidden">
-                {/* datatable-exempt: compact embedded quotation line-item table */}
-                <CTable hover className="align-middle mb-0 records-table-compact">
-                  <CTableHead>
-                    <CTableRow>
-                      <CTableHeaderCell style={{ width: '48px' }}>#</CTableHeaderCell>
-                      <CTableHeaderCell>Item</CTableHeaderCell>
-                      <CTableHeaderCell>Notes</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
-                      <CTableHeaderCell style={{ width: '120px' }}>Total</CTableHeaderCell>
-                      <CTableHeaderCell
-                        className="text-end"
-                        style={{ width: '48px' }}
-                        aria-label="Row actions"
-                      >
-                        <span className="visually-hidden">Actions</span>
-                      </CTableHeaderCell>
-                    </CTableRow>
-                  </CTableHead>
-                  <CTableBody>
-                    {hygieneItems.map((item, index) => {
-                      if (editingIndex === index) {
+                <div className="records-table-shell quote-line-items-table-shell overflow-hidden">
+                  {/* datatable-exempt: compact embedded quotation line-item table */}
+                  <CTable hover className="align-middle mb-0 records-table-compact">
+                    <CTableHead>
+                      <CTableRow>
+                        <CTableHeaderCell style={{ width: '48px' }}>#</CTableHeaderCell>
+                        <CTableHeaderCell>Item</CTableHeaderCell>
+                        <CTableHeaderCell>Notes</CTableHeaderCell>
+                        <CTableHeaderCell style={{ width: '96px' }}>Qty</CTableHeaderCell>
+                        <CTableHeaderCell style={{ width: '96px' }}>Unit</CTableHeaderCell>
+                        <CTableHeaderCell style={{ width: '140px' }}>Unit Price</CTableHeaderCell>
+                        <CTableHeaderCell style={{ width: '120px' }}>Total</CTableHeaderCell>
+                        <CTableHeaderCell
+                          className="text-end"
+                          style={{ width: '48px' }}
+                          aria-label="Row actions"
+                        >
+                          <span className="visually-hidden">Actions</span>
+                        </CTableHeaderCell>
+                      </CTableRow>
+                    </CTableHead>
+                    <CTableBody>
+                      {hygieneItems.map((item, index) => {
+                        if (editingIndex === index) {
+                          return (
+                            <React.Fragment key={item.id || index}>
+                              {renderItemFormRows({
+                                label: index + 1,
+                                item: editItem,
+                                setItem: setEditItem,
+                                primaryLabel: 'Save',
+                                primaryDisabled: !canSaveEditItem,
+                                onPrimary: handleSaveEditItem,
+                                onCancel: handleCancelEditItem,
+                              })}
+                            </React.Fragment>
+                          )
+                        }
+
                         return (
-                          <React.Fragment key={item.id || index}>
-                            {renderItemFormRows({
-                              label: index + 1,
-                              item: editItem,
-                              setItem: setEditItem,
-                              primaryLabel: 'Save',
-                              primaryDisabled: !canSaveEditItem,
-                              onPrimary: handleSaveEditItem,
-                              onCancel: handleCancelEditItem,
-                            })}
-                          </React.Fragment>
+                          <CTableRow key={item.id || index}>
+                            <CTableDataCell>{index + 1}</CTableDataCell>
+                            <CTableDataCell>{item.item_description || '-'}</CTableDataCell>
+                            <CTableDataCell>{item.description || '-'}</CTableDataCell>
+                            <CTableDataCell>{Number(item.quantity) || 0}</CTableDataCell>
+                            <CTableDataCell>{item.unit || '-'}</CTableDataCell>
+                            <CTableDataCell>
+                              {Number(item.unit_price || 0).toFixed(2)}
+                            </CTableDataCell>
+                            <CTableDataCell>{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
+                            <CTableDataCell
+                              className="record-action-cell text-center"
+                              data-no-row-open="true"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <DataTableActionMenu
+                                record={item}
+                                actionKey={`hygiene-fee-${item.id || index}`}
+                                ariaLabel={`Additional fee actions for ${item.item_description || index + 1}`}
+                                actions={[
+                                  {
+                                    key: 'edit',
+                                    label: 'Edit',
+                                    onClick: handleStartEditItem(index),
+                                  },
+                                  {
+                                    key: 'delete',
+                                    label: 'Delete',
+                                    danger: true,
+                                    onClick: handleRemoveItem(index),
+                                  },
+                                ]}
+                              />
+                            </CTableDataCell>
+                          </CTableRow>
                         )
-                      }
-
-                      return (
-                        <CTableRow key={item.id || index}>
-                          <CTableDataCell>{index + 1}</CTableDataCell>
-                          <CTableDataCell>{item.item_description || '-'}</CTableDataCell>
-                          <CTableDataCell>{item.description || '-'}</CTableDataCell>
-                          <CTableDataCell>{Number(item.quantity) || 0}</CTableDataCell>
-                          <CTableDataCell>{item.unit || '-'}</CTableDataCell>
-                          <CTableDataCell>{Number(item.unit_price || 0).toFixed(2)}</CTableDataCell>
-                          <CTableDataCell>{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
-                          <CTableDataCell
-                            className="record-action-cell text-center"
-                            data-no-row-open="true"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <DataTableActionMenu
-                              record={item}
-                              actionKey={`hygiene-fee-${item.id || index}`}
-                              ariaLabel={`Additional fee actions for ${item.item_description || index + 1}`}
-                              actions={[
-                                {
-                                  key: 'edit',
-                                  label: 'Edit',
-                                  onClick: handleStartEditItem(index),
-                                },
-                                {
-                                  key: 'delete',
-                                  label: 'Delete',
-                                  danger: true,
-                                  onClick: handleRemoveItem(index),
-                                },
-                              ]}
-                            />
+                      })}
+                      {hygieneItems.length === 0 && !isAddingFee && (
+                        <CTableRow>
+                          <CTableDataCell colSpan={8} className="text-muted">
+                            No miscellaneous fees added.
                           </CTableDataCell>
                         </CTableRow>
-                      )
-                    })}
-                    {hygieneItems.length === 0 && !isAddingFee && (
-                      <CTableRow>
-                        <CTableDataCell colSpan={8} className="text-muted">
-                          No miscellaneous fees added.
-                        </CTableDataCell>
-                      </CTableRow>
-                    )}
-                    {isAddingFee &&
-                      renderItemFormRows({
-                        label: 'New',
-                        item: newItem,
-                        setItem: setNewItem,
-                        primaryLabel: 'Add',
-                        primaryDisabled: !canAddItem,
-                        onPrimary: handleAddItem,
-                        onCancel: handleCancelNewItem,
-                      })}
-                  </CTableBody>
-                </CTable>
+                      )}
+                      {isAddingFee &&
+                        renderItemFormRows({
+                          label: 'New',
+                          item: newItem,
+                          setItem: setNewItem,
+                          primaryLabel: 'Add',
+                          primaryDisabled: !canAddItem,
+                          onPrimary: handleAddItem,
+                          onCancel: handleCancelNewItem,
+                        })}
+                    </CTableBody>
+                  </CTable>
+                </div>
               </div>
-            </div>
+            )}
           </CForm>
         </CCardBody>
       </CCard>

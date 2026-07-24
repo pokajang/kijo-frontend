@@ -12,7 +12,10 @@ import {
 import { clearQuoteMainDraft, clearQuoteServiceDraft } from '../quoteMainDrafts'
 import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { getRecordListPath } from '../../records/config/recordTabs'
-import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+import {
+  calculateHygieneTotals,
+  LEGACY_HYGIENE_PRICING_RULE,
+} from '../../../../shared/invoice/hygienePricing'
 import {
   QuoteClientSummary,
   QuoteReviewCard,
@@ -56,6 +59,7 @@ const ReviewHygieneQuotationCard = ({
   const hasWorkUnitsInput = Number(formData.numWorkUnits) > 0
   const workUnits = hasWorkUnitsInput ? toNumber(formData.numWorkUnits, 1) : 1
   const hygieneItems = Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []
+  const isLegacyPricing = formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
   const totals = calculateHygieneTotals({
     sampleCounts,
     numWorkUnits: formData.numWorkUnits,
@@ -64,6 +68,8 @@ const ReviewHygieneQuotationCard = ({
     customItems: hygieneItems,
     discount: formData.discount,
     sstPercent: formData.sstPercent,
+    pricingRuleVersion: formData.pricingRuleVersion,
+    complexityRating: formData.complexityRating,
   })
 
   return (
@@ -114,8 +120,11 @@ const ReviewHygieneQuotationCard = ({
             <CTableDataCell>
               {totals.serviceTotal.toFixed(2)}{' '}
               <small className="text-muted">
-                (Unit Price: {baseUnitPrice.toFixed(2)} x Work Units: {workUnits} x Samples:{' '}
-                {sampleCounts})
+                (Unit Price: {baseUnitPrice.toFixed(2)}
+                {isLegacyPricing
+                  ? ` x Complexity: ${totals.complexityRating} (${totals.complexityMultiplier.toFixed(1)}x)`
+                  : ''}{' '}
+                x Work Units: {workUnits} x Samples: {sampleCounts})
               </small>
             </CTableDataCell>
           </CTableRow>
@@ -125,7 +134,7 @@ const ReviewHygieneQuotationCard = ({
             <CTableDataCell>{toNumber(formData.travelCharge, 0).toFixed(2)}</CTableDataCell>
           </CTableRow>
 
-          {hygieneItems.length > 0 && (
+          {!isLegacyPricing && hygieneItems.length > 0 && (
             <CTableRow>
               <CTableHeaderCell className="text-end">Additional Fees (RM)</CTableHeaderCell>
               <CTableDataCell className="p-0">
@@ -171,10 +180,12 @@ const ReviewHygieneQuotationCard = ({
             </CTableRow>
           )}
 
-          <CTableRow>
-            <CTableHeaderCell className="text-end">Gross Subtotal (RM)</CTableHeaderCell>
-            <CTableDataCell>{totals.subtotalBeforeDiscount.toFixed(2)}</CTableDataCell>
-          </CTableRow>
+          {!isLegacyPricing && (
+            <CTableRow>
+              <CTableHeaderCell className="text-end">Gross Subtotal (RM)</CTableHeaderCell>
+              <CTableDataCell>{totals.subtotalBeforeDiscount.toFixed(2)}</CTableDataCell>
+            </CTableRow>
+          )}
 
           <CTableRow>
             <CTableHeaderCell className="text-end">Discount (RM)</CTableHeaderCell>
@@ -182,7 +193,9 @@ const ReviewHygieneQuotationCard = ({
           </CTableRow>
 
           <CTableRow>
-            <CTableHeaderCell className="text-end">Subtotal after Discount (RM)</CTableHeaderCell>
+            <CTableHeaderCell className="text-end">
+              {isLegacyPricing ? 'Subtotal (RM)' : 'Subtotal after Discount (RM)'}
+            </CTableHeaderCell>
             <CTableDataCell>{totals.taxableTotal.toFixed(2)}</CTableDataCell>
           </CTableRow>
 

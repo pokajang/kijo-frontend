@@ -77,4 +77,29 @@ describe('ReviewHygieneQuotationCard', () => {
     expect(screen.getByText('5500.00')).toBeInTheDocument()
     expect(screen.getAllByText('5200.00').length).toBeGreaterThan(0)
   })
+
+  it('preserves the archived complexity presentation for legacy quotations', () => {
+    render(
+      <MemoryRouter>
+        <ReviewHygieneQuotationCard
+          selectedClient={selectedClient}
+          formData={{
+            ...baseFormData,
+            pricingRuleVersion: 'ih_complexity_v1',
+            complexityRating: 4,
+          }}
+          setFormData={vi.fn()}
+          onSave={vi.fn()}
+          isEditMode
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/Complexity: 4 \(1\.3x\)/)).toBeInTheDocument()
+    expect(screen.queryByText('Additional Fees (RM)')).not.toBeInTheDocument()
+    expect(screen.queryByText('Gross Subtotal (RM)')).not.toBeInTheDocument()
+    expect(screen.getByText('Subtotal (RM)')).toBeInTheDocument()
+    expect(screen.getByText('6500.00')).toBeInTheDocument()
+    expect(screen.getAllByText('6200.00').length).toBeGreaterThan(0)
+  })
 })

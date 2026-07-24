@@ -219,6 +219,9 @@ export const serviceConfig = {
       sampleCounts: toInt(pick(row, 'sample_counts', 'sampleCounts'), 0),
       sampleUnit: pick(row, 'sample_unit', 'sampleUnit') || 'sample(s)',
       numWorkUnits: toInt(pick(row, 'num_work_units', 'numWorkUnits'), 0),
+      pricingRuleVersion:
+        pick(row, 'pricing_rule_version', 'pricingRuleVersion') || 'ih_standard_v2',
+      complexityRating: toInt(pick(row, 'complexity_rating', 'complexityRating'), 1),
       estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
       trafficLightRuleVersion:
         pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',

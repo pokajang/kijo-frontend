@@ -567,4 +567,39 @@ describe('buildInvoiceCreatePayload', () => {
       ]),
     )
   })
+
+  it('carries legacy IH complexity into invoice creation', () => {
+    const result = buildInvoiceCreatePayload('Industrial Hygiene', {
+      ...baseArgs,
+      project: {
+        id: 19,
+        quote_id: 56,
+        project_name: 'Legacy IH Project',
+        project_type: 'Industrial Hygiene',
+      },
+      quoteDetails: {
+        id: 56,
+        service_title: 'Legacy Monitoring',
+        pricing_rule_version: 'ih_complexity_v1',
+        complexity_rating: 4,
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        service_title: 'Legacy Monitoring',
+        sample_counts: 10,
+        sample_unit: 'sample(s)',
+        num_work_units: 2,
+        unit_price: 500,
+        pricing_rule_version: 'ih_complexity_v1',
+        complexity_rating: 4,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.breakdown[0]).toMatchObject({
+      quantity: 20,
+      unit_price: 650,
+    })
+    expect(result.payload.breakdown[0].description).toContain('complexity 4 (1.3x)')
+  })
 })
