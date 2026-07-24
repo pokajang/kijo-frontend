@@ -78,6 +78,8 @@ const SalaryWorkspace = ({ routeSection }) => {
     [activeSection],
   )
   const ActiveComponent = activeConfig.component
+  const medicalEntitlementSetup =
+    activeSection === 'settings' && location.state?.salarySettingsIntent === 'medical-entitlement'
 
   useEffect(() => {
     if (activeSection === 'apply' && location.state?.editRecord) {
@@ -87,6 +89,27 @@ const SalaryWorkspace = ({ routeSection }) => {
       setOtherClaimAdjustmentsVisible(true)
     }
   }, [activeSection, location.state?.editRecord])
+
+  const handleConfigureMedicalEntitlement = ({ claimMonth } = {}) => {
+    const returnState = {
+      ...location.state,
+      resumeClaimType: 'medical',
+      resumeClaimMonth: claimMonth,
+      resumeNotice: 'Medical claim draft restored. Review it before submitting.',
+    }
+
+    navigate('/my/salary/other-claims/apply', {
+      replace: true,
+      state: returnState,
+    })
+    navigate('/my/salary/settings', {
+      state: {
+        salarySettingsIntent: 'medical-entitlement',
+        returnClaimMonth: claimMonth,
+        returnClaimState: returnState,
+      },
+    })
+  }
 
   if (location.pathname.startsWith('/my/salary/records/')) {
     return <SalaryRecordDetailPage />
@@ -103,7 +126,24 @@ const SalaryWorkspace = ({ routeSection }) => {
         ariaLabel="My salary sections"
       />
       {activeSection === 'settings' ? (
-        <ActiveComponent />
+        <ActiveComponent
+          medicalEntitlementSetup={medicalEntitlementSetup}
+          onMedicalEntitlementSaved={
+            medicalEntitlementSetup
+              ? () =>
+                  navigate('/my/salary/other-claims/apply', {
+                    replace: true,
+                    state: {
+                      ...(location.state?.returnClaimState || {}),
+                      resumeClaimType: 'medical',
+                      resumeClaimMonth: location.state?.returnClaimMonth,
+                      resumeNotice:
+                        'Medical entitlement updated. Review your medical claim before submitting.',
+                    },
+                  })
+              : undefined
+          }
+        />
       ) : (
         <CCard className="salary-workspace">
           {['payment-queue', 'records', 'other-claim-records'].includes(activeSection) && (
@@ -161,6 +201,20 @@ const SalaryWorkspace = ({ routeSection }) => {
                 activeSection === 'apply' ? setSalaryAdjustmentsVisible : undefined
               }
               showAddAdjustmentAction={activeSection === 'apply'}
+              resumeClaimType={
+                activeSection === 'other-claim-apply' ? location.state?.resumeClaimType : undefined
+              }
+              resumeNotice={
+                activeSection === 'other-claim-apply' ? location.state?.resumeNotice : undefined
+              }
+              resumeClaimMonth={
+                activeSection === 'other-claim-apply' ? location.state?.resumeClaimMonth : undefined
+              }
+              onConfigureMedicalEntitlement={
+                activeSection === 'other-claim-apply'
+                  ? handleConfigureMedicalEntitlement
+                  : undefined
+              }
               statsVisible
             />
           ) : (

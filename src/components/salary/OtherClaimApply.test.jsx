@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import OtherClaimApply from './OtherClaimApply'
+import { readOtherClaimDraft } from './otherClaimDraftStorage'
+import { getCurrentClaimMonth } from './other-claim/model/otherClaimModel'
 
 const apiMock = vi.hoisted(() => ({
   apiJson: vi.fn(),
@@ -30,9 +32,28 @@ const completeMileage = ({ date = '2026-07-20', purpose = 'Site inspection' } = 
   fireEvent.change(screen.getByLabelText('Business purpose'), { target: { value: purpose } })
 }
 
+const draftAllowanceRecord = {
+  id: 42,
+  claimMonth: 'July 2026',
+  claimMonthValue: '2026-07',
+  claimsTotal: 50,
+  status: 'Draft',
+  claims: [
+    {
+      id: 'allowance-1',
+      type: 'Allowance',
+      date: '2026-07-20',
+      description: 'Meal allowance',
+      amount: 50,
+    },
+  ],
+}
+
 describe('OtherClaimApply', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    apiMock.apiJson.mockReset()
+    projectApiMock.listActiveProjectOptions.mockReset()
     projectApiMock.listActiveProjectOptions.mockResolvedValue([
       { id: 101, projectName: 'Project Alpha', clientName: 'Acme Group' },
     ])
@@ -74,6 +95,106 @@ describe('OtherClaimApply', () => {
     expect(screen.getByRole('button', { name: 'Travel & Mileage' })).toBeInTheDocument()
     expect(screen.getByLabelText('Attachment (optional)')).toBeInTheDocument()
     expect(screen.getByLabelText('Claim month')).toBeInTheDocument()
+  })
+
+  it('preserves the medical draft before opening entitlement setup', async () => {
+    const onConfigureMedicalEntitlement = vi.fn()
+    apiMock.apiJson.mockImplementation(async (url) => {
+      if (String(url).includes('hr/salary/profile')) {
+        return {
+          profile: {
+            basicSalary: '3000',
+            effectiveMonth: getCurrentClaimMonth(),
+            defaultMileageRate: '0.60',
+            yearlyMedicalClaim: '0',
+            recurringAllowances: [],
+          },
+        }
+      }
+      return { record: null }
+    })
+
+    render(<OtherClaimApply onConfigureMedicalEntitlement={onConfigureMedicalEntitlement} />)
+
+    await screen.findByText('Other Claim Summary')
+    fireEvent.click(screen.getByRole('button', { name: 'June 2026' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Medical' }))
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-24' } })
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Clinic consultation' },
+    })
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '85' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set Medical Entitlement' }))
+
+    expect(onConfigureMedicalEntitlement).toHaveBeenCalledWith({ claimMonth: '2026-06' })
+    expect(readOtherClaimDraft({ claimMonth: '2026-06' })).toEqual(
+      expect.objectContaining({
+        formData: expect.objectContaining({
+          medicalDate: '2026-07-24',
+          medicalDescription: 'Clinic consultation',
+          medicalAmount: '85',
+        }),
+      }),
+    )
+  })
+
+  it('stays on the claim when the medical draft cannot be preserved locally', async () => {
+    const onConfigureMedicalEntitlement = vi.fn()
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('Storage quota exceeded')
+    })
+    apiMock.apiJson.mockImplementation(async (url) => {
+      if (String(url).includes('hr/salary/profile')) {
+        return {
+          profile: {
+            basicSalary: '3000',
+            effectiveMonth: getCurrentClaimMonth(),
+            defaultMileageRate: '0.60',
+            yearlyMedicalClaim: '0',
+            recurringAllowances: [],
+          },
+        }
+      }
+      return { record: null }
+    })
+
+    render(<OtherClaimApply onConfigureMedicalEntitlement={onConfigureMedicalEntitlement} />)
+
+    await screen.findByText('Other Claim Summary')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Medical' }))
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Clinic consultation' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Set Medical Entitlement' }))
+
+    expect(onConfigureMedicalEntitlement).not.toHaveBeenCalled()
+    expect(
+      screen.getByText(
+        'Your medical claim could not be preserved in this browser. Keep this page open and try again before opening Salary Settings.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('reopens the medical editor with return guidance after entitlement setup', async () => {
+    render(
+      <OtherClaimApply
+        resumeClaimType="medical"
+        resumeClaimMonth="2026-06"
+        resumeNotice="Medical entitlement updated. Review your medical claim before submitting."
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        'Medical entitlement updated. Review your medical claim before submitting.',
+      ),
+    ).toBeInTheDocument()
+    expect(document.getElementById('otherClaimMonth')).toHaveValue('2026-06')
+    await waitFor(() => expect(screen.getByLabelText('Date')).toHaveFocus())
+    expect(screen.getByLabelText('Description')).toBeInTheDocument()
   })
 
   it('defaults travel claims to mileage charged to the company', async () => {
@@ -234,5 +355,109 @@ describe('OtherClaimApply', () => {
       .filter((index) => index !== -1)
     expect(myProjectIndices).toHaveLength(2)
     expect(myProjectIndices[0]).toBeLessThan(myProjectIndices[1])
+  })
+
+  it('keeps the form editable and explains when explicit draft sync blocks submission', async () => {
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).includes('hr/salary/profile')) {
+        return {
+          profile: {
+            defaultMileageRate: '0.60',
+            yearlyMedicalClaim: '1200',
+            recurringAllowances: [],
+          },
+        }
+      }
+      if (String(url).includes('hr/salary/other-claims/draft') && options.method === 'POST') {
+        throw new Error('Network unavailable')
+      }
+      return { record: null }
+    })
+
+    render(<OtherClaimApply editRecord={draftAllowanceRecord} />)
+    await screen.findByText('Other Claim Summary')
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    expect(
+      await screen.findByText(
+        'Submission stopped because the draft could not sync. Network unavailable',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveFocus()
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.getAllByText(/Meal allowance/).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Apply Another' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled()
+  })
+
+  it('keeps the form editable when final submission validation fails after draft sync', async () => {
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).includes('hr/salary/profile')) {
+        return {
+          profile: {
+            defaultMileageRate: '0.60',
+            yearlyMedicalClaim: '1200',
+            recurringAllowances: [],
+          },
+        }
+      }
+      if (String(url).includes('hr/salary/other-claims/draft') && options.method === 'POST') {
+        return { record: draftAllowanceRecord }
+      }
+      if (String(url).endsWith('hr/salary/other-claims') && options.method === 'POST') {
+        throw new Error('The claim could not be submitted.')
+      }
+      return { record: null }
+    })
+
+    render(<OtherClaimApply editRecord={draftAllowanceRecord} />)
+    await screen.findByText('Other Claim Summary')
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    expect(await screen.findByText('The claim could not be submitted.')).toBeInTheDocument()
+    expect(screen.getAllByText(/Meal allowance/).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Apply Another' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled()
+  })
+
+  it('does not create or clear a monthly draft when resubmitting a rejected claim', async () => {
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).includes('hr/salary/profile')) {
+        return {
+          profile: {
+            defaultMileageRate: '0.60',
+            yearlyMedicalClaim: '1200',
+            recurringAllowances: [],
+          },
+        }
+      }
+      if (String(url).endsWith('hr/salary/other-claims') && options.method === 'POST') {
+        return {
+          record: {
+            ...draftAllowanceRecord,
+            id: 84,
+            status: 'Submitted',
+          },
+          mail_sent: true,
+        }
+      }
+      return { record: null }
+    })
+
+    render(
+      <OtherClaimApply
+        editRecord={{ ...draftAllowanceRecord, status: 'Rejected', recordVersion: 2 }}
+        amendmentReason="Receipt corrected"
+      />,
+    )
+    await screen.findByText('Other Claim Summary')
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    expect(await screen.findByText('Other claim was submitted for review.')).toBeInTheDocument()
+    expect(
+      apiMock.apiJson.mock.calls.filter(([url]) =>
+        String(url).includes('hr/salary/other-claims/draft'),
+      ),
+    ).toHaveLength(0)
   })
 })

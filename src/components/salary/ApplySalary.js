@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CIcon from '@coreui/icons-react'
 import { cilExternalLink, cilPencil, cilTrash } from '@coreui/icons'
 import {
@@ -263,6 +263,7 @@ const ApplySalary = ({
     color: 'info',
     scope: 'general',
   })
+  const submissionErrorRef = useRef(null)
 
   const showNotice = useCallback((type, message, options = {}) => {
     const normalizedType = colorByType[type] ? type : 'info'
@@ -297,6 +298,7 @@ const ApplySalary = ({
     attachmentProcessing,
     summary,
     draftSaveState,
+    draftSaveError,
     isSubmitting,
     isSwitchingSalaryMonth,
     selectedMonthRecord,
@@ -319,14 +321,21 @@ const ApplySalary = ({
     amendmentReason,
   })
 
-  const showSubmissionPanel = isSubmitting || (notice.visible && notice.scope === 'submission')
+  useEffect(() => {
+    if (notice.visible && notice.scope === 'submission-error') {
+      submissionErrorRef.current?.focus()
+    }
+  }, [notice])
+
+  const showSubmissionPanel =
+    isSubmitting || (notice.visible && notice.scope === 'submission-success')
   const draftStatusText =
     {
       dirty: 'Draft pending save',
       saving: 'Saving draft...',
       saved: 'Draft saved',
       restored: 'Draft restored',
-      error: 'Draft save failed',
+      error: 'Saved on this device, but not synced to server',
     }[draftSaveState] || ''
   const salaryMonthOptions = useMemo(() => buildSalaryMonthOptions(), [])
   const selectedSalaryPeriod = formatSalaryPeriod(
@@ -913,11 +922,26 @@ const ApplySalary = ({
       </CCardBody>
 
       <CCardBody className="salary-settings-actions-body">
-        {notice.visible && notice.scope !== 'submission' && (
-          <CAlert color={notice.color} className="py-2" dismissible onClose={hideNotice}>
+        {notice.visible && notice.scope !== 'submission-success' && (
+          <CAlert
+            ref={notice.scope === 'submission-error' ? submissionErrorRef : undefined}
+            color={notice.color}
+            className="py-2"
+            dismissible
+            onClose={hideNotice}
+            role={notice.scope === 'submission-error' ? 'alert' : undefined}
+            tabIndex={notice.scope === 'submission-error' ? -1 : undefined}
+          >
             {notice.message}
           </CAlert>
         )}
+        {draftSaveState === 'error' &&
+          draftSaveError &&
+          !(notice.visible && notice.scope === 'submission-error') && (
+            <CAlert color="warning" className="py-2" role="alert">
+              Your entries remain saved on this device. Server sync failed: {draftSaveError}
+            </CAlert>
+          )}
 
         <div className="salary-submit-actions">
           {draftStatusText && (

@@ -106,7 +106,7 @@ describe('SalarySettings', () => {
 
       fireEvent.change(screen.getByLabelText('Basic Salary'), { target: { value: '4800' } })
       fireEvent.change(screen.getByLabelText('Effective From'), { target: { value: '2026-06' } })
-      fireEvent.change(screen.getByLabelText('Yearly Medical Claim'), {
+      fireEvent.change(screen.getByLabelText('Annual Medical Entitlement (RM)'), {
         target: { value: '1200' },
       })
       expect(screen.getByText('Previous Year Salary Snapshot')).toBeInTheDocument()
@@ -178,6 +178,77 @@ describe('SalarySettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
 
     expect(screen.getByText('Enter a valid fixed monthly salary.')).toBeInTheDocument()
+  })
+
+  it('guides medical entitlement setup and returns only after a successful save', async () => {
+    const onMedicalEntitlementSaved = vi.fn()
+    render(
+      <SalarySettings
+        medicalEntitlementSetup
+        onMedicalEntitlementSaved={onMedicalEntitlementSaved}
+      />,
+    )
+
+    const entitlementInput = await screen.findByLabelText('Annual Medical Entitlement (RM)')
+    await waitFor(() => expect(entitlementInput).toHaveFocus())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save and Return to Medical Claim' }))
+    expect(
+      screen.getByText(
+        'Enter an annual medical entitlement greater than RM0.00 before continuing.',
+      ),
+    ).toBeInTheDocument()
+    expect(onMedicalEntitlementSaved).not.toHaveBeenCalled()
+
+    fireEvent.change(entitlementInput, { target: { value: '1200' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save and Return to Medical Claim' }))
+
+    await waitFor(() =>
+      expect(onMedicalEntitlementSaved).toHaveBeenCalledWith(
+        expect.objectContaining({ yearlyMedicalClaim: '1200' }),
+      ),
+    )
+  })
+
+  it('allows focused medical setup when an unrelated basic salary is zero', async () => {
+    profile = { ...defaultProfile(), basicSalary: '0' }
+    const onMedicalEntitlementSaved = vi.fn()
+    render(
+      <SalarySettings
+        medicalEntitlementSetup
+        onMedicalEntitlementSaved={onMedicalEntitlementSaved}
+      />,
+    )
+
+    const entitlementInput = await screen.findByLabelText('Annual Medical Entitlement (RM)')
+    fireEvent.change(entitlementInput, { target: { value: '900' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save and Return to Medical Claim' }))
+
+    await waitFor(() => expect(onMedicalEntitlementSaved).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Enter a valid fixed monthly salary.')).not.toBeInTheDocument()
+  })
+
+  it('stays in medical entitlement setup when saving fails', async () => {
+    const onMedicalEntitlementSaved = vi.fn()
+    apiMock.apiJson.mockImplementation(async (_url, options = {}) => {
+      if (options.method === 'PUT') throw new Error('Could not update entitlement.')
+      return { profile }
+    })
+
+    render(
+      <SalarySettings
+        medicalEntitlementSetup
+        onMedicalEntitlementSaved={onMedicalEntitlementSaved}
+      />,
+    )
+
+    const entitlementInput = await screen.findByLabelText('Annual Medical Entitlement (RM)')
+    fireEvent.change(entitlementInput, { target: { value: '1200' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save and Return to Medical Claim' }))
+
+    expect(await screen.findByText('Could not update entitlement.')).toBeInTheDocument()
+    expect(onMedicalEntitlementSaved).not.toHaveBeenCalled()
+    expect(entitlementInput).toHaveValue(1200)
   })
 
   it('removes recurring allowance rows with the compact remove action', async () => {

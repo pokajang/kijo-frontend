@@ -6,6 +6,7 @@ import { DataTableActionMenu, DataTableRecordControls, DataTableStatusBadge } fr
 import dialog from '../dialog/dialogService'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { formatMoney, roundMoney } from './salaryCalculations'
+import { clearOtherClaimDraft } from './otherClaimDraftStorage'
 import {
   exportOtherClaimPdf,
   findOtherClaimRecord,
@@ -350,6 +351,9 @@ const OtherClaimRecords = ({
 
     try {
       await removeOtherClaimRecord(record.id, cancellationReason, record.recordVersion)
+      if (record.status === 'Draft') {
+        clearOtherClaimDraft({ claimMonth: record.claimMonthValue })
+      }
       await refreshRecords()
     } catch (err) {
       setError(err?.message || 'Unable to delete other claim record.')

@@ -318,6 +318,7 @@ export const useApplySalaryHandlers = ({
   const [draftSaveState, setDraftSaveState] = useState(
     initialDraftRef.current ? 'restored' : 'idle',
   )
+  const [draftSaveError, setDraftSaveError] = useState('')
 
   const notify = useCallback(
     (type, message, options = {}) => {
@@ -455,6 +456,7 @@ export const useApplySalaryHandlers = ({
       resetAttachmentProcessing()
       resetAttachmentInputs()
       hasPersistedDraftRef.current = false
+      setDraftSaveError('')
       setDraftSaveState('idle')
     },
     [salaryProfile],
@@ -483,6 +485,7 @@ export const useApplySalaryHandlers = ({
       resetAttachmentProcessing()
       resetAttachmentInputs()
       hasPersistedDraftRef.current = true
+      setDraftSaveError('')
       setDraftSaveState('restored')
     },
     [salaryProfile],
@@ -507,6 +510,7 @@ export const useApplySalaryHandlers = ({
       resetAttachmentProcessing()
       resetAttachmentInputs()
       hasPersistedDraftRef.current = record.status === 'Draft'
+      setDraftSaveError('')
       setDraftSaveState(record.status === 'Draft' ? 'restored' : 'idle')
     },
     [salaryProfile?.defaultMileageRate],
@@ -992,9 +996,13 @@ export const useApplySalaryHandlers = ({
           clearSalaryApplicationServerDraft(salaryMonth)
             .then(() => {
               hasPersistedDraftRef.current = false
+              setDraftSaveError('')
               setDraftSaveState('idle')
             })
-            .catch(() => setDraftSaveState('error'))
+            .catch((error) => {
+              setDraftSaveError(error?.message || 'Could not clear the server draft.')
+              setDraftSaveState('error')
+            })
         }, 800)
       } else {
         setDraftSaveState('idle')
@@ -1005,6 +1013,7 @@ export const useApplySalaryHandlers = ({
     }
 
     writeSalaryApplicationDraft({ salaryMonth, draft: applicationDraftPayload })
+    setDraftSaveError('')
     setDraftSaveState('dirty')
     draftSaveTimerRef.current = window.setTimeout(() => {
       setDraftSaveState('saving')
@@ -1016,9 +1025,13 @@ export const useApplySalaryHandlers = ({
       })
         .then(() => {
           hasPersistedDraftRef.current = true
+          setDraftSaveError('')
           setDraftSaveState('saved')
         })
-        .catch(() => setDraftSaveState('error'))
+        .catch((error) => {
+          setDraftSaveError(error?.message || 'Could not sync the draft to the server.')
+          setDraftSaveState('error')
+        })
     }, 1200)
 
     return () => {
@@ -1074,9 +1087,13 @@ export const useApplySalaryHandlers = ({
     clearSalaryApplicationServerDraft(previousSalaryMonth)
       .then(() => {
         hasPersistedDraftRef.current = false
+        setDraftSaveError('')
         setDraftSaveState('idle')
       })
-      .catch(() => setDraftSaveState('error'))
+      .catch((error) => {
+        setDraftSaveError(error?.message || 'Could not clear the server draft.')
+        setDraftSaveState('error')
+      })
     setFormData({
       salaryMonth,
       basicSalary: salaryProfile?.basicSalary || '',
@@ -1174,21 +1191,24 @@ export const useApplySalaryHandlers = ({
           'success',
           savedRecord.mailMessage ||
             'Salary application was submitted for review. Reviewers will receive the daily pending-work digest when applicable.',
-          { scope: 'submission' },
+          { scope: 'submission-success' },
         )
       } else if (savedRecord.mailSent === true) {
-        notify('success', 'Salary application was submitted for review.', { scope: 'submission' })
+        notify('success', 'Salary application was submitted for review.', {
+          scope: 'submission-success',
+        })
       } else {
         notify(
           'warning',
           savedRecord.mailMessage ||
             'Salary application was submitted, but workflow notification delivery could not be confirmed.',
-          { scope: 'submission' },
+          { scope: 'submission-success' },
         )
       }
       clearSalaryApplicationDraft({ salaryMonth: formData.salaryMonth })
       clearSalaryApplicationServerDraft(formData.salaryMonth).catch(() => {})
       hasPersistedDraftRef.current = false
+      setDraftSaveError('')
       setDraftSaveState('idle')
       await onSubmitted?.(savedRecord)
     } catch (err) {
@@ -1197,7 +1217,7 @@ export const useApplySalaryHandlers = ({
           ? 'This salary month is locked after review and cannot be changed.'
           : err?.message || 'Could not submit salary application.'
       notify('error', message, {
-        scope: 'submission',
+        scope: 'submission-error',
       })
     } finally {
       setIsSubmitting(false)
@@ -1216,6 +1236,7 @@ export const useApplySalaryHandlers = ({
     summary,
     medicalBalance,
     draftSaveState,
+    draftSaveError,
     isSubmitting,
     isLoadingProfile,
     isSwitchingSalaryMonth,

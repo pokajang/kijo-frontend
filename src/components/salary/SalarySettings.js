@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAlert,
   CButton,
@@ -56,7 +56,7 @@ const previousYearFromMonth = (month) => {
   return Number.isFinite(year) && year > 0 ? String(year - 1) : ''
 }
 
-const SalarySettings = () => {
+const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementSaved }) => {
   const [profile, setProfile] = useState(getSalaryProfile)
   const [allowanceDraft, setAllowanceDraft] = useState(createAllowanceRow)
   const [editingAllowanceId, setEditingAllowanceId] = useState(null)
@@ -64,6 +64,7 @@ const SalarySettings = () => {
   const [notice, setNotice] = useState(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const medicalEntitlementInputRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -88,6 +89,19 @@ const SalarySettings = () => {
       isMounted = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!medicalEntitlementSetup || isLoadingProfile) return undefined
+
+    const focusTimer = window.setTimeout(() => {
+      medicalEntitlementInputRef.current?.scrollIntoView?.({
+        block: 'center',
+      })
+      medicalEntitlementInputRef.current?.focus()
+    }, 0)
+
+    return () => window.clearTimeout(focusTimer)
+  }, [isLoadingProfile, medicalEntitlementSetup])
 
   const activeAllowanceItems = useMemo(
     () =>
@@ -341,8 +355,17 @@ const SalarySettings = () => {
       return
     }
 
-    if (Number(profile.basicSalary) <= 0) {
+    if (!medicalEntitlementSetup && Number(profile.basicSalary) <= 0) {
       setNotice({ color: 'warning', message: 'Enter a valid fixed monthly salary.' })
+      return
+    }
+
+    if (medicalEntitlementSetup && Number(profile.yearlyMedicalClaim) <= 0) {
+      setNotice({
+        color: 'warning',
+        message: 'Enter an annual medical entitlement greater than RM0.00 before continuing.',
+      })
+      medicalEntitlementInputRef.current?.focus()
       return
     }
 
@@ -363,9 +386,14 @@ const SalarySettings = () => {
       setIsSavingProfile(true)
       const savedProfile = await saveSalaryProfile(profile)
       setProfile(savedProfile)
-      showToast(
-        'Salary settings saved. Apply Salary uses these values for new monthly applications.',
-      )
+      if (medicalEntitlementSetup) {
+        showToast('Medical entitlement saved. Returning to your medical claim.')
+        onMedicalEntitlementSaved?.(savedProfile)
+      } else {
+        showToast(
+          'Salary settings saved. Apply Salary uses these values for new monthly applications.',
+        )
+      }
     } catch (err) {
       setNotice({
         color: 'danger',
@@ -405,6 +433,15 @@ const SalarySettings = () => {
 
   return (
     <CForm onSubmit={handleSubmit} className="salary-settings-form salary-settings-card-stack">
+      {medicalEntitlementSetup && (
+        <CAlert color="info" className="mb-0">
+          <strong>Complete your medical entitlement setup.</strong>
+          <div className="small mt-1">
+            Update Annual Medical Entitlement below, then save to return to your preserved medical
+            claim draft.
+          </div>
+        </CAlert>
+      )}
       <CCard className="salary-workspace">
         <CCardHeader className="salary-section-header">
           <h3 className="salary-form-panel-heading" id="salaryProfileHeading">
@@ -467,17 +504,23 @@ const SalarySettings = () => {
             </CCol>
             <CCol xs={12} md className="salary-settings-profile-col">
               <CFormLabel htmlFor="yearlyMedicalClaim" className="mb-1">
-                Yearly Medical Claim
+                Annual Medical Entitlement (RM)
               </CFormLabel>
               <CFormInput
                 id="yearlyMedicalClaim"
+                ref={medicalEntitlementInputRef}
                 name="yearlyMedicalClaim"
                 type="number"
                 min="0"
                 step="0.01"
+                aria-describedby="yearlyMedicalClaimHelp"
                 value={profile.yearlyMedicalClaim}
                 onChange={handleProfileChange}
               />
+              <div id="yearlyMedicalClaimHelp" className="form-text">
+                Enter your annual medical claim limit. HR can verify the entitlement when reviewing
+                submitted claims.
+              </div>
             </CCol>
           </CRow>
         </CCardBody>
@@ -675,7 +718,11 @@ const SalarySettings = () => {
               type="submit"
               disabled={isLoadingProfile || isSavingProfile}
             >
-              {isSavingProfile ? 'Saving' : 'Save Salary'}
+              {isSavingProfile
+                ? 'Saving'
+                : medicalEntitlementSetup
+                  ? 'Save and Return to Medical Claim'
+                  : 'Save Salary'}
             </CButton>
           </div>
         </CCardBody>

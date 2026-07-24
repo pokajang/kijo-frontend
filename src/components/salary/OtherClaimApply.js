@@ -210,15 +210,26 @@ const OtherClaimApply = ({
   editRecord,
   amendmentReason = '',
   showAdjustments = false,
+  resumeClaimType = '',
+  resumeClaimMonth = '',
+  resumeNotice = '',
+  onConfigureMedicalEntitlement,
 }) => {
-  const initialType = firstClaimType(editRecord)
-  const [isAdjusting, setIsAdjusting] = useState(Boolean(editRecord) || showAdjustments)
+  const normalizedResumeClaimMonth = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(resumeClaimMonth))
+    ? String(resumeClaimMonth)
+    : ''
+  const initialType = resumeClaimType || firstClaimType(editRecord)
+  const [isAdjusting, setIsAdjusting] = useState(
+    Boolean(editRecord) || showAdjustments || Boolean(resumeClaimType),
+  )
   const [activeAdjustmentType, setActiveAdjustmentType] = useState(initialType)
-  const [showClaimDraft, setShowClaimDraft] = useState(Boolean(editRecord))
+  const [showClaimDraft, setShowClaimDraft] = useState(
+    Boolean(editRecord) || Boolean(resumeClaimType),
+  )
   const [notice, setNotice] = useState({
-    visible: false,
-    message: '',
-    color: 'info',
+    visible: Boolean(resumeNotice),
+    message: resumeNotice,
+    color: resumeNotice ? 'success' : 'info',
     scope: 'general',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -226,6 +237,7 @@ const OtherClaimApply = ({
   const [salaryProfile, setSalaryProfile] = useState(null)
   const initialDraftSaveStateRef = useRef('idle')
   const [draftSaveState, setDraftSaveState] = useState(() => initialDraftSaveStateRef.current)
+  const [draftSaveError, setDraftSaveError] = useState('')
   const [attachmentInputVersion, setAttachmentInputVersion] = useState(0)
   const [attachmentProcessing, setAttachmentProcessing] = useState(createAttachmentProcessingState)
   const attachmentProcessingRef = useRef(attachmentProcessing)
@@ -241,9 +253,11 @@ const OtherClaimApply = ({
   const hasPersistedDraftRef = useRef(false)
   const hasSubmittedRef = useRef(false)
   const initialStateRef = useRef(null)
+  const submissionErrorRef = useRef(null)
 
   if (!initialStateRef.current) {
-    const claimMonth = editRecord?.claimMonthValue || getCurrentClaimMonth()
+    const claimMonth =
+      editRecord?.claimMonthValue || normalizedResumeClaimMonth || getCurrentClaimMonth()
     const localDraft = editRecord ? null : readOtherClaimDraft({ claimMonth })
     if (localDraft) {
       hasPersistedDraftRef.current = true
@@ -302,6 +316,16 @@ const OtherClaimApply = ({
     }
   }, [])
 
+  useEffect(() => {
+    if (isLoading || resumeClaimType !== 'medical') return undefined
+
+    const focusTimer = window.setTimeout(() => {
+      document.getElementById('otherMedicalDate')?.focus()
+    }, 0)
+
+    return () => window.clearTimeout(focusTimer)
+  }, [isLoading, resumeClaimType])
+
   const showNotice = useCallback((type, message, options = {}) => {
     const normalizedType = colorByType[type] ? type : 'info'
     setNotice({
@@ -344,12 +368,21 @@ const OtherClaimApply = ({
 
         if (serverDraft) hasPersistedDraftRef.current = true
         if (restoredState) {
+          const canonicalClaims = Array.isArray(serverDraft?.claims) ? serverDraft.claims : []
           setDraftSaveState('restored')
           setFormData(restoredState.formData)
-          setAllowanceItems(restoredState.allowanceItems)
-          setExpenseItems(restoredState.expenseItems)
-          setMileageItems(restoredState.mileageItems)
-          setMedicalItems(restoredState.medicalItems)
+          setAllowanceItems(
+            mergeCanonicalClaimItems(restoredState.allowanceItems, 'Allowance', canonicalClaims),
+          )
+          setExpenseItems(
+            mergeCanonicalClaimItems(restoredState.expenseItems, 'Expense', canonicalClaims),
+          )
+          setMileageItems(
+            mergeCanonicalClaimItems(restoredState.mileageItems, 'Mileage', canonicalClaims),
+          )
+          setMedicalItems(
+            mergeCanonicalClaimItems(restoredState.medicalItems, 'Medical', canonicalClaims),
+          )
         }
         setFormData((prev) => ({
           ...prev,
@@ -368,6 +401,12 @@ const OtherClaimApply = ({
       if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
     }
   }, [showNotice])
+
+  useEffect(() => {
+    if (notice.visible && notice.scope === 'submission-error') {
+      submissionErrorRef.current?.focus()
+    }
+  }, [notice])
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target
@@ -570,6 +609,13 @@ const OtherClaimApply = ({
 
   const addMedical = () => {
     if (attachmentProcessingRef.current.medical) return false
+    if (salaryProfile && Number(salaryProfile.yearlyMedicalClaim || 0) <= 0) {
+      showNotice(
+        'warning',
+        'No annual medical entitlement is configured. Use Set Medical Entitlement before saving this medical claim.',
+      )
+      return false
+    }
     const amount = toPositiveNumber(formData.medicalAmount)
     if (!formData.medicalDate || !formData.medicalDescription.trim() || !amount) {
       showNotice('warning', 'Enter medical date, description, and a valid amount.')
@@ -928,6 +974,25 @@ const OtherClaimApply = ({
   )
   const hasDraftContent = useMemo(() => draftHasContent(draftPayload), [draftPayload])
 
+  const handleConfigureMedicalEntitlement = () => {
+    if (attachmentProcessingRef.current.medical) return
+
+    const claimMonth = draftPayload.formData.claimMonth || getCurrentClaimMonth()
+    const wasSavedLocally = writeOtherClaimDraft({ claimMonth, draft: draftPayload })
+    if (!wasSavedLocally) {
+      const message =
+        'Your medical claim could not be preserved in this browser. Keep this page open and try again before opening Salary Settings.'
+      setDraftSaveError(message)
+      setDraftSaveState('error')
+      showNotice('error', message, { scope: 'submission-error' })
+      return
+    }
+
+    setDraftSaveError('')
+    setDraftSaveState('dirty')
+    onConfigureMedicalEntitlement?.({ claimMonth })
+  }
+
   useEffect(() => {
     if (
       hasSubmittedRef.current ||
@@ -950,10 +1015,14 @@ const OtherClaimApply = ({
               if (saveRevision !== draftSaveRevisionRef.current) return
               hasPersistedDraftRef.current = false
               draftRecordRef.current = null
+              setDraftSaveError('')
               setDraftSaveState('idle')
             })
-            .catch(() => {
-              if (saveRevision === draftSaveRevisionRef.current) setDraftSaveState('error')
+            .catch((error) => {
+              if (saveRevision === draftSaveRevisionRef.current) {
+                setDraftSaveError(error?.message || 'Could not clear the server draft.')
+                setDraftSaveState('error')
+              }
             })
         }, 800)
       } else {
@@ -965,6 +1034,7 @@ const OtherClaimApply = ({
     }
 
     writeOtherClaimDraft({ claimMonth, draft: draftPayload })
+    setDraftSaveError('')
     setDraftSaveState('dirty')
     draftSaveTimerRef.current = window.setTimeout(() => {
       setDraftSaveState('saving')
@@ -993,10 +1063,14 @@ const OtherClaimApply = ({
               mergeCanonicalClaimItems(items, 'Medical', savedDraft.claims),
             )
           }
+          setDraftSaveError('')
           setDraftSaveState('saved')
         })
-        .catch(() => {
-          if (saveRevision === draftSaveRevisionRef.current) setDraftSaveState('error')
+        .catch((error) => {
+          if (saveRevision === draftSaveRevisionRef.current) {
+            setDraftSaveError(error?.message || 'Could not sync the draft to the server.')
+            setDraftSaveState('error')
+          }
         })
     }, 1200)
 
@@ -1035,6 +1109,7 @@ const OtherClaimApply = ({
     setActiveAdjustmentType('allowance')
     setShowClaimDraft(false)
     hasPersistedDraftRef.current = false
+    setDraftSaveError('')
     setDraftSaveState('idle')
   }
 
@@ -1046,13 +1121,53 @@ const OtherClaimApply = ({
       showNotice('warning', 'Add at least one claim before submitting.')
       return
     }
+    if (medicalItems.length > 0 && Number(salaryProfile?.yearlyMedicalClaim || 0) <= 0) {
+      showNotice(
+        'error',
+        'A medical claim is included, but no annual medical entitlement is configured. Set the entitlement in Salary Settings, then review and submit this claim.',
+        { scope: 'submission-error' },
+      )
+      return
+    }
     try {
       setIsSubmitting(true)
       draftSaveRevisionRef.current += 1
-      const draftRecordId =
-        draftRecordRef.current?.claimMonth === claimMonth ? draftRecordRef.current.id : null
+      if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
+
+      let submissionRecordId = activeRecordId
+      let submissionRecordVersion = initialRecordRef.current?.recordVersion || null
+      const shouldSyncDraft =
+        !initialRecordRef.current || initialRecordRef.current.status === 'Draft'
+      if (shouldSyncDraft) {
+        try {
+          setDraftSaveError('')
+          setDraftSaveState('saving')
+          const syncedDraft = await saveOtherClaimDraft({
+            claimMonthValue: claimMonth,
+            claims: allClaims.filter((claim) => isCompleteClaim(claim, allClaims)),
+            draftPayload,
+          })
+          if (!syncedDraft?.id) {
+            throw new Error('The draft could not be confirmed by the server.')
+          }
+          submissionRecordId = syncedDraft.id
+          submissionRecordVersion = syncedDraft.recordVersion || submissionRecordVersion
+          hasPersistedDraftRef.current = true
+          draftRecordRef.current = { id: syncedDraft.id, claimMonth }
+          setDraftSaveState('saved')
+        } catch (error) {
+          const message = error?.message || 'Could not sync the draft to the server.'
+          setDraftSaveError(message)
+          setDraftSaveState('error')
+          showNotice('error', `Submission stopped because the draft could not sync. ${message}`, {
+            scope: 'submission-error',
+          })
+          return
+        }
+      }
+
       const savedRecord = await saveOtherClaimRecord({
-        id: activeRecordId || draftRecordId || `other-claim-${claimMonth}`,
+        id: submissionRecordId || `other-claim-${claimMonth}`,
         claimMonth: formatClaimMonth(claimMonth),
         claimMonthValue: claimMonth,
         claimsTotal,
@@ -1060,36 +1175,41 @@ const OtherClaimApply = ({
         claims: allClaims,
         submittedAt: new Date().toISOString(),
         amendmentReason: amendmentReasonRef.current,
-        recordVersion: initialRecordRef.current?.recordVersion || null,
+        recordVersion: submissionRecordVersion,
       })
       setActiveRecordId(savedRecord.id || null)
       draftRecordRef.current = null
       hasSubmittedRef.current = true
       if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
-      clearOtherClaimDraft({ claimMonth })
-      clearOtherClaimServerDraft(claimMonth).catch(() => {})
-      hasPersistedDraftRef.current = false
-      setDraftSaveState('idle')
+      if (shouldSyncDraft) {
+        clearOtherClaimDraft({ claimMonth })
+        clearOtherClaimServerDraft(claimMonth).catch(() => {})
+        hasPersistedDraftRef.current = false
+        setDraftSaveError('')
+        setDraftSaveState('idle')
+      }
       if (savedRecord.mailStatus === 'digest') {
         showNotice(
           'success',
           savedRecord.mailMessage ||
             'Other claim was submitted for review. Reviewers will receive the daily pending-work digest when applicable.',
-          { scope: 'submission' },
+          { scope: 'submission-success' },
         )
       } else if (savedRecord.mailSent === true) {
-        showNotice('success', 'Other claim was submitted for review.', { scope: 'submission' })
+        showNotice('success', 'Other claim was submitted for review.', {
+          scope: 'submission-success',
+        })
       } else {
         showNotice(
           'warning',
           savedRecord.mailMessage ||
             'Other claim was submitted, but workflow notification delivery could not be confirmed.',
-          { scope: 'submission' },
+          { scope: 'submission-success' },
         )
       }
     } catch (err) {
       const message = err?.message || 'Could not submit other claim.'
-      showNotice('error', message, { scope: 'submission' })
+      showNotice('error', message, { scope: 'submission-error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -1218,6 +1338,34 @@ const OtherClaimApply = ({
           addAction={renderPanelAddAction()}
           attachmentInputVersion={attachmentInputVersion}
           isPreparing={attachmentProcessing.medical}
+          guidance={
+            salaryProfile && Number(salaryProfile.yearlyMedicalClaim || 0) <= 0 ? (
+              <CAlert color="warning" className="mb-3">
+                <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                  <div>
+                    <strong>Set your annual medical entitlement before submitting.</strong>
+                    <div className="small mt-1">
+                      Your medical claim draft will be kept while you update Salary Settings. HR can
+                      verify the entitlement during claim review.
+                    </div>
+                  </div>
+                  {onConfigureMedicalEntitlement && (
+                    <CButton
+                      color="warning"
+                      type="button"
+                      className="flex-shrink-0"
+                      disabled={attachmentProcessing.medical}
+                      onClick={handleConfigureMedicalEntitlement}
+                    >
+                      {attachmentProcessing.medical
+                        ? 'Preparing receipt...'
+                        : 'Set Medical Entitlement'}
+                    </CButton>
+                  )}
+                </div>
+              </CAlert>
+            ) : null
+          }
           onChange={handleChange}
           onAttachmentChange={(file) => handleAttachmentChange('medical', file)}
           onSave={() => handleSaveClaimDraft(addMedical)}
@@ -1243,7 +1391,7 @@ const OtherClaimApply = ({
     </section>
   )
 
-  if (isSubmitting || (notice.visible && notice.scope === 'submission')) {
+  if (isSubmitting || (notice.visible && notice.scope === 'submission-success')) {
     return (
       <CCardBody className="salary-section-body">
         <CAlert color={isSubmitting ? 'info' : notice.color} className="mb-3 py-3">
@@ -1284,7 +1432,7 @@ const OtherClaimApply = ({
       saving: 'Saving draft...',
       saved: 'Draft saved',
       restored: 'Draft restored',
-      error: 'Draft save failed',
+      error: 'Saved on this device, but not synced to server',
     }[draftSaveState] || ''
 
   return (
@@ -1354,18 +1502,42 @@ const OtherClaimApply = ({
         />
       </CCardBody>
       <CCardBody className="salary-settings-actions-body">
-        {notice.visible && notice.scope !== 'submission' && (
-          <CAlert color={notice.color} className="py-2" dismissible onClose={hideNotice}>
+        {notice.visible && notice.scope !== 'submission-success' && (
+          <CAlert
+            ref={notice.scope === 'submission-error' ? submissionErrorRef : undefined}
+            color={notice.color}
+            className="py-2"
+            dismissible
+            onClose={hideNotice}
+            role={notice.scope === 'submission-error' ? 'alert' : undefined}
+            tabIndex={notice.scope === 'submission-error' ? -1 : undefined}
+          >
             {notice.message}
           </CAlert>
         )}
+        {draftSaveState === 'error' &&
+          draftSaveError &&
+          !(notice.visible && notice.scope === 'submission-error') && (
+            <CAlert color="warning" className="py-2" role="alert">
+              Your entries remain saved on this device. Server sync failed: {draftSaveError}
+            </CAlert>
+          )}
         <div className="salary-submit-actions">
           {draftStatusText && (
             <span className="salary-draft-save-state" role="status">
               {draftStatusText}
             </span>
           )}
-          <CButton type="submit" color="primary" size="sm" disabled={isSubmitting}>
+          <CButton
+            type="submit"
+            color="primary"
+            size="sm"
+            disabled={
+              isSubmitting ||
+              draftSaveState === 'saving' ||
+              Object.values(attachmentProcessing).some(Boolean)
+            }
+          >
             Submit
           </CButton>
         </div>

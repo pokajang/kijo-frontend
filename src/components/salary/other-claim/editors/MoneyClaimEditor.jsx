@@ -17,6 +17,7 @@ const MoneyClaimEditor = ({
   addAction,
   attachmentInputVersion,
   isPreparing,
+  guidance,
   onChange,
   onAttachmentChange,
   onSave,
@@ -31,6 +32,7 @@ const MoneyClaimEditor = ({
   return (
     <section className="salary-adjustment-input-panel mt-3" aria-labelledby={headingId}>
       <FormPanelHeading id={headingId} title={title} action={addAction} />
+      {guidance}
       {showDraft && (
         <>
           <CRow className="g-3 salary-claim-field-row">

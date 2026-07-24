@@ -83,6 +83,8 @@ describe('ApplySalary', () => {
 
   beforeEach(() => {
     window.localStorage.clear()
+    apiMock.apiFetch.mockReset()
+    apiMock.apiJson.mockReset()
     profile = defaultProfile()
     records = []
     apiMock.apiJson.mockImplementation(async (url, options = {}) => {
@@ -243,5 +245,52 @@ describe('ApplySalary', () => {
     await waitFor(() => {
       expect(onViewRecords).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('keeps the salary form editable and focuses the error when submission fails', async () => {
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).includes('hr/salary/profile')) return { profile }
+      if (String(url).includes('hr/salary/applications/draft')) return { record: null }
+      if (String(url).endsWith('hr/salary/applications') && options.method === 'POST') {
+        throw new Error('Salary submission failed.')
+      }
+      if (String(url).includes('hr/salary/records')) return { records: [] }
+      return {}
+    })
+
+    await renderApplySalary()
+    fireEvent.submit(screen.getByRole('button', { name: 'Submit' }).closest('form'))
+
+    expect(await screen.findByText('Salary submission failed.')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveFocus()
+    expect(screen.getByText('Salary Summary')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Apply Another' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled()
+  })
+
+  it('keeps the local draft and exposes the server sync error without blocking submit', async () => {
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).includes('hr/salary/profile')) return { profile }
+      if (String(url).includes('hr/salary/applications/draft')) {
+        if (options.method === 'POST') throw new Error('Network unavailable')
+        return { record: null }
+      }
+      if (String(url).includes('hr/salary/records')) return { records: [] }
+      return {}
+    })
+
+    await renderApplySalary()
+    await addSalaryAdjustment({ description: 'Draft payroll adjustment' })
+
+    expect(
+      await screen.findByText(
+        'Your entries remain saved on this device. Server sync failed: Network unavailable',
+        {},
+        { timeout: 3000 },
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Saved on this device, but not synced to server')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled()
+    expect(window.localStorage.length).toBeGreaterThan(0)
   })
 })

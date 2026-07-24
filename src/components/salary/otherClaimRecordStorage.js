@@ -272,6 +272,25 @@ const appendClaimAttachments = (formData, claims) => {
   })
 }
 
+const serverDraftPayload = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(serverDraftPayload).filter((nestedValue) => nestedValue !== null)
+  }
+  if (!value || typeof value !== 'object') return value
+
+  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(value, key)
+  const isAttachment =
+    (hasOwn('dataUrl') || hasOwn('file')) && (hasOwn('clientId') || hasOwn('name'))
+  const isPersistedAttachment = Boolean(value.id || value.url || value.downloadUrl)
+  if (isAttachment && !isPersistedAttachment) return null
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key !== 'file' && key !== 'dataUrl')
+      .map(([key, nestedValue]) => [key, serverDraftPayload(nestedValue)]),
+  )
+}
+
 export const getOtherClaimRecords = async () => {
   const payload = await apiJson(`${API_BASE}hr/salary/other-claims`)
   return Array.isArray(payload.records) ? payload.records.map(normalizeOtherClaimRecord) : []
@@ -345,13 +364,15 @@ export const saveOtherClaimDraft = async (draft) => {
 
   if (!/^\d{4}-\d{2}$/.test(claimMonth)) return null
 
+  // PHP parses multipart uploads reliably as POST. Laravel then routes this as PUT.
+  formData.append('_method', 'PUT')
   formData.append('claim_month', claimMonth)
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
-  formData.append('draft_payload', JSON.stringify(draft.draftPayload || {}))
+  formData.append('draft_payload', JSON.stringify(serverDraftPayload(draft.draftPayload || {})))
   appendClaimAttachments(formData, claims)
 
   const payload = await apiJson(`${API_BASE}hr/salary/other-claims/draft`, {
-    method: 'PUT',
+    method: 'POST',
     body: formData,
     silentError: true,
   })

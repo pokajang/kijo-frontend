@@ -230,6 +230,25 @@ export const fetchSalaryApplicationDraft = async (salaryMonth) => {
   return payload.record ? normalizeRecord(payload.record) : null
 }
 
+const serverDraftPayload = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(serverDraftPayload).filter((nestedValue) => nestedValue !== null)
+  }
+  if (!value || typeof value !== 'object') return value
+
+  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(value, key)
+  const isAttachment =
+    (hasOwn('dataUrl') || hasOwn('file')) && (hasOwn('clientId') || hasOwn('name'))
+  const isPersistedAttachment = Boolean(value.id || value.url || value.downloadUrl)
+  if (isAttachment && !isPersistedAttachment) return null
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => key !== 'file' && key !== 'dataUrl')
+      .map(([key, nestedValue]) => [key, serverDraftPayload(nestedValue)]),
+  )
+}
+
 export const saveSalaryApplicationDraft = async (draft) => {
   const formData = new FormData()
   const claims = Array.isArray(draft.claims)
@@ -239,12 +258,14 @@ export const saveSalaryApplicationDraft = async (draft) => {
 
   if (!/^\d{4}-\d{2}$/.test(salaryMonth)) return null
 
+  // PHP parses multipart request bodies as POST; Laravel applies the PUT override.
+  formData.append('_method', 'PUT')
   formData.append('salary_month', salaryMonth)
   formData.append('basic_salary', String(draft.basicSalary || 0))
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
-  formData.append('draft_payload', JSON.stringify(draft.draftPayload || {}))
+  formData.append('draft_payload', JSON.stringify(serverDraftPayload(draft.draftPayload || {})))
   const payload = await apiJson(`${API_BASE}hr/salary/applications/draft`, {
-    method: 'PUT',
+    method: 'POST',
     body: formData,
     silentError: true,
   })
