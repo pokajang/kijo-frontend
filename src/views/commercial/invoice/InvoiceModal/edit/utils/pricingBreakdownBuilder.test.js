@@ -171,4 +171,23 @@ describe('buildBreakdownFromPricing Industrial Hygiene', () => {
       unit: 'Lump Sum',
     })
   })
+
+  it('carries legacy complexity into the invoice service unit price', () => {
+    const breakdown = buildBreakdownFromPricing('Industrial Hygiene', {
+      service_title: 'Legacy Monitoring',
+      sample_counts: 10,
+      sample_unit: 'sample(s)',
+      num_work_units: 2,
+      unit_price: 500,
+      pricing_rule_version: 'ih_complexity_v1',
+      complexity_rating: 4,
+      hygiene_items: [],
+    })
+
+    expect(breakdown[0]).toMatchObject({
+      quantity: 20,
+      unit_price: 650,
+    })
+    expect(breakdown[0].description).toContain('complexity 4 (1.3x)')
+  })
 })

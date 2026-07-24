@@ -1,5 +1,17 @@
 import React from 'react'
-import { CRow, CCol, CFormLabel, CFormInput, CFormSelect, CInputGroup } from '@coreui/react'
+import {
+  CRow,
+  CCol,
+  CFormLabel,
+  CFormInput,
+  CFormSelect,
+  CInputGroup,
+  CFormText,
+} from '@coreui/react'
+import {
+  getHygieneComplexityMultiplier,
+  LEGACY_HYGIENE_PRICING_RULE,
+} from '../../../../shared/invoice/hygienePricing'
 
 const SAMPLE_UNITS = [
   'chemical(s)',
@@ -16,6 +28,9 @@ const SAMPLE_UNITS = [
 ]
 
 const ProjectDetailsCard = ({ formData, setFormData }) => {
+  const isLegacyPricing = formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
+  const complexityMultiplier = getHygieneComplexityMultiplier(formData.complexityRating)
+
   return (
     <CRow className="g-3 mb-3">
       <CCol md={4}>
@@ -52,6 +67,24 @@ const ProjectDetailsCard = ({ formData, setFormData }) => {
           onChange={(e) => setFormData((prev) => ({ ...prev, numWorkUnits: e.target.value }))}
         />
       </CCol>
+
+      {isLegacyPricing && (
+        <CCol md={4}>
+          <CFormLabel>Legacy Complexity Rating</CFormLabel>
+          <CFormInput
+            name="complexityRating"
+            type="number"
+            min="1"
+            max="5"
+            value={formData.complexityRating}
+            disabled
+            readOnly
+          />
+          <CFormText>
+            Preserved from the original quotation ({complexityMultiplier.toFixed(1)}× pricing).
+          </CFormText>
+        </CCol>
+      )}
     </CRow>
   )
 }

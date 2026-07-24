@@ -13,7 +13,11 @@ import { buildPicPayload } from '../quoteContactUtils'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
-import { calculateHygieneTotals } from '../../../../shared/invoice/hygienePricing'
+import {
+  calculateHygieneTotals,
+  LEGACY_HYGIENE_PRICING_RULE,
+  STANDARD_HYGIENE_PRICING_RULE,
+} from '../../../../shared/invoice/hygienePricing'
 import TrafficLightCard from '../shared/TrafficLightCard'
 import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
@@ -76,6 +80,8 @@ export default function HygieneQuotationForm({
       sampleCounts: 0,
       sampleUnit: 'sample(s)',
       numWorkUnits: '',
+      pricingRuleVersion: STANDARD_HYGIENE_PRICING_RULE,
+      complexityRating: 1,
       inquiryRemarks: '',
       unitPrice: 500,
       discount: 300,
@@ -129,6 +135,8 @@ export default function HygieneQuotationForm({
           Number(initialFormData.numWorkUnits) > 0
             ? initialFormData.numWorkUnits
             : defaultForm.numWorkUnits,
+        pricingRuleVersion: initialFormData.pricingRuleVersion || defaultForm.pricingRuleVersion,
+        complexityRating: initialFormData.complexityRating ?? defaultForm.complexityRating,
         discount: initialFormData.discount ?? defaultForm.discount,
         hygieneItems: Array.isArray(initialFormData.hygieneItems)
           ? initialFormData.hygieneItems
@@ -180,6 +188,8 @@ export default function HygieneQuotationForm({
       serviceCode: '',
       sampleCounts: 0,
       numWorkUnits: '',
+      pricingRuleVersion: defaultForm.pricingRuleVersion,
+      complexityRating: defaultForm.complexityRating,
       travelCharge: 0,
       unitPrice: defaultForm.unitPrice,
       discount: defaultForm.discount,
@@ -204,6 +214,8 @@ export default function HygieneQuotationForm({
         customItems: Array.isArray(formData.hygieneItems) ? formData.hygieneItems : [],
         discount: toNumber(formData.discount, 0),
         sstPercent: toNumber(formData.sstPercent, 0),
+        pricingRuleVersion: formData.pricingRuleVersion,
+        complexityRating: formData.complexityRating,
       }),
     [
       formData.sampleCounts,
@@ -213,6 +225,8 @@ export default function HygieneQuotationForm({
       formData.hygieneItems,
       formData.discount,
       formData.sstPercent,
+      formData.pricingRuleVersion,
+      formData.complexityRating,
       toInteger,
       toNumber,
     ],
@@ -241,7 +255,9 @@ export default function HygieneQuotationForm({
         ? null
         : Number(formData.estimatedTotalCost)
     const estimatedCostPayload = Number.isFinite(estimatedCost) ? estimatedCost : null
-    if (!Number.isFinite(estimatedCostPayload) || estimatedCostPayload <= 0) {
+    const isLegacyPricing =
+      isEditMode && formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
+    if (!isLegacyPricing && (!Number.isFinite(estimatedCostPayload) || estimatedCostPayload <= 0)) {
       dialog.alert('Please enter a traffic-light estimated cost greater than zero before saving.')
       return
     }
@@ -297,6 +313,7 @@ export default function HygieneQuotationForm({
       grand_total: quoteTotals.grandTotal,
       estimated_total_cost: estimatedCostPayload,
       traffic_light_rule_version: formData.trafficLightRuleVersion || TRAFFIC_LIGHT_RULE_VERSION,
+      complexity_rating: toInteger(formData.complexityRating, 1),
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -305,6 +322,8 @@ export default function HygieneQuotationForm({
   }
 
   const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+  const isLegacyPricing = isEditMode && formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
+  const canShowPricing = hasEstimatedCost || isLegacyPricing
   const trafficLightStatus = getTrafficLightStatus({
     serviceKey: 'ih',
     estimatedTotalCost: formData.estimatedTotalCost,
@@ -340,11 +359,11 @@ export default function HygieneQuotationForm({
             }
           />
 
-          {hasEstimatedCost && (
+          {canShowPricing && (
             <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
           )}
 
-          {selectedClient && formData.serviceId && formData.serviceCode && hasEstimatedCost && (
+          {selectedClient && formData.serviceId && formData.serviceCode && canShowPricing && (
             <ReviewHygieneQuotationCard
               selectedClient={selectedClient}
               formData={formData}

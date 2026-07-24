@@ -1,6 +1,10 @@
 import { buildHygieneBaseLabel } from './labelUtils'
 import { toNumber } from './numberUtils'
 import { getEquipmentInvoiceUnitPrice } from '../../../../../../shared/invoice/equipmentInvoiceUtils'
+import {
+  getHygieneComplexityMultiplier,
+  LEGACY_HYGIENE_PRICING_RULE,
+} from '../../../../../../shared/invoice/hygienePricing'
 
 export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) => {
   const toNegative = (value) => -Math.abs(toNumber(value))
@@ -166,11 +170,19 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
       const workUnits = hasWorkUnits ? rawWorkUnits : 1
       const baseQty = sampleCounts * workUnits
       const sampleUnit = pricing.sample_unit || 'sample(s)'
+      const isLegacyPricing = pricing.pricing_rule_version === LEGACY_HYGIENE_PRICING_RULE
+      const complexityRating = toNumber(pricing.complexity_rating ?? 1)
+      const complexityMultiplier = isLegacyPricing
+        ? getHygieneComplexityMultiplier(complexityRating)
+        : 1
       const useComboUnit = hasWorkUnits && sampleCounts > 1 && workUnits > 1
       const displayUnit = hasWorkUnits ? (useComboUnit ? 'sample-unit' : sampleUnit) : 'Lump Sum'
       const baseNote = hasWorkUnits
         ? `${sampleCounts} ${sampleUnit} x ${workUnits} work units`
         : `${sampleCounts} ${sampleUnit} - Lump Sum Work Unit`
+      const pricedBaseNote = isLegacyPricing
+        ? `${baseNote} x complexity ${Math.trunc(complexityRating)} (${complexityMultiplier.toFixed(1)}x)`
+        : baseNote
       const travelQty = toNumber(pricing.travel_qty ?? 1)
       const travelUnit = pricing.travel_unit || 'Lot'
       const travelUnitPrice = toNumber(
@@ -191,8 +203,8 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
           item_description: buildHygieneBaseLabel(pricing.service_title),
           unit: displayUnit,
           quantity: baseQty,
-          unit_price: toNumber(pricing.unit_price),
-          description: baseNote,
+          unit_price: toNumber(pricing.unit_price) * complexityMultiplier,
+          description: pricedBaseNote,
         },
         {
           id: null,

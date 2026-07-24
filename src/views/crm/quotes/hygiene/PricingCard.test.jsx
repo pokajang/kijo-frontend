@@ -36,6 +36,17 @@ afterEach(() => {
 })
 
 describe('Hygiene PricingCard additional fees', () => {
+  it('does not expose V2 additional fees on a legacy complexity quotation', () => {
+    renderPricingCard({
+      ...baseFormData,
+      pricingRuleVersion: 'ih_complexity_v1',
+      complexityRating: 4,
+    })
+
+    expect(screen.queryByRole('button', { name: 'Add Miscellaneous Fee' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Additional Fees')).not.toBeInTheDocument()
+  })
+
   it('hides the draft fee row until the add action is clicked and supports cancel', () => {
     renderPricingCard()
 
