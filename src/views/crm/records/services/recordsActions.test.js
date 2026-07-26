@@ -91,3 +91,37 @@ describe('recordsActions delete refresh behavior', () => {
     expect(fetchQuotes).not.toHaveBeenCalled()
   })
 })
+
+describe('recordsActions PDF remediation', () => {
+  it('keeps the quotation unchanged and offers one active retry when PDF generation fails', async () => {
+    const popup = {
+      close: vi.fn(),
+      location: { replace: vi.fn() },
+    }
+    vi.spyOn(window, 'open').mockReturnValue(popup)
+    const fetcher = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({
+        ok: false,
+        headers: new Headers({ 'content-type': 'application/json' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/pdf' }),
+        blob: vi.fn().mockResolvedValue(new Blob(['%PDF-test'], { type: 'application/pdf' })),
+      })
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:quote-pdf')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    const { handlers } = createDeleteHarness()
+    await handlers.handleGeneratePdf({ id: 68 })
+
+    expect(dialog.confirm).toHaveBeenCalledWith(
+      expect.stringContaining('quotation itself remains saved and unchanged'),
+      expect.objectContaining({ confirmText: 'Retry PDF' }),
+    )
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(popup.close).toHaveBeenCalledOnce()
+    expect(popup.location.replace).toHaveBeenCalledWith('blob:quote-pdf')
+  })
+})

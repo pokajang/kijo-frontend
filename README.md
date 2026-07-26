@@ -22,6 +22,7 @@ CoreUI is meant to be the UX game changer. Pure & transparent code is devoid of 
 
 ## Table of Contents
 
+* [Kijo deployment runbooks](#kijo-deployment-runbooks)
 * [Versions](#versions)
 * [CoreUI PRO](#coreui-pro)
 * [CoreUI PRO React Admin Templates](#coreui-pro-react-admin-templates)
@@ -35,6 +36,13 @@ CoreUI is meant to be the UX game changer. Pure & transparent code is devoid of 
 * [Community](#community)
 * [Support CoreUI Development](#support-coreui-development)
 * [Copyright and License](#copyright-and-license)
+
+## Kijo deployment runbooks
+
+- [Production deployment](docs/PRODUCTION_DEPLOYMENT.md)
+- [Routine deployment](docs/ROUTINE_DEPLOYMENT.md)
+- [IH release validation](docs/IH_RELEASE_VALIDATION.md)
+- [IH release evidence template](docs/ih-release-evidence.example.json)
 
 ## Versions
 

@@ -25,6 +25,13 @@ export default defineConfig(({ command }) => {
     ...existingMeta,
     version,
   }
+  const proxy = {
+    '/proxy': {
+      target: proxyTarget,
+      changeOrigin: true,
+      rewrite: (requestPath) => requestPath.replace(/^\/proxy/, ''),
+    },
+  }
 
   if (process.env.VITE_MINIMUM_SUPPORTED_VERSION) {
     buildMeta.minimum_supported_version = process.env.VITE_MINIMUM_SUPPORTED_VERSION
@@ -137,13 +144,12 @@ export default defineConfig(({ command }) => {
       fs: {
         allow: [path.resolve(__dirname, '..')],
       },
-      proxy: {
-        '/proxy': {
-          target: proxyTarget,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/proxy/, ''),
-        },
-      },
+      proxy,
+    },
+    preview: {
+      host: '127.0.0.1',
+      port: 4173,
+      proxy,
     },
   }
 })

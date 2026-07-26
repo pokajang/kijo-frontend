@@ -1,0 +1,88 @@
+{
+  "release": {
+    "frontend_commit": "replace-with-tested-commit",
+    "backend_commit": "replace-with-tested-commit",
+    "environment": "isolated production-like staging",
+    "validated_at": "YYYY-MM-DDTHH:MM:SSZ",
+    "validated_by": "name"
+  },
+  "gates": {
+    "isolated_environment": {
+      "status": "pending",
+      "evidence": "",
+      "checks": {
+        "production_build": "pending",
+        "isolated_database": "pending",
+        "anonymized_data": "pending",
+        "outbound_email_disabled": "pending",
+        "external_integrations_disabled": "pending",
+        "reset_tested": "pending"
+      },
+      "notes": "Production-like configuration, anonymized data, outbound email disabled, and no production database."
+    },
+    "pdf_visual_reconciliation": {
+      "status": "pending",
+      "evidence": "",
+      "checks": {
+        "complexity_v1": "pending",
+        "standard_v1": "pending",
+        "standard_v2": "pending",
+        "per_unit_price": "pending",
+        "no_data_mutation": "pending"
+      },
+      "notes": "Visually compare PDFs for ih_complexity_v1, ih_standard_v1, and ih_standard_v2 with stored totals and per-unit presentation."
+    },
+    "full_quote_lifecycle": {
+      "status": "pending",
+      "evidence": "",
+      "checks": {
+        "create": "pending",
+        "edit": "pending",
+        "revise": "pending",
+        "approve": "pending",
+        "award": "pending",
+        "project": "pending",
+        "invoice": "pending",
+        "failure_remediation": "pending",
+        "reset_after_run": "pending"
+      },
+      "notes": "Create, edit, revise, approve, award, create project/invoice, generate PDFs, and verify failed-action remediation."
+    },
+    "deployment_compatibility": {
+      "status": "pending",
+      "evidence": "",
+      "checks": {
+        "old_frontend_new_backend": "pending",
+        "new_frontend_old_backend": "pending",
+        "cached_tab": "pending",
+        "backend_first_rollout": "pending"
+      },
+      "notes": "Record old frontend/new backend and new frontend/old backend results, including cached-tab stale-save handling."
+    },
+    "rollback_rehearsal": {
+      "status": "pending",
+      "evidence": "",
+      "checks": {
+        "backup": "pending",
+        "classification_dry_run": "pending",
+        "classification_commit": "pending",
+        "post_audit": "pending",
+        "rollback": "pending",
+        "financial_fingerprint": "pending"
+      },
+      "notes": "Rehearse classification dry-run, commit, post-audit, rollback dry-run, rollback, and financial fingerprint comparison."
+    },
+    "operations_handoff": {
+      "status": "pending",
+      "evidence": "",
+      "checks": {
+        "release_owner": "pending",
+        "deployment_window": "pending",
+        "rollback_authority": "pending",
+        "monitoring": "pending",
+        "user_notice": "pending"
+      },
+      "notes": "Named owner, deployment window, user reload notice, monitoring queries, thresholds, and rollback authority."
+    }
+  }
+}

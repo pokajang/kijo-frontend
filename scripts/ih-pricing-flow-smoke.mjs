@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { chromium } from 'playwright'
+import { redactEmail, validateSmokeTarget } from './ih-smoke-safety.mjs'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const projectRoot = path.resolve(scriptDir, '..')
@@ -12,9 +13,11 @@ const execFileAsync = promisify(execFile)
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '')
 const outputDir = path.join(projectRoot, 'test-results', `ih-pricing-flow-smoke-${stamp}`)
 const screenshotsDir = path.join(outputDir, 'screenshots')
-const baseUrl = process.env.FRONTEND_URL || 'http://127.0.0.1:3000'
+const pdfsDir = path.join(outputDir, 'pdfs')
+const requestedBaseUrl = process.env.FRONTEND_URL || 'http://127.0.0.1:3000'
 const email = process.env.SMOKE_EMAIL || 'azam@amiosh.com'
 const password = process.env.SMOKE_PASSWORD
+let baseUrl = requestedBaseUrl
 
 const findings = []
 const check = (name, ok, detail = '') => {
@@ -62,10 +65,29 @@ const runFixtureCommand = async (args) => {
   throw new Error(`IH smoke fixture command returned no JSON result: ${stdout.trim()}`)
 }
 
+const gitRevision = async (cwd) => {
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd,
+      windowsHide: true,
+      timeout: 10_000,
+    })
+    return stdout.trim()
+  } catch {
+    return null
+  }
+}
+
 const run = async () => {
+  baseUrl = validateSmokeTarget(requestedBaseUrl)
   if (!password) throw new Error('SMOKE_PASSWORD environment variable is required.')
 
   await fs.mkdir(screenshotsDir, { recursive: true })
+  await fs.mkdir(pdfsDir, { recursive: true })
+  const sourceRevisions = {
+    frontend: await gitRevision(projectRoot),
+    backend: await gitRevision(backendRoot),
+  }
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const page = await context.newPage()
@@ -79,6 +101,7 @@ const run = async () => {
   let createdQuoteId = null
   let createdQuoteDeleted = false
   let legacyQuoteId = null
+  let intermediateQuoteId = null
 
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
@@ -285,6 +308,7 @@ const run = async () => {
       `${baseUrl}/proxy/quote-records/ih/${createdQuoteId}/pdf?quote_id=${createdQuoteId}`,
     )
     const v2PdfBody = await v2PdfResponse.body()
+    await fs.writeFile(path.join(pdfsDir, `ih-v2-quote-${createdQuoteId}.pdf`), v2PdfBody)
     check(
       'new-flow-pdf-generation',
       v2PdfResponse.status() === 200 &&
@@ -408,6 +432,10 @@ const run = async () => {
       `${baseUrl}/proxy/quote-records/ih/${legacyQuoteId}/pdf?quote_id=${legacyQuoteId}`,
     )
     const legacyPdfBody = await legacyPdfResponse.body()
+    await fs.writeFile(
+      path.join(pdfsDir, `ih-complexity-v1-quote-${legacyQuoteId}.pdf`),
+      legacyPdfBody,
+    )
     check(
       'legacy-flow-pdf-generation',
       legacyPdfResponse.status() === 200 &&
@@ -432,6 +460,85 @@ const run = async () => {
 
     await page.screenshot({
       path: path.join(screenshotsDir, '02-legacy-v1-edit.png'),
+      fullPage: true,
+    })
+
+    const intermediateFixture = await runFixtureCommand([
+      'prepare',
+      `--source-id=${createdQuoteId}`,
+      '--rule=intermediate',
+    ])
+    intermediateQuoteId = Number(intermediateFixture.quote_id || 0)
+    requireCheck(
+      'intermediate-fixture-prepared',
+      intermediateQuoteId > 0 &&
+        intermediateFixture.pricing_rule_version === 'ih_standard_v1' &&
+        Number(intermediateFixture.grand_total) === 9300,
+      `quote #${intermediateQuoteId || 'unknown'}`,
+    )
+
+    await page.goto(`${baseUrl}/crm/quotes?service=ih&edit=true&quoteId=${intermediateQuoteId}`, {
+      waitUntil: 'commit',
+    })
+    await page.getByText('Edit Quotation', { exact: true }).waitFor()
+    await page.getByText('Pricing Details', { exact: true }).waitFor()
+    check(
+      'intermediate-flow-hides-complexity',
+      (await page.getByText('Legacy Complexity Rating', { exact: true }).count()) === 0,
+    )
+    check(
+      'intermediate-flow-preserves-contractual-total',
+      await page.getByText('9300.00', { exact: true }).first().isVisible(),
+    )
+
+    await page.getByRole('button', { name: 'Upgrade to Current V2 Pricing' }).click()
+    const upgradeDialog = page.getByRole('dialog')
+    await upgradeDialog.getByRole('button', { name: 'Upgrade pricing' }).click()
+    await page.getByText('V2 pricing upgrade preview', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Cancel Upgrade' }).click()
+    check(
+      'intermediate-upgrade-can-be-cancelled-before-save',
+      await page.getByRole('button', { name: 'Upgrade to Current V2 Pricing' }).isVisible(),
+    )
+
+    await page.locator('textarea[name="inquiryRemarks"]').fill('Unsaved stale browser edit')
+    await runFixtureCommand(['touch', `--quote-id=${intermediateQuoteId}`])
+    const staleResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/proxy/quotes/ih/${intermediateQuoteId}`) &&
+        response.request().method() === 'PUT',
+    )
+    await page.getByRole('button', { name: 'Update Quote', exact: true }).click()
+    const staleResponse = await staleResponsePromise
+    check(
+      'intermediate-stale-save-is-rejected',
+      staleResponse.status() === 409,
+      `HTTP ${staleResponse.status()}`,
+    )
+    await page.getByText('A newer quotation version is available', { exact: true }).waitFor()
+    check(
+      'intermediate-stale-save-offers-remediation',
+      await page.getByRole('button', { name: 'Review Latest Version' }).isVisible(),
+    )
+
+    const intermediatePdfResponse = await context.request.get(
+      `${baseUrl}/proxy/quote-records/ih/${intermediateQuoteId}/pdf?quote_id=${intermediateQuoteId}`,
+    )
+    const intermediatePdfBody = await intermediatePdfResponse.body()
+    await fs.writeFile(
+      path.join(pdfsDir, `ih-standard-v1-quote-${intermediateQuoteId}.pdf`),
+      intermediatePdfBody,
+    )
+    check(
+      'intermediate-flow-pdf-generation',
+      intermediatePdfResponse.status() === 200 &&
+        (intermediatePdfResponse.headers()['content-type'] || '').includes('application/pdf') &&
+        intermediatePdfBody.byteLength > 1000,
+      `HTTP ${intermediatePdfResponse.status()}, ${intermediatePdfBody.byteLength} bytes`,
+    )
+
+    await page.screenshot({
+      path: path.join(screenshotsDir, '03-intermediate-stale-remediation.png'),
       fullPage: true,
     })
 
@@ -466,6 +573,18 @@ const run = async () => {
       .catch(() => {})
     throw error
   } finally {
+    if (intermediateQuoteId) {
+      try {
+        const cleanup = await runFixtureCommand(['cleanup', `--quote-id=${intermediateQuoteId}`])
+        check(
+          'temporary-intermediate-quote-cleaned-up',
+          cleanup.status === 'success' && cleanup.deleted !== false,
+          `quote #${intermediateQuoteId}`,
+        )
+      } catch (error) {
+        check('temporary-intermediate-quote-cleaned-up', false, error.message)
+      }
+    }
     if (legacyQuoteId) {
       try {
         const cleanup = await runFixtureCommand(['cleanup', `--quote-id=${legacyQuoteId}`])
@@ -515,7 +634,14 @@ const run = async () => {
   const result = {
     at: new Date().toISOString(),
     baseUrl,
+    smokeAccount: redactEmail(email),
+    sourceRevisions,
+    artifacts: {
+      screenshots: 'screenshots',
+      pdfs: 'pdfs',
+    },
     legacyQuoteId,
+    intermediateQuoteId,
     createdQuoteId,
     findings,
     consoleErrors,
@@ -538,7 +664,13 @@ run().catch(async (error) => {
   await fs.writeFile(
     path.join(outputDir, 'result.json'),
     JSON.stringify(
-      { at: new Date().toISOString(), baseUrl, findings, crash: error.stack },
+      {
+        at: new Date().toISOString(),
+        baseUrl,
+        smokeAccount: redactEmail(email),
+        findings,
+        crash: error.stack,
+      },
       null,
       2,
     ),

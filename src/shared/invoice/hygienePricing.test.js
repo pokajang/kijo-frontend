@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildStoredHygieneTotals,
   calculateHygieneTotals,
+  INTERMEDIATE_HYGIENE_PRICING_RULE,
   LEGACY_HYGIENE_PRICING_RULE,
   STANDARD_HYGIENE_PRICING_RULE,
 } from './hygienePricing'
@@ -131,5 +133,71 @@ describe('calculateHygieneTotals', () => {
 
     expect(totals.complexityMultiplier).toBe(1)
     expect(totals.serviceTotal).toBe(1000)
+  })
+
+  it('supports intermediate pricing with net subtotal and no complexity or items', () => {
+    const totals = calculateHygieneTotals({
+      sampleCounts: 2,
+      numWorkUnits: 1,
+      unitPrice: 500,
+      travelCharge: 100,
+      customItems: [{ quantity: 1, unit_price: 400 }],
+      discount: 50,
+      sstPercent: 8,
+      pricingRuleVersion: INTERMEDIATE_HYGIENE_PRICING_RULE,
+      complexityRating: 5,
+    })
+
+    expect(totals.complexityMultiplier).toBe(1)
+    expect(totals.customTotal).toBe(0)
+    expect(totals.subTotal).toBe(1050)
+    expect(totals.grandTotal).toBe(1134)
+  })
+
+  it('preserves an intermediate historical snapshot with a precision variance', () => {
+    const totals = buildStoredHygieneTotals({
+      sampleCounts: 120,
+      numWorkUnits: 1,
+      unitPrice: 79.17,
+      discount: 200,
+      subTotal: 9300,
+      grandTotal: 9300,
+      pricingRuleVersion: INTERMEDIATE_HYGIENE_PRICING_RULE,
+      complexityRating: 4,
+    })
+
+    expect(totals.complexityRating).toBe(1)
+    expect(totals.serviceTotal).toBe(9500)
+    expect(totals.subTotal).toBe(9300)
+    expect(totals.grandTotal).toBe(9300)
+  })
+
+  it('fails closed for unknown pricing rules', () => {
+    expect(() =>
+      calculateHygieneTotals({
+        pricingRuleVersion: 'unknown-rule',
+      }),
+    ).toThrow('Unsupported IH pricing rule')
+  })
+
+  it('rounds each additional-fee line before subtotal and tax like the backend', () => {
+    const totals = calculateHygieneTotals({
+      sampleCounts: 1,
+      numWorkUnits: 1,
+      unitPrice: 10,
+      customItems: [
+        { quantity: 3, unit_price: 0.335 },
+        { quantity: 3, unit_price: 0.335 },
+      ],
+      discount: 0.01,
+      sstPercent: 8,
+      pricingRuleVersion: STANDARD_HYGIENE_PRICING_RULE,
+    })
+
+    expect(totals.customTotal).toBe(2.02)
+    expect(totals.subtotalBeforeDiscount).toBe(12.02)
+    expect(totals.taxableTotal).toBe(12.01)
+    expect(totals.sstAmount).toBe(0.96)
+    expect(totals.grandTotal).toBe(12.97)
   })
 })

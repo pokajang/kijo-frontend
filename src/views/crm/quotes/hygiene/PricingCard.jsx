@@ -21,7 +21,7 @@ import {
 import DataTableActionMenu from '../../../../components/datatable/DataTableActionMenu'
 import {
   calculateHygieneTotals,
-  LEGACY_HYGIENE_PRICING_RULE,
+  isHistoricalHygienePricingRule,
 } from '../../../../shared/invoice/hygienePricing'
 import { getTrafficLightStatus } from '../shared/trafficLightConfig'
 import '../shared/TrafficLightCard.css'
@@ -50,7 +50,12 @@ const isValidItem = (item) =>
   Number(item.quantity) > 0 &&
   Number(item.unit_price) > 0
 
-const PricingCard = ({ formData, setFormData }) => {
+const PricingCard = ({
+  formData,
+  setFormData,
+  totalsOverride = null,
+  preserveStoredTotals = false,
+}) => {
   const {
     unitPrice = 0,
     travelCharge = 0,
@@ -63,23 +68,25 @@ const PricingCard = ({ formData, setFormData }) => {
     () => (Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []),
     [formData.hygieneItems],
   )
-  const isLegacyPricing = formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
+  const isHistoricalPricing = isHistoricalHygienePricingRule(formData.pricingRuleVersion)
   const [isAddingFee, setIsAddingFee] = useState(false)
   const [newItem, setNewItem] = useState(createDefaultItem)
   const [editingIndex, setEditingIndex] = useState(null)
   const [editItem, setEditItem] = useState(createDefaultItem)
 
-  const totals = calculateHygieneTotals({
-    sampleCounts,
-    numWorkUnits,
-    unitPrice,
-    travelCharge,
-    customItems: hygieneItems,
-    discount,
-    sstPercent,
-    pricingRuleVersion: formData.pricingRuleVersion,
-    complexityRating: formData.complexityRating,
-  })
+  const totals =
+    totalsOverride ||
+    calculateHygieneTotals({
+      sampleCounts,
+      numWorkUnits,
+      unitPrice,
+      travelCharge,
+      customItems: hygieneItems,
+      discount,
+      sstPercent,
+      pricingRuleVersion: formData.pricingRuleVersion,
+      complexityRating: formData.complexityRating,
+    })
   const pricingStatus = getTrafficLightStatus({
     serviceKey: 'ih',
     quoteTotal: totals.grandTotal,
@@ -89,9 +96,11 @@ const PricingCard = ({ formData, setFormData }) => {
   const hasStatus = pricingStatus !== 'unknown'
 
   useEffect(() => {
+    if (preserveStoredTotals) return
+
     setFormData((prev) => ({
       ...prev,
-      subTotal: (isLegacyPricing ? totals.taxableTotal : totals.subtotalBeforeDiscount).toFixed(2),
+      subTotal: totals.subTotal.toFixed(2),
       sstAmount: totals.sstAmount.toFixed(2),
       grandTotal: totals.grandTotal.toFixed(2),
     }))
@@ -103,11 +112,10 @@ const PricingCard = ({ formData, setFormData }) => {
     sampleCounts,
     discount,
     sstPercent,
-    totals.subtotalBeforeDiscount,
-    totals.taxableTotal,
+    totals.subTotal,
     totals.sstAmount,
     totals.grandTotal,
-    isLegacyPricing,
+    preserveStoredTotals,
     setFormData,
   ])
 
@@ -305,7 +313,7 @@ const PricingCard = ({ formData, setFormData }) => {
               </CCol>
             </CRow>
 
-            {!isLegacyPricing && (
+            {!isHistoricalPricing && (
               <div className="mt-4">
                 <div className="d-flex align-items-center justify-content-between mb-2">
                   <strong>Additional Fees</strong>

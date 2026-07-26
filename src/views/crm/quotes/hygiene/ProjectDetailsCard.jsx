@@ -7,11 +7,15 @@ import {
   CFormSelect,
   CInputGroup,
   CFormText,
+  CButton,
 } from '@coreui/react'
 import {
   getHygieneComplexityMultiplier,
+  isHistoricalHygienePricingRule,
   LEGACY_HYGIENE_PRICING_RULE,
+  STANDARD_HYGIENE_PRICING_RULE,
 } from '../../../../shared/invoice/hygienePricing'
+import dialog from '../../../../components/dialog/dialogService'
 
 const SAMPLE_UNITS = [
   'chemical(s)',
@@ -29,7 +33,27 @@ const SAMPLE_UNITS = [
 
 const ProjectDetailsCard = ({ formData, setFormData }) => {
   const isLegacyPricing = formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
+  const isHistoricalPricing = isHistoricalHygienePricingRule(formData.pricingRuleVersion)
   const complexityMultiplier = getHygieneComplexityMultiplier(formData.complexityRating)
+  const handleUpgradePricing = async () => {
+    const confirmed = await dialog.confirm(
+      'Upgrade this historical quotation to current V2 pricing? Its totals will be recalculated and this cannot be undone by an ordinary edit.',
+      {
+        title: 'Upgrade IH Pricing',
+        confirmText: 'Upgrade pricing',
+        cancelText: 'Keep historical pricing',
+      },
+    )
+    if (!confirmed) return
+
+    setFormData((prev) => ({
+      ...prev,
+      pricingRuleVersion: STANDARD_HYGIENE_PRICING_RULE,
+      upgradePricingRule: true,
+      hygieneItems: [],
+      estimatedTotalCost: '',
+    }))
+  }
 
   return (
     <CRow className="g-3 mb-3">
@@ -83,6 +107,17 @@ const ProjectDetailsCard = ({ formData, setFormData }) => {
           <CFormText>
             Preserved from the original quotation ({complexityMultiplier.toFixed(1)}× pricing).
           </CFormText>
+        </CCol>
+      )}
+
+      {isHistoricalPricing && (
+        <CCol xs={12}>
+          <CFormText className="d-block mb-2">
+            This quotation retains its historical pricing calculation and stored contractual totals.
+          </CFormText>
+          <CButton type="button" color="warning" variant="outline" onClick={handleUpgradePricing}>
+            Upgrade to Current V2 Pricing
+          </CButton>
         </CCol>
       )}
     </CRow>

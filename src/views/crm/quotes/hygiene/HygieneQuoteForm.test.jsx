@@ -47,6 +47,20 @@ vi.mock('./HygieneDetailsCard', () => ({
       >
         Select IH service
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          setFormData((current) => ({
+            ...current,
+            pricingRuleVersion: 'ih_standard_v2',
+            upgradePricingRule: true,
+            hygieneItems: [],
+            estimatedTotalCost: '',
+          }))
+        }
+      >
+        Preview V2 upgrade
+      </button>
     </section>
   ),
 }))
@@ -71,9 +85,9 @@ vi.mock('./PricingCard', () => ({
 }))
 
 vi.mock('./ReviewHygieneQuotationCard', () => ({
-  default: ({ formData, onSave }) => (
+  default: ({ formData, onSave, totalsOverride }) => (
     <section data-testid="review">
-      <div data-testid="review-total">{formData.grandTotal}</div>
+      <div data-testid="review-total">{totalsOverride?.grandTotal ?? formData.grandTotal}</div>
       <button type="button" onClick={onSave}>
         Save quote
       </button>
@@ -137,6 +151,7 @@ describe('HygieneQuoteForm pricing-version flows', () => {
         sub_total: 1000,
         grand_total: 1000,
       }),
+      expect.objectContaining({ onRecoverableFailure: expect.any(Function) }),
     )
     expect(mocks.saveQuote.mock.calls[0][0]).not.toHaveProperty('pricing_rule_version')
   })
@@ -161,10 +176,14 @@ describe('HygieneQuoteForm pricing-version flows', () => {
           travelCharge: 0,
           discount: 0,
           sstPercent: 0,
+          sstAmount: 0,
+          subTotal: 1300,
+          grandTotal: 1300,
           estimatedTotalCost: '',
           pricingRuleVersion: 'ih_complexity_v1',
           complexityRating: 4,
           hygieneItems: [],
+          quoteVersion: 'a'.repeat(64),
         }}
       />,
     )
@@ -186,7 +205,211 @@ describe('HygieneQuoteForm pricing-version flows', () => {
         sub_total: 1300,
         grand_total: 1300,
       }),
+      expect.objectContaining({ onRecoverableFailure: expect.any(Function) }),
     )
+  })
+
+  it('preserves an unchanged intermediate quote financial snapshot', async () => {
+    render(
+      <HygieneQuoteForm
+        selectedClient={selectedClient}
+        isEditMode
+        quoteId={68}
+        initialFormData={{
+          serviceId: 201,
+          serviceTitle: 'CEM Monitoring',
+          serviceCode: 'CEM',
+          siteAddress: 'Intermediate Site',
+          sampleCounts: 120,
+          sampleUnit: 'sample(s)',
+          numWorkUnits: 1,
+          unitPrice: 79.17,
+          travelCharge: 0,
+          discount: 200,
+          sstPercent: 0,
+          sstAmount: 0,
+          subTotal: 9300,
+          grandTotal: 9300,
+          estimatedTotalCost: '',
+          pricingRuleVersion: 'ih_standard_v1',
+          complexityRating: 4,
+          hygieneItems: [],
+          quoteVersion: 'a'.repeat(64),
+        }}
+      />,
+    )
+
+    expect(await screen.findByTestId('pricing')).toHaveTextContent('ih_standard_v1:4')
+    expect(screen.getByTestId('review')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save quote' }))
+
+    await waitFor(() => expect(mocks.saveQuote).toHaveBeenCalledOnce())
+    expect(mocks.saveQuote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 68,
+        estimated_total_cost: null,
+        complexity_rating: 4,
+        sub_total: 9300,
+        grand_total: 9300,
+        quote_version: 'a'.repeat(64),
+      }),
+      expect.objectContaining({ onRecoverableFailure: expect.any(Function) }),
+    )
+  })
+
+  it('requires confirmation before recalculating historical pricing inputs', async () => {
+    render(
+      <HygieneQuoteForm
+        selectedClient={selectedClient}
+        isEditMode
+        quoteId={68}
+        initialFormData={{
+          serviceId: 201,
+          serviceTitle: 'CEM Monitoring',
+          serviceCode: 'CEM',
+          sampleCounts: 120,
+          sampleUnit: 'sample(s)',
+          numWorkUnits: 1,
+          unitPrice: 79.17,
+          travelCharge: 0,
+          discount: 200,
+          sstPercent: 0,
+          sstAmount: 0,
+          subTotal: 9300,
+          grandTotal: 9300,
+          pricingRuleVersion: 'ih_standard_v1',
+          complexityRating: 4,
+          hygieneItems: [],
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select IH service' }))
+
+    expect(await screen.findByText('Historical pricing inputs changed')).toBeInTheDocument()
+    expect(screen.getByTestId('review-total')).toHaveTextContent('9300')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save quote' }))
+    expect(mocks.saveQuote).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue and Recalculate' }))
+    await waitFor(() => expect(screen.getByTestId('review-total')).toHaveTextContent('1000'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save quote' }))
+    await waitFor(() => expect(mocks.saveQuote).toHaveBeenCalledOnce())
+    expect(mocks.saveQuote).toHaveBeenCalledWith(
+      expect.objectContaining({ sub_total: 1000, grand_total: 1000 }),
+      expect.objectContaining({ onRecoverableFailure: expect.any(Function) }),
+    )
+  })
+
+  it('can cancel an unsaved V2 upgrade and restore the historical financial snapshot', async () => {
+    render(
+      <HygieneQuoteForm
+        selectedClient={selectedClient}
+        isEditMode
+        quoteId={68}
+        initialFormData={{
+          serviceId: 201,
+          serviceTitle: 'CEM Monitoring',
+          serviceCode: 'CEM',
+          sampleCounts: 120,
+          sampleUnit: 'sample(s)',
+          numWorkUnits: 1,
+          unitPrice: 79.17,
+          travelCharge: 0,
+          discount: 200,
+          sstPercent: 0,
+          sstAmount: 0,
+          subTotal: 9300,
+          grandTotal: 9300,
+          pricingRuleVersion: 'ih_standard_v1',
+          complexityRating: 4,
+          hygieneItems: [],
+        }}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview V2 upgrade' }))
+    expect(await screen.findByText('V2 pricing upgrade preview')).toBeInTheDocument()
+    expect(screen.queryByTestId('pricing')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel Upgrade' }))
+
+    expect(screen.getByTestId('details-rule')).toHaveTextContent('ih_standard_v1')
+    expect(screen.getByTestId('review-total')).toHaveTextContent('9300')
+    expect(screen.queryByText('V2 pricing upgrade preview')).not.toBeInTheDocument()
+  })
+
+  it('turns a stale-save response into reload and copy remediation without losing form state', async () => {
+    mocks.saveQuote.mockImplementationOnce(async (_payload, options) => {
+      await options.onRecoverableFailure({
+        status: 'error',
+        error_code: 'STALE_QUOTE_VERSION',
+        message: 'A newer version exists.',
+      })
+      return { saved: false }
+    })
+
+    render(
+      <HygieneQuoteForm
+        selectedClient={selectedClient}
+        isEditMode
+        quoteId={92}
+        initialFormData={{
+          serviceId: 201,
+          serviceTitle: 'CEM Monitoring',
+          serviceCode: 'CEM',
+          sampleCounts: 2,
+          sampleUnit: 'sample(s)',
+          numWorkUnits: 1,
+          unitPrice: 500,
+          discount: 0,
+          sstPercent: 0,
+          estimatedTotalCost: 800,
+          pricingRuleVersion: 'ih_standard_v2',
+          quoteVersion: 'a'.repeat(64),
+        }}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Save quote' }))
+
+    expect(await screen.findByText('A newer quotation version is available')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Review Latest Version' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy Unsaved Form Data' })).toBeInTheDocument()
+    expect(screen.getByTestId('review')).toBeInTheDocument()
+  })
+
+  it('keeps unsupported pricing data viewable and blocks financial save with remediation', async () => {
+    render(
+      <HygieneQuoteForm
+        selectedClient={selectedClient}
+        isEditMode
+        quoteId={99}
+        initialFormData={{
+          serviceId: 201,
+          serviceTitle: 'CEM Monitoring',
+          serviceCode: 'CEM',
+          sampleCounts: 2,
+          numWorkUnits: 1,
+          unitPrice: 500,
+          discount: 0,
+          sstPercent: 0,
+          subTotal: 1000,
+          grandTotal: 1000,
+          pricingRuleVersion: 'ih_unknown_v9',
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText('Financial editing is temporarily unavailable'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('pricing')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('review')).not.toBeInTheDocument()
+    expect(mocks.saveQuote).not.toHaveBeenCalled()
   })
 
   it('updates a V2 quote with its estimate and miscellaneous fees intact', async () => {
@@ -245,6 +468,7 @@ describe('HygieneQuoteForm pricing-version flows', () => {
           }),
         ],
       }),
+      expect.objectContaining({ onRecoverableFailure: expect.any(Function) }),
     )
   })
 })

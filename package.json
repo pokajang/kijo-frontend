@@ -21,6 +21,7 @@
         "test:run": "vitest run",
         "e2e:other-claim-crud": "node scripts/other-claim-crud-lifecycle-e2e.mjs",
         "smoke:ih-pricing": "node scripts/ih-pricing-flow-smoke.mjs",
+        "release:ih-readiness": "node scripts/ih-release-readiness.mjs",
         "datatable:audit": "node scripts/datatable-audit.mjs",
         "qa:tables": "node scripts/table-unification-qa.mjs",
         "guard:api-routes": "node scripts/guard-api-routes.mjs"

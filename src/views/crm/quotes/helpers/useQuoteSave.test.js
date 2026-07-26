@@ -153,6 +153,42 @@ describe('saveQuote', () => {
     expect(dialogService.confirm).not.toHaveBeenCalled()
   })
 
+  it('delegates actionable failures without replacing them with a generic alert', async () => {
+    const failure = {
+      status: 'error',
+      error_code: 'STALE_QUOTE_VERSION',
+      message: 'A newer version is available.',
+      remediation: {
+        primary: 'reload_quote',
+        secondary: 'review_unsaved_changes',
+      },
+    }
+    const fetcher = vi.fn().mockResolvedValue(jsonResponse(failure, { ok: false }))
+    const dialogService = {
+      alert: vi.fn(),
+      confirm: vi.fn(),
+    }
+    const onRecoverableFailure = vi.fn().mockResolvedValue(true)
+
+    const result = await saveQuote({
+      serviceKey: 'ih',
+      quoteId: 68,
+      isEditMode: true,
+      payload: { quote_version: 'a'.repeat(64) },
+      fetcher,
+      dialogService,
+      navigate: vi.fn(),
+      onRecoverableFailure,
+    })
+
+    expect(result.saved).toBe(false)
+    expect(onRecoverableFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ error_code: 'STALE_QUOTE_VERSION' }),
+      expect.objectContaining({ response: expect.any(Object) }),
+    )
+    expect(dialogService.alert).not.toHaveBeenCalled()
+  })
+
   it('prompts and retries when an awarded quote value decision is required', async () => {
     const fetcher = vi
       .fn()

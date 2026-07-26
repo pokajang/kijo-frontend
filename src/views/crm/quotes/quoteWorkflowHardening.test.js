@@ -39,6 +39,26 @@ describe('quote service registry', () => {
     expect(getQuoteService('training-tab')).toBe(serviceConfig.training)
     expect(getQuoteService('industrial-hygiene')).toBe(serviceConfig.ih)
   })
+
+  it('maps the IH concurrency token and backend pricing state into edit data', () => {
+    const mapped = serviceConfig.ih.mapRowToFormData({
+      pricing_rule_version: 'ih_standard_v1',
+      quote_version: 'a'.repeat(64),
+      pricing_state: {
+        editable: true,
+        code: 'HISTORICAL_TOTAL_PRESERVED',
+      },
+    })
+
+    expect(mapped).toMatchObject({
+      pricingRuleVersion: 'ih_standard_v1',
+      quoteVersion: 'a'.repeat(64),
+      pricingState: {
+        editable: true,
+        code: 'HISTORICAL_TOTAL_PRESERVED',
+      },
+    })
+  })
 })
 
 describe('quote inquiry source storage', () => {

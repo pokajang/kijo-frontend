@@ -202,6 +202,46 @@ export const createHandlers = ({
     return isSuccess(relatedPayload) ? relatedPayload.data || {} : null
   }
 
+  const openQuotationPdf = async (record, allowRetry = true) => {
+    const pdfWindow = window.open('about:blank', '_blank')
+    if (!pdfWindow) {
+      await dialog.alert(
+        'The PDF window was blocked by the browser. Allow pop-ups for this site, then retry.',
+      )
+      return
+    }
+    pdfWindow.opener = null
+
+    try {
+      const response = await fetch(urls.generate(record.id), {
+        method: 'GET',
+        credentials: 'include',
+      })
+      const contentType = response.headers.get('content-type') || ''
+      if (!response.ok || !contentType.toLowerCase().includes('application/pdf')) {
+        throw new Error('The server did not return a valid quotation PDF.')
+      }
+
+      const pdfUrl = URL.createObjectURL(await response.blob())
+      pdfWindow.location.replace(pdfUrl)
+      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000)
+    } catch (error) {
+      pdfWindow.close()
+      console.error('PDF generation failed:', error)
+      const retry =
+        allowRetry &&
+        (await dialog.confirm(
+          `${error?.message || 'The quotation PDF could not be generated.'}\n\nThe quotation itself remains saved and unchanged.`,
+          {
+            title: 'PDF Generation Failed',
+            confirmText: 'Retry PDF',
+            cancelText: 'Return to Records',
+          },
+        ))
+      if (retry) await openQuotationPdf(record, false)
+    }
+  }
+
   return {
     // Delete Action
     handleDelete: async (id) => {
@@ -461,14 +501,7 @@ export const createHandlers = ({
     },
 
     // Handle Generate PDF
-    handleGeneratePdf: (record) => {
-      try {
-        window.open(urls.generate(record.id), '_blank')
-      } catch (err) {
-        console.error('PDF generation failed:', err)
-        dialog.alert('Failed to generate PDF.')
-      }
-    },
+    handleGeneratePdf: (record) => openQuotationPdf(record),
 
     // Sync Client Details
     handleSyncClientDetails: async (record) => {

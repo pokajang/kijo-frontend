@@ -14,6 +14,7 @@ import { removeQuoteInquirySource } from '../quoteInquirySource'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import {
   calculateHygieneTotals,
+  isHistoricalHygienePricingRule,
   LEGACY_HYGIENE_PRICING_RULE,
 } from '../../../../shared/invoice/hygienePricing'
 import {
@@ -36,6 +37,7 @@ const ReviewHygieneQuotationCard = ({
   saveLabel,
   requiresApproval = false,
   isEditMode = false,
+  totalsOverride = null,
 }) => {
   const navigate = useNavigate()
 
@@ -60,17 +62,20 @@ const ReviewHygieneQuotationCard = ({
   const workUnits = hasWorkUnitsInput ? toNumber(formData.numWorkUnits, 1) : 1
   const hygieneItems = Array.isArray(formData.hygieneItems) ? formData.hygieneItems : []
   const isLegacyPricing = formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
-  const totals = calculateHygieneTotals({
-    sampleCounts,
-    numWorkUnits: formData.numWorkUnits,
-    unitPrice: formData.unitPrice,
-    travelCharge: formData.travelCharge,
-    customItems: hygieneItems,
-    discount: formData.discount,
-    sstPercent: formData.sstPercent,
-    pricingRuleVersion: formData.pricingRuleVersion,
-    complexityRating: formData.complexityRating,
-  })
+  const isHistoricalPricing = isHistoricalHygienePricingRule(formData.pricingRuleVersion)
+  const totals =
+    totalsOverride ||
+    calculateHygieneTotals({
+      sampleCounts,
+      numWorkUnits: formData.numWorkUnits,
+      unitPrice: formData.unitPrice,
+      travelCharge: formData.travelCharge,
+      customItems: hygieneItems,
+      discount: formData.discount,
+      sstPercent: formData.sstPercent,
+      pricingRuleVersion: formData.pricingRuleVersion,
+      complexityRating: formData.complexityRating,
+    })
 
   return (
     <QuoteReviewCard
@@ -134,7 +139,7 @@ const ReviewHygieneQuotationCard = ({
             <CTableDataCell>{toNumber(formData.travelCharge, 0).toFixed(2)}</CTableDataCell>
           </CTableRow>
 
-          {!isLegacyPricing && hygieneItems.length > 0 && (
+          {!isHistoricalPricing && hygieneItems.length > 0 && (
             <CTableRow>
               <CTableHeaderCell className="text-end">Additional Fees (RM)</CTableHeaderCell>
               <CTableDataCell className="p-0">
@@ -180,7 +185,7 @@ const ReviewHygieneQuotationCard = ({
             </CTableRow>
           )}
 
-          {!isLegacyPricing && (
+          {!isHistoricalPricing && (
             <CTableRow>
               <CTableHeaderCell className="text-end">Gross Subtotal (RM)</CTableHeaderCell>
               <CTableDataCell>{totals.subtotalBeforeDiscount.toFixed(2)}</CTableDataCell>
@@ -194,7 +199,7 @@ const ReviewHygieneQuotationCard = ({
 
           <CTableRow>
             <CTableHeaderCell className="text-end">
-              {isLegacyPricing ? 'Subtotal (RM)' : 'Subtotal after Discount (RM)'}
+              {isHistoricalPricing ? 'Subtotal (RM)' : 'Subtotal after Discount (RM)'}
             </CTableHeaderCell>
             <CTableDataCell>{totals.taxableTotal.toFixed(2)}</CTableDataCell>
           </CTableRow>

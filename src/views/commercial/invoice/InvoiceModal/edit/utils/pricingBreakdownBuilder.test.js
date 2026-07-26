@@ -190,4 +190,28 @@ describe('buildBreakdownFromPricing Industrial Hygiene', () => {
     })
     expect(breakdown[0].description).toContain('complexity 4 (1.3x)')
   })
+
+  it('preserves an intermediate precision variance and excludes V2 fee rows', () => {
+    const breakdown = buildBreakdownFromPricing('Industrial Hygiene', {
+      service_title: 'Intermediate Monitoring',
+      sample_counts: 120,
+      sample_unit: 'sample(s)',
+      num_work_units: 1,
+      unit_price: 79.17,
+      travel_charge: 0,
+      discount: 200,
+      sub_total: 9300,
+      pricing_rule_version: 'ih_standard_v1',
+      complexity_rating: 4,
+      hygiene_items: [{ item_description: 'Must be ignored', quantity: 1, unit_price: 500 }],
+    })
+
+    expect(breakdown[0]).toMatchObject({
+      quantity: 1,
+      unit: 'Lump Sum',
+      unit_price: 9500,
+    })
+    expect(breakdown[0].description).toContain('preserved historical quoted amount')
+    expect(breakdown).toHaveLength(3)
+  })
 })

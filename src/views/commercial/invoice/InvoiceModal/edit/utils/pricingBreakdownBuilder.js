@@ -3,7 +3,9 @@ import { toNumber } from './numberUtils'
 import { getEquipmentInvoiceUnitPrice } from '../../../../../../shared/invoice/equipmentInvoiceUtils'
 import {
   getHygieneComplexityMultiplier,
+  isHistoricalHygienePricingRule,
   LEGACY_HYGIENE_PRICING_RULE,
+  STANDARD_HYGIENE_PRICING_RULE,
 } from '../../../../../../shared/invoice/hygienePricing'
 
 export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) => {
@@ -170,7 +172,12 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
       const workUnits = hasWorkUnits ? rawWorkUnits : 1
       const baseQty = sampleCounts * workUnits
       const sampleUnit = pricing.sample_unit || 'sample(s)'
-      const isLegacyPricing = pricing.pricing_rule_version === LEGACY_HYGIENE_PRICING_RULE
+      const pricingRuleVersion =
+        pricing.pricing_rule_version ||
+        quoteDetails?.pricing_rule_version ||
+        STANDARD_HYGIENE_PRICING_RULE
+      const isLegacyPricing = pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
+      const isHistoricalPricing = isHistoricalHygienePricingRule(pricingRuleVersion)
       const complexityRating = toNumber(pricing.complexity_rating ?? 1)
       const complexityMultiplier = isLegacyPricing
         ? getHygieneComplexityMultiplier(complexityRating)
@@ -195,16 +202,33 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         pricing.discount_unit_price ??
           (discountQty ? toNumber(pricing.discount) / discountQty : pricing.discount),
       )
-      const hygieneItems = Array.isArray(pricing.hygiene_items) ? pricing.hygiene_items : []
+      const hygieneItems =
+        pricingRuleVersion === STANDARD_HYGIENE_PRICING_RULE && Array.isArray(pricing.hygiene_items)
+          ? pricing.hygiene_items
+          : []
+      const calculatedUnitPrice = toNumber(pricing.unit_price) * complexityMultiplier
+      const calculatedServiceTotal = baseQty * calculatedUnitPrice
+      const contractualServiceTotal = Math.max(
+        0,
+        toNumber(pricing.sub_total) + toNumber(pricing.discount) - toNumber(pricing.travel_charge),
+      )
+      const hasStoredHistoricalSubtotal =
+        pricing.sub_total !== null && pricing.sub_total !== undefined
+      const hasHistoricalVariance =
+        isHistoricalPricing &&
+        hasStoredHistoricalSubtotal &&
+        Math.abs(calculatedServiceTotal - contractualServiceTotal) > 0.01
 
       return [
         {
           id: null,
           item_description: buildHygieneBaseLabel(pricing.service_title),
-          unit: displayUnit,
-          quantity: baseQty,
-          unit_price: toNumber(pricing.unit_price) * complexityMultiplier,
-          description: pricedBaseNote,
+          unit: hasHistoricalVariance ? 'Lump Sum' : displayUnit,
+          quantity: hasHistoricalVariance ? 1 : baseQty,
+          unit_price: hasHistoricalVariance ? contractualServiceTotal : calculatedUnitPrice,
+          description: hasHistoricalVariance
+            ? `${pricedBaseNote}; preserved historical quoted amount`
+            : pricedBaseNote,
         },
         {
           id: null,

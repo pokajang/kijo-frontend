@@ -590,6 +590,8 @@ describe('buildInvoiceCreatePayload', () => {
         sample_unit: 'sample(s)',
         num_work_units: 2,
         unit_price: 500,
+        sub_total: 13000,
+        grand_total: 13000,
         pricing_rule_version: 'ih_complexity_v1',
         complexity_rating: 4,
       },
@@ -601,5 +603,48 @@ describe('buildInvoiceCreatePayload', () => {
       unit_price: 650,
     })
     expect(result.payload.breakdown[0].description).toContain('complexity 4 (1.3x)')
+  })
+
+  it('preserves an intermediate IH precision variance as a contractual lump sum', () => {
+    const result = buildInvoiceCreatePayload('Industrial Hygiene', {
+      ...baseArgs,
+      project: {
+        id: 20,
+        quote_id: 68,
+        project_name: 'Intermediate IH Project',
+        project_type: 'Industrial Hygiene',
+      },
+      quoteDetails: {
+        id: 68,
+        service_title: 'Intermediate Monitoring',
+        pricing_rule_version: 'ih_standard_v1',
+        complexity_rating: 4,
+        hygiene_items: [{ item_description: 'Must be ignored', quantity: 1, unit_price: 500 }],
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        service_title: 'Intermediate Monitoring',
+        sample_counts: 120,
+        sample_unit: 'sample(s)',
+        num_work_units: 1,
+        unit_price: 79.17,
+        travel_charge: 0,
+        discount: 200,
+        sub_total: 9300,
+        grand_total: 9300,
+        pricing_rule_version: 'ih_standard_v1',
+        complexity_rating: 4,
+        hygiene_items: [{ item_description: 'Must be ignored', quantity: 1, unit_price: 500 }],
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.breakdown[0]).toMatchObject({
+      quantity: 1,
+      unit: 'Lump Sum',
+      unit_price: 9500,
+    })
+    expect(result.payload.breakdown[0].description).toContain('preserved historical quoted amount')
+    expect(result.payload.breakdown).toHaveLength(3)
   })
 })

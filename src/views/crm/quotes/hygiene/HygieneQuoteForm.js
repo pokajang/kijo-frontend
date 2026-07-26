@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import HygieneDetailsCard from './HygieneDetailsCard'
+import HygieneQuoteLifecycleAlerts from './HygieneQuoteLifecycleAlerts'
 import PricingCard from './PricingCard'
 import ReviewHygieneQuotationCard from './ReviewHygieneQuotationCard'
 import {
@@ -14,12 +15,23 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
 import dialog from '../../../../components/dialog/dialogService'
 import {
+  buildStoredHygieneTotals,
   calculateHygieneTotals,
-  LEGACY_HYGIENE_PRICING_RULE,
+  isHistoricalHygienePricingRule,
+  isKnownHygienePricingRule,
   STANDARD_HYGIENE_PRICING_RULE,
 } from '../../../../shared/invoice/hygienePricing'
 import TrafficLightCard from '../shared/TrafficLightCard'
 import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+
+const IH_PRICING_INPUT_FIELDS = [
+  'sampleCounts',
+  'numWorkUnits',
+  'unitPrice',
+  'travelCharge',
+  'discount',
+  'sstPercent',
+]
 
 export default function HygieneQuotationForm({
   selectedClient,
@@ -86,6 +98,9 @@ export default function HygieneQuotationForm({
       unitPrice: 500,
       discount: 300,
       hygieneItems: [],
+      upgradePricingRule: false,
+      quoteVersion: '',
+      pricingState: null,
       priceExceptionRequestId: '',
       sstPercent: 0,
       sstAmount: '0.00',
@@ -107,6 +122,8 @@ export default function HygieneQuotationForm({
 
   const draft = loadDraft()
   const [formData, setFormData] = useState({ ...defaultForm, ...(draft || {}) })
+  const [pricingChangeConfirmed, setPricingChangeConfirmed] = useState(false)
+  const [saveRemediation, setSaveRemediation] = useState(null)
   const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
 
   // Persist draft on change (create mode only)
@@ -141,6 +158,8 @@ export default function HygieneQuotationForm({
         hygieneItems: Array.isArray(initialFormData.hygieneItems)
           ? initialFormData.hygieneItems
           : defaultForm.hygieneItems,
+        quoteVersion: initialFormData.quoteVersion || defaultForm.quoteVersion,
+        pricingState: initialFormData.pricingState || defaultForm.pricingState,
         priceExceptionRequestId: '',
         sstPercent: initialFormData.sstPercent ?? defaultForm.sstPercent,
         sstAmount: initialFormData.sstAmount ?? defaultForm.sstAmount,
@@ -201,38 +220,159 @@ export default function HygieneQuotationForm({
     }))
   }, [defaultForm, proposalLanguage, isEditMode])
 
-  const quoteTotals = useMemo(
-    () =>
-      calculateHygieneTotals({
-        sampleCounts: toInteger(formData.sampleCounts, 0),
-        numWorkUnits:
-          String(formData.numWorkUnits || '').trim() !== ''
-            ? Math.max(1, toInteger(formData.numWorkUnits, 1))
-            : 0,
-        unitPrice: toNumber(formData.unitPrice, 0),
-        travelCharge: toNumber(formData.travelCharge, 0),
-        customItems: Array.isArray(formData.hygieneItems) ? formData.hygieneItems : [],
-        discount: toNumber(formData.discount, 0),
-        sstPercent: toNumber(formData.sstPercent, 0),
+  const isHistoricalPricing =
+    isEditMode && isHistoricalHygienePricingRule(formData.pricingRuleVersion)
+  const hasKnownPricingRule = isKnownHygienePricingRule(formData.pricingRuleVersion)
+  const originatedWithHistoricalPricing =
+    isEditMode &&
+    initialFormData &&
+    isHistoricalHygienePricingRule(initialFormData.pricingRuleVersion)
+  const historicalPricingInputsChanged =
+    originatedWithHistoricalPricing &&
+    IH_PRICING_INPUT_FIELDS.every(
+      (field) =>
+        Math.abs(toNumber(formData[field], 0) - toNumber(initialFormData[field], 0)) < 0.00001,
+    ) === false
+  const historicalPricingUnchanged = isHistoricalPricing && !historicalPricingInputsChanged
+  const preserveHistoricalSnapshot =
+    isHistoricalPricing && (!historicalPricingInputsChanged || !pricingChangeConfirmed)
+
+  useEffect(() => {
+    if (!historicalPricingInputsChanged) setPricingChangeConfirmed(false)
+  }, [historicalPricingInputsChanged])
+
+  const quoteTotals = useMemo(() => {
+    if (!hasKnownPricingRule) {
+      const storedSubTotal = toNumber(formData.subTotal, 0)
+      const storedDiscount = toNumber(formData.discount, 0)
+      return {
+        effectiveWorkUnits: Math.max(1, toNumber(formData.numWorkUnits, 1)),
+        baseQuantity: toNumber(formData.sampleCounts, 0),
+        pricingRuleVersion: formData.pricingRuleVersion,
+        complexityRating: toInteger(formData.complexityRating, 1),
+        complexityMultiplier: 1,
+        serviceTotal: Math.max(
+          0,
+          storedSubTotal + storedDiscount - toNumber(formData.travelCharge, 0),
+        ),
+        customTotal: 0,
+        subtotalBeforeDiscount: storedSubTotal + storedDiscount,
+        discountTotal: storedDiscount,
+        taxableTotal: storedSubTotal,
+        sstAmount: toNumber(formData.sstAmount, 0),
+        subTotal: storedSubTotal,
+        grandTotal: toNumber(formData.grandTotal, 0),
+      }
+    }
+
+    if (preserveHistoricalSnapshot) {
+      return buildStoredHygieneTotals({
+        sampleCounts: formData.sampleCounts,
+        numWorkUnits: formData.numWorkUnits,
+        travelCharge: formData.travelCharge,
+        discount: formData.discount,
+        sstPercent: formData.sstPercent,
+        sstAmount: formData.sstAmount,
+        subTotal: formData.subTotal,
+        grandTotal: formData.grandTotal,
         pricingRuleVersion: formData.pricingRuleVersion,
         complexityRating: formData.complexityRating,
-      }),
-    [
-      formData.sampleCounts,
-      formData.numWorkUnits,
-      formData.unitPrice,
-      formData.travelCharge,
-      formData.hygieneItems,
-      formData.discount,
-      formData.sstPercent,
-      formData.pricingRuleVersion,
-      formData.complexityRating,
-      toInteger,
-      toNumber,
-    ],
-  )
+      })
+    }
+
+    return calculateHygieneTotals({
+      sampleCounts: toInteger(formData.sampleCounts, 0),
+      numWorkUnits:
+        String(formData.numWorkUnits || '').trim() !== ''
+          ? Math.max(1, toInteger(formData.numWorkUnits, 1))
+          : 0,
+      unitPrice: toNumber(formData.unitPrice, 0),
+      travelCharge: toNumber(formData.travelCharge, 0),
+      customItems: Array.isArray(formData.hygieneItems) ? formData.hygieneItems : [],
+      discount: toNumber(formData.discount, 0),
+      sstPercent: toNumber(formData.sstPercent, 0),
+      pricingRuleVersion: formData.pricingRuleVersion,
+      complexityRating: formData.complexityRating,
+    })
+  }, [
+    formData.sampleCounts,
+    formData.numWorkUnits,
+    formData.unitPrice,
+    formData.travelCharge,
+    formData.hygieneItems,
+    formData.discount,
+    formData.sstPercent,
+    formData.pricingRuleVersion,
+    formData.complexityRating,
+    formData.subTotal,
+    formData.grandTotal,
+    formData.sstAmount,
+    hasKnownPricingRule,
+    preserveHistoricalSnapshot,
+    toInteger,
+    toNumber,
+  ])
+
+  const restoreHistoricalPricing = useCallback(() => {
+    if (!initialFormData) return
+
+    setFormData((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        IH_PRICING_INPUT_FIELDS.map((field) => [field, initialFormData[field] ?? current[field]]),
+      ),
+      pricingRuleVersion: initialFormData.pricingRuleVersion,
+      complexityRating: initialFormData.complexityRating ?? 1,
+      hygieneItems: Array.isArray(initialFormData.hygieneItems) ? initialFormData.hygieneItems : [],
+      estimatedTotalCost: initialFormData.estimatedTotalCost ?? '',
+      sstAmount: initialFormData.sstAmount ?? current.sstAmount,
+      subTotal: initialFormData.subTotal ?? current.subTotal,
+      grandTotal: initialFormData.grandTotal ?? current.grandTotal,
+      upgradePricingRule: false,
+    }))
+    setPricingChangeConfirmed(false)
+    setSaveRemediation(null)
+  }, [initialFormData])
+
+  const focusEstimatedCost = useCallback(() => {
+    document.getElementById('estimatedTotalCost')?.focus()
+  }, [])
+
+  const handleRecoverableFailure = useCallback((result) => {
+    const knownRecoverableErrors = new Set([
+      'ESTIMATED_COST_REQUIRED',
+      'STALE_QUOTE_VERSION',
+      'UNKNOWN_PRICING_RULE',
+      'QUOTE_SAVE_FAILED',
+      'QUOTE_NETWORK_ERROR',
+    ])
+    if (!knownRecoverableErrors.has(result?.error_code)) return false
+
+    setSaveRemediation(result)
+    return true
+  }, [])
 
   const handleSaveQuote = async () => {
+    setSaveRemediation(null)
+
+    if (!hasKnownPricingRule) {
+      setSaveRemediation({
+        error_code: 'UNKNOWN_PRICING_RULE',
+        message:
+          'Stored quotation data is still available, but financial editing is disabled until the pricing rule is repaired.',
+      })
+      return
+    }
+
+    if (isHistoricalPricing && historicalPricingInputsChanged && !pricingChangeConfirmed) {
+      setSaveRemediation({
+        error_code: 'PRICING_CHANGE_REQUIRES_RECALCULATION',
+        message:
+          'Confirm recalculation or restore the original pricing before saving this historical quotation.',
+      })
+      return
+    }
+
     const { primaryPIC, pic_name, pic_email, pic_phone, pic_position } =
       buildPicPayload(selectedClient)
     if (!primaryPIC) {
@@ -255,9 +395,10 @@ export default function HygieneQuotationForm({
         ? null
         : Number(formData.estimatedTotalCost)
     const estimatedCostPayload = Number.isFinite(estimatedCost) ? estimatedCost : null
-    const isLegacyPricing =
-      isEditMode && formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
-    if (!isLegacyPricing && (!Number.isFinite(estimatedCostPayload) || estimatedCostPayload <= 0)) {
+    if (
+      !isHistoricalPricing &&
+      (!Number.isFinite(estimatedCostPayload) || estimatedCostPayload <= 0)
+    ) {
       dialog.alert('Please enter a traffic-light estimated cost greater than zero before saving.')
       return
     }
@@ -306,10 +447,11 @@ export default function HygieneQuotationForm({
       unit_price: toNumber(formData.unitPrice, 0),
       discount: toNumber(formData.discount, 0),
       hygiene_items: hygieneItems,
+      upgrade_pricing_rule: Boolean(formData.upgradePricingRule),
       price_exception_request_id: null,
       sst_percent: toNumber(formData.sstPercent, 0),
       sst_amount: quoteTotals.sstAmount,
-      sub_total: quoteTotals.subtotalBeforeDiscount,
+      sub_total: quoteTotals.subTotal,
       grand_total: quoteTotals.grandTotal,
       estimated_total_cost: estimatedCostPayload,
       traffic_light_rule_version: formData.trafficLightRuleVersion || TRAFFIC_LIGHT_RULE_VERSION,
@@ -318,12 +460,28 @@ export default function HygieneQuotationForm({
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
 
-    await saveQuote(payload)
+    const saveResult = await saveQuote(
+      {
+        ...payload,
+        ...(isEditMode && { quote_version: formData.quoteVersion || null }),
+      },
+      { onRecoverableFailure: handleRecoverableFailure },
+    )
+
+    if (saveResult?.saved && saveResult.result?.data) {
+      setFormData((current) => ({
+        ...current,
+        quoteVersion: saveResult.result.data.quote_version || current.quoteVersion,
+        pricingRuleVersion:
+          saveResult.result.data.pricing_rule_version || current.pricingRuleVersion,
+        upgradePricingRule: false,
+      }))
+      setSaveRemediation(null)
+    }
   }
 
   const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
-  const isLegacyPricing = isEditMode && formData.pricingRuleVersion === LEGACY_HYGIENE_PRICING_RULE
-  const canShowPricing = hasEstimatedCost || isLegacyPricing
+  const canShowPricing = hasKnownPricingRule && (hasEstimatedCost || isHistoricalPricing)
   const trafficLightStatus = getTrafficLightStatus({
     serviceKey: 'ih',
     estimatedTotalCost: formData.estimatedTotalCost,
@@ -348,6 +506,22 @@ export default function HygieneQuotationForm({
 
       {toInteger(formData.sampleCounts, 0) > 0 && (
         <>
+          <HygieneQuoteLifecycleAlerts
+            formData={formData}
+            hasKnownPricingRule={hasKnownPricingRule}
+            isHistoricalPricing={isHistoricalPricing}
+            historicalPricingInputsChanged={historicalPricingInputsChanged}
+            pricingChangeConfirmed={pricingChangeConfirmed}
+            onConfirmRecalculation={() => {
+              setPricingChangeConfirmed(true)
+              setSaveRemediation(null)
+            }}
+            onRestoreHistoricalPricing={restoreHistoricalPricing}
+            onFocusEstimatedCost={focusEstimatedCost}
+            saveRemediation={saveRemediation}
+            onRetrySave={handleSaveQuote}
+          />
+
           <TrafficLightCard
             serviceKey="ih"
             estimatedTotalCost={formData.estimatedTotalCost}
@@ -360,7 +534,13 @@ export default function HygieneQuotationForm({
           />
 
           {canShowPricing && (
-            <PricingCard formData={formData} setFormData={setFormData} isEditMode={isEditMode} />
+            <PricingCard
+              formData={formData}
+              setFormData={setFormData}
+              isEditMode={isEditMode}
+              totalsOverride={quoteTotals}
+              preserveStoredTotals={preserveHistoricalSnapshot}
+            />
           )}
 
           {selectedClient && formData.serviceId && formData.serviceCode && canShowPricing && (
@@ -373,6 +553,7 @@ export default function HygieneQuotationForm({
               requiresApproval={requiresApproval}
               isEditMode={isEditMode}
               quoteId={quoteId}
+              totalsOverride={quoteTotals}
             />
           )}
         </>

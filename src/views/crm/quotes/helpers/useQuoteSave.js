@@ -134,6 +134,7 @@ export const saveQuote = async ({
   networkErrorMessage = 'An error occurred while saving the quotation.',
   createAnotherPath = '/crm/quotes',
   allowProjectValueDecision = true,
+  onRecoverableFailure,
 } = {}) => {
   const endpoint = quoteServiceUrl(serviceKey, isEditMode ? quoteId : null)
 
@@ -181,11 +182,16 @@ export const saveQuote = async ({
         networkErrorMessage,
         createAnotherPath,
         allowProjectValueDecision: false,
+        onRecoverableFailure,
       })
     }
 
     if (!response?.ok && !isQuoteSaveSuccess(result)) {
-      dialogService.alert(getServerMessage(result, failureMessage))
+      const handled =
+        typeof onRecoverableFailure === 'function'
+          ? await onRecoverableFailure(result, { response })
+          : false
+      if (!handled) dialogService.alert(getServerMessage(result, failureMessage))
       return { saved: false, result }
     }
 
@@ -231,9 +237,20 @@ export const saveQuote = async ({
     return { saved: true, result }
   } catch (err) {
     console.error('Quote save error:', err)
-    dialogService.alert(
-      err?.message === invalidSaveResponseMessage ? err.message : networkErrorMessage,
-    )
+    const recoveryResult = {
+      status: 'error',
+      error_code: 'QUOTE_NETWORK_ERROR',
+      message: err?.message === invalidSaveResponseMessage ? err.message : networkErrorMessage,
+      remediation: {
+        primary: 'retry_save',
+        secondary: 'copy_unsaved_data',
+      },
+    }
+    const handled =
+      typeof onRecoverableFailure === 'function'
+        ? await onRecoverableFailure(recoveryResult, { error: err })
+        : false
+    if (!handled) dialogService.alert(recoveryResult.message)
     return { saved: false, error: err }
   }
 }
