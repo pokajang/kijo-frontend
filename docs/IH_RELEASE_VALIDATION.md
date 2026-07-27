@@ -93,10 +93,11 @@ Using disposable V2 data:
 9. Reconcile quote, project, invoice, discount, SST, and fee values.
 10. Restore the isolated database snapshot after evidence is captured.
 
-Also verify stale-save HTTP 409 remediation, missing estimated cost, cancelled
-V2 upgrade, PDF retry, unknown pricing rule, unauthorized approval, rejected
-approval, network failure, and repeated submission. Each failure must preserve
-data, avoid duplicates, and present an actionable remediation control.
+Also verify that a valid save after an external row update remains allowed and
+persists the submitted form values. Verify missing estimated cost, cancelled V2
+upgrade, PDF retry, unknown pricing rule, unauthorized approval, rejected
+approval, network failure, and repeated submission. Each genuine failure must
+preserve data, avoid duplicates, and present an actionable remediation control.
 
 ## 6. Deployment compatibility matrix
 
@@ -104,13 +105,12 @@ Record evidence for every cell:
 
 | Frontend | Backend | Expected outcome |
 | --- | --- | --- |
-| Previous | New | Save remains compatible because `quote_version` is optional |
-| New | Previous | Unknown request fields are ignored and no unsupported rule is created |
-| Cached previous tab | New | Stale save is rejected without losing the unsaved browser data |
+| Previous | New | Save remains compatible through the normal update contract |
+| New | Previous | Save remains compatible and no unsupported rule is created |
+| Cached previous tab | New | Valid edit or revision remains allowed and persists the submitted values |
 | New after backend-first rollout | New | All three pricing rules load, save, print, and convert correctly |
 
-Any incompatible cell is a stop condition. Do not rely on instructing users to
-resubmit stale payloads.
+Any incompatible cell is a stop condition.
 
 ## 7. Classification and rollback rehearsal
 

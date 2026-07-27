@@ -99,7 +99,6 @@ export default function HygieneQuotationForm({
       discount: 300,
       hygieneItems: [],
       upgradePricingRule: false,
-      quoteVersion: '',
       pricingState: null,
       priceExceptionRequestId: '',
       sstPercent: 0,
@@ -158,7 +157,6 @@ export default function HygieneQuotationForm({
         hygieneItems: Array.isArray(initialFormData.hygieneItems)
           ? initialFormData.hygieneItems
           : defaultForm.hygieneItems,
-        quoteVersion: initialFormData.quoteVersion || defaultForm.quoteVersion,
         pricingState: initialFormData.pricingState || defaultForm.pricingState,
         priceExceptionRequestId: '',
         sstPercent: initialFormData.sstPercent ?? defaultForm.sstPercent,
@@ -341,7 +339,6 @@ export default function HygieneQuotationForm({
   const handleRecoverableFailure = useCallback((result) => {
     const knownRecoverableErrors = new Set([
       'ESTIMATED_COST_REQUIRED',
-      'STALE_QUOTE_VERSION',
       'UNKNOWN_PRICING_RULE',
       'QUOTE_SAVE_FAILED',
       'QUOTE_NETWORK_ERROR',
@@ -460,18 +457,13 @@ export default function HygieneQuotationForm({
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
 
-    const saveResult = await saveQuote(
-      {
-        ...payload,
-        ...(isEditMode && { quote_version: formData.quoteVersion || null }),
-      },
-      { onRecoverableFailure: handleRecoverableFailure },
-    )
+    const saveResult = await saveQuote(payload, {
+      onRecoverableFailure: handleRecoverableFailure,
+    })
 
     if (saveResult?.saved && saveResult.result?.data) {
       setFormData((current) => ({
         ...current,
-        quoteVersion: saveResult.result.data.quote_version || current.quoteVersion,
         pricingRuleVersion:
           saveResult.result.data.pricing_rule_version || current.pricingRuleVersion,
         upgradePricingRule: false,

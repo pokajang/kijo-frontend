@@ -390,10 +390,10 @@ Smoke-test all three rule generations:
 
 The browser lifecycle smoke now covers V2, legacy-complexity, and the
 intermediate RM9,300 precision fixture. It also verifies that an unsaved V2
-upgrade can be cancelled, a stale edit receives HTTP 409 without overwriting
-the newer row, remediation actions remain available, PDFs generate, and
-disposable fixtures are removed. It intentionally refuses every non-loopback
-URL because its fixture command operates on the locally configured backend.
+upgrade can be cancelled, a form save remains available after an external row
+update and persists the submitted values, PDFs generate, and disposable
+fixtures are removed. It intentionally refuses every non-loopback URL because
+its fixture command operates on the locally configured backend.
 Run it against an isolated backend and the production frontend build:
 
 ```bash
@@ -462,25 +462,25 @@ evidence returns exit code 3 and is not release approval.
 
 Lifecycle compatibility and remediation expectations:
 
-- Deploy the backend first. The new `quote_version` request field is optional,
-  so an older cached frontend can finish a safe save during rollout.
-- Deploy the frontend immediately afterward. A new frontend can safely send
-  `quote_version` to a backend that has not yet been restarted because unknown
-  request fields are not persisted.
+- Deploy the backend first, followed immediately by the frontend.
+- Create, edit, and revise remain normal form actions. They must not be blocked
+  by quotation-version or row-timestamp comparisons.
+- Older cached frontends remain compatible during rollout; obsolete extra
+  fields are ignored and the submitted update is processed normally.
 - A historical pricing-input change keeps stored totals until the user chooses
   `Continue and Recalculate`; `Restore Original Pricing` remains available.
 - A V2 upgrade remains a browser preview until a successful save and provides
   `Cancel Upgrade`.
-- `STALE_QUOTE_VERSION` must open the latest version in a separate tab and
-  offer copy-unsaved-data; it must not destroy the current form by reloading it.
+- If the quotation changes while a form is open, the subsequent valid save or
+  revision remains allowed and the submitted form values become the latest
+  saved state.
 - `ESTIMATED_COST_REQUIRED` must focus the estimated-cost field and allow a
   return to historical pricing.
 - PDF failure must not roll back a saved quote and must offer one active retry.
 - An unknown pricing rule remains viewable and printable, but financial update
   is disabled until administrator repair.
 - After deployment, clear application/config caches and ask active quotation
-  users to reload once. Never resolve a stale-save warning by resubmitting the
-  old payload manually.
+  users to reload once.
 
 Rollback must reverse the data classification before rolling back either
 application:

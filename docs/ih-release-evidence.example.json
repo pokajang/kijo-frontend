@@ -57,7 +57,7 @@
         "cached_tab": "pending",
         "backend_first_rollout": "pending"
       },
-      "notes": "Record old frontend/new backend and new frontend/old backend results, including cached-tab stale-save handling."
+      "notes": "Record old frontend/new backend and new frontend/old backend results, including a cached-tab save after an external row update."
     },
     "rollback_rehearsal": {
       "status": "pending",

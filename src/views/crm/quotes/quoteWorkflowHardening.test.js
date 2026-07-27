@@ -40,7 +40,7 @@ describe('quote service registry', () => {
     expect(getQuoteService('industrial-hygiene')).toBe(serviceConfig.ih)
   })
 
-  it('maps the IH concurrency token and backend pricing state into edit data', () => {
+  it('maps the IH backend pricing state into edit data without a concurrency token', () => {
     const mapped = serviceConfig.ih.mapRowToFormData({
       pricing_rule_version: 'ih_standard_v1',
       quote_version: 'a'.repeat(64),
@@ -52,12 +52,12 @@ describe('quote service registry', () => {
 
     expect(mapped).toMatchObject({
       pricingRuleVersion: 'ih_standard_v1',
-      quoteVersion: 'a'.repeat(64),
       pricingState: {
         editable: true,
         code: 'HISTORICAL_TOTAL_PRESERVED',
       },
     })
+    expect(mapped).not.toHaveProperty('quoteVersion')
   })
 })
 

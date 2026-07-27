@@ -183,7 +183,6 @@ describe('HygieneQuoteForm pricing-version flows', () => {
           pricingRuleVersion: 'ih_complexity_v1',
           complexityRating: 4,
           hygieneItems: [],
-          quoteVersion: 'a'.repeat(64),
         }}
       />,
     )
@@ -234,7 +233,6 @@ describe('HygieneQuoteForm pricing-version flows', () => {
           pricingRuleVersion: 'ih_standard_v1',
           complexityRating: 4,
           hygieneItems: [],
-          quoteVersion: 'a'.repeat(64),
         }}
       />,
     )
@@ -252,10 +250,10 @@ describe('HygieneQuoteForm pricing-version flows', () => {
         complexity_rating: 4,
         sub_total: 9300,
         grand_total: 9300,
-        quote_version: 'a'.repeat(64),
       }),
       expect.objectContaining({ onRecoverableFailure: expect.any(Function) }),
     )
+    expect(mocks.saveQuote.mock.calls[0][0]).not.toHaveProperty('quote_version')
   })
 
   it('requires confirmation before recalculating historical pricing inputs', async () => {
@@ -340,46 +338,6 @@ describe('HygieneQuoteForm pricing-version flows', () => {
     expect(screen.getByTestId('details-rule')).toHaveTextContent('ih_standard_v1')
     expect(screen.getByTestId('review-total')).toHaveTextContent('9300')
     expect(screen.queryByText('V2 pricing upgrade preview')).not.toBeInTheDocument()
-  })
-
-  it('turns a stale-save response into reload and copy remediation without losing form state', async () => {
-    mocks.saveQuote.mockImplementationOnce(async (_payload, options) => {
-      await options.onRecoverableFailure({
-        status: 'error',
-        error_code: 'STALE_QUOTE_VERSION',
-        message: 'A newer version exists.',
-      })
-      return { saved: false }
-    })
-
-    render(
-      <HygieneQuoteForm
-        selectedClient={selectedClient}
-        isEditMode
-        quoteId={92}
-        initialFormData={{
-          serviceId: 201,
-          serviceTitle: 'CEM Monitoring',
-          serviceCode: 'CEM',
-          sampleCounts: 2,
-          sampleUnit: 'sample(s)',
-          numWorkUnits: 1,
-          unitPrice: 500,
-          discount: 0,
-          sstPercent: 0,
-          estimatedTotalCost: 800,
-          pricingRuleVersion: 'ih_standard_v2',
-          quoteVersion: 'a'.repeat(64),
-        }}
-      />,
-    )
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Save quote' }))
-
-    expect(await screen.findByText('A newer quotation version is available')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Review Latest Version' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Copy Unsaved Form Data' })).toBeInTheDocument()
-    expect(screen.getByTestId('review')).toBeInTheDocument()
   })
 
   it('keeps unsupported pricing data viewable and blocks financial save with remediation', async () => {

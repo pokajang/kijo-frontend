@@ -221,7 +221,6 @@ export const serviceConfig = {
       numWorkUnits: toInt(pick(row, 'num_work_units', 'numWorkUnits'), 0),
       pricingRuleVersion:
         pick(row, 'pricing_rule_version', 'pricingRuleVersion') || 'ih_standard_v2',
-      quoteVersion: pick(row, 'quote_version', 'updated_at', 'quoteVersion') || '',
       pricingState: pick(row, 'pricing_state', 'pricingState') || null,
       complexityRating: toInt(pick(row, 'complexity_rating', 'complexityRating'), 1),
       estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),

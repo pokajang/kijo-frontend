@@ -79,18 +79,6 @@ const HygieneQuoteLifecycleAlerts = ({
         />
       )}
 
-      {saveRemediation?.error_code === 'STALE_QUOTE_VERSION' && (
-        <QuoteLifecycleRemediation
-          color="danger"
-          title="A newer quotation version is available"
-          message={saveRemediation.message}
-          primaryLabel="Review Latest Version"
-          onPrimary={openLatestQuote}
-          secondaryLabel="Copy Unsaved Form Data"
-          onSecondary={copyUnsavedFormData}
-        />
-      )}
-
       {['QUOTE_SAVE_FAILED', 'QUOTE_NETWORK_ERROR'].includes(saveRemediation?.error_code) && (
         <QuoteLifecycleRemediation
           color="danger"

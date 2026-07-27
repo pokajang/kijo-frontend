@@ -501,24 +501,30 @@ const run = async () => {
       await page.getByRole('button', { name: 'Upgrade to Current V2 Pricing' }).isVisible(),
     )
 
-    await page.locator('textarea[name="inquiryRemarks"]').fill('Unsaved stale browser edit')
+    const concurrentEditRemarks = 'Browser edit saved after external row update'
+    await page.locator('textarea[name="inquiryRemarks"]').fill(concurrentEditRemarks)
     await runFixtureCommand(['touch', `--quote-id=${intermediateQuoteId}`])
-    const staleResponsePromise = page.waitForResponse(
+    const concurrentEditResponsePromise = page.waitForResponse(
       (response) =>
         response.url().includes(`/proxy/quotes/ih/${intermediateQuoteId}`) &&
         response.request().method() === 'PUT',
     )
     await page.getByRole('button', { name: 'Update Quote', exact: true }).click()
-    const staleResponse = await staleResponsePromise
+    const concurrentEditResponse = await concurrentEditResponsePromise
     check(
-      'intermediate-stale-save-is-rejected',
-      staleResponse.status() === 409,
-      `HTTP ${staleResponse.status()}`,
+      'intermediate-save-after-external-update-is-allowed',
+      concurrentEditResponse.status() === 200,
+      `HTTP ${concurrentEditResponse.status()}`,
     )
-    await page.getByText('A newer quotation version is available', { exact: true }).waitFor()
+    const savedConcurrentEdit = await context.request.get(
+      `${baseUrl}/proxy/quotes/ih/${intermediateQuoteId}`,
+    )
+    const savedConcurrentEditPayload = await readJsonResponse(savedConcurrentEdit)
     check(
-      'intermediate-stale-save-offers-remediation',
-      await page.getByRole('button', { name: 'Review Latest Version' }).isVisible(),
+      'intermediate-save-after-external-update-persists-form-data',
+      savedConcurrentEdit.status() === 200 &&
+        savedConcurrentEditPayload?.data?.inquiry_remarks === concurrentEditRemarks,
+      `HTTP ${savedConcurrentEdit.status()}`,
     )
 
     const intermediatePdfResponse = await context.request.get(
