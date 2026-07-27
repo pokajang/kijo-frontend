@@ -24,6 +24,7 @@ const baseFormData = {
   travelCharge: 1500,
   travelRegion: 'northern',
   mealsProvided: 'Yes',
+  hrdCharge: 4,
 }
 
 const renderTrainingDetails = ({ formData = baseFormData, setFormData = vi.fn() } = {}) => {
@@ -62,5 +63,25 @@ describe('TrainingDetailsCard', () => {
     expect(nextFormData.travelCharge).toBe(0)
     expect(nextFormData.travelRegion).toBe('none')
     expect(nextFormData.mealsProvided).toBe('No')
+  })
+
+  it('does not apply a default HRD rate when selecting HRD Grant', () => {
+    const selfPaymentForm = {
+      ...baseFormData,
+      paymentMethod: 'Self-Payment',
+      hrdCharge: 0,
+    }
+    let nextFormData
+    const setFormData = vi.fn((updateFormData) => {
+      nextFormData = updateFormData(selfPaymentForm)
+    })
+    renderTrainingDetails({ formData: selfPaymentForm, setFormData })
+
+    const paymentMethodLabel = screen.getByText('Payment Method')
+    const paymentMethodSelect = paymentMethodLabel.parentElement.querySelector('select')
+    fireEvent.change(paymentMethodSelect, { target: { value: 'HRD Grant' } })
+
+    expect(nextFormData.paymentMethod).toBe('HRD Grant')
+    expect(nextFormData.hrdCharge).toBe(0)
   })
 })

@@ -65,10 +65,11 @@ export const buildInvoiceCreatePayload = (
       ? Math.max(toNumber(pricing.training_total) - trainingDiscountTotal, 0) * (hrdRate / 100)
       : 0
   const hrdQty = toNumber(pricing.hrd_qty ?? 1)
-  const hrdUnitPrice = isHrdPayment ? toNumber(pricing.hrd_amount) || computedHrdAmount : 0
+  const hrdUnitPrice =
+    isHrdPayment && hrdRate > 0 ? toNumber(pricing.hrd_amount) || computedHrdAmount : 0
   const hrdAmount = hrdQty * hrdUnitPrice
   const resolvedGrandTotal =
-    serviceType === 'Training' && isHrdPayment && hrdAmount > 0
+    serviceType === 'Training'
       ? baseAmount + toNumber(pricing.sst_amount) + hrdAmount
       : toNumber(pricing.grand_total)
 

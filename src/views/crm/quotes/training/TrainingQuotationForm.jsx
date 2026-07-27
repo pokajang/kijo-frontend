@@ -19,7 +19,7 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchPriceException } from '../priceException'
 import { getTrainingRateOption } from './trainingRates'
-import { DEFAULT_HRD_CHARGE_RATE, normalizeTrainingHrdCharge } from './trainingHrd'
+import { normalizeTrainingHrdCharge } from './trainingHrd'
 import {
   calculateTrainingTotal,
   calculateMealTotal,
@@ -91,7 +91,7 @@ const TrainingQuotationForm = ({
     discountType: 'No Discount',
     discountValue: 0,
     sstRate: 0,
-    hrdCharge: DEFAULT_HRD_CHARGE_RATE,
+    hrdCharge: 0,
     estimatedTotalCost: '',
     trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
     attachProposal: true,
@@ -390,7 +390,8 @@ const TrainingQuotationForm = ({
   const mobilizationCost = calculateMobilization(travelCharge)
   const subtotal = calculateSubtotal(trainingTotal, mealTotal, mobilizationCost, discountAmount)
   const sstAmount = calculateSST(subtotal, sstRate)
-  const hrdAmount = calculateHRD(trainingTotal, discountAmount, hrdCharge)
+  const effectiveHrdCharge = normalizeTrainingHrdCharge(formData.paymentMethod, hrdCharge)
+  const hrdAmount = calculateHRD(trainingTotal, discountAmount, effectiveHrdCharge)
   const quoteGrandTotal = calculateGrandTotal(subtotal, sstAmount, hrdAmount)
   const trafficStatus = getTrafficLightStatus({
     serviceKey: 'training',

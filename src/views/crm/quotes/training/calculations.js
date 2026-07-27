@@ -81,7 +81,8 @@ export const calculateSST = (subtotal, sstRate) => subtotal * (sstRate / 100)
  * @returns {number}
  */
 export const calculateHRD = (trainingTotal, discount, hrdRate) =>
-  (trainingTotal - discount) * (hrdRate / 100)
+  Math.max(Number(trainingTotal || 0) - Number(discount || 0), 0) *
+  (Math.max(Number(hrdRate || 0), 0) / 100)
 
 /**
  * Calculate grand total payable

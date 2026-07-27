@@ -25,6 +25,7 @@ import {
   calculateHRD,
   calculateGrandTotal,
 } from './calculations'
+import { normalizeTrainingHrdCharge } from './trainingHrd'
 import dialog from '../../../../components/dialog/dialogService'
 
 const money = (value) =>
@@ -118,7 +119,8 @@ const ReviewQuotationCard = ({
   const mobilizationCost = calculateMobilization(travelCharge)
   const subtotal = calculateSubtotal(trainingTotal, mealTotal, mobilizationCost, discountAmount)
   const sstAmount = calculateSST(subtotal, sstRate)
-  const hrdAmount = calculateHRD(trainingTotal, discountAmount, hrdCharge)
+  const effectiveHrdCharge = normalizeTrainingHrdCharge(formData.paymentMethod, hrdCharge)
+  const hrdAmount = calculateHRD(trainingTotal, discountAmount, effectiveHrdCharge)
   const grandTotal = calculateGrandTotal(subtotal, sstAmount, hrdAmount)
 
   const handleSaveQuote = async () => {
@@ -187,7 +189,7 @@ const ReviewQuotationCard = ({
       discount_type: formData.discountType,
       discount_value: Number(formData.discountValue) || 0,
       sst_rate: Number(formData.sstRate) || 0,
-      hrd_charge: Number(formData.hrdCharge) || 0,
+      hrd_charge: effectiveHrdCharge,
       training_total: trainingTotal,
       meal_total: mealTotal,
       mobilization_cost: mobilizationCost,
@@ -356,7 +358,7 @@ const ReviewQuotationCard = ({
             <CTableDataCell>
               RM {hrdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               <small className="text-body-secondary ms-2">
-                ({hrdCharge}% of net training cost)
+                ({effectiveHrdCharge}% of net training cost)
               </small>
             </CTableDataCell>
           </CTableRow>

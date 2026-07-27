@@ -27,6 +27,7 @@ import {
   trainingRateOptions,
   trainingTravelRegionOptions,
 } from './trainingRates'
+import { isHrdGrantPayment, normalizeTrainingHrdCharge } from './trainingHrd'
 
 const money = (value) =>
   Number(value || 0).toLocaleString('en-MY', {
@@ -64,6 +65,7 @@ const labels = {
     discountValue: 'Discount Value',
     sstRate: 'SST Rate',
     hrdCharge: 'HRD Charge',
+    hrdChargeHelp: 'Enter the applicable HRD rate. No rate is applied automatically.',
     chooseDiscount: 'Choose discount',
     noDiscount: 'No Discount',
     oneOff: 'One-Off',
@@ -111,6 +113,7 @@ const labels = {
     discountValue: 'Nilai Diskaun',
     sstRate: 'Kadar SST',
     hrdCharge: 'Caj HRD',
+    hrdChargeHelp: 'Masukkan kadar HRD yang berkenaan. Tiada kadar digunakan secara automatik.',
     chooseDiscount: 'Pilih diskaun',
     noDiscount: 'Tiada Diskaun',
     oneOff: 'Sekali Sahaja',
@@ -152,6 +155,7 @@ const PricingDetailsCard = ({
   const selectedRate = getTrainingRateOption(formData.trainingRateType)
   const selectedTravelRegion = getTrainingTravelRegion(formData.travelRegion)
   const isPerPaxMode = formData.pricingBasis === 'per_pax'
+  const isHrdPayment = isHrdGrantPayment(formData.paymentMethod)
   const appliesRateFloors = shouldApplyTrainingRateFloors(formData)
   const durationUnit = formData.durationUnit || 'day(s)'
   const unitLabel = durationUnit === 'hour(s)' ? text.hourUnit : text.dayUnit
@@ -613,15 +617,23 @@ const PricingDetailsCard = ({
                   value={formData.hrdCharge}
                   min="0"
                   step="1"
+                  disabled={!isHrdPayment}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
                       hrdCharge: e.target.value,
                     }))
                   }
+                  onBlur={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hrdCharge: normalizeTrainingHrdCharge(prev.paymentMethod, prev.hrdCharge),
+                    }))
+                  }
                 />
                 <CInputGroupText>%</CInputGroupText>
               </CInputGroup>
+              <small className="text-body-secondary">{text.hrdChargeHelp}</small>
             </CCol>
           </CForm>
         </CCardBody>

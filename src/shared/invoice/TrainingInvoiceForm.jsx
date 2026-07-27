@@ -117,7 +117,7 @@ const TrainingInvoiceForm = ({
   const computedHrdAmount = isHrdPayment ? hrdBase * (hrdRate / 100) : 0
   const hrdAmountInput = toNumber(pricing.hrd_amount, NaN)
   const hrdAmount =
-    isHrdPayment && Number.isFinite(hrdAmountInput) && hrdAmountInput > 0
+    isHrdPayment && hrdRate > 0 && Number.isFinite(hrdAmountInput) && hrdAmountInput > 0
       ? hrdAmountInput
       : computedHrdAmount
   const hrdLineTotal = hrdQty * hrdAmount
@@ -139,11 +139,15 @@ const TrainingInvoiceForm = ({
       if (shouldAutofillHrdAmount) {
         next.hrd_amount = toNumber(hrdAmount.toFixed(2))
       }
+      if ((!isHrdPayment || hrdRate <= 0) && toNumber(prev.hrd_amount) !== 0) {
+        next.hrd_amount = 0
+        next.hrd_amount_manual = false
+      }
 
       const unchanged = Object.entries(next).every(([key, value]) => prev[key] === value)
       return unchanged ? prev : { ...prev, ...next }
     })
-  }, [subtotal, sstAmount, grandTotal, isHrdPayment, hrdAmount, setPricing])
+  }, [subtotal, sstAmount, grandTotal, isHrdPayment, hrdRate, hrdAmount, setPricing])
 
   const handleChange = (field) => (e) => {
     const { value } = e.target

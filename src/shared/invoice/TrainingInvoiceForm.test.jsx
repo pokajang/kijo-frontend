@@ -37,11 +37,11 @@ const hrdQuoteDetails = {
   mobilization_cost: 0,
   discount_amount: 300,
   hrd_charge: 0,
-  hrd_amount: 0,
+  hrd_amount: 168,
   subtotal: 4200,
   sst_rate: 0,
   sst_amount: 0,
-  grand_total: 4200,
+  grand_total: 4368,
 }
 
 const renderTrainingInvoiceForm = () => {
@@ -66,15 +66,15 @@ describe('TrainingInvoiceForm', () => {
     cleanup()
   })
 
-  it('keeps training quote values populated and defaults HRD rate when quote HRD charge is missing', async () => {
+  it('keeps a zero-rate HRD quote at zero and clears a stale HRD amount', async () => {
     renderTrainingInvoiceForm()
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('4500')).toBeInTheDocument()
       expect(screen.getByDisplayValue('300')).toBeInTheDocument()
-      expect(screen.getByText('HRD Charge (4% of training net)')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('168')).toBeInTheDocument()
-      expect(screen.getByText('4368.00')).toBeInTheDocument()
+      expect(screen.getByText('HRD Charge (0% of training net)')).toBeInTheDocument()
+      expect(screen.queryByDisplayValue('168')).not.toBeInTheDocument()
+      expect(screen.queryByText('4368.00')).not.toBeInTheDocument()
     })
   })
 })

@@ -281,7 +281,7 @@ describe('buildInvoiceCreatePayload', () => {
     expect(result.payload.grand_total).toBe(120)
   })
 
-  it('defaults a missing training HRD rate when the quote payment method is HRD Grant', () => {
+  it('keeps a missing training HRD rate at zero for HRD Grant payment', () => {
     const result = buildInvoiceCreatePayload('Training', {
       ...baseArgs,
       project: {
@@ -297,9 +297,9 @@ describe('buildInvoiceCreatePayload', () => {
       pricing: {
         ...baseArgs.pricing,
         subtotal: 4200,
-        grand_total: 4200,
+        grand_total: 4368,
         hrd_rate: 0,
-        hrd_amount: 0,
+        hrd_amount: 168,
         sst_amount: 0,
         training_total: 4500,
         training_qty: 1,
@@ -316,16 +316,11 @@ describe('buildInvoiceCreatePayload', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(result.payload.hrd_rate).toBe(4)
-    expect(result.payload.hrd_amount).toBe(168)
-    expect(result.payload.grand_total).toBe(4368)
-    expect(result.payload.breakdown).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          item_description: '4% HRD Charge',
-          unit_price: 168,
-        }),
-      ]),
+    expect(result.payload.hrd_rate).toBe(0)
+    expect(result.payload.hrd_amount).toBe(0)
+    expect(result.payload.grand_total).toBe(4200)
+    expect(result.payload.breakdown.map((item) => item.item_description)).not.toContain(
+      '4% HRD Charge',
     )
   })
 

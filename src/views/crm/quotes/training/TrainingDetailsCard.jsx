@@ -21,7 +21,6 @@ import {
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { getPricingDurationDefaults } from './trainingDuration'
 import { getTrainingUnitPriceForDurationUnit } from './trainingRates'
-import { DEFAULT_HRD_CHARGE_RATE } from './trainingHrd'
 
 const toInputDateValue = (value) => {
   if (!value) return ''
@@ -263,7 +262,7 @@ const TrainingDetailsCard = ({
                     return {
                       ...prev,
                       paymentMethod: nextMethod,
-                      hrdCharge: nextMethod === 'HRD Grant' ? DEFAULT_HRD_CHARGE_RATE : 0,
+                      hrdCharge: 0,
                     }
                   })
                 }
