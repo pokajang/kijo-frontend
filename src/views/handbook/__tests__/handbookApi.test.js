@@ -3,6 +3,7 @@ import {
   getHandbookAcknowledgementStatus,
   getCurrentHandbook,
   getHandbookChangeLogs,
+  getHandbookSignatureEvidence,
   getHandbookSignatures,
   getHandbookVersion,
   getHandbookVersions,
@@ -78,21 +79,47 @@ describe('handbookApi', () => {
     })
   })
 
-  it('posts trimmed acknowledgement values as form data', async () => {
+  it('posts acknowledgement evidence as JSON', async () => {
     const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue(
       mockResponse({
         body: JSON.stringify({ success: true, message: 'Signed' }),
       }),
     )
 
-    await signHandbook({ fullName: 'Jane Doe', icNumber: '900101-01-1234', versionId: 12 })
+    const payload = {
+      submission_uuid: '1f4861ea-d6b8-4f34-ac4a-f843b3f7d591',
+      handbook_version_id: 12,
+      typed_legal_name: 'Jane Doe',
+      accepted_declaration_ids: ['one', 'two', 'three', 'four'],
+      acknowledgement_sha256: 'a'.repeat(64),
+      personal_signature_sha256: 'b'.repeat(64),
+    }
+    await signHandbook(payload)
 
     const [, options] = fetchMock.mock.calls[0]
     expect(options.method).toBe('POST')
     expect(options.credentials).toBe('include')
-    expect(options.body.get('full_name')).toBe('Jane Doe')
-    expect(options.body.get('ic_number')).toBe('900101-01-1234')
-    expect(options.body.get('handbook_version_id')).toBe('12')
+    expect(options.headers).toEqual({ 'Content-Type': 'application/json' })
+    expect(JSON.parse(options.body)).toEqual(payload)
+  })
+
+  it('loads a restricted acknowledgement evidence record', async () => {
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue(
+      mockResponse({
+        body: JSON.stringify({
+          success: true,
+          data: { id: 42, evidence_status: 'complete', integrity_verified: true },
+        }),
+      }),
+    )
+
+    const result = await getHandbookSignatureEvidence({ signatureId: 42 })
+
+    expect(result.data).toMatchObject({ id: 42, integrity_verified: true })
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('hr/handbook/signatures/42'), {
+      credentials: 'include',
+      signal: undefined,
+    })
   })
 
   it('loads the current handbook version', async () => {

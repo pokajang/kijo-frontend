@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
-import { CButton, CCol, CFormLabel, CTooltip } from '@coreui/react'
+import { CBadge, CButton, CCol, CFormLabel, CTooltip } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilReload } from '@coreui/icons'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../../auth/AuthProvider'
 import {
   DataTableFilterPanel,
   DataTableRecordList,
@@ -19,28 +20,43 @@ import {
 } from '../../../components/filters'
 import { useDebouncedSearch } from '../../../hooks/datatable'
 import { recordsTruncateStyle } from '../../../utils/datatable/tableFormatters'
+import { hasAnyAllowedRole } from '../../../utils/roles'
 import { getHandbookSignatures } from '../api/handbookApi'
+import HandbookAcknowledgementEvidenceDrawer from './HandbookAcknowledgementEvidenceDrawer'
 import {
   acknowledgementColumnPreferenceApiKey,
   acknowledgementColumnStorageKey,
   acknowledgementDataColumns,
+  declarationColumnKeys,
   defaultAcknowledgementVisibleColumns,
   emptyAcknowledgementValue,
   formatAcknowledgementSignedAt,
   formatAcknowledgementUserAgent,
+  formatDeclarationState,
   requiredAcknowledgementColumns,
 } from '../utils/handbookAcknowledgementRecordsConfig'
 
 const desktopUtilityPortalId = 'handbook-acknowledgement-records-utilities'
 const mobileUtilityPortalId = 'handbook-acknowledgement-records-mobile-utilities'
+const restrictedAuditColumnKeys = new Set(['ipAddress', 'userAgent', 'evidenceScheme'])
 
 const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canViewEvidence = hasAnyAllowedRole(user?.roles, ['HR', 'System Admin'])
+  const availableDataColumns = useMemo(
+    () =>
+      canViewEvidence
+        ? acknowledgementDataColumns
+        : acknowledgementDataColumns.filter((column) => !restrictedAuditColumnKeys.has(column.key)),
+    [canViewEvidence],
+  )
   const [loading, setLoading] = useState(false)
   const [records, setRecords] = useState([])
   const [error, setError] = useState(null)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
+  const [selectedEvidenceId, setSelectedEvidenceId] = useState(null)
   const { searchInput, setSearchInput, searchTerm, setSearchTerm } = useDebouncedSearch()
 
   useEffect(() => {
@@ -78,16 +94,38 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
 
   const normalizedRecords = useMemo(
     () =>
-      records.map((record) => ({
-        ...record,
-        version: record.version_label || emptyAcknowledgementValue,
-        fullName: record.full_name || emptyAcknowledgementValue,
-        signedAt: record.signed_at || '',
-        signedAtDisplay: formatAcknowledgementSignedAt(record.signed_at),
-        ipAddress: record.ip_address || emptyAcknowledgementValue,
-        userAgentShort: formatAcknowledgementUserAgent(record.user_agent),
-        userAgentFull: record.user_agent || emptyAcknowledgementValue,
-      })),
+      records.map((record) => {
+        const isEvidence = record.evidence_status === 'complete'
+        const accepted = Number(record.declarations_accepted || 0)
+        const required = Number(record.declarations_required || 0)
+
+        return {
+          ...record,
+          version: record.version_label || emptyAcknowledgementValue,
+          fullName: record.full_name || emptyAcknowledgementValue,
+          employeeCode: record.employee_code || emptyAcknowledgementValue,
+          declarationsStatus: isEvidence
+            ? `${accepted}/${required} accepted`
+            : 'Legacy - not captured',
+          signatureStatus: isEvidence ? 'Electronically signed' : 'Legacy acknowledgement',
+          signedAt: record.signed_at || '',
+          signedAtDisplay: formatAcknowledgementSignedAt(record.signed_at),
+          handbookReceipt: formatDeclarationState(record, declarationColumnKeys.handbookReceipt),
+          salaryDeduction: formatDeclarationState(record, declarationColumnKeys.salaryDeduction),
+          confidentialityAi: formatDeclarationState(
+            record,
+            declarationColumnKeys.confidentialityAi,
+          ),
+          electronicSignatureValidation: formatDeclarationState(
+            record,
+            declarationColumnKeys.electronicSignatureValidation,
+          ),
+          ipAddress: record.ip_address || emptyAcknowledgementValue,
+          userAgentShort: formatAcknowledgementUserAgent(record.user_agent),
+          userAgentFull: record.user_agent || emptyAcknowledgementValue,
+          evidenceScheme: isEvidence ? `v${record.evidence_schema_version}` : 'Legacy',
+        }
+      }),
     [records],
   )
 
@@ -102,6 +140,9 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
       [
         record.version,
         record.fullName,
+        record.employeeCode,
+        record.declarationsStatus,
+        record.signatureStatus,
         record.signedAtDisplay,
         record.ipAddress,
         record.userAgentShort,
@@ -136,6 +177,36 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
 
   const renderCell = (record, column) => {
     if (column.key === 'signedAt') return record.signedAtDisplay
+    if (column.key === 'declarationsStatus') {
+      return (
+        <CBadge color={record.evidence_status === 'complete' ? 'success' : 'secondary'}>
+          {record.declarationsStatus}
+        </CBadge>
+      )
+    }
+    if (column.key === 'signatureStatus') {
+      return (
+        <div>
+          <CBadge color={record.evidence_status === 'complete' ? 'success' : 'secondary'}>
+            {record.signatureStatus}
+          </CBadge>
+          {record.evidence_status === 'complete' && (
+            <div className="small text-body-secondary mt-1">{record.signedAtDisplay}</div>
+          )}
+        </div>
+      )
+    }
+    if (
+      [
+        'handbookReceipt',
+        'salaryDeduction',
+        'confidentialityAi',
+        'electronicSignatureValidation',
+      ].includes(column.key)
+    ) {
+      const accepted = record[column.key] === 'Accepted'
+      return <CBadge color={accepted ? 'success' : 'secondary'}>{record[column.key]}</CBadge>
+    }
     if (column.key === 'userAgent') {
       return (
         <span title={record.userAgentFull} style={recordsTruncateStyle}>
@@ -223,7 +294,7 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
             rows={filteredRecords}
             loading={loading}
             loadingMessage="Loading acknowledgement records..."
-            dataColumns={acknowledgementDataColumns}
+            dataColumns={availableDataColumns}
             defaultVisibleColumns={defaultAcknowledgementVisibleColumns}
             requiredColumns={requiredAcknowledgementColumns}
             storageKey={acknowledgementColumnStorageKey}
@@ -240,6 +311,18 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
             getSortValue={(record, field) =>
               field === 'signedAt' ? record.signedAt : record[field]
             }
+            onRowOpen={canViewEvidence ? (record) => setSelectedEvidenceId(record.id) : undefined}
+            getActions={
+              canViewEvidence
+                ? (record) => [
+                    {
+                      key: 'view-evidence',
+                      label: 'View evidence',
+                      onClick: () => setSelectedEvidenceId(record.id),
+                    },
+                  ]
+                : undefined
+            }
             className="handbook-acknowledgement-records-table"
             desktopUtilityPlacement="portal"
             desktopUtilityPortalId={desktopUtilityPortalId}
@@ -255,13 +338,22 @@ const HandbookAcknowledgementRecords = ({ refreshKey = 0 }) => {
               subtitle: (record) => record.version,
               meta: (record) => record.signedAtDisplay,
               kv: (record) => [
-                { key: 'ip', label: 'IP', value: record.ipAddress },
-                { key: 'agent', label: 'Agent', value: record.userAgentShort },
+                {
+                  key: 'declarations',
+                  label: 'Declarations',
+                  value: record.declarationsStatus,
+                },
+                { key: 'signature', label: 'Signature', value: record.signatureStatus },
               ],
             }}
           />
         </>
       )}
+      <HandbookAcknowledgementEvidenceDrawer
+        recordId={selectedEvidenceId}
+        open={selectedEvidenceId !== null}
+        onClose={() => setSelectedEvidenceId(null)}
+      />
     </>
   )
 }

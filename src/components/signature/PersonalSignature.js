@@ -13,10 +13,11 @@ import {
 } from '@coreui/react'
 import dialog from '../dialog/dialogService'
 import { showToast } from '../toast/toastService'
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/'
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png']
-const MAX_SIGNATURE_SIZE = 2 * 1024 * 1024
+import {
+  getPersonalSignature,
+  uploadPersonalSignature,
+  validateSignatureFile,
+} from './signatureApi'
 
 const formatFileSize = (size) => `${(size / (1024 * 1024)).toFixed(1)} MB`
 
@@ -52,13 +53,7 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(`${API_BASE}signature`, {
-          credentials: 'include',
-        })
-        const data = await res.json()
-        if (!res.ok || data.status !== 'success') {
-          throw new Error(data.message || 'Failed to load signature.')
-        }
+        const data = await getPersonalSignature()
         if (!ignore) {
           setCurrentSignatureUrl(data.url || null)
           setPreviewUrl(null)
@@ -91,16 +86,9 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
 
     if (!file) return
 
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError('Please select a JPEG or PNG image.')
-      e.target.value = ''
-      return
-    }
-
-    if (file.size > MAX_SIGNATURE_SIZE) {
-      setError(
-        `Signature image must be 2 MB or smaller. Selected file is ${formatFileSize(file.size)}.`,
-      )
+    const validationError = validateSignatureFile(file)
+    if (validationError) {
+      setError(validationError)
       e.target.value = ''
       return
     }
@@ -124,17 +112,7 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
     setSaving(true)
     setError('')
     try {
-      const formData = new FormData()
-      formData.append('signature', signatureFile)
-      const res = await fetch(`${API_BASE}signature`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok || data.status !== 'success' || !data.url) {
-        throw new Error(data.message || 'Save failed.')
-      }
+      const data = await uploadPersonalSignature(signatureFile)
 
       setCurrentSignatureUrl(data.url)
       setPreviewUrl(null)
@@ -155,7 +133,7 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
     <CCard className="account-card records-page-card">
       <CCardHeader className="account-card-header records-page-card-header">
         <div>
-          <strong>Digital Signature</strong>
+          <strong>Personal Signature</strong>
         </div>
       </CCardHeader>
       <CCardBody className="records-page-card-body">
@@ -179,7 +157,7 @@ const PersonalSignature = ({ onClose, onStatusChange }) => {
                     <span>Checking for existing signature...</span>
                   </div>
                 ) : activePreviewUrl ? (
-                  <img src={activePreviewUrl} alt="Current digital signature preview" />
+                  <img src={activePreviewUrl} alt="Current personal signature preview" />
                 ) : (
                   <div className="account-empty-state">
                     <strong>No signature uploaded</strong>

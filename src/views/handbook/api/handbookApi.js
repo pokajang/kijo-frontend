@@ -87,6 +87,9 @@ export const getHandbookSignatures = async ({ signal, versionId } = {}) => {
   return requestHandbookJson(`handbook/signatures${query ? `?${query}` : ''}`, { signal })
 }
 
+export const getHandbookSignatureEvidence = async ({ signatureId, signal } = {}) =>
+  requestHandbookJson(`handbook/signatures/${encodeURIComponent(signatureId)}`, { signal })
+
 export const publishHandbook = async ({ content, changeSummary, sectionId, sectionTitle }) =>
   requestHandbookJson('handbook/publish', {
     method: 'POST',
@@ -138,16 +141,12 @@ export const discardHandbookDraft = async () =>
     method: 'DELETE',
   })
 
-export const signHandbook = async ({ fullName, icNumber, versionId }) => {
-  const formData = new FormData()
-  formData.append('full_name', fullName)
-  formData.append('ic_number', icNumber)
-  if (versionId) {
-    formData.append('handbook_version_id', versionId)
-  }
-
+export const signHandbook = async (payload) => {
   return requestHandbookJson('handbook/sign', {
     method: 'POST',
-    body: formData,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   })
 }

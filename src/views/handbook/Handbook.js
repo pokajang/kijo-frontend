@@ -31,6 +31,7 @@ const signatureRecordRoles = ['System Admin', 'HR', 'Manager']
 const normalizeContent = (content) => ({
   title: content?.title || defaultHandbookContent.title,
   chapters: Array.isArray(content?.chapters) ? content.chapters : defaultHandbookContent.chapters,
+  acknowledgement: content?.acknowledgement || null,
 })
 
 const Handbook = () => {
@@ -49,6 +50,7 @@ const Handbook = () => {
     signed_at: null,
     full_name: null,
   })
+  const [signingContext, setSigningContext] = useState(null)
   const [currentDraft, setCurrentDraft] = useState(null)
   const [contentMode, setContentMode] = useState('official')
   const [draftActionLoading, setDraftActionLoading] = useState(false)
@@ -87,6 +89,7 @@ const Handbook = () => {
       signed_at: json.current_signature?.signed_at || null,
       full_name: json.current_signature?.full_name || null,
     })
+    setSigningContext(json.signing_context || null)
     setCurrentDraft(json.draft || null)
     setServerCanManage(json.can_manage === true)
     setServerLoaded(true)
@@ -445,6 +448,8 @@ const Handbook = () => {
       <HandbookAcknowledgementForm
         signature={currentSignature}
         version={currentVersion}
+        acknowledgement={currentVersion.content?.acknowledgement || null}
+        signingContext={signingContext}
         canSign={canInteractWithServerVersion}
         disabledMessage={signingDisabledMessage}
         onSigned={handleSigned}
