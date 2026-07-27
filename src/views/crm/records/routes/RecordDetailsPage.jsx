@@ -7,8 +7,10 @@ import ChangeToSuccessModal from '../modals/shared/ChangeToSuccessModal.jsx'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import FollowUpModal from '../modals/shared/FollowUpModal.jsx'
 import RecordDetailsActions from '../details/RecordDetailsActions'
+import RecordActivityDetails from '../details/RecordActivityDetails'
 import RecordDetailsCard from '../details/RecordDetailsCard'
 import RecordProposalInlineDetails from '../details/RecordProposalInlineDetails'
+import RecordServiceDetails from '../details/service/RecordServiceDetails'
 import { getStatusColor, useRecordDetailsData } from '../hooks/useRecordDetailsData'
 import { useRecordDetailsActions } from '../hooks/useRecordDetailsActions'
 
@@ -93,7 +95,7 @@ const RecordDetailsPage = () => {
       <CCol xs={12}>
         <CCard className="mb-4">
           <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-            <strong>Quotation Details</strong>
+            <h1 className="h6 mb-0">Quotation Details</h1>
             <CButton
               size="sm"
               color="secondary"
@@ -107,7 +109,6 @@ const RecordDetailsPage = () => {
             loading={loading}
             error={error}
             serviceLabel={serviceConfig?.label}
-            serviceTab={serviceTab}
             record={record}
             subject={subject}
             amountDisplay={amountDisplay}
@@ -117,6 +118,13 @@ const RecordDetailsPage = () => {
           />
           {!loading && !error && record ? (
             <>
+              <RecordServiceDetails
+                serviceTab={serviceTab}
+                record={record}
+                getDateOnly={getDateOnly}
+              />
+              <RecordProposalInlineDetails record={record} />
+              <RecordActivityDetails record={record} getDateOnly={getDateOnly} />
               <RecordDetailsActions
                 handlers={handlers}
                 record={record}
@@ -132,7 +140,6 @@ const RecordDetailsPage = () => {
                 onDelete={handleDelete}
                 onEmail={handleEmail}
               />
-              <RecordProposalInlineDetails record={record} />
             </>
           ) : null}
         </CCard>

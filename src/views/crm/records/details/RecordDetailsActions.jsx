@@ -34,8 +34,8 @@ const RecordDetailsActions = ({
 
   return (
     <>
-      <CCardHeader>
-        <strong>Actions</strong>
+      <CCardHeader className="records-detail-section-header">
+        <h2 className="h6 mb-0">Actions</h2>
       </CCardHeader>
       <CCardBody>
         <div className="d-flex flex-wrap gap-2">

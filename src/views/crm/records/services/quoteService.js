@@ -152,6 +152,7 @@ const getProjectOutcomeFields = (awardHistory = []) => {
 }
 
 const toNullableNumber = (value) => {
+  if (value === '' || value === null || value === undefined) return undefined
   const number = Number(value)
   return Number.isFinite(number) ? number : undefined
 }
@@ -259,6 +260,7 @@ export async function fetchTrainingQuotes() {
 
         formData: {
           trainingTopic: row.training_title,
+          trainingTitle: row.training_title,
           trainingId: row.training_id ? Number(row.training_id) : null,
           proposalId: row.proposal_id ? Number(row.proposal_id) : null,
           trainingTypeOption: row.training_type,
@@ -270,15 +272,21 @@ export async function fetchTrainingQuotes() {
           trainingInqRemarks: row.remarks,
 
           sessionCount: parseInt(row.session_count ?? 0, 10),
-          trainingDuration: parseInt(row.duration_per_session ?? 0, 10),
+          trainingDuration: parseFloat(row.duration_per_session ?? 0),
           durationUnit: row.duration_unit,
+          pricingBasis:
+            row.pricing_basis || (Number(row.session_count || 0) > 0 ? 'per_session' : 'per_pax'),
+          trainingRateType: row.training_rate_type || '',
           noOfPax: parseInt(row.pax ?? 0, 10),
 
           unitPrice: parseFloat(row.unit_price ?? 0),
           travelCharge: parseFloat(row.travel_charge ?? 0),
+          travelRegion: row.travel_region || 'none',
           mealsProvided: row.meals_provided,
           mealPrice: parseFloat(row.meal_price ?? 0),
           estimated_cost: estimatedCost,
+          estimatedTotalCost: estimatedCost,
+          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
 
           discountType: row.discount_type,
           discountValue: parseFloat(row.discount_value ?? 0),
@@ -290,10 +298,16 @@ export async function fetchTrainingQuotes() {
         },
 
         amount: row.grand_total != null ? Number(row.grand_total).toFixed(2) : '0.00',
+        grandTotal: parseFloat(row.grand_total ?? 0),
         estimatedCost,
+        trainingTotal: parseFloat(row.training_total ?? 0),
+        mealTotal: parseFloat(row.meal_total ?? 0),
+        mobilizationCost: parseFloat(row.mobilization_cost ?? 0),
         subtotal: parseFloat(row.subtotal ?? 0),
         sst_amount: parseFloat(row.sst_amount ?? 0),
+        sstAmount: parseFloat(row.sst_amount ?? 0),
         hrd_amount: parseFloat(row.hrd_amount ?? 0),
+        hrdAmount: parseFloat(row.hrd_amount ?? 0),
         discountAmount: parseFloat(row.discount_amount ?? 0),
 
         personInCharge: row.pic_name,
@@ -418,6 +432,10 @@ export async function fetchIHQuotes() {
           unitPrice: parseFloat(row.unit_price ?? 0),
           travelCharge: parseFloat(row.travel_charge ?? 0),
           estimated_cost: estimatedCost,
+          estimatedTotalCost: estimatedCost,
+          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
+          pricingRuleVersion: row.pricing_rule_version || '',
+          complexityRating: parseInt(row.complexity_rating ?? 1, 10),
           hygieneItems: lineItems.map((item) => ({
             id: item.id,
             item_description: item.item_description,
@@ -429,7 +447,11 @@ export async function fetchIHQuotes() {
           })),
 
           discountValue: parseFloat(row.discount ?? 0),
+          discount: parseFloat(row.discount ?? 0),
           sstPercent: parseFloat(row.sst_percent ?? 0),
+          sstAmount: parseFloat(row.sst_amount ?? 0),
+          subTotal: parseFloat(row.sub_total ?? 0),
+          grandTotal: parseFloat(row.grand_total ?? 0),
         },
 
         // totals
@@ -437,7 +459,9 @@ export async function fetchIHQuotes() {
         estimatedCost,
         subtotal: parseFloat(row.sub_total ?? 0),
         sst_amount: parseFloat(row.sst_amount ?? 0),
+        sstAmount: parseFloat(row.sst_amount ?? 0),
         discountAmount: parseFloat(row.discount ?? 0),
+        grandTotal: parseFloat(row.grand_total ?? 0),
 
         // PIC in table
         personInCharge: row.pic_name,
@@ -560,6 +584,8 @@ export async function fetchManpowerQuotes() {
           inquiryRemarks: row.inquiry_remarks || '',
           requiresManagementApproval: toBool(row.requires_management_approval),
           estimated_cost: estimatedCost,
+          estimatedTotalCost: estimatedCost,
+          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
 
           unitCost: parseFloat(row.unit_cost ?? 0),
           discount: parseFloat(row.discount ?? 0),
@@ -571,7 +597,9 @@ export async function fetchManpowerQuotes() {
         estimatedCost,
         subtotal: parseFloat(row.sub_total ?? 0),
         sst_amount: parseFloat(row.sst_amount ?? 0),
+        sstAmount: parseFloat(row.sst_amount ?? 0),
         discountAmount: parseFloat(row.discount ?? 0),
+        grandTotal: parseFloat(row.grand_total ?? 0),
 
         // display PIC in table
         personInCharge: row.pic_name,
@@ -685,14 +713,22 @@ export async function fetchSpecialQuotes() {
           serviceCode: row.service_code || '',
           estimated_cost: estimatedCost,
           generalRemarks: row.general_remarks || '',
+          discount: parseFloat(row.discount ?? 0),
+          sstPercent: parseFloat(row.sst_percent ?? 0),
+          subTotal: parseFloat(row.sub_total ?? 0),
+          sstAmount: parseFloat(row.sst_amount ?? 0),
+          grandTotal: parseFloat(row.grand_total ?? 0),
         },
 
         // --- Totals & pricing ---
         subtotal: parseFloat(row.sub_total ?? 0),
         estimatedCost,
         sstAmount: parseFloat(row.sst_amount ?? 0),
+        sstPercent: parseFloat(row.sst_percent ?? 0),
         discount: parseFloat(row.discount ?? 0),
+        discountAmount: parseFloat(row.discount ?? 0),
         amount: row.grand_total != null ? Number(row.grand_total).toFixed(2) : '0.00',
+        grandTotal: parseFloat(row.grand_total ?? 0),
 
         // --- Line‐items array (with unit, quantity, unitPrice, lineTotal & timestamps) ---
         lineItems: Array.isArray(row.line_items)
@@ -702,7 +738,7 @@ export async function fetchSpecialQuotes() {
               title: item.line_item_title || '',
               description: item.description || '',
               unit: item.unit || '',
-              quantity: item.quantity ? parseInt(item.quantity, 10) : 1,
+              quantity: item.quantity ? parseFloat(item.quantity) : 1,
               unitPrice: item.unit_price ? parseFloat(item.unit_price) : 0,
               lineTotal: item.line_total != null ? Number(item.line_total).toFixed(2) : '0.00',
               createdBy: item.created_by ? parseInt(item.created_by, 10) : null,
@@ -816,6 +852,8 @@ export async function fetchEquipmentQuotes() {
         formData: {
           inquiryRemarks: row.inquiry_remarks || '',
           estimated_cost: estimatedCost,
+          estimatedTotalCost: estimatedCost,
+          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
         },
 
         // --- Charges & totals ---
@@ -837,7 +875,10 @@ export async function fetchEquipmentQuotes() {
               categoryId: item.category_id || '',
               description: item.description || '',
               unit: item.unit || '',
-              quantity: item.quantity ? parseInt(item.quantity, 10) : 0,
+              supplierName: item.supplier_name || '',
+              supplierPrice: item.supplier_price ? parseFloat(item.supplier_price) : 0,
+              priceDate: item.price_date || null,
+              quantity: item.quantity ? parseFloat(item.quantity) : 0,
               unitPrice: item.unit_price ? parseFloat(item.unit_price) : 0,
               markedUp: item.marked_up_price ? parseFloat(item.marked_up_price) : 0,
               lineTotal: item.line_total != null ? Number(item.line_total).toFixed(2) : '0.00',

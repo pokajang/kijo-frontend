@@ -137,10 +137,10 @@ export const useRecordDetailsData = () => {
   const amountDisplay = useMemo(() => {
     const amount = Number(record?.amount ?? record?.grandTotal ?? 0)
     if (!Number.isFinite(amount)) return '-'
-    return amount.toLocaleString('en-MY', {
+    return `RM ${amount.toLocaleString('en-MY', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    })
+    })}`
   }, [record])
 
   const subject = useMemo(() => getSubject(record), [record])

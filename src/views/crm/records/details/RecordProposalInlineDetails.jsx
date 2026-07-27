@@ -172,16 +172,14 @@ const RecordProposalInlineDetails = ({ record }) => {
 
   return (
     <>
-      <CCardHeader>
-        <strong>Proposal</strong>
+      <CCardHeader className="records-detail-section-header">
+        <h2 className="h6 mb-0">Proposal</h2>
       </CCardHeader>
       <CCardBody>
         <div className="d-flex flex-column align-items-start gap-2">
           <CBadge
             color={attachedProposal ? 'success' : 'secondary'}
-            className={`text-start text-wrap ${
-              attachedProposal ? 'text-success-emphasis' : 'text-secondary-emphasis'
-            }`}
+            className="text-start text-wrap"
           >
             {proposalChipText}
           </CBadge>
