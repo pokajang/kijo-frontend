@@ -28,10 +28,13 @@ const modalBindings = {
   setClientLoaRefNo: vi.fn(),
 }
 
-const createDeleteHarness = ({ refreshAfterLocalDelete = false } = {}) => {
+const createDeleteHarness = ({
+  refreshAfterLocalDelete = false,
+  serviceKey = 'training-tab',
+} = {}) => {
   let quotes = [
-    { id: 1, serviceTab: 'training-tab' },
-    { id: 2, serviceTab: 'training-tab' },
+    { id: 1, serviceTab: serviceKey },
+    { id: 2, serviceTab: serviceKey },
   ]
   const fetchQuotes = vi.fn()
   const onActionSuccess = vi.fn()
@@ -40,7 +43,7 @@ const createDeleteHarness = ({ refreshAfterLocalDelete = false } = {}) => {
   })
 
   const handlers = createHandlers({
-    serviceKey: 'training-tab',
+    serviceKey,
     fetchQuotes,
     setQuotes,
     navigate: vi.fn(),
@@ -92,36 +95,95 @@ describe('recordsActions delete refresh behavior', () => {
   })
 })
 
-describe('recordsActions PDF remediation', () => {
-  it('keeps the quotation unchanged and offers one active retry when PDF generation fails', async () => {
-    const popup = {
-      close: vi.fn(),
-      location: { replace: vi.fn() },
-    }
-    vi.spyOn(window, 'open').mockReturnValue(popup)
-    const fetcher = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce({
-        ok: false,
-        headers: new Headers({ 'content-type': 'application/json' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: new Headers({ 'content-type': 'application/pdf' }),
-        blob: vi.fn().mockResolvedValue(new Blob(['%PDF-test'], { type: 'application/pdf' })),
-      })
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:quote-pdf')
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+describe('recordsActions PDF opening', () => {
+  it.each([
+    ['training-tab', 'training'],
+    ['ih-tab', 'ih'],
+    ['equipment-tab', 'equipment'],
+    ['manpower-tab', 'manpower'],
+    ['special-tab', 'special'],
+  ])(
+    'opens the %s endpoint directly so the response filename is preserved',
+    async (serviceKey, serviceRoute) => {
+      const popup = {
+        close: vi.fn(),
+        location: { replace: vi.fn() },
+      }
+      vi.spyOn(window, 'open').mockReturnValue(popup)
+
+      const { handlers } = createDeleteHarness({ serviceKey })
+      await handlers.handleGeneratePdf({ id: 68 })
+
+      expect(window.open).toHaveBeenCalledWith('about:blank', '_blank')
+      expect(popup.opener).toBeNull()
+      expect(popup.close).not.toHaveBeenCalled()
+      expect(popup.location.replace).toHaveBeenCalledWith(
+        expect.stringContaining(`quote-records/${serviceRoute}/68/pdf`),
+      )
+    },
+  )
+
+  it('explains how to continue when the PDF popup is blocked', async () => {
+    vi.spyOn(window, 'open').mockReturnValue(null)
 
     const { handlers } = createDeleteHarness()
     await handlers.handleGeneratePdf({ id: 68 })
 
-    expect(dialog.confirm).toHaveBeenCalledWith(
-      expect.stringContaining('quotation itself remains saved and unchanged'),
-      expect.objectContaining({ confirmText: 'Retry PDF' }),
+    expect(dialog.alert).toHaveBeenCalledWith(
+      'The PDF window was blocked by the browser. Allow pop-ups for this site, then retry.',
     )
-    expect(fetcher).toHaveBeenCalledTimes(2)
-    expect(popup.close).toHaveBeenCalledOnce()
-    expect(popup.location.replace).toHaveBeenCalledWith('blob:quote-pdf')
+  })
+})
+
+describe('recordsActions un-award safeguards', () => {
+  it.each([
+    ['training-tab', 'training'],
+    ['ih-tab', 'ih'],
+    ['equipment-tab', 'equipment'],
+    ['manpower-tab', 'manpower'],
+    ['special-tab', 'special'],
+  ])('blocks %s un-award and links its Supplier PO', async (serviceKey, serviceRoute) => {
+    const { handlers } = createDeleteHarness({ serviceKey })
+    dialog.confirm.mockResolvedValue(false)
+    fetchJsonCompat.mockResolvedValueOnce({
+      success: true,
+      data: {
+        projects: [{ id: 501, project_name: 'Awarded Project' }],
+        supplier_pos: [
+          {
+            po_id: 77,
+            po_ref_no: 'POES26-0077AZA',
+            supplier_name: 'Lab Supplier',
+          },
+        ],
+      },
+    })
+
+    await handlers.handleUnAward(68)
+
+    expect(fetchJsonCompat).toHaveBeenCalledWith(
+      expect.stringContaining(`quote-records/${serviceRoute}/68/related-docs`),
+      expect.objectContaining({ method: 'GET' }),
+    )
+    expect(dialog.confirm).toHaveBeenCalledWith(
+      expect.stringContaining('cannot be un-awarded'),
+      expect.objectContaining({
+        confirmDisabled: true,
+        relatedRecords: {
+          groups: expect.arrayContaining([
+            expect.objectContaining({
+              key: 'supplier-pos',
+              items: [
+                expect.objectContaining({
+                  label: 'POES26-0077AZA',
+                  href: '/commercial/supplier-po/77',
+                }),
+              ],
+            }),
+          ]),
+        },
+      }),
+    )
+    expect(fetchJsonCompat).toHaveBeenCalledTimes(1)
   })
 })

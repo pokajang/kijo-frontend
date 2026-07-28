@@ -29,6 +29,24 @@ describe('projectActions', () => {
     expect(getAction(supplyActions, 'jd14')).toBeUndefined()
   })
 
+  it.each([
+    'Training',
+    'Industrial Hygiene',
+    'Equipment Supply',
+    'Manpower Supply',
+    'Special Service',
+  ])('exposes every applicable commercial document action for %s', (projectType) => {
+    const actions = buildProjectActions({
+      project: { ...activeSupplyProject, project_type: projectType },
+    })
+    const actionKeys = actions.map((action) => action.key)
+
+    expect(actionKeys).toEqual(
+      expect.arrayContaining(['invoice', 'delivery-order', 'vendor-loa', 'supplier-po']),
+    )
+    expect(actionKeys.includes('jd14')).toBe(projectType === 'Training')
+  })
+
   it('allows complete and terminate for active projects', () => {
     const actions = buildProjectActions({ project: activeSupplyProject })
 

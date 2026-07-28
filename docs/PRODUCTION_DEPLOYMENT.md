@@ -284,7 +284,8 @@ Post-deploy smoke checks:
   exactly unchanged.
 - Change a pricing input on a test legacy revision and confirm the archived
   complexity formula is used.
-- Regenerate its PDF and confirm the complexity basis and final total reconcile.
+- Regenerate its PDF and confirm the final total matches the stored contractual
+  amount without exposing the internal calculation formula.
 - Create a new IH quote and confirm complexity is absent while additional fees
   and the current V2 calculation remain available.
 - Confirm a legacy quote without estimated cost follows its grandfathered

@@ -1,0 +1,2 @@
+import{j as r}from"./vendor-react-CsbEsM4e.js";import{g as j,j as u}from"./vendor-coreui-DPt4cQXn.js";const c=({label:a,placeholder:o,rows:l=3,valueKey:t,textKey:e,formData:n,setFormData:i})=>r.jsxs(r.Fragment,{children:[r.jsx(j,{htmlFor:t,children:a}),r.jsx(u,{rows:l,placeholder:o,value:n[e]||"",onChange:s=>{const m=s.target.value.split(`
+`).map(p=>p.trim()).filter(Boolean);i({...n,[e]:s.target.value,[t]:m})}})]});export{c as M};

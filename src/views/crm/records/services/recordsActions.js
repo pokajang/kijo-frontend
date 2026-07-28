@@ -39,6 +39,7 @@ const buildRelatedRecordGroups = (related = {}) => {
   const jd14 = safeArray(related.jd14)
   const vendorLoas = safeArray(related.vendor_loas)
   const vendorPayments = safeArray(related.vendor_payments)
+  const supplierPos = safeArray(related.supplier_pos)
 
   if (projects.length) {
     groups.push({
@@ -120,6 +121,19 @@ const buildRelatedRecordGroups = (related = {}) => {
     })
   }
 
+  if (supplierPos.length) {
+    groups.push({
+      key: 'supplier-pos',
+      label: 'Supplier POs',
+      items: supplierPos.map((po) => ({
+        key: `supplier-po-${po.po_id}`,
+        label: po.po_ref_no || `Supplier PO #${po.po_id}`,
+        secondary: po.supplier_name || undefined,
+        href: `/commercial/supplier-po/${encodeURIComponent(po.po_id)}`,
+      })),
+    })
+  }
+
   return groups
 }
 
@@ -128,7 +142,8 @@ const hasUnAwardBlockers = (related = {}) =>
   safeArray(related.delivery_orders).length > 0 ||
   safeArray(related.jd14).length > 0 ||
   safeArray(related.vendor_loas).length > 0 ||
-  safeArray(related.vendor_payments).length > 0
+  safeArray(related.vendor_payments).length > 0 ||
+  safeArray(related.supplier_pos).length > 0
 
 export const createHandlers = ({
   serviceKey,
@@ -202,7 +217,7 @@ export const createHandlers = ({
     return isSuccess(relatedPayload) ? relatedPayload.data || {} : null
   }
 
-  const openQuotationPdf = async (record, allowRetry = true) => {
+  const openQuotationPdf = async (record) => {
     const pdfWindow = window.open('about:blank', '_blank')
     if (!pdfWindow) {
       await dialog.alert(
@@ -213,32 +228,13 @@ export const createHandlers = ({
     pdfWindow.opener = null
 
     try {
-      const response = await fetch(urls.generate(record.id), {
-        method: 'GET',
-        credentials: 'include',
-      })
-      const contentType = response.headers.get('content-type') || ''
-      if (!response.ok || !contentType.toLowerCase().includes('application/pdf')) {
-        throw new Error('The server did not return a valid quotation PDF.')
-      }
-
-      const pdfUrl = URL.createObjectURL(await response.blob())
-      pdfWindow.location.replace(pdfUrl)
-      window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 60_000)
+      pdfWindow.location.replace(urls.generate(record.id))
     } catch (error) {
       pdfWindow.close()
-      console.error('PDF generation failed:', error)
-      const retry =
-        allowRetry &&
-        (await dialog.confirm(
-          `${error?.message || 'The quotation PDF could not be generated.'}\n\nThe quotation itself remains saved and unchanged.`,
-          {
-            title: 'PDF Generation Failed',
-            confirmText: 'Retry PDF',
-            cancelText: 'Return to Records',
-          },
-        ))
-      if (retry) await openQuotationPdf(record, false)
+      console.error('PDF window navigation failed:', error)
+      await dialog.alert(
+        `${error?.message || 'The quotation PDF could not be opened.'}\n\nThe quotation itself remains saved and unchanged.`,
+      )
     }
   }
 
