@@ -33,7 +33,10 @@ const SpecialRecordDetails = ({ record }) => {
         />
       </RecordDetailSection>
 
-      <RecordDetailSection title="Quotation Calculation" bodyClassName="pt-0">
+      <RecordDetailSection
+        title="Quotation Calculation"
+        bodyClassName="records-detail-calculation-body"
+      >
         <CCol xs={12}>
           <QuotationCalculationTable
             rows={buildSpecialCalculationRows(record)}

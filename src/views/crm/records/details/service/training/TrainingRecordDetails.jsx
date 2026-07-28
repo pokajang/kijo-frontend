@@ -106,7 +106,10 @@ const TrainingRecordDetails = ({ record, getDateOnly }) => {
         <RecordDetailField label="HRD Rate" value={formatPercentage(formData.hrdCharge)} />
       </RecordDetailSection>
 
-      <RecordDetailSection title="Quotation Calculation" bodyClassName="pt-0">
+      <RecordDetailSection
+        title="Quotation Calculation"
+        bodyClassName="records-detail-calculation-body"
+      >
         <CCol xs={12}>
           <TrainingCommercialBreakdown record={record} />
         </CCol>

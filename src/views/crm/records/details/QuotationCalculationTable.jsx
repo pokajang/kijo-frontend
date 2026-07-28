@@ -15,9 +15,13 @@ const QuotationCalculationTable = ({ rows, caption }) => (
       <caption className="visually-hidden">{caption}</caption>
       <CTableHead>
         <CTableRow>
-          <CTableHeaderCell scope="col">Description</CTableHeaderCell>
-          <CTableHeaderCell scope="col">Calculation</CTableHeaderCell>
-          <CTableHeaderCell scope="col" className="text-end">
+          <CTableHeaderCell scope="col" className="quotation-calculation-label">
+            Description
+          </CTableHeaderCell>
+          <CTableHeaderCell scope="col" className="quotation-calculation-formula">
+            Calculation
+          </CTableHeaderCell>
+          <CTableHeaderCell scope="col" className="text-end quotation-calculation-amount">
             Amount
           </CTableHeaderCell>
         </CTableRow>
@@ -28,13 +32,13 @@ const QuotationCalculationTable = ({ rows, caption }) => (
             key={row.key}
             className={row.emphasis ? `quotation-calculation-row--${row.emphasis}` : undefined}
           >
-            <CTableHeaderCell scope="row">
+            <CTableHeaderCell scope="row" className="quotation-calculation-label">
               <div>{row.label}</div>
               {row.description ? (
                 <div className="small fw-normal text-body-secondary mt-1">{row.description}</div>
               ) : null}
             </CTableHeaderCell>
-            <CTableDataCell className="text-body-secondary">
+            <CTableDataCell className="text-body-secondary quotation-calculation-formula">
               {row.calculation || null}
             </CTableDataCell>
             <CTableDataCell

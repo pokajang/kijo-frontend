@@ -48,7 +48,10 @@ const EquipmentRecordDetails = ({ record }) => {
 
       <RecordPricingGovernanceSection serviceKey="equipment" record={record} />
 
-      <RecordDetailSection title="Quotation Calculation" bodyClassName="pt-0">
+      <RecordDetailSection
+        title="Quotation Calculation"
+        bodyClassName="records-detail-calculation-body"
+      >
         <CCol xs={12}>
           <QuotationCalculationTable
             rows={buildEquipmentCalculationRows(record)}
