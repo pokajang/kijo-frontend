@@ -9,6 +9,7 @@ export const createBlankManualEntryRow = () => ({
   rowId: createPipelineEntryRowId(),
   prospect_name: '',
   service_category: '',
+  custom_service_category: '',
   estimated_rm: '',
   notes: '',
   photoFile: null,
@@ -21,6 +22,7 @@ export const buildManualEntryRow = (entry, form) => ({
   source: entry.source || form.source,
   segment_type: normalizeClassificationType(entry.segment_type ?? form.segment_type),
   service_category: entry.service_category || '',
+  custom_service_category: entry.custom_service_category || '',
   estimated_rm:
     entryTypeAllowsEstimatedRm(entry.entry_type || form.entry_type) &&
     entry.estimated_rm !== '' &&

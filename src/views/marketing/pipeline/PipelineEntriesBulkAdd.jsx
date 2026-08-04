@@ -35,9 +35,10 @@ import {
   entryTypeAllowsEstimatedRm,
   formatDate,
   getPipelineEntryValidationError,
+  isOtherServiceCategory,
   normalizeBulkRow,
   serviceCategories,
-  serviceCategoryLabel,
+  serviceCategoryDisplayLabel,
   typeBadgeClass,
   typeLabel,
 } from './pipelineEntryUtils'
@@ -84,6 +85,7 @@ const serializeBulkRow = (row) => ({
   source: row.source || '',
   segment_type: row.segment_type || '',
   service_category: row.service_category || '',
+  custom_service_category: row.custom_service_category || '',
   estimated_rm: row.estimated_rm === null || row.estimated_rm === undefined ? '' : row.estimated_rm,
   prospect_name: row.prospect_name || '',
   notes: row.notes || '',
@@ -97,6 +99,8 @@ const sanitizeBulkRow = (row, fallback = createBlankEntryRow()) => ({
   source: typeof row?.source === 'string' ? row.source : fallback.source,
   segment_type: typeof row?.segment_type === 'string' ? row.segment_type : '',
   service_category: typeof row?.service_category === 'string' ? row.service_category : '',
+  custom_service_category:
+    typeof row?.custom_service_category === 'string' ? row.custom_service_category : '',
   estimated_rm: entryTypeAllowsEstimatedRm(row?.entry_type)
     ? row?.estimated_rm === null || row?.estimated_rm === undefined
       ? ''
@@ -162,6 +166,9 @@ const createNextDraft = (currentDraft) => ({
   source: currentDraft.source,
   segment_type: currentDraft.segment_type,
   service_category: currentDraft.service_category,
+  custom_service_category: isOtherServiceCategory(currentDraft.service_category)
+    ? currentDraft.custom_service_category
+    : '',
   estimated_rm: entryTypeAllowsEstimatedRm(currentDraft.entry_type)
     ? currentDraft.estimated_rm
     : '',
@@ -191,6 +198,7 @@ const PipelineEntriesBulkAdd = () => {
     String(draft.estimated_rm ?? '').trim() !== '' ||
     Boolean(draft.segment_type) ||
     Boolean(draft.service_category) ||
+    Boolean(draft.custom_service_category) ||
     Boolean(draft.photoFile) ||
     batchRows.length > 0
   const serializedEditDraft = JSON.stringify(serializeBulkRow(draft))
@@ -251,6 +259,7 @@ const PipelineEntriesBulkAdd = () => {
           source: entry.source || '',
           segment_type: entry.segmentType || '',
           service_category: entry.serviceCategory || '',
+          custom_service_category: entry.customServiceCategory || '',
           estimated_rm:
             entry.estimatedRm === null || entry.estimatedRm === undefined
               ? ''
@@ -307,6 +316,10 @@ const PipelineEntriesBulkAdd = () => {
       ...(Object.prototype.hasOwnProperty.call(updates, 'entry_type') &&
       !entryTypeAllowsEstimatedRm(updates.entry_type)
         ? { estimated_rm: '' }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(updates, 'service_category') &&
+      !isOtherServiceCategory(updates.service_category)
+        ? { custom_service_category: '' }
         : {}),
     }))
   }
@@ -401,6 +414,7 @@ const PipelineEntriesBulkAdd = () => {
       formData.append('source', normalizedDraft.source)
       formData.append('segment_type', normalizedDraft.segment_type || '')
       formData.append('service_category', normalizedDraft.service_category || '')
+      formData.append('custom_service_category', normalizedDraft.custom_service_category || '')
       formData.append(
         'estimated_rm',
         entryTypeAllowsEstimatedRm(normalizedDraft.entry_type) &&
@@ -486,6 +500,7 @@ const PipelineEntriesBulkAdd = () => {
             notes: row.notes,
             segment_type: row.segment_type || '',
             service_category: row.service_category || '',
+            custom_service_category: row.custom_service_category || '',
             estimated_rm:
               entryTypeAllowsEstimatedRm(row.entry_type) && row.estimated_rm !== ''
                 ? row.estimated_rm
@@ -575,6 +590,7 @@ const PipelineEntriesBulkAdd = () => {
                 <CRow className="g-3 align-items-end">
                   <CCol xs={12} md={4} xl>
                     <CFormSelect
+                      id="bulk-pipeline-entry-type"
                       label="Type"
                       value={draft.entry_type}
                       onChange={(event) => updateDraft({ entry_type: event.target.value })}
@@ -588,6 +604,7 @@ const PipelineEntriesBulkAdd = () => {
                   </CCol>
                   <CCol xs={12} md={4} xl>
                     <CFormInput
+                      id="bulk-pipeline-entry-date"
                       type="date"
                       label="Date"
                       value={draft.entry_date}
@@ -613,6 +630,7 @@ const PipelineEntriesBulkAdd = () => {
                   </CCol>
                   <CCol xs={12} md={4} xl>
                     <CFormSelect
+                      id="bulk-pipeline-entry-classification"
                       label="Classification"
                       value={draft.segment_type}
                       onChange={(event) => updateDraft({ segment_type: event.target.value })}
@@ -626,6 +644,7 @@ const PipelineEntriesBulkAdd = () => {
                   </CCol>
                   <CCol xs={12} md={4} xl>
                     <CFormSelect
+                      id="bulk-pipeline-entry-service"
                       label="Service"
                       value={draft.service_category}
                       onChange={(event) => updateDraft({ service_category: event.target.value })}
@@ -637,9 +656,25 @@ const PipelineEntriesBulkAdd = () => {
                       ))}
                     </CFormSelect>
                   </CCol>
+                  {isOtherServiceCategory(draft.service_category) && (
+                    <CCol xs={12} md={4} xl>
+                      <CFormInput
+                        id="bulk-pipeline-entry-custom-service"
+                        label="Specify service category"
+                        value={draft.custom_service_category}
+                        maxLength={191}
+                        required
+                        placeholder="Example: Environmental Monitoring"
+                        onChange={(event) =>
+                          updateDraft({ custom_service_category: event.target.value })
+                        }
+                      />
+                    </CCol>
+                  )}
                   {showEstimatedRm && (
                     <CCol xs={12} md={4} xl>
                       <CFormInput
+                        id="bulk-pipeline-entry-estimated-rm"
                         type="number"
                         min="0"
                         step="0.01"
@@ -652,6 +687,7 @@ const PipelineEntriesBulkAdd = () => {
                   )}
                   <CCol xs={12} md={4} xl={4}>
                     <CFormInput
+                      id="bulk-pipeline-entry-prospect"
                       label="Company / Prospect"
                       value={draft.prospect_name}
                       placeholder="Example: ABC Manufacturing Sdn Bhd"
@@ -660,6 +696,7 @@ const PipelineEntriesBulkAdd = () => {
                   </CCol>
                   <CCol xs={12} md={5} xl={5}>
                     <CFormInput
+                      id="bulk-pipeline-entry-notes"
                       label="Notes"
                       value={draft.notes}
                       placeholder="Optional context, requested service, or next action"
@@ -748,7 +785,12 @@ const PipelineEntriesBulkAdd = () => {
                                   Classification: {classificationLabel(entry.segment_type)}
                                 </div>
                                 <div className="text-muted">
-                                  Service: {serviceCategoryLabel(entry.service_category)} | RM:{' '}
+                                  Service:{' '}
+                                  {serviceCategoryDisplayLabel(
+                                    entry.service_category,
+                                    entry.custom_service_category,
+                                  )}{' '}
+                                  | RM:{' '}
                                   {entry.estimated_rm === '' || entry.estimated_rm === null
                                     ? '-'
                                     : Number(entry.estimated_rm || 0).toLocaleString()}

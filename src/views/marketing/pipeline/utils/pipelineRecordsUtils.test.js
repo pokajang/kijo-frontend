@@ -7,6 +7,7 @@ import {
   getPipelineRecordMobileMeta,
   getPipelineRecordSortValue,
   normalizePipelineRecord,
+  pipelineRecordColumns,
 } from './pipelineRecordsUtils'
 
 describe('pipeline record utilities', () => {
@@ -127,5 +128,37 @@ describe('pipeline record utilities', () => {
     expect(normalized.canUpdate).toBe(false)
     expect(normalized.canDelete).toBe(false)
     expect(getPipelineEntryTypeTone(normalized.entryType)).toBe('primary')
+  })
+
+  it('preserves raw Other values while displaying and exporting the custom service', () => {
+    const normalized = normalizePipelineRecord({
+      entryType: 'closed',
+      prospectName: 'Other Service Prospect',
+      serviceCategory: 'other',
+      customServiceCategory: 'Environmental Monitoring',
+      estimatedRm: 1500,
+    })
+
+    expect(normalized.serviceCategoryValue).toBe('other')
+    expect(normalized.customServiceCategoryValue).toBe('Environmental Monitoring')
+    expect(normalized.serviceCategory).toBe('Others — Environmental Monitoring')
+
+    const serviceColumn = pipelineRecordColumns.find((column) => column.key === 'serviceCategory')
+    expect(serviceColumn.getExportValue(normalized)).toBe('Others — Environmental Monitoring')
+
+    const chips = buildPipelineRecordActiveChips({
+      filters: {
+        q: '',
+        entry_type: '',
+        staff_code: '',
+        source: '',
+        segment_type: '',
+        service_category: 'other',
+      },
+      periodRange: null,
+      searchInput: '',
+      staffOptions: [],
+    })
+    expect(chips).toContainEqual({ key: 'service_category', label: 'Service: Others' })
   })
 })

@@ -66,13 +66,23 @@ export const serviceCategories = [
   { value: 'training', label: 'Training' },
   { value: 'consultancy_iso', label: 'Consultancy - ISO' },
   { value: 'consultancy_ihoh', label: 'Consultancy - IHOH' },
+  { value: 'consultancy_osh', label: 'Consultancy - OSH' },
   { value: 'man_power', label: 'Man Power' },
   { value: 'equipment_supply', label: 'Equipment Supply' },
   { value: 'engineering', label: 'Engineering' },
   { value: 'infrastructure', label: 'Infrastructure' },
+  { value: 'other', label: 'Others' },
 ]
 export const serviceCategoryLabel = (value, fallback = 'Not classified') =>
   serviceCategories.find((service) => service.value === (value || ''))?.label || fallback
+export const isOtherServiceCategory = (value) => value === 'other'
+export const serviceCategoryDisplayLabel = (value, customValue, fallback = 'Not classified') => {
+  const label = serviceCategoryLabel(value, fallback)
+  if (!isOtherServiceCategory(value)) return label
+
+  const customLabel = String(customValue || '').trim()
+  return customLabel ? `${label} — ${customLabel}` : label
+}
 export const serviceCategoryValues = serviceCategories
   .map((service) => service.value)
   .filter((value) => value !== '')
@@ -115,6 +125,7 @@ export const createBlankEntryRow = () => ({
   source: defaultEntrySource,
   segment_type: '',
   service_category: '',
+  custom_service_category: '',
   estimated_rm: '',
   prospect_name: '',
   notes: '',
@@ -160,6 +171,13 @@ export const getPipelineEntryValidationError = (
 
   if (hasInvalidEstimatedRm(estimatedRm)) {
     return 'Estimated RM must be zero or more.'
+  }
+
+  if (
+    isOtherServiceCategory(entry?.service_category) &&
+    !String(entry?.custom_service_category || '').trim()
+  ) {
+    return 'Specify the service category when Others is selected.'
   }
 
   if (requireClosedRevenueFields && entryType === 'closed') {
@@ -264,6 +282,9 @@ export const normalizeBulkRow = (row) => ({
   source: row.source.trim(),
   segment_type: normalizeClassificationType(row.segment_type),
   service_category: row.service_category || '',
+  custom_service_category: isOtherServiceCategory(row.service_category)
+    ? String(row.custom_service_category || '').trim()
+    : '',
   estimated_rm:
     entryTypeAllowsEstimatedRm(row.entry_type) &&
     row.estimated_rm !== '' &&

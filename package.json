@@ -21,6 +21,7 @@
         "test:run": "vitest run",
         "e2e:other-claim-crud": "node scripts/other-claim-crud-lifecycle-e2e.mjs",
         "e2e:debtor-payments": "node scripts/debtor-payment-lifecycle-e2e.mjs",
+        "e2e:pipeline-service-category": "node scripts/pipeline-service-category-lifecycle-e2e.mjs",
         "smoke:ih-pricing": "node scripts/ih-pricing-flow-smoke.mjs",
         "smoke:training-hrd": "node scripts/training-hrd-flow-smoke.mjs",
         "release:ih-readiness": "node scripts/ih-release-readiness.mjs",

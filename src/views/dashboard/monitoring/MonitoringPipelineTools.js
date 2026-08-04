@@ -12,6 +12,7 @@ import {
   defaultEntrySource,
   entryTypeAllowsEstimatedRm,
   getPipelineEntryValidationError,
+  isOtherServiceCategory,
 } from '../../marketing/pipeline/pipelineEntryUtils'
 import {
   buildManualEntryRow,
@@ -33,6 +34,7 @@ const manualDraftHasContent = (draft) =>
   draft.prospect_name.trim() !== '' ||
   draft.notes.trim() !== '' ||
   Boolean(draft.service_category) ||
+  Boolean(draft.custom_service_category) ||
   String(draft.estimated_rm ?? '').trim() !== '' ||
   Boolean(draft.photoFile)
 
@@ -72,6 +74,7 @@ const serializeManualDraft = (draft) => ({
   rowId: draft.rowId || '',
   prospect_name: draft.prospect_name || '',
   service_category: draft.service_category || '',
+  custom_service_category: draft.custom_service_category || '',
   estimated_rm:
     draft.estimated_rm === null || draft.estimated_rm === undefined ? '' : draft.estimated_rm,
   notes: draft.notes || '',
@@ -103,6 +106,8 @@ const sanitizeStoredDraft = (draft) => {
     rowId: typeof draft?.rowId === 'string' && draft.rowId ? draft.rowId : blankDraft.rowId,
     prospect_name: typeof draft?.prospect_name === 'string' ? draft.prospect_name : '',
     service_category: typeof draft?.service_category === 'string' ? draft.service_category : '',
+    custom_service_category:
+      typeof draft?.custom_service_category === 'string' ? draft.custom_service_category : '',
     estimated_rm:
       draft?.estimated_rm === null || draft?.estimated_rm === undefined
         ? ''
@@ -124,6 +129,7 @@ const sanitizeStoredBatchEntry = (entry, fallbackForm) => {
     source: typeof entry?.source === 'string' ? entry.source : fallbackForm.source,
     segment_type: typeof entry?.segment_type === 'string' ? entry.segment_type : '',
     service_category: draft.service_category,
+    custom_service_category: draft.custom_service_category,
     estimated_rm: entryTypeAllowsEstimatedRm(entryType) ? draft.estimated_rm : '',
     prospect_name: draft.prospect_name.trim(),
     notes: draft.notes.trim(),
@@ -327,7 +333,14 @@ const MonitoringPipelineTools = ({
   const updateManualDraft = (updates) => {
     setManualForm((current) => ({
       ...current,
-      draft: { ...current.draft, ...updates },
+      draft: {
+        ...current.draft,
+        ...updates,
+        ...(Object.prototype.hasOwnProperty.call(updates, 'service_category') &&
+        !isOtherServiceCategory(updates.service_category)
+          ? { custom_service_category: '' }
+          : {}),
+      },
     }))
   }
 
@@ -417,6 +430,7 @@ const MonitoringPipelineTools = ({
           notes: entry.notes,
           segment_type: entry.segment_type || '',
           service_category: entry.service_category || '',
+          custom_service_category: entry.custom_service_category || '',
           estimated_rm:
             entryTypeAllowsEstimatedRm(entry.entry_type) && entry.estimated_rm !== ''
               ? entry.estimated_rm
@@ -517,6 +531,7 @@ const MonitoringPipelineTools = ({
           rowId: entry.rowId,
           prospect_name: entry.prospect_name,
           service_category: entry.service_category || '',
+          custom_service_category: entry.custom_service_category || '',
           estimated_rm:
             entryTypeAllowsEstimatedRm(entry.entry_type) &&
             entry.estimated_rm !== '' &&

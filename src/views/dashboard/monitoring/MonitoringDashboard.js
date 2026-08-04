@@ -62,7 +62,7 @@ const monitoringTourSteps = [
     target: '[data-tour="monitoring-pipeline-status"]',
     title: 'Revenue Status',
     content:
-      'This card groups realized project revenue by service category, such as Training, Consultancy, Man Power, Equipment Supply, Engineering, and Infrastructure.',
+      'This card groups realized project revenue by service category, including Training, Consultancy, Man Power, Equipment Supply, Engineering, Infrastructure, and Others.',
     skipBeacon: true,
   },
   {

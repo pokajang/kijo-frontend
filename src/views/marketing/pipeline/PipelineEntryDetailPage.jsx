@@ -10,7 +10,7 @@ import {
   classificationLabel,
   formatDate,
   getPipelineEntryPhotoUrl,
-  serviceCategoryLabel,
+  serviceCategoryDisplayLabel,
   typeLabel,
 } from './pipelineEntryUtils'
 
@@ -88,7 +88,8 @@ const normalizeEntry = (entry) => ({
   segmentTypeValue: entry.segmentType || '',
   segmentType: classificationLabel(entry.segmentType),
   serviceCategoryValue: entry.serviceCategory || '',
-  serviceCategory: serviceCategoryLabel(entry.serviceCategory),
+  customServiceCategoryValue: entry.customServiceCategory || '',
+  serviceCategory: serviceCategoryDisplayLabel(entry.serviceCategory, entry.customServiceCategory),
   estimatedRm:
     entry.estimatedRm === null || entry.estimatedRm === undefined
       ? null

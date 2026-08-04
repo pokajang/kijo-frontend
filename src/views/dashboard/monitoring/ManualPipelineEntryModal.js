@@ -23,7 +23,8 @@ import {
   entryTypeAllowsEstimatedRm,
   formatDate as formatManualEntryDate,
   serviceCategories as manualServiceCategories,
-  serviceCategoryLabel,
+  isOtherServiceCategory,
+  serviceCategoryDisplayLabel,
 } from '../../marketing/pipeline/pipelineEntryUtils'
 
 const getOptionLabel = (options, value, fallback) =>
@@ -202,6 +203,7 @@ const ManualPipelineEntryModal = ({
             <div className="row g-3 mb-3">
               <div className="col-6 col-lg-2">
                 <CFormSelect
+                  id="manual-pipeline-entry-type"
                   label="Entry type"
                   value={manualForm.entry_type}
                   onChange={(event) => onFormChange({ entry_type: event.target.value })}
@@ -215,6 +217,7 @@ const ManualPipelineEntryModal = ({
               </div>
               <div className="col-6 col-lg-4">
                 <CFormInput
+                  id="manual-pipeline-entry-date"
                   type="date"
                   label="Entry date"
                   value={manualForm.entry_date}
@@ -241,6 +244,7 @@ const ManualPipelineEntryModal = ({
               </div>
               <div className="col-6 col-lg-3">
                 <CFormSelect
+                  id="manual-pipeline-entry-classification"
                   label="Classification"
                   value={manualForm.segment_type}
                   onChange={(event) => onFormChange({ segment_type: event.target.value })}
@@ -263,6 +267,7 @@ const ManualPipelineEntryModal = ({
               <div className="row g-3">
                 <div className="col-md-4">
                   <CFormInput
+                    id="manual-pipeline-entry-prospect"
                     label="Company / prospect"
                     placeholder="Example: ABC Manufacturing Sdn Bhd"
                     maxLength={191}
@@ -272,6 +277,7 @@ const ManualPipelineEntryModal = ({
                 </div>
                 <div className="col-md-4">
                   <CFormSelect
+                    id="manual-pipeline-entry-service"
                     label="Service category"
                     value={manualForm.draft.service_category}
                     onChange={(event) => onDraftChange({ service_category: event.target.value })}
@@ -283,9 +289,25 @@ const ManualPipelineEntryModal = ({
                     ))}
                   </CFormSelect>
                 </div>
+                {isOtherServiceCategory(manualForm.draft.service_category) && (
+                  <div className="col-md-4">
+                    <CFormInput
+                      id="manual-pipeline-entry-custom-service"
+                      label="Specify service category"
+                      placeholder="Example: Environmental Monitoring"
+                      maxLength={191}
+                      required
+                      value={manualForm.draft.custom_service_category}
+                      onChange={(event) =>
+                        onDraftChange({ custom_service_category: event.target.value })
+                      }
+                    />
+                  </div>
+                )}
                 {showEstimatedRm && (
                   <div className="col-md-4">
                     <CFormInput
+                      id="manual-pipeline-entry-estimated-rm"
                       type="number"
                       min="0"
                       step="0.01"
@@ -298,6 +320,7 @@ const ManualPipelineEntryModal = ({
                 )}
                 <div className="col-md-8">
                   <CFormTextarea
+                    id="manual-pipeline-entry-notes"
                     label="Notes"
                     placeholder="Optional context, e.g. referral source, requested service, or next action"
                     rows={2}
@@ -399,7 +422,10 @@ const ManualPipelineEntryModal = ({
                       entry.segment_type,
                       selectedManualClassificationLabel,
                     )
-                    const serviceCategory = serviceCategoryLabel(entry.service_category)
+                    const serviceCategory = serviceCategoryDisplayLabel(
+                      entry.service_category,
+                      entry.custom_service_category,
+                    )
 
                     return (
                       <div

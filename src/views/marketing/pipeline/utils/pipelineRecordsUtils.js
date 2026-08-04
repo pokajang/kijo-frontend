@@ -6,7 +6,7 @@ import {
   entryTypes,
   formatDate,
   serviceCategories,
-  serviceCategoryLabel,
+  serviceCategoryDisplayLabel,
   typeLabel,
 } from '../pipelineEntryUtils'
 
@@ -175,7 +175,8 @@ export const normalizePipelineRecord = (entry) => ({
   segmentTypeValue: entry.segmentType || '',
   segmentType: classificationLabel(entry.segmentType),
   serviceCategoryValue: entry.serviceCategory || '',
-  serviceCategory: serviceCategoryLabel(entry.serviceCategory),
+  customServiceCategoryValue: entry.customServiceCategory || '',
+  serviceCategory: serviceCategoryDisplayLabel(entry.serviceCategory, entry.customServiceCategory),
   estimatedRm:
     entry.estimatedRm === null || entry.estimatedRm === undefined
       ? null

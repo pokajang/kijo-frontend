@@ -24,6 +24,7 @@ import {
   entryTypes,
   entryTypeAllowsEstimatedRm,
   getPipelineEntryValidationError,
+  isOtherServiceCategory,
   serviceCategories,
 } from './pipelineEntryUtils'
 
@@ -33,6 +34,7 @@ const createFormState = (entry) => ({
   source: entry?.sourceValue || entry?.source || '',
   segment_type: entry?.segmentTypeValue || '',
   service_category: entry?.serviceCategoryValue || '',
+  custom_service_category: entry?.customServiceCategoryValue || '',
   estimated_rm:
     entry?.estimatedRm === null || entry?.estimatedRm === undefined
       ? ''
@@ -68,6 +70,10 @@ const PipelineEntryEditModal = ({ visible, entry, onClose, onSaved }) => {
       ...(Object.prototype.hasOwnProperty.call(updates, 'entry_type') &&
       !entryTypeAllowsEstimatedRm(updates.entry_type)
         ? { estimated_rm: '' }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(updates, 'service_category') &&
+      !isOtherServiceCategory(updates.service_category)
+        ? { custom_service_category: '' }
         : {}),
     }))
   }
@@ -119,6 +125,7 @@ const PipelineEntryEditModal = ({ visible, entry, onClose, onSaved }) => {
       formData.append('source', form.source.trim())
       formData.append('segment_type', form.segment_type || '')
       formData.append('service_category', form.service_category || '')
+      formData.append('custom_service_category', form.custom_service_category.trim())
       formData.append(
         'estimated_rm',
         showEstimatedRm && form.estimated_rm !== '' ? form.estimated_rm : '',
@@ -227,6 +234,21 @@ const PipelineEntryEditModal = ({ visible, entry, onClose, onSaved }) => {
               ))}
             </CFormSelect>
           </CCol>
+          {isOtherServiceCategory(form.service_category) && (
+            <CCol xs={12} md={4}>
+              <CFormLabel htmlFor="pipeline-edit-custom-service">
+                Specify Service Category
+              </CFormLabel>
+              <CFormInput
+                id="pipeline-edit-custom-service"
+                value={form.custom_service_category}
+                maxLength={191}
+                required
+                placeholder="Example: Environmental Monitoring"
+                onChange={(event) => updateForm({ custom_service_category: event.target.value })}
+              />
+            </CCol>
+          )}
           {showEstimatedRm && (
             <CCol xs={12} md={4}>
               <CFormLabel htmlFor="pipeline-edit-estimated-rm">Estimated RM</CFormLabel>

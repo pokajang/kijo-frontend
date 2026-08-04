@@ -61,10 +61,12 @@ const formatPipelineStatusLabel = (label) => {
     TRAINING: 'Training',
     'CONSULTANCY -ISO': 'Consultancy - ISO',
     'CONSULTANCY - IHOH': 'Consultancy - IHOH',
+    'CONSULTANCY - OSH': 'Consultancy - OSH',
     'MAN POWER': 'Man Power',
     'EQUIPMENT SUPPLY': 'Equipment Supply',
     ENGINEERING: 'Engineering',
     INFRASTRUCTURE: 'Infrastructure',
+    OTHERS: 'Others',
     TOTAL: 'Total',
   }
 

@@ -5,6 +5,8 @@ import {
   hasInvalidEstimatedRm,
   legalComplianceAssessmentSource,
   normalizeBulkRow,
+  serviceCategories,
+  serviceCategoryDisplayLabel,
 } from './pipelineEntryUtils'
 
 describe('pipeline entry utilities', () => {
@@ -64,5 +66,68 @@ describe('pipeline entry utilities', () => {
 
   it('exposes free legal compliance assessments as a source filter option', () => {
     expect(entrySources).toContain(legalComplianceAssessmentSource)
+  })
+
+  it('supports Consultancy - OSH and requires a description for Others', () => {
+    expect(serviceCategories).toEqual(
+      expect.arrayContaining([
+        { value: 'consultancy_osh', label: 'Consultancy - OSH' },
+        { value: 'other', label: 'Others' },
+      ]),
+    )
+
+    const otherEntry = {
+      entry_type: 'lead',
+      entry_date: '2026-05-11',
+      source: 'WhatsApp Personal',
+      prospect_name: 'Acme Sdn Bhd',
+      service_category: 'other',
+      custom_service_category: '   ',
+      estimated_rm: '',
+    }
+
+    expect(getPipelineEntryValidationError(otherEntry)).toBe(
+      'Specify the service category when Others is selected.',
+    )
+    expect(
+      getPipelineEntryValidationError({
+        ...otherEntry,
+        custom_service_category: 'Environmental Monitoring',
+      }),
+    ).toBe('')
+    expect(serviceCategoryDisplayLabel('other', ' Environmental Monitoring ')).toBe(
+      'Others — Environmental Monitoring',
+    )
+    expect(serviceCategoryDisplayLabel('consultancy_osh', 'Ignored')).toBe('Consultancy - OSH')
+  })
+
+  it('normalizes custom service text and clears it for canonical categories', () => {
+    expect(
+      normalizeBulkRow({
+        entry_type: 'lead',
+        entry_date: '2026-05-11',
+        source: ' WhatsApp Personal ',
+        segment_type: '',
+        service_category: 'other',
+        custom_service_category: ' Environmental Monitoring ',
+        estimated_rm: '',
+        prospect_name: ' Acme ',
+        notes: '',
+      }).custom_service_category,
+    ).toBe('Environmental Monitoring')
+
+    expect(
+      normalizeBulkRow({
+        entry_type: 'lead',
+        entry_date: '2026-05-11',
+        source: 'WhatsApp Personal',
+        segment_type: '',
+        service_category: 'training',
+        custom_service_category: 'Stale value',
+        estimated_rm: '',
+        prospect_name: 'Acme',
+        notes: '',
+      }).custom_service_category,
+    ).toBe('')
   })
 })
