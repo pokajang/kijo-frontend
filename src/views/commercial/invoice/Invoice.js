@@ -30,7 +30,7 @@ import {
   fetchAllInvoices,
   handleAction,
   handleMarkPaidConfirmed,
-  handleMarkUnpaidConfirmed,
+  handlePaymentReversal,
   handleUpdateHrdClaimRefConfirmed,
   handleDelete,
 } from './actionHandlers'
@@ -323,10 +323,6 @@ const Invoice = () => {
                 </DataTableRecordControls>
               }
               onAction={(action, invoice) => {
-                if (action === 'markunpaid') {
-                  handleMarkUnpaidConfirmed(invoice, refreshInvoicesQuietly)
-                  return
-                }
                 handleAction(
                   action,
                   invoice,
@@ -380,6 +376,7 @@ const Invoice = () => {
         onConfirmed={(invoice, paidData) =>
           handleMarkPaidConfirmed(invoice, paidData, refreshInvoicesQuietly, setShowMarkPaid)
         }
+        onReverse={(payment) => handlePaymentReversal(payment, refreshInvoicesQuietly)}
       />
 
       <UpdateHrdClaimRefModal

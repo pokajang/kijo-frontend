@@ -159,13 +159,14 @@ const debtorTableColumns = [
   },
   {
     key: 'amount',
-    label: 'Amount',
+    label: 'Outstanding',
     sortable: true,
     sortType: 'number',
     align: 'end',
     width: '6rem',
     shrinkToFit: true,
-    getExportValue: (invoice) => `RM ${formatInvoiceAmount(invoice.grand_total)}`,
+    getExportValue: (invoice) =>
+      `RM ${formatInvoiceAmount(invoice.outstanding_amount ?? invoice.grand_total)}`,
   },
 ]
 
@@ -421,7 +422,9 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                 }
                 if (column.key === 'paymentTerms') return renderInvoicePaymentTerms(invoice)
                 if (column.key === 'amount') {
-                  return `RM ${formatInvoiceAmount(invoice.grand_total)}`
+                  return `RM ${formatInvoiceAmount(
+                    invoice.outstanding_amount ?? invoice.grand_total,
+                  )}`
                 }
                 return '-'
               }}
@@ -433,7 +436,8 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                 if (field === 'age') return getInvoiceAgeDays(invoice)
                 if (field === 'paymentTerms')
                   return Number(getInvoicePaymentTermsDays(invoice) ?? -1)
-                if (field === 'amount') return Number(invoice.grand_total || 0)
+                if (field === 'amount')
+                  return Number(invoice.outstanding_amount ?? invoice.grand_total ?? 0)
                 return invoice?.[field] || ''
               }}
               initialSortField="invoiceDate"
@@ -480,10 +484,10 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                   },
                   {
                     key: 'amount',
-                    label: 'Amount',
+                    label: 'Outstanding',
                     value: (
                       <span className="fw-semibold text-warning">
-                        RM {formatInvoiceAmount(invoice.grand_total)}
+                        RM {formatInvoiceAmount(invoice.outstanding_amount ?? invoice.grand_total)}
                       </span>
                     ),
                   },

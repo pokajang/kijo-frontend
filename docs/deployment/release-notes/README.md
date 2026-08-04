@@ -16,6 +16,7 @@ Use it only when the deployed release explicitly requires it.
 
 ## Current Notes
 
+- [Receivable payment ledger and legacy payment backfill](receivable-payment-ledger.md)
 - [Special invoice and proposal schema](special-invoice-and-proposal.md)
 - [KPI measurement metadata](kpi-measurement-metadata.md)
 - [Legal compliance assessment snapshots](legal-compliance-snapshots.md)

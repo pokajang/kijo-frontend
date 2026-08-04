@@ -13,7 +13,7 @@ import {
   handleAction,
   handleDelete,
   handleMarkPaidConfirmed,
-  handleMarkUnpaidConfirmed,
+  handlePaymentReversal,
   handleUpdateHrdClaimRefConfirmed,
 } from './actionHandlers'
 
@@ -25,6 +25,13 @@ const getStatusTone = (status) => {
   if (normalized.includes('cancel') || normalized.includes('void')) return 'danger'
   return 'warning'
 }
+
+const isCancelledInvoice = (status) =>
+  ['cancelled', 'canceled', 'void'].includes(
+    String(status || '')
+      .trim()
+      .toLowerCase(),
+  )
 
 const InvoiceDetailPage = () => {
   const navigate = useNavigate()
@@ -54,10 +61,6 @@ const InvoiceDetailPage = () => {
 
   const runAction = (action, target = invoice) => {
     if (!target) return
-    if (action === 'markunpaid') {
-      handleMarkUnpaidConfirmed(target, refresh)
-      return
-    }
     handleAction(
       action,
       target,
@@ -95,17 +98,7 @@ const InvoiceDetailPage = () => {
           label: 'Edit',
           buttonColor: 'primary',
           onClick: () => runAction('edit'),
-          hidden: invoice.status === 'Paid',
         },
-        invoice.status === 'Paid'
-          ? {
-              key: 'edit-disabled',
-              label: 'Edit',
-              buttonColor: 'secondary',
-              disabled: true,
-              tooltip: 'Mark as Pending to edit',
-            }
-          : null,
         invoice.isHrdTraining
           ? {
               key: 'updatehrdclaim',
@@ -128,19 +121,14 @@ const InvoiceDetailPage = () => {
               onClick: () => runAction('receipt'),
             }
           : null,
-        invoice.status === 'Paid'
+        !isCancelledInvoice(invoice.status)
           ? {
-              key: 'markunpaid',
-              label: 'Mark as Pending',
-              buttonColor: 'warning',
-              onClick: () => runAction('markunpaid'),
-            }
-          : {
               key: 'markpaid',
-              label: 'Mark as Paid',
+              label: 'Update Payment',
               buttonColor: 'success',
               onClick: () => runAction('markpaid'),
-            },
+            }
+          : null,
         {
           key: 'delete',
           label: 'Delete',
@@ -215,6 +203,7 @@ const InvoiceDetailPage = () => {
         onConfirmed={(invoiceData, paidData) =>
           handleMarkPaidConfirmed(invoiceData, paidData, refresh, setShowMarkPaid)
         }
+        onReverse={(payment) => handlePaymentReversal(payment, refresh)}
       />
       <UpdateHrdClaimRefModal
         visible={showHrdClaimRefModal}

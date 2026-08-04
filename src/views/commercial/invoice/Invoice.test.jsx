@@ -46,6 +46,7 @@ vi.mock('./actionHandlers', () => ({
   handleAction: vi.fn(),
   handleDelete: vi.fn(),
   handleMarkPaidConfirmed: vi.fn(),
+  handlePaymentReversal: vi.fn(),
   handleMarkUnpaidConfirmed: vi.fn(),
   handleUpdateHrdClaimRefConfirmed: vi.fn(),
 }))

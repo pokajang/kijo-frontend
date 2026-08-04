@@ -28,7 +28,7 @@ import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
-import DebtorMarkPaidModal from './DebtorMarkPaidModal'
+import DebtorUpdatePaymentModal from './DebtorUpdatePaymentModal'
 import {
   emptyValue,
   formatCount,
@@ -40,7 +40,7 @@ import {
   normalizeDebtorRow,
 } from './debtorUtils'
 
-const columnStorageKey = 'commercial.debtors.visible-columns.v2'
+const columnStorageKey = 'commercial.debtors.visible-columns.v3'
 
 const defaultVisibleColumns = {
   invoice: true,
@@ -54,6 +54,8 @@ const defaultVisibleColumns = {
   dueDate: true,
   overdue: true,
   total: true,
+  paid: true,
+  outstanding: true,
   status: true,
   source: true,
 }
@@ -144,6 +146,26 @@ const dataColumns = [
     shrinkToFit: true,
   },
   {
+    key: 'paid',
+    label: 'Paid',
+    width: '140px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => formatMoney(row.paidTotal),
+  },
+  {
+    key: 'outstanding',
+    label: 'Outstanding',
+    width: '150px',
+    sortable: true,
+    sortType: 'number',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => formatMoney(row.outstandingAmount),
+  },
+  {
     key: 'status',
     label: 'Status',
     width: '120px',
@@ -159,9 +181,17 @@ const getSourceLabel = (debtor) =>
 
 const getSourceTone = (debtor) => (debtor?.sourceType === 'manual' ? 'warning' : 'info')
 
+const isCancelledStatus = (status) =>
+  ['cancelled', 'canceled', 'void'].includes(
+    String(status || '')
+      .trim()
+      .toLowerCase(),
+  )
+
 const getInvoiceCountLabel = (count) => `${formatCount(count)} invoice${count === 1 ? '' : 's'}`
 
-const sumGrandTotal = (items) => items.reduce((sum, row) => sum + Number(row.grandTotal || 0), 0)
+const sumOutstanding = (items) =>
+  items.reduce((sum, row) => sum + Number(row.outstandingAmount || 0), 0)
 
 const getCollectionDays = (row) =>
   row.overdueDays !== null && row.overdueDays !== undefined
@@ -203,7 +233,7 @@ const Debtors = () => {
   const [asOfDate, setAsOfDate] = useState(getTodayDate)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [selectedDebtor, setSelectedDebtor] = useState(null)
-  const [markPaidVisible, setMarkPaidVisible] = useState(false)
+  const [updatePaymentVisible, setUpdatePaymentVisible] = useState(false)
   const [submittingPayment, setSubmittingPayment] = useState(false)
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('commercial.debtors')
@@ -250,7 +280,7 @@ const Debtors = () => {
       {
         key: 'open-receivables',
         label: 'Open Receivables',
-        value: formatMoney(sumGrandTotal(openRows)),
+        value: formatMoney(sumOutstanding(openRows)),
         tone: 'warning',
         size: 'md',
         onClick: () => {
@@ -261,7 +291,7 @@ const Debtors = () => {
       {
         key: 'over-30',
         label: 'More Than 30 Days',
-        value: formatMoney(sumGrandTotal(overThirtyRows)),
+        value: formatMoney(sumOutstanding(overThirtyRows)),
         sublabel: getInvoiceCountLabel(overThirtyRows.length),
         tone: overThirtyRows.length ? 'danger' : 'secondary',
         size: 'md',
@@ -269,7 +299,7 @@ const Debtors = () => {
       {
         key: '31-60',
         label: '31-60 Days',
-        value: formatMoney(sumGrandTotal(thirtyOneToSixtyRows)),
+        value: formatMoney(sumOutstanding(thirtyOneToSixtyRows)),
         sublabel: getInvoiceCountLabel(thirtyOneToSixtyRows.length),
         tone: thirtyOneToSixtyRows.length ? 'warning' : 'secondary',
         size: 'md',
@@ -277,7 +307,7 @@ const Debtors = () => {
       {
         key: '61-plus',
         label: '61+ Days',
-        value: formatMoney(sumGrandTotal(sixtyOnePlusRows)),
+        value: formatMoney(sumOutstanding(sixtyOnePlusRows)),
         sublabel: getInvoiceCountLabel(sixtyOnePlusRows.length),
         tone: sixtyOnePlusRows.length ? 'danger' : 'secondary',
         size: 'md',
@@ -308,48 +338,59 @@ const Debtors = () => {
     setShowAdvancedFilters(false)
   }
 
-  const openMarkPaid = (debtor) => {
+  const openUpdatePayment = (debtor) => {
     setSelectedDebtor(debtor)
-    setMarkPaidVisible(true)
+    setUpdatePaymentVisible(true)
   }
 
-  const handleConfirmPaid = async (paymentData) => {
-    if (!selectedDebtor) return
+  const handleConfirmPayment = async (paymentData) => {
+    if (!selectedDebtor) return false
     setSubmittingPayment(true)
     try {
-      const endpoint =
-        selectedDebtor.sourceType === 'manual'
-          ? `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(selectedDebtor.sourceId)}/mark-paid`
-          : `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(selectedDebtor.sourceId)}/mark-paid`
+      const endpoint = `${import.meta.env.VITE_API_BASE}receivables/${encodeURIComponent(
+        selectedDebtor.sourceType,
+      )}/${encodeURIComponent(selectedDebtor.sourceId)}/payments`
       await fetchJson(endpoint, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          id: selectedDebtor.sourceId,
-          ...paymentData,
-        }),
+        method: 'POST',
+        body: JSON.stringify(paymentData),
       })
-      setMarkPaidVisible(false)
+      setUpdatePaymentVisible(false)
       setSelectedDebtor(null)
-      showToast('Debtor marked as paid.')
+      showToast('Payment updated.')
       await fetchDebtors({ showLoader: false })
+      return true
     } catch (error) {
-      dialog.alert(error?.message || 'Unable to mark debtor as paid.')
+      dialog.alert(error?.message || 'Unable to update payment.')
+      return false
     } finally {
       setSubmittingPayment(false)
     }
   }
 
-  const handleReopenManual = async (debtor) => {
-    if (!(await dialog.confirm(`Mark ${debtor.invoiceRef} as Open?`))) return
+  const handleReversePayment = async (payment) => {
+    const reason = await dialog.prompt('Reason for reversing this payment', {
+      title: 'Reverse Payment',
+      placeholder: 'Enter the correction reason',
+      confirmText: 'Reverse Payment',
+      confirmColor: 'danger',
+      required: true,
+    })
+    if (!String(reason || '').trim()) return false
+
+    setSubmittingPayment(true)
     try {
       await fetchJson(
-        `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(debtor.sourceId)}/mark-open`,
-        { method: 'PATCH', body: JSON.stringify({}) },
+        `${import.meta.env.VITE_API_BASE}receivable-payments/${encodeURIComponent(payment.id)}/reverse`,
+        { method: 'POST', body: JSON.stringify({ reason: String(reason).trim() }) },
       )
-      showToast('Manual debtor reopened.')
+      showToast('Payment reversed.')
       await fetchDebtors({ showLoader: false })
+      return true
     } catch (error) {
-      dialog.alert(error?.message || 'Unable to reopen manual debtor.')
+      dialog.alert(error?.message || 'Unable to reverse payment.')
+      return false
+    } finally {
+      setSubmittingPayment(false)
     }
   }
 
@@ -361,11 +402,19 @@ const Debtors = () => {
       }))
     )
       return
+    const reason = await dialog.prompt('Reason for deleting this manual debtor', {
+      title: 'Deletion Reason',
+      placeholder: 'For example: duplicate or incorrect entry',
+      confirmText: 'Continue',
+      required: true,
+    })
+    if (!String(reason || '').trim()) return
     try {
       await fetchJson(
         `${import.meta.env.VITE_API_BASE}debtors/manual/${encodeURIComponent(debtor.sourceId)}`,
         {
           method: 'DELETE',
+          body: JSON.stringify({ reason: String(reason).trim() }),
         },
       )
       showToast('Manual debtor deleted.')
@@ -412,19 +461,13 @@ const Debtors = () => {
             onClick: (record) => window.open(record.attachmentUrl, '_blank'),
           }
         : null,
-      isOpenStatus(debtor.status)
+      !isCancelledStatus(debtor.status)
         ? {
-            key: 'mark-paid',
-            label: 'Mark Paid',
-            onClick: openMarkPaid,
+            key: 'update-payment',
+            label: 'Update Payment',
+            onClick: openUpdatePayment,
           }
-        : debtor.sourceType === 'manual'
-          ? {
-              key: 'reopen',
-              label: 'Mark Open',
-              onClick: handleReopenManual,
-            }
-          : null,
+        : null,
       debtor.sourceType === 'manual'
         ? {
             key: 'delete',
@@ -462,6 +505,8 @@ const Debtors = () => {
       )
     }
     if (column.key === 'total') return formatMoney(debtor.grandTotal)
+    if (column.key === 'paid') return formatMoney(debtor.paidTotal)
+    if (column.key === 'outstanding') return formatMoney(debtor.outstandingAmount)
     if (column.key === 'source') {
       return (
         <DataTableStatusBadge tone={getSourceTone(debtor)}>
@@ -634,6 +679,8 @@ const Debtors = () => {
                   if (field === 'paymentTerms') return Number(debtor.paymentTermsDays || -1)
                   if (field === 'overdue') return Number(debtor.overdueDays ?? -999999)
                   if (field === 'total') return debtor.grandTotal
+                  if (field === 'paid') return debtor.paidTotal
+                  if (field === 'outstanding') return debtor.outstandingAmount
                   if (field === 'source') return debtor.sourceType
                   return debtor[field] || ''
                 }}
@@ -645,12 +692,13 @@ const Debtors = () => {
         </CCol>
       </CRow>
 
-      <DebtorMarkPaidModal
-        visible={markPaidVisible}
+      <DebtorUpdatePaymentModal
+        visible={updatePaymentVisible}
         debtor={selectedDebtor}
         submitting={submittingPayment}
-        onClose={() => setMarkPaidVisible(false)}
-        onConfirm={handleConfirmPaid}
+        onClose={() => setUpdatePaymentVisible(false)}
+        onConfirm={handleConfirmPayment}
+        onReverse={handleReversePayment}
       />
     </>
   )

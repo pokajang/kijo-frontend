@@ -61,11 +61,6 @@ const blankForm = {
   payment_terms_source: '',
   due_date: '',
   grand_total: '',
-  status: 'Open',
-  payment_method: '',
-  paid_date: '',
-  paid_amount: '',
-  paid_remarks: '',
   attachmentUrl: '',
   attachmentOriginalName: '',
 }
@@ -376,9 +371,6 @@ const DebtorFormPage = () => {
                 ? addDaysToDate(current.invoice_date, value)
                 : '',
           }
-        : {}),
-      ...(field === 'status' && value !== 'Paid'
-        ? { paid_date: '', paid_amount: '', paid_remarks: '' }
         : {}),
     }))
   }, [])
@@ -784,19 +776,10 @@ const DebtorFormPage = () => {
                       form.service_period,
                     )}
                   />
-                  <ReviewItem label="Status" value={form.status} />
-                  <ReviewItem label="Payment Method" value={form.payment_method} />
                   <ReviewItem
                     label="Attachment"
                     value={attachment?.name || form.attachmentOriginalName}
                   />
-                  {form.status === 'Paid' && (
-                    <>
-                      <ReviewItem label="Paid Date" value={form.paid_date} />
-                      <ReviewItem label="Paid Amount" value={form.paid_amount} />
-                      <ReviewItem label="Paid Remarks" value={form.paid_remarks} />
-                    </>
-                  )}
                   <CCol xs={12}>
                     <div className="text-body-secondary small">Remarks</div>
                     <div className="fw-semibold" style={{ whiteSpace: 'pre-wrap' }}>
@@ -967,25 +950,7 @@ const DebtorFormPage = () => {
                         />
                       </CCol>
 
-                      <CCol xs={12} md={4}>
-                        <CFormLabel>Status</CFormLabel>
-                        <CFormSelect
-                          value={form.status}
-                          onChange={(event) => updateField('status', event.target.value)}
-                        >
-                          <option value="Open">Open</option>
-                          <option value="Paid">Paid</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </CFormSelect>
-                      </CCol>
-                      <CCol xs={12} md={4}>
-                        <CFormLabel>Payment Method</CFormLabel>
-                        <CFormInput
-                          value={form.payment_method}
-                          onChange={(event) => updateField('payment_method', event.target.value)}
-                        />
-                      </CCol>
-                      <CCol xs={12} md={4}>
+                      <CCol xs={12}>
                         <CFormLabel>Attachment</CFormLabel>
                         <CFormInput
                           type="file"
@@ -1000,38 +965,6 @@ const DebtorFormPage = () => {
                           </div>
                         )}
                       </CCol>
-
-                      {form.status === 'Paid' && (
-                        <>
-                          <CCol xs={12} md={4}>
-                            <CFormLabel>Paid Date</CFormLabel>
-                            <CFormInput
-                              type="date"
-                              value={form.paid_date}
-                              onChange={(event) => updateField('paid_date', event.target.value)}
-                              required
-                            />
-                          </CCol>
-                          <CCol xs={12} md={4}>
-                            <CFormLabel>Paid Amount</CFormLabel>
-                            <CFormInput
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={form.paid_amount}
-                              onChange={(event) => updateField('paid_amount', event.target.value)}
-                              required
-                            />
-                          </CCol>
-                          <CCol xs={12} md={4}>
-                            <CFormLabel>Paid Remarks</CFormLabel>
-                            <CFormInput
-                              value={form.paid_remarks}
-                              onChange={(event) => updateField('paid_remarks', event.target.value)}
-                            />
-                          </CCol>
-                        </>
-                      )}
                     </CRow>
                   </>
                 )}

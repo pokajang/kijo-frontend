@@ -8,7 +8,9 @@ const endpoints = {
   generate: (id) => `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/pdf`,
   receipt: (id) => `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/receipt-pdf`,
   updateStatus: (id) =>
-    `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/mark-paid`,
+    `${import.meta.env.VITE_API_BASE}receivables/invoice/${encodeURIComponent(id)}/payments`,
+  reversePayment: (id) =>
+    `${import.meta.env.VITE_API_BASE}receivable-payments/${encodeURIComponent(id)}/reverse`,
   markUnpaid: (id) =>
     `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/mark-unpaid`,
   updateHrdClaimRef: (id) =>
@@ -243,23 +245,60 @@ export const handleAction = async (
 }
 
 /**
- * 3) Confirm Mark Paid -> update status & refresh
+ * 3) Record a full or partial payment and refresh.
  */
 export const handleMarkPaidConfirmed = async (invoice, paidData, refreshList, setShowMarkPaid) => {
   try {
     const endpoint = getEndpoint('updateStatus')(invoice.rawId)
-    await fetch(endpoint, {
-      method: 'PATCH',
+    const res = await fetch(endpoint, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ id: invoice.rawId, ...paidData }),
+      body: JSON.stringify(paidData),
     })
-    showToast('Invoice marked as paid.')
+    const result = await res.json()
+    if (!res.ok || result.status !== 'success') {
+      throw new Error(result.message || 'Unable to update payment.')
+    }
+    showToast('Payment updated.')
     await refreshList()
+    setShowMarkPaid(false)
+    return true
   } catch (err) {
     console.error('Update status failed:', err)
-  } finally {
-    setShowMarkPaid(false)
+    dialog.alert(err.message || 'Unable to update payment.')
+    return false
+  }
+}
+
+export const handlePaymentReversal = async (payment, refreshList) => {
+  const reason = await dialog.prompt('Reason for reversing this payment', {
+    title: 'Reverse Payment',
+    placeholder: 'Enter the correction reason',
+    confirmText: 'Reverse Payment',
+    confirmColor: 'danger',
+    required: true,
+  })
+  if (!String(reason || '').trim()) return false
+
+  try {
+    const res = await fetch(getEndpoint('reversePayment')(payment.id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ reason: String(reason).trim() }),
+    })
+    const result = await res.json()
+    if (!res.ok || result.status !== 'success') {
+      throw new Error(result.message || 'Unable to reverse payment.')
+    }
+    showToast('Payment reversed.')
+    await refreshList()
+    return true
+  } catch (err) {
+    console.error('Payment reversal failed:', err)
+    dialog.alert(err.message || 'Unable to reverse payment.')
+    return false
   }
 }
 
@@ -300,13 +339,23 @@ export const handleDelete = async (invoice, refreshList) => {
     }))
   )
     return
+  const reason = await dialog.prompt('Reason for deleting this invoice', {
+    title: 'Deletion Reason',
+    placeholder: 'For example: duplicate or incorrect invoice',
+    confirmText: 'Continue',
+    required: true,
+  })
+  if (!String(reason || '').trim()) return
   try {
     const endpoint = getEndpoint('delete')
     const res = await fetch(endpoint, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ invoice_ref_no: invoice.id }),
+      body: JSON.stringify({
+        invoice_ref_no: invoice.id,
+        reason: String(reason).trim(),
+      }),
     })
     const result = await res.json()
     if (result.status === 'success') {

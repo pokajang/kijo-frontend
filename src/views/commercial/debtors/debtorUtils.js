@@ -68,6 +68,25 @@ export const normalizeDebtorRow = (row = {}) => {
         ? Number(rawOverdueDays)
         : null,
     grandTotal: Number(row.grandTotal ?? row.grand_total ?? 0),
+    paidTotal: Number(row.paidTotal ?? row.paid_total ?? row.paidAmount ?? row.paid_amount ?? 0),
+    outstandingAmount: Number(
+      row.outstandingAmount ??
+        row.outstanding_amount ??
+        Math.max(
+          0,
+          Number(row.grandTotal ?? row.grand_total ?? 0) -
+            Number(row.paidTotal ?? row.paid_total ?? row.paidAmount ?? row.paid_amount ?? 0),
+        ),
+    ),
+    paymentStatus: row.paymentStatus || row.payment_status || row.status || emptyValue,
+    paymentCount: Number(row.paymentCount ?? row.payment_count ?? 0),
+    lastPaymentDate:
+      row.lastPaymentDate || row.last_payment_date || row.paidDate || row.paid_date || '',
+    hasPaymentHistory: Boolean(
+      row.hasPaymentHistory ??
+        row.has_payment_history ??
+        Number(row.paymentCount ?? row.payment_count ?? 0) > 0,
+    ),
     status: row.status || emptyValue,
     paymentMethod: row.paymentMethod || row.payment_method || '',
     paidDate: row.paidDate || row.paid_date || '',
@@ -97,11 +116,6 @@ export const manualDebtorToForm = (row = {}) => ({
   purpose: row.purpose || '',
   invoice_date: row.invoiceDate || row.invoice_date || '',
   grand_total: row.grandTotal ?? row.grand_total ?? '',
-  status: row.status || 'Open',
-  payment_method: row.paymentMethod || row.payment_method || '',
-  paid_date: row.paidDate || row.paid_date || '',
-  paid_amount: row.paidAmount ?? row.paid_amount ?? '',
-  paid_remarks: row.paidRemarks || row.paid_remarks || '',
   override_payment_terms:
     (row.paymentTermsSource || row.payment_terms_source || '') === 'manual_override',
   payment_terms_days: row.paymentTermsDays ?? row.payment_terms_days ?? '',

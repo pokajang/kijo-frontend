@@ -7,6 +7,12 @@ import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.invoices.visible-columns.v4'
+const isCancelledInvoice = (status) =>
+  ['cancelled', 'canceled', 'void'].includes(
+    String(status || '')
+      .trim()
+      .toLowerCase(),
+  )
 
 const defaultVisibleColumns = {
   invoice: true,
@@ -285,18 +291,11 @@ const InvoiceTable = ({
         label: 'View',
         onClick: () => onAction('view', inv),
       },
-      inv.status === 'Paid'
-        ? {
-            key: 'edit-disabled',
-            label: 'Edit',
-            disabled: true,
-            tooltip: 'Mark as Pending to edit',
-          }
-        : {
-            key: 'edit',
-            label: 'Edit',
-            onClick: () => onAction('edit', inv),
-          },
+      {
+        key: 'edit',
+        label: 'Edit',
+        onClick: () => onAction('edit', inv),
+      },
       inv.isHrdTraining
         ? {
             key: 'updatehrdclaim',
@@ -316,17 +315,13 @@ const InvoiceTable = ({
             onClick: () => onAction('receipt', inv),
           }
         : null,
-      inv.status === 'Paid'
+      !isCancelledInvoice(inv.status)
         ? {
-            key: 'markunpaid',
-            label: 'Mark as Pending',
-            onClick: () => onAction('markunpaid', inv),
-          }
-        : {
             key: 'markpaid',
-            label: 'Mark as Paid',
+            label: 'Update Payment',
             onClick: () => onAction('markpaid', inv),
-          },
+          }
+        : null,
       {
         key: 'delete',
         label: 'Delete',
