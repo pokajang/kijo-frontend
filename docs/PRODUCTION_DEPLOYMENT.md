@@ -223,6 +223,118 @@ For every applicable data operation:
 - Keep repair/inference backfills out of migrations unless the release design
   intentionally requires an automatic transactional transformation.
 
+### Receivable Payment Lifecycle Navigation and Audit History
+
+The debtor lifecycle release adds Outstanding, Partially Paid, Paid,
+Cancelled, and All views; keeps settled records discoverable; and exposes the
+existing payment and reversal audit history. It is a coordinated frontend and
+backend release because the frontend relies on the backend's lifecycle filters
+and `hasPaymentHistory` response.
+
+This change adds no migration, dependency, backfill, queue, scheduler, or
+special Artisan command. It relies on the existing receivable-ledger migrations
+introduced by the preceding payment-ledger release:
+
+```text
+database/migrations/2026_08_04_000000_create_receivable_payments_table.php
+database/migrations/2026_08_04_001000_create_receivable_audit_events_table.php
+```
+
+Confirm both migrations are marked `Ran`, then use the standard
+`php artisan migrate --force` and cache-clear/cache-rebuild sequence from the
+backend release workflow. Deploy the backend first and the fresh frontend build
+immediately afterward. No receivable data rewrite is required.
+
+Post-deploy, verify that a partially paid record appears under Partially Paid,
+a fully settled record moves to Paid, its complete payment history remains
+available, and reversing a settlement returns it to Outstanding. Perform any
+write-path smoke only with an approved disposable record; the committed debtor
+lifecycle E2E creates and removes its own local fixture and must not be pointed
+at production.
+
+### React Router Security Audit Applicability (2026-08-05)
+
+This release pins `react-router-dom` to `7.18.2`, the latest published 7.x
+version available during release validation. `npm audit` still reports
+`GHSA-qwww-vcr4-c8h2` because its declared affected range covers React Router
+7.12.0 through 8.2.0 and the advisory lists 8.3.0 as the first patched version.
+
+The advisory applies only to applications using React Router's unstable React
+Server Components APIs. Kijo is a browser-rendered Vite SPA and contains none
+of those RSC APIs, so the affected request path is not present in this
+deployment. Do not force-install an unpublished or incompatible major solely to
+silence the audit. Recheck the advisory on each release and move to a supported
+patched version when a compatible 7.x backport or published 8.3+ upgrade is
+available.
+
+This dependency adjustment requires the normal fresh `npm ci` and committed
+frontend build. It adds no backend command or environment change.
+
+### Vendor Payment Workflow Visibility and Stage Actions
+
+The vendor-payment workflow visibility release is a coordinated backend and
+frontend deployment. The backend returns the saved Review, Approval, and
+Finance flow plus record-specific action permissions; the frontend uses that
+contract for the table summary, workflow dialog, detail timeline, and action
+buttons.
+
+This release adds no migration, backfill, dependency, scheduler entry, queue
+command, or special Artisan command. The required vendor-payment columns and
+workflow tables already belong to these existing migrations:
+
+```text
+database/migrations/2026_05_28_220000_harden_vendor_payment_workflow.php
+database/migrations/2026_05_28_230000_create_vendor_payment_workflow_settings.php
+```
+
+Use the normal backend deployment commands. Confirm both migrations are marked
+`Ran`; if either is pending, the standard forced migration applies it:
+
+```bash
+cd ~/kijo-laravel
+php artisan migrate:status | grep -E '2026_05_28_(220000|230000)'
+php artisan migrate --force
+
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+Deploy the backend first, then immediately deploy a fresh frontend build. No
+workflow data rewrite is required: saved workflow snapshots remain authoritative
+for submitted payments, while legacy records without snapshots use the current
+workflow configuration.
+
+The committed Playwright smoke is read-only. It logs in through the real UI,
+selects an existing payment in the current table period, verifies the table,
+dialog, responsive layout, action visibility, and detail route, and does not
+click Review, Approve, Return, Reject, Mark Paid, or Delete:
+
+```bash
+cd ~/kijo-frontend
+read -rsp "Smoke password: " SMOKE_PASSWORD
+export SMOKE_PASSWORD
+echo
+FRONTEND_URL=https://kijo.amiosh.com \
+SMOKE_EMAIL='authorized-smoke-account@example.com' \
+npm run smoke:vendor-payment-workflow
+unset SMOKE_PASSWORD
+```
+
+The smoke requires at least one vendor payment with workflow data in the
+current table period. Evidence is written under
+`test-results/vendor-payment-workflow-*` and must not be committed. A successful
+release shows the current stage directly in the table, the complete configured
+flow in the dialog and detail page, and only the actions authorized by the API.
+
+There is no database rollback for this release. If application rollback is
+needed, revert the frontend and backend application commits together and use
+the standard cache-clear and frontend-build rollback procedures.
+
 ### IH Legacy Complexity Pricing Compatibility
 
 The IH legacy-pricing compatibility release includes:

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PaymentTable from './PaymentTable'
 
@@ -127,14 +127,14 @@ describe('PaymentTable', () => {
       />,
     )
 
-    const checkButton = screen.getByRole('button', { name: /^check$/i })
+    const reviewButton = screen.getByRole('button', { name: /^review$/i })
     const returnButton = screen.getByRole('button', { name: /^return$/i })
-    fireEvent.click(checkButton)
+    fireEvent.click(reviewButton)
     fireEvent.click(returnButton)
 
     expect(onCheck).toHaveBeenCalledWith(1)
     expect(onReturn).toHaveBeenCalledWith(1)
-    expect(checkButton).toHaveClass('btn-outline-info')
+    expect(reviewButton).toHaveClass('btn-outline-info')
     expect(returnButton).toHaveClass('btn-outline-secondary')
     expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete Payment' })).toBeDisabled()
@@ -179,8 +179,78 @@ describe('PaymentTable', () => {
 
     expect(onApprove).toHaveBeenCalledWith(1)
     expect(approveButton).toHaveClass('btn-outline-success')
-    expect(screen.getByText(/Review: Reviewed by Review User \(REV\)/)).toBeInTheDocument()
-    expect(screen.getByText(/Remarks: Looks right/)).toBeInTheDocument()
+    expect(screen.getByText('Approval · Pending')).toBeInTheDocument()
+    expect(screen.getByText('1 of 2 stages completed')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'View flow' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Reviewed by')).toBeInTheDocument()
+    expect(within(dialog).getByText('Review User (REV)')).toBeInTheDocument()
+    expect(within(dialog).getByText('Looks right')).toBeInTheDocument()
+  })
+
+  it('shows the complete workflow to a requester without exposing stage actions', () => {
+    render(
+      <PaymentTable
+        payments={[
+          {
+            ...basePayment,
+            status: 'Pending',
+            can_check: false,
+            can_approve: false,
+            can_return: false,
+            can_reject: false,
+            workflow_flow: {
+              currentStage: { label: 'Review' },
+              stages: [
+                {
+                  key: 'review.1',
+                  stageType: 'review',
+                  label: 'Review',
+                  state: 'current',
+                  status: 'Pending',
+                  recipients: [{ staffId: 10, fullName: 'Review User', nameCode: 'REV' }],
+                },
+                {
+                  key: 'approval.1',
+                  stageType: 'approval',
+                  label: 'Approval',
+                  state: 'waiting',
+                  status: 'Waiting',
+                  recipients: [{ staffId: 20, fullName: 'Approve User', nameCode: 'APP' }],
+                },
+                {
+                  key: 'finance.1',
+                  stageType: 'finance',
+                  label: 'Finance',
+                  state: 'waiting',
+                  status: 'Waiting',
+                  recipients: [{ staffId: 30, fullName: 'Finance User', nameCode: 'FIN' }],
+                },
+              ],
+            },
+          },
+        ]}
+        staffRoles={['Staff']}
+        onView={vi.fn()}
+        onCheck={vi.fn()}
+        onApprove={vi.fn()}
+        onReject={vi.fn()}
+        onReturn={vi.fn()}
+        onMarkPaid={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Review · Pending')).toBeInTheDocument()
+    expect(screen.getByText('0 of 3 stages completed')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'View flow' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText('Review User (REV)')).toBeInTheDocument()
+    expect(within(dialog).getByText('Approve User (APP)')).toBeInTheDocument()
+    expect(within(dialog).getByText('Finance User (FIN)')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^review$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument()
   })
 
   it('keeps workflow actions out of the kebab action list', () => {

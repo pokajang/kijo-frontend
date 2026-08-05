@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CButton,
   CCard,
@@ -29,18 +29,21 @@ import { fetchJson } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
 import DebtorUpdatePaymentModal from './DebtorUpdatePaymentModal'
+import DebtorLifecycleTabs from './DebtorLifecycleTabs'
+import { buildDebtorStats } from './debtorStats'
 import {
   emptyValue,
-  formatCount,
   formatMoney,
   getAgeTone,
+  getDebtorStatusApiValue,
+  getDebtorStatusScope,
   getStatusTone,
   getTodayDate,
-  isOpenStatus,
+  normalizeDebtorStatusScope,
   normalizeDebtorRow,
 } from './debtorUtils'
 
-const columnStorageKey = 'commercial.debtors.visible-columns.v3'
+const columnStorageKey = 'commercial.debtors.visible-columns.v4'
 
 const defaultVisibleColumns = {
   invoice: true,
@@ -55,6 +58,7 @@ const defaultVisibleColumns = {
   overdue: true,
   total: true,
   paid: true,
+  lastPayment: true,
   outstanding: true,
   status: true,
   source: true,
@@ -156,6 +160,16 @@ const dataColumns = [
     getExportValue: (row) => formatMoney(row.paidTotal),
   },
   {
+    key: 'lastPayment',
+    label: 'Last Payment',
+    width: '130px',
+    sortable: true,
+    sortType: 'date',
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: (row) => row.lastPaymentDate || emptyValue,
+  },
+  {
     key: 'outstanding',
     label: 'Outstanding',
     width: '150px',
@@ -188,16 +202,6 @@ const isCancelledStatus = (status) =>
       .toLowerCase(),
   )
 
-const getInvoiceCountLabel = (count) => `${formatCount(count)} invoice${count === 1 ? '' : 's'}`
-
-const sumOutstanding = (items) =>
-  items.reduce((sum, row) => sum + Number(row.outstandingAmount || 0), 0)
-
-const getCollectionDays = (row) =>
-  row.overdueDays !== null && row.overdueDays !== undefined
-    ? Number(row.overdueDays || 0)
-    : Number(row.ageDays || 0)
-
 const getOverdueTone = (overdueDays) => {
   const days = Number(overdueDays || 0)
   if (days <= 0) return 'success'
@@ -225,25 +229,41 @@ const getPaymentTermsDisplay = (debtor) =>
 const Debtors = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('open')
+  const statusFilter = normalizeDebtorStatusScope(urlSearchParams.get('status'))
   const [sourceFilter, setSourceFilter] = useState('all')
   const [asOfDate, setAsOfDate] = useState(getTodayDate)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [selectedDebtor, setSelectedDebtor] = useState(null)
   const [updatePaymentVisible, setUpdatePaymentVisible] = useState(false)
   const [submittingPayment, setSubmittingPayment] = useState(false)
+  const fetchRequestIdRef = useRef(0)
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('commercial.debtors')
 
+  const setStatusFilter = useCallback(
+    (nextStatus) => {
+      const normalized = normalizeDebtorStatusScope(nextStatus)
+      setUrlSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        if (normalized === 'open') next.delete('status')
+        else next.set('status', normalized)
+        return next
+      })
+    },
+    [setUrlSearchParams],
+  )
+
   const fetchDebtors = useCallback(
     async ({ showLoader = true, preserveRows = true } = {}) => {
+      const requestId = ++fetchRequestIdRef.current
       if (showLoader) setLoading(true)
       try {
         const params = new URLSearchParams({
-          status: statusFilter,
+          status: getDebtorStatusApiValue(statusFilter),
           source: sourceFilter,
           as_of_date: asOfDate,
         })
@@ -251,13 +271,15 @@ const Debtors = () => {
         const payload = await fetchJson(
           `${import.meta.env.VITE_API_BASE}debtors?${params.toString()}`,
         )
+        if (requestId !== fetchRequestIdRef.current) return
         setRows(Array.isArray(payload?.debtors) ? payload.debtors.map(normalizeDebtorRow) : [])
       } catch (error) {
+        if (requestId !== fetchRequestIdRef.current) return
         console.error('Debtors fetch error:', error)
         dialog.alert(error?.message || 'Unable to load debtors.')
         if (!preserveRows) setRows([])
       } finally {
-        setLoading(false)
+        if (requestId === fetchRequestIdRef.current) setLoading(false)
       }
     },
     [asOfDate, searchTerm, sourceFilter, statusFilter],
@@ -267,58 +289,17 @@ const Debtors = () => {
     fetchDebtors()
   }, [fetchDebtors])
 
-  const statsItems = useMemo(() => {
-    const openRows = rows.filter((row) => isOpenStatus(row.status))
-    const overThirtyRows = openRows.filter((row) => getCollectionDays(row) > 30)
-    const thirtyOneToSixtyRows = openRows.filter((row) => {
-      const collectionDays = getCollectionDays(row)
-      return collectionDays >= 31 && collectionDays <= 60
-    })
-    const sixtyOnePlusRows = openRows.filter((row) => getCollectionDays(row) >= 61)
-
-    return [
-      {
-        key: 'open-receivables',
-        label: 'Open Receivables',
-        value: formatMoney(sumOutstanding(openRows)),
-        tone: 'warning',
-        size: 'md',
-        onClick: () => {
-          setStatusFilter('open')
-          setShowAdvancedFilters(true)
-        },
-      },
-      {
-        key: 'over-30',
-        label: 'More Than 30 Days',
-        value: formatMoney(sumOutstanding(overThirtyRows)),
-        sublabel: getInvoiceCountLabel(overThirtyRows.length),
-        tone: overThirtyRows.length ? 'danger' : 'secondary',
-        size: 'md',
-      },
-      {
-        key: '31-60',
-        label: '31-60 Days',
-        value: formatMoney(sumOutstanding(thirtyOneToSixtyRows)),
-        sublabel: getInvoiceCountLabel(thirtyOneToSixtyRows.length),
-        tone: thirtyOneToSixtyRows.length ? 'warning' : 'secondary',
-        size: 'md',
-      },
-      {
-        key: '61-plus',
-        label: '61+ Days',
-        value: formatMoney(sumOutstanding(sixtyOnePlusRows)),
-        sublabel: getInvoiceCountLabel(sixtyOnePlusRows.length),
-        tone: sixtyOnePlusRows.length ? 'danger' : 'secondary',
-        size: 'md',
-      },
-    ]
-  }, [rows])
+  const statsItems = useMemo(
+    () => buildDebtorStats(rows, statusFilter, asOfDate),
+    [asOfDate, rows, statusFilter],
+  )
 
   const activeFilterCount = [statusFilter !== 'open', sourceFilter !== 'all'].filter(Boolean).length
   const activeChips = [
     searchTerm.trim() ? { key: 'search', label: `Search: ${searchTerm.trim()}` } : null,
-    statusFilter !== 'open' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
+    statusFilter !== 'open'
+      ? { key: 'status', label: `Status: ${getDebtorStatusScope(statusFilter).label}` }
+      : null,
     sourceFilter !== 'all' ? { key: 'source', label: `Source: ${sourceFilter}` } : null,
     asOfDate !== getTodayDate() ? { key: 'asOf', label: `As of: ${asOfDate}` } : null,
   ].filter(Boolean)
@@ -350,13 +331,18 @@ const Debtors = () => {
       const endpoint = `${import.meta.env.VITE_API_BASE}receivables/${encodeURIComponent(
         selectedDebtor.sourceType,
       )}/${encodeURIComponent(selectedDebtor.sourceId)}/payments`
-      await fetchJson(endpoint, {
+      const payload = await fetchJson(endpoint, {
         method: 'POST',
         body: JSON.stringify(paymentData),
       })
       setUpdatePaymentVisible(false)
       setSelectedDebtor(null)
-      showToast('Payment updated.')
+      const outstanding = Number(payload?.summary?.outstandingAmount ?? 0)
+      showToast(
+        outstanding <= 0
+          ? 'Payment completed. This record is now available under Paid.'
+          : `Partial payment recorded. ${formatMoney(outstanding)} remains outstanding.`,
+      )
       await fetchDebtors({ showLoader: false })
       return true
     } catch (error) {
@@ -379,11 +365,16 @@ const Debtors = () => {
 
     setSubmittingPayment(true)
     try {
-      await fetchJson(
+      const payload = await fetchJson(
         `${import.meta.env.VITE_API_BASE}receivable-payments/${encodeURIComponent(payment.id)}/reverse`,
         { method: 'POST', body: JSON.stringify({ reason: String(reason).trim() }) },
       )
-      showToast('Payment reversed.')
+      const outstanding = Number(payload?.summary?.outstandingAmount ?? 0)
+      showToast(
+        outstanding > 0
+          ? 'Payment reversed. This record is now available under Outstanding.'
+          : 'Payment reversed.',
+      )
       await fetchDebtors({ showLoader: false })
       return true
     } catch (error) {
@@ -425,6 +416,20 @@ const Debtors = () => {
   }
 
   const getActions = (debtor) => {
+    const paymentAction = isCancelledStatus(debtor.status)
+      ? debtor.hasPaymentHistory
+        ? {
+            key: 'payment-history',
+            label: 'Payment History',
+            onClick: openUpdatePayment,
+          }
+        : null
+      : {
+          key: 'update-payment',
+          label: Number(debtor.outstandingAmount || 0) > 0 ? 'Update Payment' : 'Payment History',
+          onClick: openUpdatePayment,
+        }
+
     const actions = [
       debtor.sourceType === 'invoice'
         ? {
@@ -461,13 +466,7 @@ const Debtors = () => {
             onClick: (record) => window.open(record.attachmentUrl, '_blank'),
           }
         : null,
-      !isCancelledStatus(debtor.status)
-        ? {
-            key: 'update-payment',
-            label: 'Update Payment',
-            onClick: openUpdatePayment,
-          }
-        : null,
+      paymentAction,
       debtor.sourceType === 'manual'
         ? {
             key: 'delete',
@@ -506,6 +505,7 @@ const Debtors = () => {
     }
     if (column.key === 'total') return formatMoney(debtor.grandTotal)
     if (column.key === 'paid') return formatMoney(debtor.paidTotal)
+    if (column.key === 'lastPayment') return debtor.lastPaymentDate || emptyValue
     if (column.key === 'outstanding') return formatMoney(debtor.outstandingAmount)
     if (column.key === 'source') {
       return (
@@ -556,6 +556,11 @@ const Debtors = () => {
               {statsVisible && (
                 <StatsStrip items={statsItems} loading={loading} layout="balanced" />
               )}
+              <DebtorLifecycleTabs
+                value={statusFilter}
+                onChange={setStatusFilter}
+                disabled={loading}
+              />
               <DataTableRecordControls
                 visible={controlsVisible}
                 searchValue={searchTerm}
@@ -571,18 +576,6 @@ const Debtors = () => {
                 mobileToolsId="debtors-mobile-table-tools"
                 loading={loading}
               >
-                <CCol xs={12} md={4} lg={3}>
-                  <CFormLabel>Status</CFormLabel>
-                  <CFormSelect
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
-                  >
-                    <option value="open">Open</option>
-                    <option value="paid">Paid</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="all">All</option>
-                  </CFormSelect>
-                </CCol>
                 <CCol xs={12} md={4} lg={3}>
                   <CFormLabel>Source</CFormLabel>
                   <CFormSelect
@@ -640,17 +633,17 @@ const Debtors = () => {
                 getMobileTitle={(debtor) => debtor.invoiceRef}
                 getMobileSubtitle={(debtor) => debtor.client}
                 getMobileMeta={(debtor) =>
-                  `${debtor.invoiceDate || '-'} | ${getPaymentTermsDisplay(debtor)} | ${formatMoney(
-                    debtor.grandTotal,
-                  )}`
+                  `${debtor.invoiceDate || '-'} | Last payment ${
+                    debtor.lastPaymentDate || '-'
+                  } | ${formatMoney(debtor.outstandingAmount)} outstanding`
                 }
                 mobileRecord={{
                   title: (debtor) => debtor.invoiceRef,
                   subtitle: (debtor) => debtor.client,
                   meta: (debtor) =>
-                    `${debtor.invoiceDate || '-'} | ${getPaymentTermsDisplay(debtor)} | ${formatMoney(
-                      debtor.grandTotal,
-                    )}`,
+                    `${debtor.invoiceDate || '-'} | Last payment ${
+                      debtor.lastPaymentDate || '-'
+                    } | ${formatMoney(debtor.outstandingAmount)} outstanding`,
                   badges: (debtor) => [
                     {
                       key: 'status',
@@ -680,11 +673,12 @@ const Debtors = () => {
                   if (field === 'overdue') return Number(debtor.overdueDays ?? -999999)
                   if (field === 'total') return debtor.grandTotal
                   if (field === 'paid') return debtor.paidTotal
+                  if (field === 'lastPayment') return debtor.lastPaymentDate
                   if (field === 'outstanding') return debtor.outstandingAmount
                   if (field === 'source') return debtor.sourceType
                   return debtor[field] || ''
                 }}
-                resetDeps={[]}
+                resetDeps={[statusFilter]}
                 actionColumnWidth="56px"
               />
             </CCardBody>
@@ -695,6 +689,7 @@ const Debtors = () => {
       <DebtorUpdatePaymentModal
         visible={updatePaymentVisible}
         debtor={selectedDebtor}
+        historyOnly={isCancelledStatus(selectedDebtor?.status)}
         submitting={submittingPayment}
         onClose={() => setUpdatePaymentVisible(false)}
         onConfirm={handleConfirmPayment}

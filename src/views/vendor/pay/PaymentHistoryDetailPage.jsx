@@ -10,6 +10,8 @@ import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
+import VendorPaymentWorkflowTimeline from '../payment-records/VendorPaymentWorkflowTimeline'
+import { getVendorPaymentCurrentStageLabel } from '../payment-records/vendorPaymentWorkflow'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -62,6 +64,7 @@ const normalizePayment = (payment) => {
     invoice: payment.receipt_url || payment.receipt_path || payment.invoice || '',
     amount,
     amountDisplay: `RM ${amount.toFixed(2)}`,
+    currentWorkflowStage: getVendorPaymentCurrentStageLabel(payment),
   }
 }
 
@@ -151,8 +154,8 @@ const PaymentHistoryDetailPage = () => {
           fields={[
             { key: 'requested', label: 'Date Requested', value: payment?.requestedDisplay },
             { key: 'requestedBy', label: 'Requested By', value: payment?.requestedBy },
-            { key: 'checked', label: 'Date Checked', value: payment?.checkedDisplay },
-            { key: 'checkedBy', label: 'Checked By', value: payment?.checkedBy },
+            { key: 'checked', label: 'Date Reviewed', value: payment?.checkedDisplay },
+            { key: 'checkedBy', label: 'Reviewed By', value: payment?.checkedBy },
             { key: 'approved', label: 'Date Approved', value: payment?.approvedDisplay },
             { key: 'approvedBy', label: 'Approved By', value: payment?.approvedBy },
             { key: 'paid', label: 'Paid Date', value: payment?.paidDisplay },
@@ -170,11 +173,22 @@ const PaymentHistoryDetailPage = () => {
                 </DataTableStatusBadge>
               ),
             },
+            {
+              key: 'currentWorkflowStage',
+              label: 'Current Stage',
+              value: payment?.currentWorkflowStage,
+            },
             { key: 'amount', label: 'Amount', value: payment?.amountDisplay },
+            {
+              key: 'workflow',
+              label: 'Workflow',
+              value: payment ? <VendorPaymentWorkflowTimeline payment={payment} /> : '-',
+              xs: 12,
+            },
             { key: 'remarks', label: 'Remarks', value: payment?.remarks, xs: 12 },
             {
               key: 'checkerRemarks',
-              label: 'Checker Remarks',
+              label: 'Review Remarks',
               value: payment?.checkerRemarks,
               xs: 12,
             },

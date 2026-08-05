@@ -1,5 +1,31 @@
 export const emptyValue = '-'
 
+export const debtorStatusScopes = Object.freeze([
+  { key: 'open', label: 'Outstanding', apiValue: 'open' },
+  { key: 'partial', label: 'Partially Paid', apiValue: 'Partially Paid' },
+  { key: 'paid', label: 'Paid', apiValue: 'paid' },
+  { key: 'cancelled', label: 'Cancelled', apiValue: 'cancelled' },
+  { key: 'all', label: 'All', apiValue: 'all' },
+])
+
+const debtorStatusScopeMap = new Map(debtorStatusScopes.map((scope) => [scope.key, scope]))
+
+export const normalizeDebtorStatusScope = (value) => {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replaceAll('_', '-')
+
+  if (normalized === 'outstanding') return 'open'
+  if (normalized === 'partially-paid' || normalized === 'partially paid') return 'partial'
+  return debtorStatusScopeMap.has(normalized) ? normalized : 'open'
+}
+
+export const getDebtorStatusScope = (value) =>
+  debtorStatusScopeMap.get(normalizeDebtorStatusScope(value)) || debtorStatusScopeMap.get('open')
+
+export const getDebtorStatusApiValue = (value) => getDebtorStatusScope(value).apiValue
+
 export const getTodayDate = () => {
   const now = new Date()
   const offsetMs = now.getTimezoneOffset() * 60 * 1000

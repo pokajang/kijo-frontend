@@ -1,1 +1,0 @@
-import{r as t}from"./vendor-react-CsbEsM4e.js";const m=(r="",s=220)=>{const[e,o]=t.useState(r),[u,c]=t.useState(r);return t.useEffect(()=>{const n=setTimeout(()=>{c(String(e||"").trim())},s);return()=>clearTimeout(n)},[s,e]),{searchInput:e,setSearchInput:o,searchTerm:u,setSearchTerm:c}};export{m as u};

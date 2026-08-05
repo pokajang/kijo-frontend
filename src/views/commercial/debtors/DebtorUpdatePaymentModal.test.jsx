@@ -38,7 +38,9 @@ describe('DebtorUpdatePaymentModal', () => {
           paymentDate: '2026-08-01',
           paymentMethod: 'Bank Transfer',
           transactionReference: 'TX-11',
+          remarks: 'First instalment',
           recordedByCode: 'EMP',
+          createdAt: '2026-08-01 09:30:00',
           reversedAt: null,
         },
       ],
@@ -101,6 +103,50 @@ describe('DebtorUpdatePaymentModal', () => {
     await waitFor(() => expect(fetchJson).toHaveBeenCalledTimes(2))
   })
 
+  it('uses a history-only view for paid debtors and exposes closure audit details', async () => {
+    fetchJson.mockResolvedValueOnce({
+      status: 'success',
+      summary: {
+        grandTotal: 1000,
+        paidTotal: 1000,
+        outstandingAmount: 0,
+        paymentStatus: 'Paid',
+      },
+      payments: [
+        {
+          id: 12,
+          amount: 700,
+          paymentDate: '2026-08-05',
+          paymentMethod: 'Cheque',
+          transactionReference: 'TX-CLOSE',
+          remarks: 'Final settlement',
+          recordedByCode: 'FIN',
+          createdAt: '2026-08-05 11:00:00',
+          reversedAt: '2026-08-05 12:00:00',
+          reversedByCode: 'MGR',
+          reversalReason: 'Wrong transaction',
+        },
+      ],
+    })
+
+    render(
+      <DebtorUpdatePaymentModal
+        visible
+        debtor={{ ...debtor, paidTotal: 1000, outstandingAmount: 0, paymentStatus: 'Paid' }}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        onReverse={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Payment History' })).toBeInTheDocument()
+    expect(screen.queryByText('Payment option')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Update Payment' })).not.toBeInTheDocument()
+    expect(screen.getByText('Final settlement')).toBeInTheDocument()
+    expect(screen.getByText(/Reversed .* by MGR: Wrong transaction/)).toBeInTheDocument()
+    expect(screen.getByText('FIN')).toBeInTheDocument()
+  })
+
   it('blocks an amount above the outstanding balance before submission', async () => {
     const onConfirm = vi.fn()
     render(
@@ -121,6 +167,27 @@ describe('DebtorUpdatePaymentModal', () => {
     expect(
       await screen.findByText('Partial payment cannot exceed the outstanding balance.'),
     ).toBeInTheDocument()
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('keeps a cancelled debtor with an outstanding balance in read-only history mode', async () => {
+    const onConfirm = vi.fn()
+    render(
+      <DebtorUpdatePaymentModal
+        visible
+        historyOnly
+        debtor={{ ...debtor, status: 'Cancelled' }}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+        onReverse={vi.fn()}
+      />,
+    )
+
+    expect(await screen.findByRole('heading', { name: 'Payment History' })).toBeInTheDocument()
+    expect(screen.getByText('RM 700.00')).toBeInTheDocument()
+    expect(screen.queryByText('Payment option')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Update Payment' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reverse' })).not.toBeInTheDocument()
     expect(onConfirm).not.toHaveBeenCalled()
   })
 })

@@ -1,7 +1,7 @@
 // src/components/PaymentTable.jsx
 
 import React, { useMemo, useState } from 'react'
-import { CButton, CCol, CFormLabel, CFormSelect } from '@coreui/react'
+import { CCol, CFormLabel, CFormSelect } from '@coreui/react'
 import {
   DataTableRecordControls,
   DataTableRecordList,
@@ -17,6 +17,11 @@ import {
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import VendorPaymentWorkflowCell from './VendorPaymentWorkflowCell'
+import {
+  getVendorPaymentWorkflowSteps,
+  getVendorPaymentWorkflowSummary,
+} from './vendorPaymentWorkflow'
 
 const dataColumns = [
   { key: 'vendor', label: 'Vendor', width: '180px', sortable: true, sortType: 'string' },
@@ -79,9 +84,6 @@ const dataColumns = [
     width: '260px',
     sortable: true,
     sortType: 'string',
-    textMode: 'expandable',
-    cellMaxWidth: '260px',
-    previewCharThreshold: 42,
   },
   {
     key: 'amount',
@@ -125,71 +127,6 @@ const getStatusTone = (status) => {
 const grandTotal = (payments) =>
   payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
 
-const getWorkflowText = (payment = {}) => {
-  if (payment.status === 'Pending') return 'Pending review'
-  if (payment.status === 'Checked') return 'Pending approval'
-  if (payment.status === 'Approved') return 'Ready for payment'
-  if (payment.status === 'Paid') return 'Paid'
-  if (payment.status === 'Rejected') return 'Rejected'
-  return payment.status || '-'
-}
-
-const parseWorkflowProgress = (payment = {}) => {
-  const raw =
-    payment.workflow_progress || payment.workflowProgress || payment.workflow_progress_json
-  if (Array.isArray(raw)) return raw
-  if (typeof raw !== 'string' || raw.trim() === '') return []
-
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-const getProgressLabel = (entry = {}) => {
-  const stageType = entry.stageType || entry.stage_type || ''
-  const levelNo = Number(entry.levelNo || entry.level_no || 0)
-  if (entry.label) return entry.label
-  if (stageType === 'review') return levelNo > 1 ? `Review Level ${levelNo}` : 'Review'
-  if (stageType === 'approval') return levelNo > 1 ? `Approval Level ${levelNo}` : 'Approval'
-  if (stageType === 'finance') return 'Finance'
-  return 'Workflow'
-}
-
-const getProgressStatus = (entry = {}) => {
-  const stageType = entry.stageType || entry.stage_type || ''
-  if (entry.status) return entry.status
-  if (stageType === 'review') return 'Reviewed'
-  if (stageType === 'approval') return 'Approved'
-  if (stageType === 'finance') return 'Paid'
-  return 'Completed'
-}
-
-const getProgressActor = (entry = {}) => {
-  const actorName = entry.actorName || entry.actor_name || ''
-  const actorCode = entry.actorCode || entry.actor_code || ''
-  const staffId = entry.staffId || entry.staff_id || ''
-  if (actorName && actorCode) return `${actorName} (${actorCode})`
-  if (actorName) return actorName
-  if (actorCode) return actorCode
-  return staffId ? `Staff #${staffId}` : ''
-}
-
-const buildWorkflowProgressStep = (entry = {}) =>
-  [
-    `${getProgressLabel(entry)}: ${getProgressStatus(entry)}`,
-    getProgressActor(entry) ? `by ${getProgressActor(entry)}` : '',
-    entry.completedAt || entry.completed_at ? `at ${entry.completedAt || entry.completed_at}` : '',
-    entry.remarks ? `Remarks: ${entry.remarks}` : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
-
-const getWorkflowSteps = (payment = {}) =>
-  parseWorkflowProgress(payment).map(buildWorkflowProgressStep).filter(Boolean)
-
 const PaymentTable = ({
   payments = [],
   loading = false,
@@ -230,8 +167,8 @@ const PaymentTable = ({
   const normalizedPayments = useMemo(
     () =>
       payments.map((payment) => {
-        const workflowSteps = getWorkflowSteps(payment)
-        const pendingWorkflowText = getWorkflowText(payment)
+        const workflowSteps = getVendorPaymentWorkflowSteps(payment)
+        const workflowSummary = getVendorPaymentWorkflowSummary(payment)
         return {
           ...payment,
           vendor: payment.vendor_name || '-',
@@ -244,9 +181,9 @@ const PaymentTable = ({
           paymentType: payment.payment_type || '-',
           method: payment.method || '-',
           status: payment.status || '-',
-          workflowSteps,
-          workflow: [...workflowSteps, pendingWorkflowText].filter(Boolean).join('\n'),
-          pendingWorkflowText,
+          workflow: workflowSteps.join('\n') || payment.status || '-',
+          workflowCurrent: workflowSummary.primary,
+          workflowProgress: workflowSummary.progress,
           amount: Number(payment.amount || 0),
           amountDisplay: `RM ${Number(payment.amount || 0).toFixed(2)}`,
           paidDate: payment.paid_date || '',
@@ -392,7 +329,7 @@ const PaymentTable = ({
       status === 'Pending' && canCheck && typeof onCheck === 'function'
         ? {
             key: 'check',
-            label: 'Check',
+            label: 'Review',
             color: 'info',
             onClick: () => onCheck(paymentId),
           }
@@ -458,56 +395,7 @@ const PaymentTable = ({
   const renderWorkflowCell = (payment) => {
     const actions = getWorkflowActions(payment)
 
-    if (!actions.length) {
-      return (
-        <DataTableTextCell
-          value={payment.workflow || payment.pendingWorkflowText}
-          maxWidth="260px"
-          title="Workflow"
-          mode="expandable"
-          previewCharThreshold={62}
-          className="small text-muted"
-        />
-      )
-    }
-
-    const handleActionClick = (event, action) => {
-      event.stopPropagation()
-      action.onClick()
-    }
-
-    return (
-      <div className="small text-muted" style={{ maxWidth: '260px' }}>
-        {payment.workflowSteps?.length > 0 && (
-          <div className="mb-1">
-            <DataTableTextCell
-              value={payment.workflowSteps.join('\n')}
-              maxWidth="260px"
-              title="Workflow"
-              mode="expandable"
-              previewCharThreshold={44}
-              className="small text-muted"
-            />
-          </div>
-        )}
-        <div className="d-flex align-items-center flex-wrap gap-1">
-          {actions.map((action) => (
-            <CButton
-              key={action.key}
-              color={action.color}
-              size="sm"
-              variant="outline"
-              className="py-0 px-2"
-              data-no-row-open="true"
-              onMouseDown={(event) => event.stopPropagation()}
-              onClick={(event) => handleActionClick(event, action)}
-            >
-              {action.label}
-            </CButton>
-          ))}
-        </div>
-      </div>
-    )
+    return <VendorPaymentWorkflowCell payment={payment} actions={actions} />
   }
 
   const renderCell = (payment, column) => {
@@ -649,7 +537,11 @@ const PaymentTable = ({
             },
           ],
           kv: (payment) => [
-            { key: 'workflow', label: 'Workflow', value: payment.workflow },
+            {
+              key: 'workflow',
+              label: 'Workflow',
+              value: `${payment.workflowCurrent} · ${payment.workflowProgress}`,
+            },
             { key: 'requested', label: 'Requested', value: payment.requestedDisplay },
             { key: 'method', label: 'Method', value: payment.method },
           ],

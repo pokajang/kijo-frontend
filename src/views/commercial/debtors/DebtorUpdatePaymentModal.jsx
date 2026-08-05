@@ -28,9 +28,16 @@ const newRequestToken = () =>
   globalThis.crypto?.randomUUID?.() ||
   `payment-${Date.now()}-${Math.random().toString(16).slice(2)}`
 
+const formatAuditTimestamp = (value) => {
+  if (!value) return '-'
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString()
+}
+
 const DebtorUpdatePaymentModal = ({
   visible,
   debtor,
+  historyOnly = false,
   submitting = false,
   onClose,
   onConfirm,
@@ -63,6 +70,7 @@ const DebtorUpdatePaymentModal = ({
     [debtor, summary],
   )
   const outstanding = Number(effectiveSummary.outstandingAmount || 0)
+  const canRecordPayment = !historyOnly && outstanding > 0
 
   const loadHistory = useCallback(async () => {
     if (!debtor?.sourceType || !debtor?.sourceId) return
@@ -99,6 +107,7 @@ const DebtorUpdatePaymentModal = ({
   }, [loadHistory, visible])
 
   const handleConfirm = async () => {
+    if (!canRecordPayment) return
     setValidationError('')
     const partialAmount = Number(amount)
     if (!paymentDate) {
@@ -137,10 +146,10 @@ const DebtorUpdatePaymentModal = ({
       visible={visible}
       onClose={submitting ? undefined : onClose}
       backdrop="static"
-      size="lg"
+      size="xl"
     >
       <CModalHeader>
-        <CModalTitle>Update Payment</CModalTitle>
+        <CModalTitle>{canRecordPayment ? 'Update Payment' : 'Payment History'}</CModalTitle>
       </CModalHeader>
       <CModalBody>
         <div className="mb-3">
@@ -168,7 +177,7 @@ const DebtorUpdatePaymentModal = ({
         {validationError && <CAlert color="danger">{validationError}</CAlert>}
         {historyError && <CAlert color="warning">{historyError}</CAlert>}
 
-        {outstanding > 0 && (
+        {canRecordPayment && (
           <>
             <CFormLabel className="fw-semibold">Payment option</CFormLabel>
             <div className="d-flex flex-column flex-md-row gap-3 mb-3">
@@ -274,7 +283,8 @@ const DebtorUpdatePaymentModal = ({
                     <CTableHeaderCell>Date</CTableHeaderCell>
                     <CTableHeaderCell>Amount</CTableHeaderCell>
                     <CTableHeaderCell>Method / Reference</CTableHeaderCell>
-                    <CTableHeaderCell>Recorded by</CTableHeaderCell>
+                    <CTableHeaderCell>Remarks</CTableHeaderCell>
+                    <CTableHeaderCell>Recorded</CTableHeaderCell>
                     <CTableHeaderCell className="text-end">Action</CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
@@ -291,15 +301,25 @@ const DebtorUpdatePaymentModal = ({
                         {[payment.paymentMethod, payment.transactionReference]
                           .filter(Boolean)
                           .join(' / ') || '-'}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        {payment.remarks || '-'}
                         {payment.reversedAt && (
-                          <div className="small text-danger">
-                            Reversed: {payment.reversalReason || 'No reason supplied'}
+                          <div className="small text-danger mt-1">
+                            Reversed {formatAuditTimestamp(payment.reversedAt)} by{' '}
+                            {payment.reversedByCode || '-'}:{' '}
+                            {payment.reversalReason || 'No reason supplied'}
                           </div>
                         )}
                       </CTableDataCell>
-                      <CTableDataCell>{payment.recordedByCode || '-'}</CTableDataCell>
+                      <CTableDataCell>
+                        <div>{payment.recordedByCode || '-'}</div>
+                        <div className="small text-muted">
+                          {formatAuditTimestamp(payment.createdAt)}
+                        </div>
+                      </CTableDataCell>
                       <CTableDataCell className="text-end">
-                        {!payment.reversedAt && typeof onReverse === 'function' && (
+                        {!historyOnly && !payment.reversedAt && typeof onReverse === 'function' && (
                           <CButton
                             color="danger"
                             variant="ghost"
@@ -329,7 +349,7 @@ const DebtorUpdatePaymentModal = ({
         >
           Close
         </CButton>
-        {outstanding > 0 && (
+        {canRecordPayment && (
           <CButton
             color="primary"
             size="sm"
@@ -346,6 +366,7 @@ const DebtorUpdatePaymentModal = ({
 
 DebtorUpdatePaymentModal.propTypes = {
   debtor: PropTypes.object,
+  historyOnly: PropTypes.bool,
   onClose: PropTypes.func,
   onConfirm: PropTypes.func,
   onReverse: PropTypes.func,

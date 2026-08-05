@@ -16,8 +16,11 @@ vi.mock('./usePaymentData', () => ({
 }))
 
 vi.mock('./PaymentTable', () => ({
-  default: ({ onApprove, onMarkPaid }) => (
+  default: ({ onCheck, onApprove, onMarkPaid }) => (
     <>
+      <button type="button" onClick={() => onCheck(123)}>
+        review
+      </button>
       <button type="button" onClick={() => onApprove(123)}>
         approve
       </button>
@@ -76,6 +79,22 @@ describe('PaymentRecords', () => {
     expect(approveCall[1]).toMatchObject({
       method: 'PATCH',
       credentials: 'include',
+    })
+  })
+
+  it('uses review terminology when reviewing a payment', async () => {
+    dialog.prompt.mockResolvedValueOnce('Review complete')
+    renderPaymentRecords()
+
+    fireEvent.click(screen.getByRole('button', { name: 'review' }))
+
+    await waitFor(() => expect(findFetchCall('vendor-payments/123/check')).toBeTruthy())
+    expect(dialog.prompt).toHaveBeenCalledWith(
+      'Review remarks',
+      expect.objectContaining({ multiline: true }),
+    )
+    expect(JSON.parse(findFetchCall('vendor-payments/123/check')[1].body)).toEqual({
+      remarks: 'Review complete',
     })
   })
 

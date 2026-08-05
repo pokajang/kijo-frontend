@@ -8,7 +8,7 @@ const projectRoot = path.resolve(scriptDir, '..')
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '')
 const outputDir = path.join(projectRoot, 'test-results', `pipeline-service-category-${stamp}`)
 const baseUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')
-const apiBase = `${baseUrl}/proxy`
+const apiBase = (process.env.PIPELINE_SERVICE_E2E_API_BASE || `${baseUrl}/proxy`).replace(/\/$/, '')
 const email = process.env.PIPELINE_SERVICE_E2E_EMAIL
 const password = process.env.PIPELINE_SERVICE_E2E_PASSWORD
 const allowMutation = process.env.PIPELINE_SERVICE_E2E_ALLOW_MUTATION === '1'
@@ -214,14 +214,15 @@ const run = async () => {
 
     await recordStep('verify records display and edit hydration', async () => {
       await page.goto(`${baseUrl}/pipeline/entries`, { waitUntil: 'domcontentloaded' })
-      await expectText(page, prospectName)
-      await expectText(page, `Others — ${customService}`)
+      await page.getByPlaceholder('Search prospect, notes, or owner').fill(runLabel)
+      await expectText(page, `${prospectName.slice(0, 34).trimEnd()}...`)
+      await expectText(page, 'Others —')
       await page.goto(`${baseUrl}/pipeline/entries/${record.id}/edit`, {
         waitUntil: 'domcontentloaded',
       })
-      await page.getByLabel('Service').waitFor()
+      await page.getByLabel('Service', { exact: true }).waitFor()
       assert(
-        (await page.getByLabel('Service').inputValue()) === 'other',
+        (await page.getByLabel('Service', { exact: true }).inputValue()) === 'other',
         'Edit category was not restored',
       )
       assert(
@@ -231,7 +232,7 @@ const run = async () => {
     })
 
     await recordStep('change Other to Consultancy - OSH and reaggregate', async () => {
-      await page.getByLabel('Service').selectOption('consultancy_osh')
+      await page.getByLabel('Service', { exact: true }).selectOption('consultancy_osh')
       assert(
         (await page.getByLabel('Specify service category').count()) === 0,
         'Custom field remained visible',
@@ -280,6 +281,14 @@ const run = async () => {
       })
     }
 
+    await apiRequest({
+      route: 'auth/logout',
+      method: 'POST',
+      expectedStatuses: [200, 204, 401, 419],
+    }).catch((error) => {
+      diagnostics.requestFailures.push(`logout: ${error.message}`)
+    })
+
     await context.tracing.stop({ path: path.join(outputDir, 'trace.zip') }).catch(() => {})
     await fs.writeFile(
       path.join(outputDir, 'results.json'),
@@ -294,9 +303,16 @@ const run = async () => {
 }
 
 const expectText = async (scope, text) => {
-  const locator = scope.getByText(text, { exact: false }).first()
-  await locator.waitFor({ state: 'visible' })
-  return locator
+  const matches = scope.getByText(text, { exact: false })
+
+  return poll(`visible text "${text}"`, async () => {
+    const count = await matches.count()
+    for (let index = 0; index < count; index += 1) {
+      const match = matches.nth(index)
+      if (await match.isVisible()) return match
+    }
+    return null
+  })
 }
 
 run().catch((error) => {

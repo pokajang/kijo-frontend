@@ -1,0 +1,309 @@
+.vendor-payment-workflow-cell {
+  display: flex;
+  min-width: 0;
+  max-width: 260px;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vendor-payment-workflow-cell__summary {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.5rem;
+  row-gap: 0.1rem;
+  align-items: center;
+}
+
+.vendor-payment-workflow-cell__primary {
+  overflow: hidden;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendor-payment-workflow-cell__secondary {
+  overflow: hidden;
+  color: var(--cui-secondary-color);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendor-payment-workflow-cell__view {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 1.75rem;
+  padding: 0 0.2rem;
+  font-size: 0.75rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.vendor-payment-workflow-cell__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.vendor-payment-workflow-dialog__subtitle {
+  margin-top: 0.15rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.vendor-payment-workflow-summary {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(var(--cui-primary-rgb), 0.24);
+  border-radius: 0.55rem;
+  background: rgba(var(--cui-primary-rgb), 0.06);
+}
+
+.vendor-payment-workflow-summary__label,
+.vendor-payment-workflow-stage__eyebrow,
+.vendor-payment-workflow-stage__detail > span,
+.vendor-payment-workflow-stage__remarks > span {
+  color: var(--cui-secondary-color);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.vendor-payment-workflow-summary__value {
+  margin-top: 0.15rem;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.vendor-payment-workflow-summary__progress {
+  flex-shrink: 0;
+}
+
+.vendor-payment-workflow-timeline {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.vendor-payment-workflow-stage {
+  --vendor-workflow-state: var(--cui-secondary);
+  --vendor-workflow-state-rgb: var(--cui-secondary-rgb);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+}
+
+.vendor-payment-workflow-stage:last-child {
+  padding-bottom: 0;
+}
+
+.vendor-payment-workflow-stage:not(:last-child)::after {
+  position: absolute;
+  z-index: 0;
+  top: 2rem;
+  bottom: -0.05rem;
+  left: calc(1rem - 1px);
+  width: 2px;
+  background: var(--cui-border-color);
+  content: '';
+}
+
+.vendor-payment-workflow-stage[data-state='completed'] {
+  --vendor-workflow-state: var(--cui-success);
+  --vendor-workflow-state-rgb: var(--cui-success-rgb);
+}
+
+.vendor-payment-workflow-stage[data-state='current'] {
+  --vendor-workflow-state: var(--cui-primary);
+  --vendor-workflow-state-rgb: var(--cui-primary-rgb);
+}
+
+.vendor-payment-workflow-stage[data-state='returned'] {
+  --vendor-workflow-state: var(--cui-warning);
+  --vendor-workflow-state-rgb: var(--cui-warning-rgb);
+}
+
+.vendor-payment-workflow-stage[data-state='rejected'] {
+  --vendor-workflow-state: var(--cui-danger);
+  --vendor-workflow-state-rgb: var(--cui-danger-rgb);
+}
+
+.vendor-payment-workflow-stage__marker {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(var(--vendor-workflow-state-rgb), 0.42);
+  border-radius: 50%;
+  background: var(--cui-body-bg);
+  color: var(--vendor-workflow-state);
+}
+
+.vendor-payment-workflow-stage__marker svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.vendor-payment-workflow-stage__surface {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 0.55rem;
+  background: var(--cui-body-bg);
+}
+
+.vendor-payment-workflow-stage[data-state='current'] .vendor-payment-workflow-stage__surface {
+  border-color: rgba(var(--cui-primary-rgb), 0.38);
+  background: rgba(var(--cui-primary-rgb), 0.035);
+}
+
+.vendor-payment-workflow-stage__header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.8rem;
+}
+
+.vendor-payment-workflow-stage__title {
+  margin-top: 0.1rem;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.vendor-payment-workflow-stage__details {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0 0.8rem 0.8rem;
+}
+
+.vendor-payment-workflow-stage__detail {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 0.4fr) minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: start;
+  font-size: 0.8rem;
+}
+
+.vendor-payment-workflow-stage__detail strong {
+  min-width: 0;
+  color: var(--cui-body-color);
+  font-weight: 600;
+}
+
+.vendor-payment-workflow-stage__detail time {
+  color: var(--cui-secondary-color);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vendor-payment-workflow-stage__people {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.vendor-payment-workflow-person {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--cui-border-color);
+  border-radius: 999px;
+  background: var(--cui-tertiary-bg);
+  color: var(--cui-body-color);
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.vendor-payment-workflow-stage__people-toggle {
+  min-height: 1.6rem;
+  padding: 0 0.15rem;
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+
+.vendor-payment-workflow-stage__remarks {
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--cui-border-color-translucent, var(--cui-border-color));
+}
+
+.vendor-payment-workflow-stage__remarks p {
+  margin: 0.15rem 0 0;
+  color: var(--cui-body-color);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.vendor-payment-workflow-empty {
+  padding: 1rem;
+  border: 1px dashed var(--cui-border-color);
+  border-radius: 0.5rem;
+  color: var(--cui-secondary-color);
+  text-align: center;
+}
+
+@media (max-width: 575.98px) {
+  .vendor-payment-workflow-dialog .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .vendor-payment-workflow-dialog .modal-content {
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .vendor-payment-workflow-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .vendor-payment-workflow-stage {
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .vendor-payment-workflow-stage:not(:last-child)::after {
+    top: 1.75rem;
+    left: calc(0.875rem - 1px);
+  }
+
+  .vendor-payment-workflow-stage__marker {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .vendor-payment-workflow-stage__header {
+    align-items: flex-start;
+  }
+
+  .vendor-payment-workflow-stage__detail {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .vendor-payment-workflow-stage__detail time {
+    white-space: normal;
+  }
+}

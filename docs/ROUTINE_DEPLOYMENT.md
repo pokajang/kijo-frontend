@@ -68,7 +68,7 @@ logic changed or a focused test cannot provide enough confidence.
 The current production workflow expects a fresh committed `build/`. Do not omit
 it merely because the source change is small.
 
-### Production publish
+### Simple production pull + deploy
 
 ```bash
 cd ~/kijo-frontend
@@ -117,7 +117,7 @@ For a changed PHP file that is not exercised by the focused test, run
 `php -l path/to/ChangedFile.php` before committing. If no meaningful focused
 test exists, run the relevant test file or the full `php artisan test` suite.
 
-### Production publish
+### Simple production pull + deploy
 
 ```bash
 cd ~/kijo-laravel

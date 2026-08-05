@@ -66,13 +66,13 @@ const PaymentRecords = () => {
   }
 
   const handleCheck = async (paymentId) => {
-    const remarks = await dialog.prompt('Checker remarks', {
+    const remarks = await dialog.prompt('Review remarks', {
       multiline: true,
       defaultValue: '',
     })
     if (remarks === null) return
     handleWorkflowAction(paymentId, 'check', {
-      successMessage: 'Payment checked.',
+      successMessage: 'Payment reviewed.',
       body: { remarks },
     })
   }

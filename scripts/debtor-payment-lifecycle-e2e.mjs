@@ -15,6 +15,8 @@ const allowMutation = process.env.DEBTOR_E2E_ALLOW_MUTATION === '1'
 const headless = process.env.DEBTOR_E2E_HEADLESS !== '0'
 const invoiceRef = `E2E-DEBTOR-${stamp}`
 const partialReference = `E2E-PARTIAL-${stamp}`
+const resettlementReference = `E2E-RESETTLE-${stamp}`
+const reversalReason = `E2E correction ${stamp}`
 const today = new Date().toLocaleDateString('en-CA')
 const results = []
 
@@ -113,11 +115,18 @@ const run = async () => {
     return payload
   }
 
-  const openPaymentModal = async () => {
-    const row = page.locator('table tbody tr').filter({ hasText: invoiceRef }).first()
+  const debtorRow = () => page.locator('table tbody tr').filter({ hasText: invoiceRef }).first()
+
+  const selectLifecycleScope = async (name) => {
+    await page.getByRole('tab', { name, exact: true }).click()
+    await debtorRow().waitFor({ state: 'visible' })
+  }
+
+  const openPaymentModal = async (actionName = 'Update Payment') => {
+    const row = debtorRow()
     await row.waitFor({ state: 'visible' })
     await row.getByRole('button', { name: 'Actions' }).click()
-    await page.locator('.dropdown-menu.show').getByText('Update Payment', { exact: true }).click()
+    await page.locator('.dropdown-menu.show').getByText(actionName, { exact: true }).click()
     const modal = page.locator('.modal.show')
     await modal.getByText('Payment history', { exact: true }).waitFor()
     return modal
@@ -189,8 +198,95 @@ const run = async () => {
       assert(Number(history.summary?.paidTotal) === 1000, 'Paid total is not RM 1,000.00.')
       assert(Number(history.summary?.outstandingAmount) === 0, 'Outstanding balance is not zero.')
       assert(history.summary?.paymentStatus === 'Paid', 'Status is not Paid.')
-      await page.screenshot({ path: path.join(outputDir, 'paid-lifecycle.png'), fullPage: true })
       return '2 ledger entries; status=Paid'
+    })
+
+    await step('find settled debtor under Paid and inspect its audit history', async () => {
+      await selectLifecycleScope('Paid')
+      assert(new URL(page.url()).searchParams.get('status') === 'paid', 'Paid scope is not in URL.')
+
+      const row = debtorRow()
+      await row.getByText('Paid', { exact: true }).waitFor()
+      await row.getByText('RM 0.00', { exact: true }).waitFor()
+
+      const modal = await openPaymentModal('Payment History')
+      await modal.getByRole('heading', { name: 'Payment History', exact: true }).waitFor()
+      await modal.getByText(new RegExp(partialReference)).waitFor()
+      assert(
+        (await modal.locator('tbody tr').count()) === 2,
+        'Paid history should have two entries.',
+      )
+      return 'settled record remains visible with two payment entries'
+    })
+
+    await step('reverse settlement and return debtor to Outstanding', async () => {
+      const paymentModal = page
+        .locator('.modal.show')
+        .filter({ hasText: 'Payment history' })
+        .first()
+      const settlementRow = paymentModal
+        .locator('tbody tr')
+        .filter({ hasText: 'RM 700.00' })
+        .first()
+      await settlementRow.getByRole('button', { name: 'Reverse', exact: true }).click()
+
+      const reversalDialog = page
+        .locator('.modal.show')
+        .filter({ hasText: 'Reason for reversing this payment' })
+        .last()
+      await reversalDialog.locator('input').fill(reversalReason)
+      await reversalDialog.getByRole('button', { name: 'Reverse Payment', exact: true }).click()
+      await reversalDialog.waitFor({ state: 'detached' })
+      await paymentModal.getByText(new RegExp(reversalReason)).waitFor()
+
+      const history = await apiRequest({ route: `receivables/manual/${debtorId}/payments` })
+      assert(
+        Number(history.summary?.paidTotal) === 300,
+        'Reversal should restore paid total to 300.',
+      )
+      assert(
+        Number(history.summary?.outstandingAmount) === 700,
+        'Reversal should restore RM 700.00 outstanding.',
+      )
+      assert(
+        history.summary?.paymentStatus === 'Partially Paid',
+        'Reversed debtor should be Partially Paid.',
+      )
+
+      await paymentModal.locator('.modal-footer').getByText('Close', { exact: true }).click()
+      await paymentModal.waitFor({ state: 'detached' })
+      await selectLifecycleScope('Outstanding')
+      await debtorRow().getByText('Partially Paid', { exact: true }).waitFor()
+      return 'status=Partially Paid outstanding=700.00'
+    })
+
+    await step('re-settle debtor and preserve the complete ledger', async () => {
+      const modal = await openPaymentModal()
+      await modal.locator('#receivable-payment-method').selectOption('Bank Transfer')
+      await modal.locator('#receivable-payment-reference').fill(resettlementReference)
+      await modal.getByRole('button', { name: 'Update Payment', exact: true }).click()
+      await modal.waitFor({ state: 'detached' })
+
+      await selectLifecycleScope('Paid')
+      const historyModal = await openPaymentModal('Payment History')
+      await historyModal.getByText(new RegExp(partialReference)).waitFor()
+      await historyModal.getByText(new RegExp(resettlementReference)).waitFor()
+      await historyModal.getByText(new RegExp(reversalReason)).waitFor()
+      assert(
+        (await historyModal.locator('tbody tr').count()) === 3,
+        'Complete history should retain three ledger entries.',
+      )
+
+      const history = await apiRequest({ route: `receivables/manual/${debtorId}/payments` })
+      assert(
+        Number(history.summary?.paidTotal) === 1000,
+        'Re-settled paid total is not RM 1,000.00.',
+      )
+      assert(Number(history.summary?.outstandingAmount) === 0, 'Re-settled balance is not zero.')
+      assert(history.summary?.paymentStatus === 'Paid', 'Re-settled status is not Paid.')
+
+      await page.screenshot({ path: path.join(outputDir, 'paid-lifecycle.png'), fullPage: true })
+      return 'status=Paid; 3 ledger entries including reversed payment'
     })
 
     await step('browser runtime and API health', async () => {
