@@ -31,6 +31,7 @@ describe('AdminFixModal', () => {
     expect(screen.getByText('Resolution Track')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Pending')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Needs Triage')).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Resolved' })).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByDisplayValue('Needs Triage'), {
       target: { value: '30-Day Fix' },

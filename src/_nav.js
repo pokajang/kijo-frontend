@@ -159,6 +159,7 @@ const _nav = [
     to: '/support/requests',
     activePaths: ['/support', '/request-tool', '/feedback'],
     icon: <CIcon icon={cilLifeRing} customClassName="nav-icon" />,
+    notificationRouteGroups: ['/support/feedback'],
   },
 
   // Extras pages or tools

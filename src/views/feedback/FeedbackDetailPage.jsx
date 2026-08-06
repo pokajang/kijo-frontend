@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   CButton,
+  CCard,
+  CCardBody,
+  CCardHeader,
   CFormTextarea,
   CModal,
   CModalBody,
@@ -15,36 +18,19 @@ import {
   DataTableStatusBadge,
 } from '../../components/datatable'
 import dialog from '../../components/dialog/dialogService'
-import { findRecordById } from '../../utils/detailPages'
 import AdminFixModal, { RESOLUTION_TRACK_OPTIONS, STATUS_OPTIONS } from './AdminFixModal'
 import {
-  deleteFeedback,
-  fetchAllFeedbacks,
-  fetchSessionInfo,
+  fetchFeedback,
+  postFeedbackComment,
   updateFeedback,
+  verifyFeedback,
 } from './actionHandlers'
-import { useAuth } from '../../auth/AuthProvider'
 import { showToast } from '../../components/toast/toastService'
 import { getDetailReturnTo } from '../../utils/navigation/returnTo'
-
-const normalize = (value) => (value ?? '').toString().trim().toLowerCase()
-
-const getStatusTone = (status) => {
-  const normalized = normalize(status)
-  if (normalized === 'fixed completed') return 'success'
-  if (normalized === 'pending' || normalized === 'fixed pending pushed') return 'warning'
-  if (normalized === 'resolved') return 'secondary'
-  return 'info'
-}
-
-const getResolutionTrackTone = (track) => {
-  const normalized = normalize(track)
-  if (normalized === '30-day fix') return 'primary'
-  if (normalized === 'needs triage') return 'warning'
-  if (normalized === 'rejected') return 'danger'
-  if (normalized === 'not actionable') return 'secondary'
-  return 'info'
-}
+import { useAppNotifications } from '../../notifications/AppNotificationProvider'
+import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
+import FeedbackActivityTimeline from './FeedbackActivityTimeline'
+import { getFeedbackStatusTone, getResolutionTrackTone } from './feedbackWorkflow'
 
 const getTodayISO = () => {
   const today = new Date()
@@ -54,33 +40,29 @@ const getTodayISO = () => {
   return `${yyyy}-${mm}-${dd}`
 }
 
-const normalizeAdminStatus = (status) => {
-  if (!status) return STATUS_OPTIONS[0]
-  const match = STATUS_OPTIONS.find(
-    (option) => option.toLowerCase() === status.toString().trim().toLowerCase(),
-  )
-  return match || STATUS_OPTIONS[0]
-}
-
-const normalizeResolutionTrack = (track) => {
-  if (!track) return RESOLUTION_TRACK_OPTIONS[0]
-  const match = RESOLUTION_TRACK_OPTIONS.find(
-    (option) => option.toLowerCase() === track.toString().trim().toLowerCase(),
-  )
-  return match || RESOLUTION_TRACK_OPTIONS[0]
+const normalizeOption = (value, options) => {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+  return options.find((option) => option.toLowerCase() === normalized) || options[0]
 }
 
 const FeedbackDetailPage = () => {
   const { feedbackId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
   const returnTo = getDetailReturnTo(location, '/support/feedback')
+  const { consumeEntity } = useAppNotifications()
   const [feedback, setFeedback] = useState(location.state?.record || null)
-  const [loading, setLoading] = useState(!location.state?.record)
+  const [history, setHistory] = useState([])
+  const [permissions, setPermissions] = useState({
+    can_comment: false,
+    can_update_fix: false,
+    can_verify: false,
+    can_edit: false,
+  })
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [currentStaffId, setCurrentStaffId] = useState(null)
   const [fixModalVisible, setFixModalVisible] = useState(false)
   const [fixData, setFixData] = useState({
     id: null,
@@ -91,75 +73,85 @@ const FeedbackDetailPage = () => {
   })
   const [editVisible, setEditVisible] = useState(false)
   const [editMessage, setEditMessage] = useState('')
-  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [commentMessage, setCommentMessage] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const isOwnerFeedback = useCallback(
-    (record) => {
-      const ownerId = Number(record?.reported_by_id)
-      const myId = Number(currentStaffId)
-      return Number.isFinite(ownerId) && Number.isFinite(myId) && ownerId === myId
-    },
-    [currentStaffId],
-  )
+  const applyDetailPayload = useCallback((payload) => {
+    setFeedback(payload?.feedback || null)
+    setHistory(Array.isArray(payload?.history) ? payload.history : [])
+    setPermissions((current) => ({ ...current, ...(payload?.permissions || {}) }))
+  }, [])
 
   const loadFeedback = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const [{ isAdmin: admin, staffId }, records] = await Promise.all([
-        fetchSessionInfo(user),
-        fetchAllFeedbacks(),
-      ])
-      setIsAdmin(admin)
-      setCurrentStaffId(staffId)
-      const found = findRecordById(records, feedbackId)
-      setFeedback(found)
-      if (!found) setError('Feedback record not found.')
+      const payload = await fetchFeedback(feedbackId)
+      applyDetailPayload(payload)
+      await consumeEntity({
+        moduleKey: 'support.feedback',
+        entityType: 'system_feedback',
+        entityId: feedbackId,
+        routePrefix: '/support/feedback',
+      }).catch(() => 0)
     } catch (err) {
       setError(err?.message || 'Unable to load feedback details.')
     } finally {
       setLoading(false)
     }
-  }, [feedbackId, user])
+  }, [applyDetailPayload, consumeEntity, feedbackId])
 
   useEffect(() => {
     loadFeedback()
   }, [loadFeedback])
 
   const openFixModal = useCallback(() => {
-    if (!isAdmin) {
-      dialog.alert('Only admins can update fix details.')
-      return
-    }
+    if (!permissions.can_update_fix || !feedback) return
     setFixData({
       id: feedback.id,
-      status: normalizeAdminStatus(feedback.status),
-      resolution_track: normalizeResolutionTrack(feedback.resolution_track),
+      status: normalizeOption(feedback.status, STATUS_OPTIONS),
+      resolution_track: normalizeOption(feedback.resolution_track, RESOLUTION_TRACK_OPTIONS),
       action_date: feedback.action_date || getTodayISO(),
       remarks: feedback.remarks || '',
     })
     setFixModalVisible(true)
-  }, [feedback, isAdmin])
+  }, [feedback, permissions.can_update_fix])
+
+  const runAction = useCallback(
+    async (action, successMessage) => {
+      setSubmitting(true)
+      try {
+        const result = await action()
+        if (result?.status !== 'success') {
+          throw new Error(result?.message || 'Unable to update feedback.')
+        }
+        if (result.feedback && result.history) {
+          applyDetailPayload(result)
+        } else {
+          await loadFeedback()
+        }
+        dispatchAppNotificationsChanged()
+        showToast(successMessage)
+        return true
+      } catch (err) {
+        dialog.alert(err?.message || 'Unable to update feedback right now.')
+        return false
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [applyDetailPayload, loadFeedback],
+  )
 
   const saveFixModal = async () => {
-    const result = await updateFeedback(fixData)
-    if (result.status === 'success') {
-      setFixModalVisible(false)
-      await loadFeedback()
-      showToast('Feedback fix details updated.')
-      return
-    }
-    dialog.alert('Failed to update: ' + result.message)
+    const saved = await runAction(
+      () => updateFeedback(fixData),
+      fixData.status === 'Fixed Completed'
+        ? 'Fix submitted for reporter verification.'
+        : 'Feedback details updated.',
+    )
+    if (saved) setFixModalVisible(false)
   }
-
-  const openEditModal = useCallback(() => {
-    if (!isAdmin && !isOwnerFeedback(feedback)) {
-      dialog.alert('You can only edit your own feedback.')
-      return
-    }
-    setEditMessage(feedback?.feedback || '')
-    setEditVisible(true)
-  }, [feedback, isAdmin, isOwnerFeedback])
 
   const saveEdit = async () => {
     const trimmed = editMessage.trim()
@@ -167,60 +159,64 @@ const FeedbackDetailPage = () => {
       dialog.alert('Please describe the issue before submitting.')
       return
     }
-    setEditSubmitting(true)
-    try {
-      const result = await updateFeedback({ id: feedbackId, feedback: trimmed })
-      if (result.status === 'success') {
-        setEditVisible(false)
-        await loadFeedback()
-        showToast('Feedback updated.')
-      } else {
-        dialog.alert(result.message || 'Failed to update feedback.')
-      }
-    } finally {
-      setEditSubmitting(false)
-    }
+    const saved = await runAction(
+      () => updateFeedback({ id: feedbackId, feedback: trimmed }),
+      'Feedback updated.',
+    )
+    if (saved) setEditVisible(false)
   }
 
-  const removeFeedback = useCallback(async () => {
-    if (!isAdmin && !isOwnerFeedback(feedback)) {
-      dialog.alert('You can only delete your own feedback.')
+  const postComment = async () => {
+    const trimmed = commentMessage.trim()
+    if (!trimmed) {
+      dialog.alert('Enter a comment before posting.')
       return
     }
-    if (
-      !(await dialog.confirm('Delete this feedback? This action cannot be undone.', {
-        confirmText: 'Delete',
-        confirmColor: 'danger',
-      }))
+    const saved = await runAction(() => postFeedbackComment(feedbackId, trimmed), 'Comment posted.')
+    if (saved) setCommentMessage('')
+  }
+
+  const confirmResolved = async () => {
+    const confirmed = await dialog.confirm('Confirm that this issue has been rectified?', {
+      confirmText: 'Confirm Resolved',
+      confirmColor: 'success',
+    })
+    if (!confirmed) return
+    await runAction(() => verifyFeedback(feedbackId, 'confirm'), 'Feedback marked as resolved.')
+  }
+
+  const rejectFix = async () => {
+    const trimmed = commentMessage.trim()
+    if (!trimmed) {
+      dialog.alert('Enter a comment explaining why the issue is not fixed.')
+      return
+    }
+    const rejected = await runAction(
+      () => verifyFeedback(feedbackId, 'reject', trimmed),
+      'Fix rejected and returned to the developer.',
     )
-      return
-    const result = await deleteFeedback(feedbackId)
-    if (result.status === 'success') {
-      showToast('Feedback deleted.')
-      navigate(returnTo)
-      return
-    }
-    dialog.alert('Failed to delete: ' + result.message)
-  }, [feedback, feedbackId, isAdmin, isOwnerFeedback, navigate, returnTo])
+    if (rejected) setCommentMessage('')
+  }
 
   const actions = useMemo(
     () => [
       {
         key: 'edit',
         label: 'Edit',
-        disabled: !isAdmin && !isOwnerFeedback(feedback),
-        onClick: openEditModal,
+        hidden: !permissions.can_edit,
+        onClick: () => {
+          setEditMessage(feedback?.feedback || '')
+          setEditVisible(true)
+        },
       },
-      { key: 'update-fix', label: 'Update Fix', hidden: !isAdmin, onClick: openFixModal },
       {
-        key: 'delete',
-        label: 'Delete',
-        danger: true,
-        disabled: !isAdmin && !isOwnerFeedback(feedback),
-        onClick: removeFeedback,
+        key: 'update-fix',
+        label: 'Update Fix',
+        hidden: !permissions.can_update_fix,
+        onClick: openFixModal,
       },
     ],
-    [feedback, isAdmin, isOwnerFeedback, openEditModal, openFixModal, removeFeedback],
+    [feedback?.feedback, openFixModal, permissions.can_edit, permissions.can_update_fix],
   )
 
   return (
@@ -243,7 +239,7 @@ const FeedbackDetailPage = () => {
               key: 'status',
               label: 'Status',
               value: (
-                <DataTableStatusBadge tone={getStatusTone(feedback?.status)}>
+                <DataTableStatusBadge tone={getFeedbackStatusTone(feedback?.status)}>
                   {feedback?.status || '-'}
                 </DataTableStatusBadge>
               ),
@@ -263,24 +259,73 @@ const FeedbackDetailPage = () => {
         />
       </DataTableDetailShell>
 
+      {feedback ? <FeedbackActivityTimeline history={history} loading={loading} /> : null}
+
+      {feedback && permissions.can_comment ? (
+        <CCard className="mt-3">
+          <CCardHeader>
+            <strong>Add Comment</strong>
+          </CCardHeader>
+          <CCardBody>
+            <CFormTextarea
+              rows={4}
+              placeholder={
+                permissions.can_verify
+                  ? 'Add a comment, or explain why the fix should be rejected...'
+                  : 'Write a comment...'
+              }
+              value={commentMessage}
+              onChange={(event) => setCommentMessage(event.target.value)}
+              disabled={submitting}
+            />
+            <div className="d-flex flex-wrap gap-2 mt-3">
+              <CButton color="primary" size="sm" onClick={postComment} disabled={submitting}>
+                Post Comment
+              </CButton>
+              {permissions.can_verify ? (
+                <>
+                  <CButton
+                    color="success"
+                    size="sm"
+                    onClick={confirmResolved}
+                    disabled={submitting}
+                  >
+                    Confirm Resolved
+                  </CButton>
+                  <CButton
+                    color="danger"
+                    variant="outline"
+                    size="sm"
+                    onClick={rejectFix}
+                    disabled={submitting}
+                  >
+                    Reject Fix
+                  </CButton>
+                </>
+              ) : null}
+            </div>
+          </CCardBody>
+        </CCard>
+      ) : null}
+
       <AdminFixModal
         visible={fixModalVisible}
         data={fixData}
         onClose={() => setFixModalVisible(false)}
-        onChangeField={(field, value) => setFixData((prev) => ({ ...prev, [field]: value }))}
+        onChangeField={(field, value) => setFixData((current) => ({ ...current, [field]: value }))}
         onSave={saveFixModal}
       />
 
       <CModal visible={editVisible} onClose={() => setEditVisible(false)} alignment="center">
         <CModalHeader closeButton>
-          <CModalTitle>Submit Support Ticket</CModalTitle>
+          <CModalTitle>Edit Feedback</CModalTitle>
         </CModalHeader>
         <CModalBody>
           <CFormTextarea
             rows={4}
-            placeholder="Enter your feedback here..."
             value={editMessage}
             onChange={(event) => setEditMessage(event.target.value)}
+            disabled={submitting}
           />
         </CModalBody>
         <CModalFooter>
@@ -289,12 +334,12 @@ const FeedbackDetailPage = () => {
             variant="outline"
             size="sm"
             onClick={() => setEditVisible(false)}
-            disabled={editSubmitting}
+            disabled={submitting}
           >
             Cancel
           </CButton>
-          <CButton color="primary" size="sm" onClick={saveEdit} disabled={editSubmitting}>
-            {editSubmitting ? 'Submitting...' : 'Submit'}
+          <CButton color="primary" size="sm" onClick={saveEdit} disabled={submitting}>
+            {submitting ? 'Saving...' : 'Save'}
           </CButton>
         </CModalFooter>
       </CModal>

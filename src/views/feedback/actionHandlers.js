@@ -1,6 +1,6 @@
 // src/views/feedback/actionHandlers.js
 
-import { fetchAllPagedRecords } from '../../utils/detailPages'
+import { fetchAllPagedRecords, fetchJson } from '../../utils/detailPages'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -38,6 +38,24 @@ export async function fetchAllFeedbacks() {
     params: { year: new Date().getFullYear() },
     dataKeys: ['feedbacks', 'data'],
     perPage: 100,
+  })
+}
+
+export async function fetchFeedback(id) {
+  return fetchJson(`${API_BASE}feedback/${id}`)
+}
+
+export async function postFeedbackComment(id, message) {
+  return fetchJson(`${API_BASE}feedback/${id}/comments`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  })
+}
+
+export async function verifyFeedback(id, decision, message = '') {
+  return fetchJson(`${API_BASE}feedback/${id}/verification`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, ...(message ? { message } : {}) }),
   })
 }
 
@@ -91,19 +109,6 @@ export async function updateFeedback(feedbackData) {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(payload),
-  })
-  return await res.json()
-}
-
-/**
- * Delete a feedback record (owner or admin).
- * @param {number} id
- * @returns {Promise<Object>} API response
- */
-export async function deleteFeedback(id) {
-  const res = await fetch(`${API_BASE}feedback/${id}`, {
-    method: 'DELETE',
-    credentials: 'include',
   })
   return await res.json()
 }

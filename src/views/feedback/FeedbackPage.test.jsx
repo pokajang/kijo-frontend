@@ -32,7 +32,6 @@ vi.mock('./actionHandlers', () => ({
   fetchAllFeedbacks: vi.fn(),
   fetchMonthlyFeedbackSla: vi.fn(),
   updateFeedback: vi.fn(),
-  deleteFeedback: vi.fn(),
 }))
 
 vi.mock('./FeedbackTable', () => ({

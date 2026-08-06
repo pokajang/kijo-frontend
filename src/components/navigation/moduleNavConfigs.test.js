@@ -3,9 +3,24 @@ import {
   clientModuleTabs,
   financialModuleTabs,
   salarySelfModuleTabs,
+  supportModuleTabs,
   systemAdminModuleTabs,
   vendorModuleTabs,
 } from './moduleNavConfigs'
+
+describe('supportModuleTabs', () => {
+  it('maps Feedback Records to its notification badge key', () => {
+    expect(supportModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'feedback-records',
+          to: '/support/feedback',
+          notificationTabKey: 'support.feedback',
+        }),
+      ]),
+    )
+  })
+})
 
 describe('clientModuleTabs', () => {
   it('includes the ROI per Client tab', () => {

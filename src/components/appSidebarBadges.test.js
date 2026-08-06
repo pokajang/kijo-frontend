@@ -52,6 +52,25 @@ describe('applySidebarBadges', () => {
     })
   })
 
+  it('adds feedback notifications to the Support sidebar item', () => {
+    const rows = applySidebarBadges(
+      [
+        {
+          name: 'Support',
+          to: '/support/requests',
+          notificationRouteGroups: ['/support/feedback'],
+        },
+      ],
+      { getRouteGroupCount: (route) => (route === '/support/feedback' ? 2 : 0) },
+    )
+
+    expect(rows[0].badge).toEqual({
+      color: 'warning',
+      text: '2',
+      title: 'Feedback updates available',
+    })
+  })
+
   it('adds the workflow setup warning badge only to the Workflows item', () => {
     const rows = applySidebarBadges(
       [

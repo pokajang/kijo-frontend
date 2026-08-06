@@ -53,6 +53,10 @@ export const routeNotificationBadges = {
     color: notificationCountBadgeColor,
     title: 'Payment updates available',
   },
+  '/support/feedback': {
+    color: notificationCountBadgeColor,
+    title: 'Feedback updates available',
+  },
 }
 
 export const tabNotificationBadges = {
@@ -103,6 +107,10 @@ export const tabNotificationBadges = {
   'crm.negotiations': {
     color: notificationCountBadgeColor,
     title: 'Negotiations need attention',
+  },
+  'support.feedback': {
+    color: notificationCountBadgeColor,
+    title: 'Feedback updates available',
   },
 }
 

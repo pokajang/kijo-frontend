@@ -21,17 +21,20 @@ import {
 import { StatsStrip } from '../../components/stats'
 import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../utils/stats/formatStats'
-import { RESOLUTION_TRACK_OPTIONS } from './AdminFixModal'
+import {
+  FEEDBACK_STATUSES,
+  RESOLUTION_TRACK_OPTIONS,
+  getFeedbackEventLabel,
+  getFeedbackStatusTone,
+  getResolutionTrackTone,
+  normalizeFeedbackValue,
+} from './feedbackWorkflow'
 
-const normalize = (value) => (value ?? '').toString().trim().toLowerCase()
+const normalize = normalizeFeedbackValue
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'fixed pending pushed', label: 'Fixed Pending Pushed' },
-  { value: 'in progress', label: 'In Progress' },
-  { value: 'fixed completed', label: 'Fixed Completed' },
-  { value: 'resolved', label: 'Resolved' },
+  ...FEEDBACK_STATUSES.map((status) => ({ value: normalize(status), label: status })),
 ]
 
 const RESOLUTION_TRACK_FILTER_OPTIONS = [
@@ -93,6 +96,16 @@ const dataColumns = [
     shrinkToFit: true,
   },
   {
+    key: 'activity',
+    label: 'Activity',
+    width: '180px',
+    sortable: true,
+    sortType: 'date',
+    getExportValue: (feedback) => feedback.activityText || '-',
+    textMode: 'plain',
+    cellMaxWidth: '180px',
+  },
+  {
     key: 'actionDate',
     label: 'Action Date',
     width: '112px',
@@ -121,6 +134,7 @@ const defaultVisibleColumns = {
   dateReported: true,
   status: true,
   resolutionTrack: true,
+  activity: true,
   actionDate: true,
   remarks: false,
 }
@@ -131,23 +145,6 @@ const isCompletedStatus = (status) => normalize(status) === 'fixed completed'
 const isPendingStatus = (status) => normalize(status) === 'pending'
 const isThirtyDayFixTrack = (track) => normalize(track) === '30-day fix'
 
-const getStatusTone = (status) => {
-  const normalized = normalize(status)
-  if (isCompletedStatus(normalized)) return 'success'
-  if (isPendingStatus(normalized) || normalized === 'fixed pending pushed') return 'warning'
-  if (normalized === 'resolved') return 'secondary'
-  return 'info'
-}
-
-const getResolutionTrackTone = (track) => {
-  const normalized = normalize(track)
-  if (normalized === '30-day fix') return 'primary'
-  if (normalized === 'needs triage') return 'warning'
-  if (normalized === 'rejected') return 'danger'
-  if (normalized === 'not actionable') return 'secondary'
-  return 'info'
-}
-
 const FeedbackTable = ({
   allFeedbacks,
   loading = false,
@@ -155,7 +152,6 @@ const FeedbackTable = ({
   currentStaffId,
   onEditFeedback,
   onUpdateFix,
-  onDeleteFeedback,
   onViewFeedback,
 }) => {
   const desktopToolsId = 'feedback-table-tools'
@@ -245,6 +241,9 @@ const FeedbackTable = ({
           feedback?.resolution_track,
           feedback?.action_date,
           feedback?.remarks,
+          feedback?.last_event_type,
+          feedback?.last_actor_name,
+          feedback?.last_activity_at,
         ]
           .map((value) => String(value || '').toLowerCase())
           .join(' ')
@@ -272,16 +271,28 @@ const FeedbackTable = ({
 
   const rows = useMemo(
     () =>
-      filteredFeedbacks.map((feedback) => ({
-        ...feedback,
-        feedbackText: feedback.feedback || '',
-        reportedBy: feedback.reported_by || '-',
-        dateReported: feedback.date_reported || '',
-        status: feedback.status || '-',
-        resolutionTrack: feedback.resolution_track || 'Needs Triage',
-        actionDate: feedback.action_date || '',
-        remarks: feedback.remarks || '',
-      })),
+      filteredFeedbacks.map((feedback) => {
+        const eventLabel = feedback.last_event_type
+          ? getFeedbackEventLabel(feedback.last_event_type)
+          : 'No activity'
+        const activityText = feedback.last_actor_name
+          ? `${eventLabel} by ${feedback.last_actor_name}`
+          : eventLabel
+        return {
+          ...feedback,
+          feedbackText: feedback.feedback || '',
+          reportedBy: feedback.reported_by || '-',
+          dateReported: feedback.date_reported || '',
+          status: feedback.status || '-',
+          resolutionTrack: feedback.resolution_track || 'Needs Triage',
+          actionDate: feedback.action_date || '',
+          remarks: feedback.remarks || '',
+          activityText,
+          activity: feedback.last_activity_at || '',
+          lastActivityAt: feedback.last_activity_at || '',
+          historyCount: Number(feedback.history_count || 0),
+        }
+      }),
     [filteredFeedbacks],
   )
 
@@ -361,13 +372,16 @@ const FeedbackTable = ({
     if (isAdmin) {
       return [
         { key: 'edit', label: 'Edit', onClick: () => onEditFeedback?.(feedback) },
-        { key: 'update-fix', label: 'Update Fix', onClick: () => onUpdateFix?.(feedback) },
         {
-          key: 'delete',
-          label: 'Delete',
-          danger: true,
-          dividerBefore: true,
-          onClick: () => onDeleteFeedback?.(feedback),
+          key: 'update-fix',
+          label: 'Update Fix',
+          disabled: normalize(feedback.status) === 'resolved',
+          tooltip:
+            normalize(feedback.status) === 'resolved'
+              ? 'Reporter-confirmed feedback is closed.'
+              : undefined,
+          onClick:
+            normalize(feedback.status) === 'resolved' ? undefined : () => onUpdateFix?.(feedback),
         },
       ]
     }
@@ -380,15 +394,6 @@ const FeedbackTable = ({
         disabled: !isOwner,
         tooltip: !isOwner ? 'You can only edit your own feedback.' : undefined,
         onClick: isOwner ? () => onEditFeedback?.(feedback) : undefined,
-      },
-      {
-        key: 'delete',
-        label: 'Delete',
-        danger: true,
-        disabled: !isOwner,
-        tooltip: !isOwner ? 'You can only delete your own feedback.' : undefined,
-        dividerBefore: true,
-        onClick: isOwner ? () => onDeleteFeedback?.(feedback) : undefined,
       },
     ]
   }
@@ -419,7 +424,7 @@ const FeedbackTable = ({
     }
     if (column.key === 'status') {
       return (
-        <DataTableStatusBadge tone={getStatusTone(feedback.status)}>
+        <DataTableStatusBadge tone={getFeedbackStatusTone(feedback.status)}>
           {feedback.status}
         </DataTableStatusBadge>
       )
@@ -429,6 +434,17 @@ const FeedbackTable = ({
         <DataTableStatusBadge tone={getResolutionTrackTone(feedback.resolutionTrack)}>
           {feedback.resolutionTrack}
         </DataTableStatusBadge>
+      )
+    }
+    if (column.key === 'activity') {
+      return (
+        <div className="small">
+          <div>{feedback.activityText}</div>
+          <div className="text-muted">
+            {feedback.lastActivityAt || '-'}
+            {feedback.historyCount > 0 ? ` · ${feedback.historyCount} events` : ''}
+          </div>
+        </div>
       )
     }
     return feedback[column.key] || '-'
@@ -531,7 +547,7 @@ const FeedbackTable = ({
           getMobileSubtitle={(feedback) => `${feedback.reportedBy} | ${feedback.resolutionTrack}`}
           getMobileMeta={(feedback) => feedback.dateReported || '-'}
           getMobileStatus={(feedback) => feedback.status}
-          getMobileStatusTone={(feedback) => getStatusTone(feedback.status)}
+          getMobileStatusTone={(feedback) => getFeedbackStatusTone(feedback.status)}
           mobileFieldKeys={{
             title: 'feedbackText',
             subtitle: 'reportedBy',

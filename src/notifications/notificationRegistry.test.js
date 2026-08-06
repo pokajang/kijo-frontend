@@ -8,4 +8,9 @@ describe('payment queue notification registry', () => {
     expect(getRouteNotificationBadge('/my/salary/payment-queue')?.title).toContain('Payment')
     expect(getTabNotificationBadge('my.salary.payment-queue')?.title).toContain('Payment')
   })
+
+  it('maps feedback notifications to Support and Feedback Records badges', () => {
+    expect(getRouteNotificationBadge('/support/feedback')?.title).toContain('Feedback')
+    expect(getTabNotificationBadge('support.feedback')?.title).toContain('Feedback')
+  })
 })

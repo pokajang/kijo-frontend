@@ -34,7 +34,12 @@ export const administrationModuleTabs = [
 
 export const supportModuleTabs = [
   { key: 'requests', label: 'Request Tool', to: '/support/requests' },
-  { key: 'feedback-records', label: 'Feedback Records', to: '/support/feedback' },
+  {
+    key: 'feedback-records',
+    label: 'Feedback Records',
+    to: '/support/feedback',
+    notificationTabKey: 'support.feedback',
+  },
   { key: 'feedback-sla', label: 'SLA Analytics', to: '/support/feedback/sla' },
 ]
 

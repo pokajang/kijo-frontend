@@ -14,12 +14,7 @@ import {
 import FeedbackTable from './FeedbackTable'
 import AdminFixModal, { RESOLUTION_TRACK_OPTIONS, STATUS_OPTIONS } from './AdminFixModal'
 import FeedbackSlaSummary from './FeedbackSlaSummary'
-import {
-  fetchSessionInfo,
-  fetchAllFeedbacks,
-  updateFeedback,
-  deleteFeedback,
-} from './actionHandlers'
+import { fetchSessionInfo, fetchAllFeedbacks, updateFeedback } from './actionHandlers'
 import dialog from '../../components/dialog/dialogService'
 import ModuleNavStrip from '../../components/navigation/ModuleNavStrip'
 import { supportModuleTabs } from '../../components/navigation/moduleNavConfigs'
@@ -27,6 +22,7 @@ import { useAuth } from '../../auth/AuthProvider'
 import { showToast } from '../../components/toast/toastService'
 import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 import useFeedbackSlaMetrics from './useFeedbackSlaMetrics'
+import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
 
 const FeedbackPage = () => {
   const navigate = useNavigate()
@@ -163,11 +159,14 @@ const FeedbackPage = () => {
     const result = await updateFeedback(modalData)
     if (result.status === 'success') {
       setAllFeedbacks((prev) =>
-        prev.map((fb) => (fb.id === modalData.id ? { ...fb, ...modalData } : fb)),
+        prev.map((fb) =>
+          fb.id === modalData.id ? { ...fb, ...modalData, ...(result.feedback || {}) } : fb,
+        ),
       )
       showToast('Feedback fix details updated.')
       handleCloseModal()
       refreshSlaMetrics()
+      dispatchAppNotificationsChanged()
     } else {
       dialog.alert('Failed to update: ' + result.message)
     }
@@ -207,10 +206,13 @@ const FeedbackPage = () => {
       if (result.status === 'success') {
         setAllFeedbacks((prev) =>
           prev.map((item) =>
-            item.id === userEditFeedbackId ? { ...item, feedback: trimmed } : item,
+            item.id === userEditFeedbackId
+              ? { ...item, feedback: trimmed, ...(result.feedback || {}) }
+              : item,
           ),
         )
         showToast('Feedback updated.')
+        dispatchAppNotificationsChanged()
         closeUserEditModal()
       } else {
         dialog.alert(result.message || 'Failed to update feedback.')
@@ -240,28 +242,6 @@ const FeedbackPage = () => {
     handleOpenModal(fb)
   }
 
-  const handleDeleteFeedback = async (fb) => {
-    if (!isAdmin && !isOwnerFeedback(fb)) {
-      dialog.alert('You can only delete your own feedback.')
-      return
-    }
-
-    const confirmed = await dialog.confirm('Delete this feedback? This action cannot be undone.', {
-      confirmText: 'Delete',
-      confirmColor: 'danger',
-    })
-    if (!confirmed) return
-
-    const result = await deleteFeedback(fb.id)
-    if (result.status === 'success') {
-      setAllFeedbacks((prev) => prev.filter((item) => item.id !== fb.id))
-      showToast('Feedback deleted.')
-      refreshSlaMetrics()
-    } else {
-      dialog.alert('Failed to delete: ' + result.message)
-    }
-  }
-
   return (
     <>
       <ModuleNavStrip
@@ -285,7 +265,6 @@ const FeedbackPage = () => {
         currentStaffId={currentStaffId}
         onEditFeedback={handleEditComplaint}
         onUpdateFix={handleUpdateFix}
-        onDeleteFeedback={handleDeleteFeedback}
         onViewFeedback={(feedback) =>
           navigate(`/support/feedback/${feedback.id}`, {
             state: { record: feedback, returnTo: getCurrentReturnTo(location) },

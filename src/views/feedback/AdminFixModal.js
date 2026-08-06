@@ -15,23 +15,10 @@ import {
   CFormTextarea,
   CButton,
 } from '@coreui/react'
+import { DEVELOPER_STATUS_OPTIONS, RESOLUTION_TRACK_OPTIONS } from './feedbackWorkflow'
 
-export const STATUS_OPTIONS = [
-  'Pending',
-  'Fixed Pending Pushed',
-  'In Progress',
-  'Fixed Completed',
-  'Resolved',
-]
-
-export const RESOLUTION_TRACK_OPTIONS = [
-  'Needs Triage',
-  '30-Day Fix',
-  'Next Upgrade',
-  'Roadmap / Backlog',
-  'Not Actionable',
-  'Rejected',
-]
+export const STATUS_OPTIONS = DEVELOPER_STATUS_OPTIONS
+export { RESOLUTION_TRACK_OPTIONS }
 
 const AdminFixModal = ({ visible, data, onClose, onChangeField, onSave }) => {
   return (
@@ -56,6 +43,9 @@ const AdminFixModal = ({ visible, data, onClose, onChangeField, onSave }) => {
                   </option>
                 ))}
               </CFormSelect>
+              {data.status === 'Fixed Completed' ? (
+                <div className="form-text">The reporter will be asked to verify this fix.</div>
+              ) : null}
             </CCol>
           </CRow>
           <CRow className="mb-3">
