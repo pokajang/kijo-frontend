@@ -475,10 +475,13 @@ describe('buildInvoiceCreatePayload', () => {
       },
       quoteDetails: {
         id: 44,
+        quotation_remarks: 'Deliver all items together.',
         equipment_items: [
           {
+            item_id: 701,
             item_name: 'Gas detector',
             description: 'Portable detector',
+            item_remarks: 'Colour: navy blue',
             unit: 'unit',
             quantity: 2,
             unit_price: 100,
@@ -503,11 +506,14 @@ describe('buildInvoiceCreatePayload', () => {
       expect.arrayContaining([
         expect.objectContaining({
           item_description: 'Gas detector',
+          description: 'Portable detector',
+          item_remarks: 'Colour: navy blue',
           quantity: 2,
           unit_price: 150,
         }),
       ]),
     )
+    expect(result.payload.quotation_remarks).toBe('Deliver all items together.')
   })
 
   it('includes Industrial Hygiene additional fees in invoice breakdown', () => {

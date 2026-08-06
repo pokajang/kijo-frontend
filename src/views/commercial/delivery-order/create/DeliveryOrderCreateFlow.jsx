@@ -52,6 +52,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
     type: '',
     description: '',
     servicePeriod: '',
+    quotationRemarks: '',
   })
   const [items, setItems] = useState([])
 
@@ -90,6 +91,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
         project.service_start_date && project.service_end_date
           ? `${project.service_start_date} to ${project.service_end_date}`
           : 'Not Available',
+      quotationRemarks: project.quotation_remarks || '',
     })
 
     if (project.project_type === 'Equipment Supply' && Array.isArray(project.equipment_items)) {
@@ -98,6 +100,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
           id: item.id,
           name: item.item_name,
           description: item.description,
+          item_remarks: item.item_remarks || '',
           quantity: item.quantity,
           unit: item.unit,
         })),
@@ -111,6 +114,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
           id: item.id,
           name: item.item_description,
           description: item.description || '',
+          item_remarks: item.item_remarks || '',
           quantity: item.quantity,
           unit: item.unit || 'Lot',
         })),
@@ -142,6 +146,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
           id: item.id ?? `inv-${index}`,
           name: item.item_description,
           description: item.description || '',
+          item_remarks: item.item_remarks || '',
           quantity: item.quantity,
           unit: item.unit,
         }))

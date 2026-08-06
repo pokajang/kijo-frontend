@@ -24,19 +24,15 @@ const DeliveryOrderCreatePage = () => {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (stateProject) {
-      setProject(stateProject)
-      setLoading(false)
-      setError('')
-      return undefined
-    }
-
     if (!projectId) return undefined
 
     let active = true
     const controller = new AbortController()
 
-    setLoading(true)
+    if (stateProject) {
+      setProject(stateProject)
+    }
+    setLoading(!stateProject)
     setError('')
     getProjectDetails(projectId, { signal: controller.signal })
       .then((found) => {

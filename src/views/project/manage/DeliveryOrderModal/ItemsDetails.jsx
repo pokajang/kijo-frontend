@@ -49,6 +49,7 @@ const ItemsDetails = ({ items, setItems }) => {
   const [currentItem, setCurrentItem] = useState({
     name: '',
     description: '',
+    item_remarks: '',
     quantity: 1,
     unit: '',
   })
@@ -56,7 +57,7 @@ const ItemsDetails = ({ items, setItems }) => {
   const handleAddItem = () => {
     if (!currentItem.name || currentItem.quantity < 1) return
     setItems([...items, { ...currentItem, id: Date.now() }])
-    setCurrentItem({ name: '', description: '', quantity: 1, unit: '' })
+    setCurrentItem({ name: '', description: '', item_remarks: '', quantity: 1, unit: '' })
   }
 
   const handleRemoveItem = (id) => {
@@ -92,6 +93,14 @@ const ItemsDetails = ({ items, setItems }) => {
               value={currentItem.description}
               onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
               placeholder="E.g. Full report..."
+            />
+            <CFormTextarea
+              rows={2}
+              maxLength={2000}
+              className="mt-2"
+              value={currentItem.item_remarks}
+              onChange={(e) => setCurrentItem({ ...currentItem, item_remarks: e.target.value })}
+              placeholder="Client specifications / item remarks"
             />
           </CCol>
           <CCol md={2}>
@@ -139,6 +148,7 @@ const ItemsDetails = ({ items, setItems }) => {
                 <CTableHeaderCell>#</CTableHeaderCell>
                 <CTableHeaderCell>Item</CTableHeaderCell>
                 <CTableHeaderCell>Description</CTableHeaderCell>
+                <CTableHeaderCell>Specifications / Remarks</CTableHeaderCell>
                 <CTableHeaderCell>Quantity</CTableHeaderCell>
                 <CTableHeaderCell>Unit</CTableHeaderCell>
                 <CTableHeaderCell>Action</CTableHeaderCell>
@@ -157,9 +167,18 @@ const ItemsDetails = ({ items, setItems }) => {
                   </CTableDataCell>
                   <CTableDataCell>
                     <CFormTextarea
-                      rows={1}
+                      rows={2}
+                      maxLength={5000}
                       value={item.description}
                       onChange={handleItemChange(item.id, 'description')}
+                    />
+                  </CTableDataCell>
+                  <CTableDataCell>
+                    <CFormTextarea
+                      rows={2}
+                      maxLength={2000}
+                      value={item.item_remarks || ''}
+                      onChange={handleItemChange(item.id, 'item_remarks')}
                     />
                   </CTableDataCell>
                   <CTableDataCell>

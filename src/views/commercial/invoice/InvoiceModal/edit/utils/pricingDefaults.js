@@ -58,4 +58,5 @@ export const defaultPricing = {
   // Form fields
   service_title: '',
   remarks: '',
+  quotation_remarks: '',
 }

@@ -17,6 +17,10 @@ import {
 import DeliveryDetails from './DeliveryDetails'
 import ProjectDetails from './ProjectDetails'
 import ItemsDetails from './ItemsDetails'
+import {
+  getEquipmentDeliveryDescription,
+  getEquipmentDeliveryRemarks,
+} from './equipmentDeliveryUtils'
 import dialog from '../../../../components/dialog/dialogService'
 import {
   confirmExistingCommercialDocs,
@@ -116,6 +120,7 @@ export default function DeliveryOrderModal({
         project.service_start_date && project.service_end_date
           ? `${project.service_start_date} to ${project.service_end_date}`
           : 'Not Available',
+      quotationRemarks: project.quotation_remarks || '',
     })
 
     // Items (preload for Equipment Supply)
@@ -124,7 +129,8 @@ export default function DeliveryOrderModal({
         project.equipment_items.map((ei) => ({
           id: ei.id,
           name: ei.item_name,
-          description: ei.description,
+          description: getEquipmentDeliveryDescription(ei),
+          item_remarks: getEquipmentDeliveryRemarks(ei),
           quantity: ei.quantity,
           unit: ei.unit,
         })),
@@ -154,6 +160,7 @@ export default function DeliveryOrderModal({
           id: item.id ?? `inv-${idx}`,
           name: item.item_description,
           description: item.description || '',
+          item_remarks: item.item_remarks || '',
           quantity: item.quantity,
           unit: item.unit,
         }))
@@ -173,6 +180,7 @@ export default function DeliveryOrderModal({
     const mappedItems = items.map((item) => ({
       item_name: item.name,
       description: item.description,
+      item_remarks: item.item_remarks || '',
       quantity: item.quantity,
       unit: item.unit,
     }))
@@ -195,6 +203,7 @@ export default function DeliveryOrderModal({
         project_type: projectDetails.type,
         project_description: projectDetails.description,
         project_service_period: projectDetails.servicePeriod,
+        quotation_remarks: projectDetails.quotationRemarks || '',
       },
       items: mappedItems,
       breakdown: mappedItems,

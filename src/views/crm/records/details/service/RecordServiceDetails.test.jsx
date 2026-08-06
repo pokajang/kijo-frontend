@@ -194,6 +194,7 @@ describe('RecordServiceDetails', () => {
       formData: {
         estimatedTotalCost: 1000,
         trafficLightRuleVersion: 'v1',
+        quotationRemarks: 'Deliver all equipment together.',
       },
       lineItems: [
         {
@@ -201,6 +202,7 @@ describe('RecordServiceDetails', () => {
           itemName: 'Gas Detector',
           categoryId: 'MONITORING',
           description: 'Portable detector',
+          itemRemarks: 'Colour: navy blue',
           unit: 'unit',
           supplierName: 'Supplier A',
           supplierPrice: 400,
@@ -214,6 +216,11 @@ describe('RecordServiceDetails', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'Equipment Items' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Quotation Remarks' })).toBeInTheDocument()
+    expect(screen.getByText('Deliver all equipment together.')).toBeInTheDocument()
+    expect(screen.getByText(/Client specifications:/).parentElement).toHaveTextContent(
+      'Colour: navy blue',
+    )
     expect(screen.getByText(/Saved base cost: RM 400.00/)).toBeInTheDocument()
     expect(screen.getByText(/Saved quoted unit price: RM 600.00/)).toBeInTheDocument()
     expect(screen.getByText(/Current catalog reference: Supplier A/)).toBeInTheDocument()

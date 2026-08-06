@@ -35,11 +35,12 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
   // ─────────────────────────────────────────────────────────────
   const handleAddItem = () => {
     console.log('About to add:', formData.newItem)
-    const { item_name, description, quantity, unit } = formData.newItem || {}
+    const { item_name, description, item_remarks, quantity, unit } = formData.newItem || {}
     if (item_name && description && Number(quantity) > 0) {
       const newItem = {
         item_name,
         description,
+        item_remarks: item_remarks || '',
         quantity: Number(quantity),
         unit: unit || 'pcs',
         id: Date.now(),
@@ -50,6 +51,7 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
         newItem: {
           item_name: '',
           description: '',
+          item_remarks: '',
           quantity: 1,
           unit: 'pcs', // reset with a default
         },
@@ -111,6 +113,7 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
                 <CTableHeaderCell>#</CTableHeaderCell>
                 <CTableHeaderCell>Item</CTableHeaderCell>
                 <CTableHeaderCell>Description</CTableHeaderCell>
+                <CTableHeaderCell>Specifications / Remarks</CTableHeaderCell>
                 <CTableHeaderCell>Quantity</CTableHeaderCell>
                 <CTableHeaderCell>Unit</CTableHeaderCell>
                 <CTableHeaderCell>Action</CTableHeaderCell>
@@ -122,6 +125,7 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
                   <CTableDataCell>{idx + 1}</CTableDataCell>
                   <CTableDataCell>{item.item_name}</CTableDataCell>
                   <CTableDataCell>{item.description}</CTableDataCell>
+                  <CTableDataCell>{item.item_remarks || '-'}</CTableDataCell>
                   <CTableDataCell>{item.quantity}</CTableDataCell>
                   <CTableDataCell>{item.unit || 'pcs'}</CTableDataCell>
                   <CTableDataCell>
@@ -157,6 +161,14 @@ const DoEditModalBreakdown = ({ formData, setFormData }) => {
               value={newItem.description || ''}
               onChange={(e) => handleNewItemChange('description', e.target.value)}
               placeholder="E.g. Full report of Chemical Health Risk Assessment..."
+            />
+            <CFormTextarea
+              rows={2}
+              maxLength={2000}
+              className="mt-2"
+              value={newItem.item_remarks || ''}
+              onChange={(e) => handleNewItemChange('item_remarks', e.target.value)}
+              placeholder="Client specifications / item remarks"
             />
           </CCol>
 

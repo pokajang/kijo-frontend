@@ -16,6 +16,7 @@ Use it only when the deployed release explicitly requires it.
 
 ## Current Notes
 
+- [Equipment quotation remarks](equipment-quotation-remarks.md)
 - [Feedback immutable workflow and history backfill](feedback-immutable-workflow.md)
 - [Receivable payment ledger and legacy payment backfill](receivable-payment-ledger.md)
 - [Special invoice and proposal schema](special-invoice-and-proposal.md)

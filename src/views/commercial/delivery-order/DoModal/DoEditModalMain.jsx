@@ -22,6 +22,7 @@ import DoEditModalBreakdown from './DoEditModalBreakdown'
 const initialNewItem = {
   item_name: '',
   description: '',
+  item_remarks: '',
   quantity: 1,
   unit: 'pcs',
 }
@@ -41,6 +42,7 @@ const initialFormData = {
   project_award_date: '',
   project_service_period: '',
   project_description: '',
+  quotation_remarks: '',
   company_contact_name: '',
   company_contact_email: '',
   company_contact_phone: '',
@@ -199,6 +201,17 @@ const DoEditModalMain = ({ visible, onClose, data, onSave }) => {
                   rows={2}
                   value={formData.project_description}
                   onChange={(e) => handleChange('project_description', e.target.value)}
+                />
+              </CCol>
+            </CRow>
+            <CRow className="mt-2">
+              <CCol md={12}>
+                <CFormLabel>Quotation Remarks</CFormLabel>
+                <CFormTextarea
+                  rows={3}
+                  maxLength={2000}
+                  value={formData.quotation_remarks || ''}
+                  onChange={(e) => handleChange('quotation_remarks', e.target.value)}
                 />
               </CCol>
             </CRow>

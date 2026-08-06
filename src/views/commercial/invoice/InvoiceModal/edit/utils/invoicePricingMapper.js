@@ -27,7 +27,11 @@ export const buildPricingFromInvoice = (invoice) => {
   const sstRate = baseAmount > 0 ? (sstAmount / baseAmount) * 100 : 0
   const remarks = invoice?.remarks || ''
 
-  const pricing = { ...defaultPricing, remarks }
+  const pricing = {
+    ...defaultPricing,
+    remarks,
+    quotation_remarks: invoice?.quotation_remarks || '',
+  }
   let quoteDetails = null
 
   switch (serviceType) {
@@ -166,6 +170,7 @@ export const buildPricingFromInvoice = (invoice) => {
             id: line.id,
             item_name: line.item_description || '',
             description: line.description || '',
+            item_remarks: line.item_remarks || '',
             unit: line.unit || 'Lot',
             quantity: toNumber(line.quantity, 1),
             unit_price: price,

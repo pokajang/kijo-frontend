@@ -238,6 +238,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       payment_method: form.paymentMethod,
       grant_approval_no: isTraining && isHrdPayment ? form.grantApprovalNo : null,
       remarks: pricing.remarks || '',
+      quotation_remarks: pricing.quotation_remarks || '',
       paid_date: form.paidDate || null,
       paid_amount: form.paidAmount ? parseFloat(form.paidAmount) : null,
       paid_remarks: form.paidRemarks || null,

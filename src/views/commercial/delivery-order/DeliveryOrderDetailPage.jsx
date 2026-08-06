@@ -24,6 +24,7 @@ const normalizeDeliveryOrder = (order = {}) => {
     breakdown: normalizedItems.map((item) => ({
       item_name: item?.item_name || item?.name || '',
       description: item?.description || '',
+      item_remarks: item?.item_remarks || '',
       quantity: item?.quantity,
       unit: item?.unit,
     })),
@@ -199,6 +200,7 @@ const DeliveryOrderDetailPage = () => {
             value={<DataTableStatusBadge>{record?.status || 'Issued'}</DataTableStatusBadge>}
           />
           <DetailField label="Description" value={record?.project_description} />
+          <DetailField label="Quotation Remarks" value={record?.quotation_remarks} />
         </DetailSection>
 
         <DetailSection title="Issued By">
@@ -214,6 +216,7 @@ const DeliveryOrderDetailPage = () => {
               columns={[
                 { key: 'item_name', label: 'Item Name' },
                 { key: 'description', label: 'Description' },
+                { key: 'item_remarks', label: 'Specifications / Remarks' },
                 {
                   key: 'quantity',
                   label: 'Quantity',

@@ -851,6 +851,7 @@ export async function fetchEquipmentQuotes() {
         // --- Equipment‐specific form data ---
         formData: {
           inquiryRemarks: row.inquiry_remarks || '',
+          quotationRemarks: row.quotation_remarks || '',
           estimated_cost: estimatedCost,
           estimatedTotalCost: estimatedCost,
           trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
@@ -874,6 +875,7 @@ export async function fetchEquipmentQuotes() {
               itemName: item.item_name || '',
               categoryId: item.category_id || '',
               description: item.description || '',
+              itemRemarks: item.item_remarks || '',
               unit: item.unit || '',
               supplierName: item.supplier_name || '',
               supplierPrice: item.supplier_price ? parseFloat(item.supplier_price) : 0,

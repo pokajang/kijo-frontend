@@ -1,7 +1,15 @@
 // src/views/crm/quotes/equipment/PricingInput.jsx
 
 import React from 'react'
-import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CFormInput } from '@coreui/react'
+import {
+  CCardBody,
+  CCardHeader,
+  CCol,
+  CFormInput,
+  CFormLabel,
+  CFormTextarea,
+  CRow,
+} from '@coreui/react'
 import '../shared/TrafficLightCard.css'
 
 export default function PricingInput({
@@ -11,6 +19,8 @@ export default function PricingInput({
   unitPrices,
   markedUp,
   handleMarkedUpChange,
+  itemRemarks = {},
+  handleItemRemarksChange = () => {},
   deliveryCharge,
   setDeliveryCharge,
   miscCharge,
@@ -54,6 +64,19 @@ export default function PricingInput({
                   {item.supplier_name || '-'} Price ({item.price_date || '-'}) - RM{' '}
                   {item.supplier_price || 0}/{item.unit || 'N/A'}
                 </small>
+                <div className="mt-2">
+                  <CFormLabel htmlFor={`equipmentItemRemarks-${item.id}`}>
+                    Client Specifications / Remarks <span className="text-muted">(optional)</span>
+                  </CFormLabel>
+                  <CFormTextarea
+                    id={`equipmentItemRemarks-${item.id}`}
+                    rows={2}
+                    maxLength={2000}
+                    value={itemRemarks[item.id] || ''}
+                    onChange={(event) => handleItemRemarksChange(item.id, event.target.value)}
+                    placeholder="e.g. Size: XL; Colour: navy blue"
+                  />
+                </div>
               </CCol>
 
               <CCol md={2}>

@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import VendorDetailsCard from './VendorDetailsCard'
+import VendorDetailsCard, { buildEquipmentServicesDescription } from './VendorDetailsCard'
 import { listAllVendors, listAssignedVendors } from '../projectApi'
 
 vi.mock('../projectApi', () => ({
@@ -80,5 +80,22 @@ describe('VendorDetailsCard', () => {
     )
 
     await waitFor(() => expect(listAssignedVendors).toHaveBeenCalledTimes(2))
+  })
+
+  it('builds an untruncated equipment LOA scope with separate item specifications', () => {
+    const services = buildEquipmentServicesDescription({
+      project_type: 'Equipment Supply',
+      equipment_items: [
+        {
+          item_name: 'Gas detector',
+          description: 'Portable calibrated detector',
+          item_remarks: 'Colour: navy blue',
+        },
+      ],
+    })
+
+    expect(services).toContain('Gas detector')
+    expect(services).toContain('Portable calibrated detector')
+    expect(services).toContain('Specifications / remarks:\nColour: navy blue')
   })
 })

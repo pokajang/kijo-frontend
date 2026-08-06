@@ -16,6 +16,17 @@ const EquipmentRecordDetails = ({ record }) => {
       <RecordClientContactSection record={record} />
       <RecordQuotationContextSection record={record} showProposalLanguage={false} />
 
+      {record?.formData?.quotationRemarks ? (
+        <RecordDetailSection title="Quotation Remarks">
+          <RecordDetailField
+            label="General requirements"
+            value={record.formData.quotationRemarks}
+            md={12}
+            lg={12}
+          />
+        </RecordDetailSection>
+      ) : null}
+
       <RecordDetailSection title="Equipment Items">
         {items.length > 0 ? (
           items.map((item, index) => (
@@ -23,6 +34,11 @@ const EquipmentRecordDetails = ({ record }) => {
               <div className="d-grid gap-1">
                 <strong>{item.itemName || 'Unnamed equipment'}</strong>
                 <span>{item.description || 'No description provided'}</span>
+                {item.itemRemarks ? (
+                  <span style={{ whiteSpace: 'pre-line' }}>
+                    <strong>Client specifications:</strong> {item.itemRemarks}
+                  </span>
+                ) : null}
                 <span className="small text-body-secondary">
                   Category: {item.categoryId || 'Not provided'} · Unit:{' '}
                   {item.unit || 'Not provided'}

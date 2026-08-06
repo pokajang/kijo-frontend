@@ -18,6 +18,7 @@ export const buildDeliveryOrderCreatePayload = ({
   const mappedItems = (Array.isArray(items) ? items : []).map((item) => ({
     item_name: item.name,
     description: item.description || item.name || '',
+    item_remarks: item.item_remarks || '',
     quantity: item.quantity,
     unit: item.unit,
   }))
@@ -40,6 +41,7 @@ export const buildDeliveryOrderCreatePayload = ({
       project_type: projectDetails.type,
       project_description: projectDetails.description,
       project_service_period: projectDetails.servicePeriod,
+      quotation_remarks: projectDetails.quotationRemarks || '',
     },
     items: mappedItems,
     breakdown: mappedItems,

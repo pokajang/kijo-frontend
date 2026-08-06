@@ -98,6 +98,7 @@ const normalizeEquipmentItems = (row) => {
     return {
       item_id: itemId || null,
       item_name: pick(item, 'item_name', 'itemName') || '',
+      item_remarks: pick(item, 'item_remarks', 'itemRemarks') || '',
       supplier_name: pick(item, 'supplier_name', 'supplierName') || '',
       unit: pick(item, 'unit') || '',
       description: pick(item, 'description') || '',
@@ -288,6 +289,7 @@ export const serviceConfig = {
       clientId: pick(row, 'client_id', 'clientId'),
       clientName: pick(row, 'client_name', 'clientName'),
       picName: pick(row, 'pic_name', 'picName'),
+      quotationRemarks: pick(row, 'quotation_remarks', 'quotationRemarks') || '',
 
       // financial fields
       discount: toFloat(pick(row, 'discount'), 0),

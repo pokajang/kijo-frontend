@@ -51,6 +51,7 @@ export const serviceRecordTableConfigs = {
       joinParts([
         record?.formData?.serviceTitle,
         record?.formData?.inquiryRemarks,
+        record?.formData?.quotationRemarks,
         ...(Array.isArray(record?.lineItems) ? record.lineItems.map(formatHygieneLineItem) : []),
       ]),
     getSubjectText: (record) => record?.formData?.serviceTitle || '-',
@@ -78,7 +79,7 @@ export const serviceRecordTableConfigs = {
         record?.formData?.inquiryRemarks,
         ...(Array.isArray(record?.lineItems)
           ? record.lineItems.map((item) =>
-              `${item?.itemName || ''} ${item?.description || ''}`.trim(),
+              `${item?.itemName || ''} ${item?.description || ''} ${item?.itemRemarks || ''}`.trim(),
             )
           : []),
       ]),

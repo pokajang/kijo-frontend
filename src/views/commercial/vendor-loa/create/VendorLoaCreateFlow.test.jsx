@@ -32,6 +32,14 @@ const project = {
   project_name: 'Project Alpha',
   project_type: 'Equipment Supply',
   client_name: 'Client A',
+  quotation_remarks: 'Use the client-approved navy colour scheme.',
+  equipment_items: [
+    {
+      item_name: 'Gas detector',
+      description: 'Portable calibrated detector.',
+      item_remarks: 'Compact enclosure; navy blue.',
+    },
+  ],
 }
 
 const renderFlow = (props = {}) =>
@@ -82,7 +90,30 @@ describe('VendorLoaCreateFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: /^create vendor loa$/i }))
 
     await waitFor(() => expect(saveProjectVendor).toHaveBeenCalledTimes(1))
+    expect(saveProjectVendor).toHaveBeenCalledWith(
+      null,
+      expect.objectContaining({
+        remarks: 'Use the client-approved navy colour scheme.',
+        services_description: expect.stringContaining('Compact enclosure; navy blue.'),
+      }),
+    )
     expect(await screen.findByText('Vendor LOA Created')).toBeInTheDocument()
+  })
+
+  it('omits blank equipment wording so the backend can apply its authoritative snapshot', async () => {
+    renderFlow({
+      project: {
+        id: 12,
+        project_name: 'Project Alpha',
+        project_type: 'Equipment Supply',
+      },
+    })
+
+    await createVendorLoaThroughReview()
+
+    const payload = saveProjectVendor.mock.calls[0][1]
+    expect(payload).not.toHaveProperty('remarks')
+    expect(payload).not.toHaveProperty('services_description')
   })
 
   it('shows list return for vendor-loa-list origin', async () => {

@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
-import { handleDelete, handleMarkPaidConfirmed, handlePaymentReversal } from './actionHandlers'
+import {
+  fetchAllInvoices,
+  handleDelete,
+  handleMarkPaidConfirmed,
+  handlePaymentReversal,
+} from './actionHandlers'
 
 vi.mock('../../../components/dialog/dialogService', () => ({
   default: {
@@ -79,5 +84,44 @@ describe('invoice receivable action handlers', () => {
       }),
     )
     expect(refresh).toHaveBeenCalledOnce()
+  })
+
+  it('keeps equipment quotation and item remarks in the detail-page model', async () => {
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        status: 'success',
+        invoices: [
+          {
+            id: 12,
+            invoice_ref_no: 'INV-012',
+            invoice_date: '2026-08-04',
+            amount: 100,
+            grand_total: 100,
+            quotation_remarks: 'Deliver all items together.',
+            breakdown: [
+              {
+                item_description: 'Gas detector',
+                description: 'Full catalogue description.',
+                item_remarks: 'Matte navy-blue enclosure.',
+                quantity: 1,
+                unit_price: 100,
+                subtotal: 100,
+              },
+            ],
+          },
+        ],
+      }),
+    })
+    const setInvoices = vi.fn()
+
+    await fetchAllInvoices(setInvoices, vi.fn())
+
+    expect(setInvoices).toHaveBeenCalledWith([
+      expect.objectContaining({
+        quotationRemarks: 'Deliver all items together.',
+        breakdown: [expect.objectContaining({ item_remarks: 'Matte navy-blue enclosure.' })],
+      }),
+    ])
   })
 })

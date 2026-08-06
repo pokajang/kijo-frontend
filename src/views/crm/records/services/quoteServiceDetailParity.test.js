@@ -134,6 +134,7 @@ describe('quotation record detail parity mapping', () => {
       id: 4,
       estimated_total_cost: '1000',
       traffic_light_rule_version: 'v1',
+      quotation_remarks: 'Deliver all equipment together.',
       delivery_charge: '100',
       misc_charge: '25',
       discount: '50',
@@ -146,6 +147,7 @@ describe('quotation record detail parity mapping', () => {
           id: 5,
           item_id: 6,
           item_name: 'Gas Detector',
+          item_remarks: 'Colour: navy blue',
           supplier_name: 'Supplier A',
           supplier_price: '400',
           price_date: '2026-07-01',
@@ -162,6 +164,7 @@ describe('quotation record detail parity mapping', () => {
     expect(record.formData).toMatchObject({
       estimatedTotalCost: 1000,
       trafficLightRuleVersion: 'v1',
+      quotationRemarks: 'Deliver all equipment together.',
     })
     expect(record.lineItems[0]).toMatchObject({
       supplierName: 'Supplier A',
@@ -169,6 +172,7 @@ describe('quotation record detail parity mapping', () => {
       quantity: 2,
       unitPrice: 400,
       markedUp: 600,
+      itemRemarks: 'Colour: navy blue',
     })
     expect(record.grandTotal).toBe(1377)
   })

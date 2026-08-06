@@ -9,6 +9,7 @@ import {
   CCardFooter,
   CFormLabel,
   CFormInput,
+  CFormTextarea,
   CRow,
   CCol,
   CTable,
@@ -60,6 +61,9 @@ export default function SupplierPo({
     handleProjectChange,
     handleReset,
     handleSave,
+    quotationRemarks,
+    setQuotationRemarks,
+    equipmentSnapshotItem,
   } = useSupplierPoServices({
     initialProjectId,
     initialProject,
@@ -179,6 +183,18 @@ export default function SupplierPo({
                   </CCol>
                 </CRow>
               )}
+              {selectedProject?.value?.project_type === 'Equipment Supply' && (
+                <div className="mt-3">
+                  <CFormLabel>Quotation Remarks</CFormLabel>
+                  <CFormTextarea
+                    rows={3}
+                    maxLength={2000}
+                    value={quotationRemarks}
+                    onChange={(event) => setQuotationRemarks(event.target.value)}
+                    placeholder="General specifications carried from the equipment quotation"
+                  />
+                </div>
+              )}
             </CCol>
           </CRow>
         </CCardBody>
@@ -221,6 +237,7 @@ export default function SupplierPo({
                 </CTableHead>
                 <CTableBody>
                   {selectedItems.map(({ value: item }, idx) => {
+                    const snapshotItem = equipmentSnapshotItem(item)
                     const qty = quantities[item.id] || 0
                     const price = unitPrices[item.id] || 0
                     return (
@@ -229,11 +246,13 @@ export default function SupplierPo({
                         <CTableDataCell>
                           <strong>{item.item_name}</strong>
                           <br />
-                          <small>
-                            {item.description.length > 50
-                              ? `${item.description.slice(0, 50)}...`
-                              : item.description}
-                          </small>
+                          <small>{snapshotItem?.description ?? item.description ?? ''}</small>
+                          {(snapshotItem?.item_remarks ?? item.item_remarks) && (
+                            <div className="small mt-1">
+                              <strong>Specifications / Remarks:</strong>{' '}
+                              {snapshotItem?.item_remarks ?? item.item_remarks}
+                            </div>
+                          )}
                         </CTableDataCell>
                         <CTableDataCell className="text-center">{item.unit}</CTableDataCell>
                         <CTableDataCell className="text-center">

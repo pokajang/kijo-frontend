@@ -25,6 +25,10 @@ export default function EquipmentQuotationForm({
     unitPrices,
     markedUp,
     handleMarkedUpChange,
+    itemRemarks,
+    handleItemRemarksChange,
+    quotationRemarks,
+    setQuotationRemarks,
     deliveryCharge,
     setDeliveryCharge,
     miscCharge,
@@ -72,6 +76,8 @@ export default function EquipmentQuotationForm({
           selectOptions={selectOptions}
           selectedItems={selectedItems}
           handleSelectChange={handleSelectChange}
+          quotationRemarks={quotationRemarks}
+          onQuotationRemarksChange={setQuotationRemarks}
           isDisabled={isEditMode}
         />
 
@@ -90,6 +96,8 @@ export default function EquipmentQuotationForm({
             markedUp={markedUp}
             trafficLightStatus={pricingCardStatus}
             handleMarkedUpChange={handleMarkedUpChange}
+            itemRemarks={itemRemarks}
+            handleItemRemarksChange={handleItemRemarksChange}
             deliveryCharge={deliveryCharge}
             setDeliveryCharge={setDeliveryCharge}
             miscCharge={miscCharge}
@@ -110,6 +118,8 @@ export default function EquipmentQuotationForm({
             selectedItems={selectedItems}
             quantities={quantities}
             markedUp={markedUp}
+            itemRemarks={itemRemarks}
+            quotationRemarks={quotationRemarks}
             deliveryCharge={deliveryCharge}
             miscCharge={miscCharge}
             discount={discount}

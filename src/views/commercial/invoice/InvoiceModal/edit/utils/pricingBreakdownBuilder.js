@@ -77,6 +77,7 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
         item_description: item.item_name || item.item_description || '',
         description: item.description || '',
+        item_remarks: item.item_remarks || '',
         unit: item.unit || 'Lot',
         quantity: toNumber(item.quantity),
         unit_price: getEquipmentInvoiceUnitPrice(item),

@@ -38,4 +38,43 @@ describe('deliveryOrderCreatePayload', () => {
 
     expect(payload.breakdown[0].description).toBe('Sample analysis')
   })
+
+  it('keeps catalogue descriptions, item specifications, and quotation remarks separate', () => {
+    const payload = buildDeliveryOrderCreatePayload({
+      clientDetails: {
+        name: 'Client A',
+        address: '1 Test Road',
+        contact: { name: 'PIC A', position: 'Manager', email: 'pic@example.test', phone: '123' },
+      },
+      companyDetails: { contact: { name: 'Admin', email: 'admin@example.test', phone: '456' } },
+      projectDetails: {
+        project_id: 1,
+        name: 'Equipment Project',
+        code: 'P-001',
+        date: '2026-08-06',
+        type: 'Equipment Supply',
+        description: 'Equipment scope',
+        servicePeriod: 'August 2026',
+        quotationRemarks: 'Deliver all items together.',
+      },
+      items: [
+        {
+          name: 'Gas detector',
+          description: 'Portable detector',
+          item_remarks: 'Colour: navy blue',
+          quantity: 1,
+          unit: 'unit',
+        },
+      ],
+    })
+
+    expect(payload.details.quotation_remarks).toBe('Deliver all items together.')
+    expect(payload.breakdown[0]).toEqual({
+      item_name: 'Gas detector',
+      description: 'Portable detector',
+      item_remarks: 'Colour: navy blue',
+      quantity: 1,
+      unit: 'unit',
+    })
+  })
 })

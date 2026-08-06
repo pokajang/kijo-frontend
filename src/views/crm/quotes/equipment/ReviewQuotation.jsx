@@ -17,6 +17,8 @@ export default function ReviewQuotation({
   selectedItems,
   quantities,
   markedUp,
+  itemRemarks = {},
+  quotationRemarks = '',
   deliveryCharge,
   miscCharge,
   discount,
@@ -47,6 +49,14 @@ export default function ReviewQuotation({
     >
       <CRow>
         <CCol xs={12}>
+          {quotationRemarks?.trim() ? (
+            <div className="mb-3">
+              <strong>Quotation Remarks</strong>
+              <div className="text-body-secondary" style={{ whiteSpace: 'pre-line' }}>
+                {quotationRemarks}
+              </div>
+            </div>
+          ) : null}
           {/* datatable-exempt: existing embedded/layout table */}
           <QuoteReviewTable>
             <CTableHead>
@@ -66,7 +76,14 @@ export default function ReviewQuotation({
                 return (
                   <CTableRow key={idx}>
                     <CTableHeaderCell>{idx + 1}</CTableHeaderCell>
-                    <CTableDataCell>{item.item_name}</CTableDataCell>
+                    <CTableDataCell>
+                      <div>{item.item_name}</div>
+                      {itemRemarks[item.id]?.trim() ? (
+                        <small className="text-body-secondary" style={{ whiteSpace: 'pre-line' }}>
+                          Specifications: {itemRemarks[item.id]}
+                        </small>
+                      ) : null}
+                    </CTableDataCell>
                     <CTableDataCell className="text-center">{qty}</CTableDataCell>
                     <CTableDataCell>{item.unit}</CTableDataCell>
                     <CTableDataCell className="text-end">{price.toFixed(2)}</CTableDataCell>

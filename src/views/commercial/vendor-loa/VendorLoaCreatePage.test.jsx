@@ -41,6 +41,15 @@ const renderCreatePage = (entry) =>
     </MemoryRouter>,
   )
 
+const createDeferred = () => {
+  let resolve
+  const promise = new Promise((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
+}
+
 describe('VendorLoaCreatePage origin handling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -77,7 +86,15 @@ describe('VendorLoaCreatePage origin handling', () => {
     expect(await screen.findByText('Vendor card project: Full Project')).toBeInTheDocument()
   })
 
-  it('keeps project-origin fast path by using route state when available', async () => {
+  it('renders route state immediately and refreshes it for project-origin navigation', async () => {
+    const detailRequest = createDeferred()
+    getProjectDetails.mockReturnValue(detailRequest.promise)
+    const freshProject = {
+      id: 12,
+      project_name: 'Fresh Project',
+      project_type: 'Equipment Supply',
+    }
+
     renderCreatePage({
       pathname: '/commercial/vendor-loa/create/12',
       state: {
@@ -91,7 +108,13 @@ describe('VendorLoaCreatePage origin handling', () => {
 
     expect(await screen.findByText('Vendor card project: State Project')).toBeInTheDocument()
     expect(screen.getByText('Project type: Equipment Supply')).toBeInTheDocument()
-    expect(getProjectDetails).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(getProjectDetails).toHaveBeenCalledWith('12', {
+        signal: expect.any(AbortSignal),
+      }),
+    )
+    detailRequest.resolve(freshProject)
+    expect(await screen.findByText('Vendor card project: Fresh Project')).toBeInTheDocument()
   })
 
   it('returns to vendor LOA list for vendor-loa-list origin', async () => {
@@ -113,6 +136,12 @@ describe('VendorLoaCreatePage origin handling', () => {
   })
 
   it('returns to manage project for project origin', async () => {
+    getProjectDetails.mockResolvedValue({
+      id: 12,
+      project_name: 'Fresh Project',
+      project_type: 'Equipment Supply',
+    })
+
     renderCreatePage({
       pathname: '/commercial/vendor-loa/create/12',
       state: {

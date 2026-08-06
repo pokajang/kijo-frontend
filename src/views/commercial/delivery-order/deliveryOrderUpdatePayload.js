@@ -5,9 +5,10 @@ const toDeliveryOrderItemRows = (updatedData = {}) => {
 }
 
 const toDeliveryOrderBreakdown = (itemRows) =>
-  itemRows.map(({ item_name, name, description, quantity, unit }) => ({
+  itemRows.map(({ item_name, name, description, item_remarks, quantity, unit }) => ({
     item_name: item_name || name || '',
     description,
+    ...(item_remarks !== undefined ? { item_remarks } : {}),
     quantity,
     unit,
   }))
@@ -40,6 +41,7 @@ export const buildDeliveryOrderUpdatePayload = (updatedData = {}, fallbackData =
     project_type: updatedData.project_type,
     project_description: updatedData.project_description,
     project_service_period: updatedData.project_service_period,
+    quotation_remarks: updatedData.quotation_remarks ?? fallbackData.quotation_remarks ?? '',
   }
 
   if (projectId !== null && projectId !== undefined) {

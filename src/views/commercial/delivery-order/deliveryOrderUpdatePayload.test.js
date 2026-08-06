@@ -69,4 +69,20 @@ describe('deliveryOrderUpdatePayload', () => {
 
     expect(payload.details).not.toHaveProperty('project_id')
   })
+
+  it('preserves explicit equipment specifications and quotation remarks during edit', () => {
+    const payload = buildDeliveryOrderUpdatePayload({
+      ...updatedDeliveryOrder,
+      quotation_remarks: 'General quote requirements',
+      breakdown: [
+        {
+          ...updatedDeliveryOrder.breakdown[0],
+          item_remarks: 'Colour: navy blue',
+        },
+      ],
+    })
+
+    expect(payload.details.quotation_remarks).toBe('General quote requirements')
+    expect(payload.breakdown[0].item_remarks).toBe('Colour: navy blue')
+  })
 })

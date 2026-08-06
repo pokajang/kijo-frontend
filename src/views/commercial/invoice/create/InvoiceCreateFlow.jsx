@@ -169,6 +169,7 @@ const getInitialPricing = () => ({
   hygiene_items: [],
   service_title: '',
   remarks: '',
+  quotation_remarks: '',
   training_items: [],
   special_items: [],
 })

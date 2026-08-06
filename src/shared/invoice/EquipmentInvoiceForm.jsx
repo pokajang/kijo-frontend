@@ -7,6 +7,7 @@ import {
   CCol,
   CFormLabel,
   CFormInput,
+  CFormTextarea,
   CTable,
   CTableHead,
   CTableRow,
@@ -39,6 +40,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
   const [newItem, setNewItem] = useState({
     item_name: '',
     description: '',
+    item_remarks: '',
     quantity: '',
     unit: '',
     marked_up_price: '',
@@ -50,6 +52,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
     setPricing((prev) => ({
       ...prev,
       equipment_items: normalizedItems,
+      quotation_remarks: prev.quotation_remarks || quoteDetails.quotation_remarks || '',
     }))
   }, [quoteDetails, setPricing])
 
@@ -124,6 +127,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
         id: `custom-${Date.now()}`,
         item_name: name,
         description: newItem.description.trim(),
+        item_remarks: newItem.item_remarks.trim(),
         unit: newItem.unit.trim() || 'Lot',
         quantity: qty,
         unit_price: price,
@@ -136,6 +140,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
     setNewItem({
       item_name: '',
       description: '',
+      item_remarks: '',
       quantity: '',
       unit: '',
       marked_up_price: '',
@@ -160,8 +165,8 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
   // 2) Generic change handler
   const handleChange = (field) => (e) => {
     const { value } = e.target
-    if (field === 'remarks') {
-      setPricing((prev) => ({ ...prev, remarks: value }))
+    if (field === 'remarks' || field === 'quotation_remarks') {
+      setPricing((prev) => ({ ...prev, [field]: value }))
     } else {
       const num = parseFloat(value)
       setPricing((prev) => ({ ...prev, [field]: isNaN(num) ? 0 : num }))
@@ -317,12 +322,21 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                       placeholder="Item"
                       className="mb-1"
                     />
-                    <CFormInput
-                      type="text"
+                    <CFormTextarea
                       value={item.description ?? ''}
                       onChange={handleItemChange(idx, 'description')}
-                      placeholder="Description"
+                      placeholder="Catalogue description"
                       className="form-control-sm"
+                      rows={2}
+                      maxLength={5000}
+                    />
+                    <CFormTextarea
+                      value={item.item_remarks ?? ''}
+                      onChange={handleItemChange(idx, 'item_remarks')}
+                      placeholder="Client specifications / item remarks"
+                      className="form-control-sm mt-1"
+                      rows={2}
+                      maxLength={2000}
                     />
                   </CTableDataCell>
                   <CTableDataCell className="text-center">
@@ -496,11 +510,20 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
             </CCol>
             <CCol md={4}>
               <CFormLabel>Description</CFormLabel>
-              <CFormInput
-                type="text"
+              <CFormTextarea
                 value={newItem.description}
                 onChange={handleNewItemChange('description')}
-                placeholder="Description"
+                placeholder="Catalogue description"
+                rows={2}
+                maxLength={5000}
+              />
+              <CFormTextarea
+                value={newItem.item_remarks}
+                onChange={handleNewItemChange('item_remarks')}
+                placeholder="Client specifications / item remarks"
+                rows={2}
+                maxLength={2000}
+                className="mt-1"
               />
             </CCol>
             <CCol md={1}>
@@ -548,13 +571,26 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
         {/* Remarks input */}
         <CRow className="mb-3">
           <CCol md={12}>
+            <CFormLabel>Quotation Remarks</CFormLabel>
+            <CFormTextarea
+              name="quotation_remarks"
+              placeholder="General specifications carried from the equipment quotation"
+              value={pricing.quotation_remarks || ''}
+              onChange={handleChange('quotation_remarks')}
+              rows={3}
+              maxLength={2000}
+            />
+          </CCol>
+        </CRow>
+        <CRow className="mb-3">
+          <CCol md={12}>
             <CFormLabel>Remarks</CFormLabel>
-            <CFormInput
-              type="text"
+            <CFormTextarea
               name="remarks"
               placeholder="Leave any remarks for this invoice"
               value={pricing.remarks || ''}
               onChange={handleChange('remarks')}
+              rows={2}
             />
           </CCol>
         </CRow>

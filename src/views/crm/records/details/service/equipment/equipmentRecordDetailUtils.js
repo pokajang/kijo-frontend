@@ -11,7 +11,12 @@ export const buildEquipmentCalculationRows = (record = {}) => {
   const itemRows = items.map((item, index) => ({
     key: `equipment-item-${item.id ?? index}`,
     label: item.itemName || `Equipment Item ${index + 1}`,
-    description: item.description || '',
+    description: [
+      item.description || '',
+      item.itemRemarks ? `Specifications: ${item.itemRemarks}` : '',
+    ]
+      .filter(Boolean)
+      .join(' — '),
     calculation: `${formatNumber(item.quantity)} ${item.unit || 'unit(s)'} × ${formatMoney(
       item.markedUp,
     )}`,

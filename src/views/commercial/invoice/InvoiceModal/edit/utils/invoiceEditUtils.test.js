@@ -145,6 +145,7 @@ describe('invoice edit utilities', () => {
         id: 10,
         item_name: 'Gas detector',
         description: 'Portable unit',
+        item_remarks: '',
         unit: 'unit',
         quantity: 2,
         unit_price: 500,

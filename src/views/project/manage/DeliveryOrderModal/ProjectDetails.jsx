@@ -73,6 +73,18 @@ const ProjectDetails = ({ project, setProject }) => {
               />
             </div>
           </CCol>
+          <CCol md={12}>
+            <div className="mb-3">
+              <CFormLabel>Quotation Remarks</CFormLabel>
+              <CFormTextarea
+                rows={3}
+                maxLength={2000}
+                value={project.quotationRemarks || ''}
+                onChange={handleChange('quotationRemarks')}
+                placeholder="General specifications carried from the equipment quotation"
+              />
+            </div>
+          </CCol>
         </CRow>
       </CCardBody>
     </>

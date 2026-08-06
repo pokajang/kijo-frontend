@@ -25,6 +25,7 @@ import {
 } from '../../../project/manage/commercialDocsWarning'
 import { listAllVendors, saveProjectVendor } from '../../../project/manage/projectApi'
 import {
+  buildEquipmentServicesDescription,
   buildVendorLoaCreatePayload,
   getCreatedAssignmentId,
   getVendorLoaUrl,
@@ -51,6 +52,13 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
   const [feeBreakdown, setFeeBreakdown] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [createdAssignmentId, setCreatedAssignmentId] = useState(null)
+
+  useEffect(() => {
+    if (project?.project_type !== 'Equipment Supply') return
+
+    setAwardRemarks((current) => current || project.quotation_remarks || '')
+    setServicesDescription((current) => current || buildEquipmentServicesDescription(project))
+  }, [project])
 
   useEffect(() => {
     const controller = new AbortController()

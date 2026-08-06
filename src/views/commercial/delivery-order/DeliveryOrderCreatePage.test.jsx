@@ -44,6 +44,15 @@ const renderCreatePage = (entry) =>
     </MemoryRouter>,
   )
 
+const createDeferred = () => {
+  let resolve
+  const promise = new Promise((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
+}
+
 describe('DeliveryOrderCreatePage origin handling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -82,7 +91,16 @@ describe('DeliveryOrderCreatePage origin handling', () => {
     expect(screen.getByText('Quote: 77')).toBeInTheDocument()
   })
 
-  it('keeps project-origin fast path by using route state when available', async () => {
+  it('renders route state immediately and refreshes it for project-origin navigation', async () => {
+    const detailRequest = createDeferred()
+    getProjectDetails.mockReturnValue(detailRequest.promise)
+    const freshProject = {
+      id: 12,
+      project_name: 'Fresh Project',
+      project_type: 'Equipment Supply',
+      quote_id: 99,
+    }
+
     renderCreatePage({
       pathname: '/commercial/delivery-order/create/12',
       state: {
@@ -97,7 +115,14 @@ describe('DeliveryOrderCreatePage origin handling', () => {
 
     expect(await screen.findByText('Project: State Project')).toBeInTheDocument()
     expect(screen.getByText('Quote: 88')).toBeInTheDocument()
-    expect(getProjectDetails).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(getProjectDetails).toHaveBeenCalledWith('12', {
+        signal: expect.any(AbortSignal),
+      }),
+    )
+    detailRequest.resolve(freshProject)
+    expect(await screen.findByText('Project: Fresh Project')).toBeInTheDocument()
+    expect(screen.getByText('Quote: 99')).toBeInTheDocument()
   })
 
   it('returns to delivery order list for delivery-order-list origin', async () => {
@@ -119,6 +144,12 @@ describe('DeliveryOrderCreatePage origin handling', () => {
   })
 
   it('returns to manage project for project origin', async () => {
+    getProjectDetails.mockResolvedValue({
+      id: 12,
+      project_name: 'Fresh Project',
+      project_type: 'Equipment Supply',
+    })
+
     renderCreatePage({
       pathname: '/commercial/delivery-order/create/12',
       state: {

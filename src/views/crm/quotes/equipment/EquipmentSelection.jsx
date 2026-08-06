@@ -1,13 +1,24 @@
 import React, { useMemo } from 'react'
 import Select from '../../../../components/forms/ThemedSelect'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CCardHeader, CCardBody, CRow, CCol, CFormLabel, CAlert, CButton } from '@coreui/react'
+import {
+  CAlert,
+  CButton,
+  CCardBody,
+  CCardHeader,
+  CCol,
+  CFormLabel,
+  CFormTextarea,
+  CRow,
+} from '@coreui/react'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 
 export default function EquipmentSelection({
   selectOptions,
   selectedItems,
   handleSelectChange,
+  quotationRemarks = '',
+  onQuotationRemarksChange = () => {},
   isEditMode = false,
 }) {
   const navigate = useNavigate()
@@ -67,6 +78,24 @@ export default function EquipmentSelection({
                 </span>
               )}
             />
+          </CCol>
+        </CRow>
+        <CRow>
+          <CCol md={12}>
+            <CFormLabel htmlFor="equipmentQuotationRemarks">
+              Quotation Remarks <span className="text-muted">(optional)</span>
+            </CFormLabel>
+            <CFormTextarea
+              id="equipmentQuotationRemarks"
+              rows={3}
+              maxLength={2000}
+              value={quotationRemarks}
+              onChange={(event) => onQuotationRemarksChange(event.target.value)}
+              placeholder="General client requirements that apply to the whole quotation"
+            />
+            <div className="form-text">
+              Use item specifications below when a requirement applies to only one item.
+            </div>
           </CCol>
         </CRow>
       </CCardBody>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import dialog from '../../../components/dialog/dialogService'
 
 const getProjectId = (project = {}) => project.id ?? project.project_id
+const getOptionProjectId = (option = {}) => getProjectId(option.value || {})
 
 const getProjectName = (project = {}) =>
   project.project_name || project.projectName || project.name || ''
@@ -21,12 +22,62 @@ const toProjectOption = (project = {}) => {
   }
 }
 
-const mergeProjectOption = (options, option) => {
+export const mergeProjectOption = (options, option) => {
   if (!option?.value?.project_id) return options
   const exists = options.some(
     (item) => String(item?.value?.project_id) === String(option.value.project_id),
   )
   return exists ? options : [option, ...options]
+}
+
+export const resolveHydratedProjectOption = (options, initialOption) => {
+  const initialId = getOptionProjectId(initialOption)
+  if (!initialId) return initialOption || null
+
+  return (
+    options.find((option) => String(getOptionProjectId(option)) === String(initialId)) ||
+    initialOption
+  )
+}
+
+export const findEquipmentSnapshotItem = (project = {}, item = {}) => {
+  if (!Array.isArray(project.equipment_items)) return null
+
+  return (
+    project.equipment_items.find(
+      (quotedItem) =>
+        String(quotedItem.item_id ?? quotedItem.catalog_item_id ?? quotedItem.id) ===
+        String(item.id ?? item.item_id ?? item.catalog_item_id),
+    ) || null
+  )
+}
+
+export const buildSupplierPoQuotationRemarks = (project = {}, quotationRemarks = '') => {
+  if (
+    project.project_type !== 'Equipment Supply' ||
+    !Object.prototype.hasOwnProperty.call(project, 'quotation_remarks')
+  ) {
+    return {}
+  }
+
+  return { quotation_remarks: quotationRemarks }
+}
+
+export const buildSupplierPoItemPayload = ({ item, snapshotItem, quantity, unitPrice }) => {
+  const payload = {
+    item_id: item.id,
+    item_name: snapshotItem?.item_name || item.item_name,
+    description: snapshotItem?.description ?? item.description ?? '',
+    unit: snapshotItem?.unit || item.unit || '',
+    quantity,
+    unit_price: unitPrice,
+    line_total: quantity * unitPrice,
+  }
+  if (snapshotItem || Object.prototype.hasOwnProperty.call(item, 'item_remarks')) {
+    payload.item_remarks = snapshotItem?.item_remarks ?? item.item_remarks ?? ''
+  }
+
+  return payload
 }
 
 export function useSupplierPoServices({
@@ -55,6 +106,9 @@ export function useSupplierPoServices({
   const [discount, setDiscount] = useState(0)
   const [deliveryCharge, setDeliveryCharge] = useState(0)
   const [sstPercent, setSstPercent] = useState(0)
+  const [quotationRemarks, setQuotationRemarks] = useState(
+    initialProjectOption?.value?.quotation_remarks || '',
+  )
 
   const [projectList, setProjectList] = useState(() =>
     initialProjectOption ? [initialProjectOption] : [],
@@ -100,6 +154,19 @@ export function useSupplierPoServices({
   }, [])
 
   useEffect(() => {
+    const applyProjectOptions = (options) => {
+      const hydratedInitial = resolveHydratedProjectOption(options, initialProjectOption)
+      setProjectList(mergeProjectOption(options, hydratedInitial))
+      if (!hydratedInitial) return
+
+      setSelectedProject((current) => {
+        if (!current) return hydratedInitial
+        return String(getOptionProjectId(current)) === String(getOptionProjectId(hydratedInitial))
+          ? hydratedInitial
+          : current
+      })
+    }
+
     const loadProjects = async () => {
       try {
         const legacyRes = await fetch(`${import.meta.env.VITE_API_BASE}projects`, {
@@ -113,7 +180,7 @@ export function useSupplierPoServices({
                 toProjectOption({ ...project, project_id: project.project_id ?? project.id }),
               )
               .filter(Boolean)
-            setProjectList(mergeProjectOption(options, initialProjectOption))
+            applyProjectOptions(options)
             return
           }
         }
@@ -128,7 +195,7 @@ export function useSupplierPoServices({
         const json = await res.json()
         const rows = Array.isArray(json?.data) ? json.data : []
         const options = rows.map((project) => toProjectOption(project)).filter(Boolean)
-        setProjectList(mergeProjectOption(options, initialProjectOption))
+        applyProjectOptions(options)
       } catch (err) {
         console.error('Project list fetch error:', err)
       }
@@ -170,6 +237,14 @@ export function useSupplierPoServices({
     setSelectedProject(option)
   }
 
+  useEffect(() => {
+    setQuotationRemarks(selectedProject?.value?.quotation_remarks || '')
+  }, [selectedProject])
+
+  const equipmentSnapshotItem = (item = {}) => {
+    return findEquipmentSnapshotItem(selectedProject?.value, item)
+  }
+
   const handleItemsChange = (options) => {
     setSelectedItems(options || [])
 
@@ -209,6 +284,7 @@ export function useSupplierPoServices({
     setDiscount(0)
     setDeliveryCharge(0)
     setSstPercent(0)
+    setQuotationRemarks(lockProject ? initialProjectOption?.value?.quotation_remarks || '' : '')
   }
 
   const handleSave = async () => {
@@ -219,16 +295,17 @@ export function useSupplierPoServices({
 
     const payload = {
       project_id: selectedProject?.value?.project_id || null,
+      ...buildSupplierPoQuotationRemarks(selectedProject?.value, quotationRemarks),
       supplier: selectedSupplier?.value || null,
-      items: selectedItems.map(({ value: item }) => ({
-        item_id: item.id,
-        item_name: item.item_name,
-        description: item.description || '',
-        unit: item.unit || '',
-        quantity: quantities[item.id] || 0,
-        unit_price: unitPrices[item.id] || 0,
-        line_total: (quantities[item.id] || 0) * (unitPrices[item.id] || 0),
-      })),
+      items: selectedItems.map(({ value: item }) => {
+        const snapshotItem = equipmentSnapshotItem(item)
+        return buildSupplierPoItemPayload({
+          item,
+          snapshotItem,
+          quantity: quantities[item.id] || 0,
+          unitPrice: unitPrices[item.id] || 0,
+        })
+      }),
       discount,
       delivery_charge: deliveryCharge,
       sst_percent: sstPercent,
@@ -287,6 +364,9 @@ export function useSupplierPoServices({
     setDeliveryCharge,
     sstPercent,
     setSstPercent,
+    quotationRemarks,
+    setQuotationRemarks,
+    equipmentSnapshotItem,
     subtotal,
     sstAmount,
     grandTotal,

@@ -18,8 +18,14 @@ export const getEquipmentInvoiceUnitPriceValue = (item = {}) =>
 export const getEquipmentInvoiceUnitPrice = (item = {}) =>
   toNumber(getEquipmentInvoiceUnitPriceValue(item))
 
+export const getEquipmentInvoiceDescription = (item = {}) => {
+  return String(item.description || '').trim()
+}
+
 export const normalizeEquipmentInvoiceItem = (item = {}) => ({
   ...item,
+  description: getEquipmentInvoiceDescription(item),
+  item_remarks: String(item.item_remarks ?? item.itemRemarks ?? '').trim(),
   quantity: toNumber(item.quantity),
   unit_price: toNumber(
     firstPresentValue(item.unit_price, item.unitPrice, item.supplier_price, item.supplierPrice),

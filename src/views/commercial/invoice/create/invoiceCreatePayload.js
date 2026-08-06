@@ -95,6 +95,11 @@ export const buildInvoiceCreatePayload = (
     grant_approval_no:
       serviceType === 'Training' && isHrdPayment ? grantApprovalNo?.trim() || null : null,
     remarks: pricing.remarks || '',
+    quotation_remarks:
+      pricing.quotation_remarks ??
+      quoteDetails?.quotation_remarks ??
+      project?.quotation_remarks ??
+      '',
     client_award_ref_no: loaNo || '',
     invoice_client_name: clientOverrides.clientName,
     invoice_client_ssm: clientOverrides.clientSSM,
@@ -175,8 +180,10 @@ export const buildInvoiceCreatePayload = (
         : []
       const equipmentItems = pricingItems.length > 0 ? pricingItems : quoteItems
       payload.breakdown = equipmentItems.map((item) => ({
+        item_id: item.item_id ?? null,
         item_description: item.item_name,
         description: item.description || '',
+        item_remarks: item.item_remarks ?? item.itemRemarks ?? '',
         unit: item.unit,
         quantity: toNumber(item.quantity),
         unit_price: getEquipmentInvoiceUnitPrice(item),

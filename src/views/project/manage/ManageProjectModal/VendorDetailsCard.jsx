@@ -46,6 +46,25 @@ const PAYMENT_TERM_OPTIONS = [
   { value: '60 days', label: '60 days' },
 ]
 
+export const buildEquipmentServicesDescription = (project = {}) => {
+  if (project.project_type !== 'Equipment Supply' || !Array.isArray(project.equipment_items)) {
+    return ''
+  }
+
+  return project.equipment_items
+    .map((item) =>
+      [
+        item.item_name || '',
+        item.description || '',
+        item.item_remarks ? `Specifications / remarks:\n${item.item_remarks}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    )
+    .filter(Boolean)
+    .join('\n\n')
+}
+
 const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -88,19 +107,28 @@ const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
       ),
     [paymentTerms],
   )
+  const equipmentServicesDescription = useMemo(
+    () => buildEquipmentServicesDescription(project),
+    [project],
+  )
+  const equipmentQuotationRemarks =
+    project?.project_type === 'Equipment Supply' ? project?.quotation_remarks || '' : ''
 
-  const resetAwardForm = useCallback(({ clearVendor = true, clearEditing = true } = {}) => {
-    if (clearVendor) setSelectedVendor(null)
-    if (clearEditing) setEditingAssignmentId(null)
+  const resetAwardForm = useCallback(
+    ({ clearVendor = true, clearEditing = true } = {}) => {
+      if (clearVendor) setSelectedVendor(null)
+      if (clearEditing) setEditingAssignmentId(null)
 
-    setAwardAmount('')
-    setAwardPosition('')
-    setAwardRemarks('')
-    setServicesDescription('')
-    setVenueDetails('')
-    setFeeBreakdown('')
-    setPaymentTerms('')
-  }, [])
+      setAwardAmount('')
+      setAwardPosition('')
+      setAwardRemarks(equipmentQuotationRemarks)
+      setServicesDescription(equipmentServicesDescription)
+      setVenueDetails('')
+      setFeeBreakdown('')
+      setPaymentTerms('')
+    },
+    [equipmentQuotationRemarks, equipmentServicesDescription],
+  )
 
   const fetchAssignedVendors = useCallback(
     async (options = {}) => {
@@ -577,7 +605,8 @@ const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
                 <CCol md={6}>
                   <CFormLabel>Services Description</CFormLabel>
                   <CFormTextarea
-                    rows={2}
+                    rows={8}
+                    maxLength={1000000}
                     value={servicesDescription}
                     onChange={(e) => setServicesDescription(e.target.value)}
                     placeholder="e.g. To lead and conduct internal audit ..."
@@ -587,6 +616,7 @@ const VendorDetailsCard = ({ project, refreshKey = 0, onProgressUpdate }) => {
                   <CFormLabel>Venue Details</CFormLabel>
                   <CFormTextarea
                     rows={2}
+                    maxLength={5000}
                     value={venueDetails}
                     onChange={(e) => setVenueDetails(e.target.value)}
                     placeholder="e.g Monash Subang"

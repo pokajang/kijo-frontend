@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { CCol } from '@coreui/react'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
-import { DetailField, DetailSection } from '../shared/CommercialDetailFields'
+import { DetailField, DetailSection, ItemsTable } from '../shared/CommercialDetailFields'
 import { getCommercialReturnContext } from '../shared/commercialReturnNavigation'
 import ViewInvoiceModal from './InvoiceModal/ViewInvoiceModal'
 import EditInvoiceModal from './InvoiceModal/edit/EditInvoiceModal'
@@ -182,6 +183,24 @@ const InvoiceDetailPage = () => {
           <DetailField label="Payment Method" value={invoice?.paymentMethod} />
           <DetailField label="HRD Claim Ref" value={invoice?.hrdClaimRef} />
           <DetailField label="Remarks" value={invoice?.remarks} />
+          <DetailField label="Quotation Remarks" value={invoice?.quotationRemarks} />
+        </DetailSection>
+
+        <DetailSection title="Item Breakdown">
+          <CCol xs={12}>
+            <ItemsTable
+              items={invoice?.breakdown || []}
+              columns={[
+                { key: 'item_description', label: 'Item' },
+                { key: 'description', label: 'Description' },
+                { key: 'item_remarks', label: 'Specifications / Remarks' },
+                { key: 'quantity', label: 'Qty', className: 'text-center' },
+                { key: 'unit', label: 'Unit', className: 'text-center' },
+                { key: 'unit_price', label: 'Unit Price', className: 'text-end' },
+                { key: 'subtotal', label: 'Subtotal', className: 'text-end' },
+              ]}
+            />
+          </CCol>
         </DetailSection>
       </DataTableDetailShell>
 

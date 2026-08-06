@@ -59,6 +59,8 @@ export function useEquipmentForm(
     quantities: {}, // { [itemId]: number }
     unitPrices: {}, // { [itemId]: number }
     markedUp: {}, // { [itemId]: number }
+    itemRemarks: {}, // { [itemId]: client specifications }
+    quotationRemarks: '',
     deliveryCharge: 0,
     miscCharge: 0,
     discount: 0,
@@ -78,7 +80,12 @@ export function useEquipmentForm(
   // Load draft in create mode, otherwise use default
   const draft = readDraft()
 
-  const [formData, setFormData] = useState({ ...defaultForm, ...(draft || {}) })
+  const [formData, setFormData] = useState({
+    ...defaultForm,
+    ...(draft || {}),
+    itemRemarks: { ...(draft?.itemRemarks || {}) },
+    quotationRemarks: String(draft?.quotationRemarks || ''),
+  })
 
   // Persist draft on every change (create mode only)
   useEffect(() => {
@@ -133,7 +140,8 @@ export function useEquipmentForm(
       // quantities, prices, markedUp
       const qs = {},
         ps = {},
-        mu = {}
+        mu = {},
+        itemRemarks = {}
       items.forEach((it) => {
         const itemId =
           parseInt(pick(it, 'item_id', 'itemId', 'catalog_item_id', 'catalogItemId'), 10) || 0
@@ -144,6 +152,7 @@ export function useEquipmentForm(
           parseFloat(
             pick(it, 'marked_up_price', 'markedUpPrice', 'markedUp', 'unit_price', 'unitPrice'),
           ) || 0
+        itemRemarks[itemId] = pick(it, 'item_remarks', 'itemRemarks') || ''
       })
       const getNumber = (...keys) => {
         for (const key of keys) {
@@ -169,6 +178,8 @@ export function useEquipmentForm(
         quantities: qs,
         unitPrices: ps,
         markedUp: mu,
+        itemRemarks,
+        quotationRemarks: pick(initialFormData, 'quotationRemarks', 'quotation_remarks') || '',
         deliveryCharge: getNumber('deliveryCharge', 'delivery_charge'),
         miscCharge: getNumber('miscCharge', 'misc_charge'),
         discount: getNumber('discount'),
@@ -189,13 +200,15 @@ export function useEquipmentForm(
     const list = opts || []
     const qs = {},
       ps = {},
-      mu = {}
+      mu = {},
+      itemRemarks = {}
     list.forEach(({ value }) => {
       const id = value.id
       const basePrice = formData.unitPrices[id] ?? parseFloat(value.supplier_price)
       qs[id] = formData.quantities[id] ?? 1
       ps[id] = basePrice
       mu[id] = parseFloat((basePrice * 1.5).toFixed(2))
+      itemRemarks[id] = formData.itemRemarks?.[id] || ''
     })
     setFormData((f) => ({
       ...f,
@@ -203,6 +216,7 @@ export function useEquipmentForm(
       quantities: qs,
       unitPrices: ps,
       markedUp: mu,
+      itemRemarks,
     }))
   }
 
@@ -225,6 +239,12 @@ export function useEquipmentForm(
     setFormData((f) => ({
       ...f,
       markedUp: { ...f.markedUp, [id]: parseFloat(v) || 0 },
+    }))
+
+  const handleItemRemarksChange = (id, value) =>
+    setFormData((f) => ({
+      ...f,
+      itemRemarks: { ...f.itemRemarks, [id]: value },
     }))
 
   // Computed totals.
@@ -281,6 +301,7 @@ export function useEquipmentForm(
         catalog_item_id: item.id,
         item_id: item.id,
         item_name: item.item_name || '',
+        item_remarks: formData.itemRemarks?.[item.id]?.trim() || null,
         quantity: qty,
         unit_price: formData.unitPrices[item.id] || 0,
         marked_up_price: price,
@@ -302,6 +323,7 @@ export function useEquipmentForm(
       pic_email,
       pic_phone,
       pic_position,
+      quotation_remarks: String(formData.quotationRemarks || '').trim() || null,
       items: itemsPayload,
       discount: formData.discount,
       price_exception_request_id: null,
@@ -350,6 +372,10 @@ export function useEquipmentForm(
     handlePriceChange,
     markedUp: formData.markedUp,
     handleMarkedUpChange,
+    itemRemarks: formData.itemRemarks || {},
+    handleItemRemarksChange,
+    quotationRemarks: formData.quotationRemarks,
+    setQuotationRemarks: (value) => setFormData((f) => ({ ...f, quotationRemarks: value })),
 
     // charges
     deliveryCharge: formData.deliveryCharge,

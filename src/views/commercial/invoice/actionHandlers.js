@@ -166,6 +166,8 @@ export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = t
 
           hrdGrantNo: grant_approval_no,
           remarks,
+          quotationRemarks: row.quotation_remarks || '',
+          breakdown: Array.isArray(row.breakdown) ? row.breakdown : [],
           raw: row,
         }
       })

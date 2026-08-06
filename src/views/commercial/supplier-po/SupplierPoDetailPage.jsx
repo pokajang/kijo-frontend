@@ -165,6 +165,7 @@ const SupplierPoDetailPage = () => {
             value={<DataTableStatusBadge>{record?.status || '-'}</DataTableStatusBadge>}
           />
           <DetailField label="Remarks" value={record?.status_remarks} />
+          <DetailField label="Quotation Remarks" value={record?.quotation_remarks} />
           <DetailField label="Grand Total" value={money(record?.grand_total)} />
         </DetailSection>
 
@@ -175,6 +176,7 @@ const SupplierPoDetailPage = () => {
               columns={[
                 { key: 'item_name', label: 'Item' },
                 { key: 'description', label: 'Description' },
+                { key: 'item_remarks', label: 'Specifications / Remarks' },
                 { key: 'quantity', label: 'Qty', className: 'text-center' },
                 { key: 'unit', label: 'Unit', className: 'text-center' },
                 {
