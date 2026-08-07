@@ -76,6 +76,45 @@ describe('equipment quotation remarks', () => {
     expect(screen.getAllByDisplayValue('150.00')).toHaveLength(4)
   })
 
+  it('shows the complete catalogue description as compact muted quotation text', () => {
+    render(
+      <PricingInput
+        selectedItems={[
+          {
+            value: {
+              ...item,
+              description: 'Portable detector\nIncludes:\n• pump\n• charging dock',
+            },
+          },
+        ]}
+        quantities={{ 701: 1 }}
+        handleQtyChange={vi.fn()}
+        unitPrices={{ 701: 100 }}
+        markedUp={{ 701: 150 }}
+        handleMarkedUpChange={vi.fn()}
+        itemRemarks={{ 701: '' }}
+        handleItemRemarksChange={vi.fn()}
+        deliveryCharge={0}
+        setDeliveryCharge={vi.fn()}
+        miscCharge={0}
+        setMiscCharge={vi.fn()}
+        discount={0}
+        setDiscount={vi.fn()}
+        sstPercent={0}
+        setSstPercent={vi.fn()}
+        itemsTotal={150}
+        subtotal={150}
+        sstAmount={0}
+        grandTotal={150}
+      />,
+    )
+
+    const description = screen.getByText(/Portable detector; Includes: pump; charging dock/)
+    expect(description).toHaveClass('text-muted')
+    expect(description.textContent).not.toContain('...')
+    expect(description.textContent).not.toContain('•')
+  })
+
   it('shows both remark scopes in the review', () => {
     render(
       <ReviewQuotation

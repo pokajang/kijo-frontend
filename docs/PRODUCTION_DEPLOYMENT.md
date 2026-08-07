@@ -254,18 +254,18 @@ at production.
 
 ### React Router Security Audit Applicability (2026-08-05)
 
-This release pins `react-router-dom` to `7.18.2`, the latest published 7.x
-version available during release validation. `npm audit` still reports
-`GHSA-qwww-vcr4-c8h2` because its declared affected range covers React Router
-7.12.0 through 8.2.0 and the advisory lists 8.3.0 as the first patched version.
+This release pins `react-router-dom` to `7.18.2`. `npm audit` may still report
+`GHSA-qwww-vcr4-c8h2` using registry metadata that marks React Router 7.12.0
+through 8.2.0 as affected. The upstream maintainer's
+[security advisory](https://github.com/remix-run/react-router/security/advisories/GHSA-qwww-vcr4-c8h2)
+now lists `7.18.2` and `8.3.0` as patched versions.
 
 The advisory applies only to applications using React Router's unstable React
 Server Components APIs. Kijo is a browser-rendered Vite SPA and contains none
 of those RSC APIs, so the affected request path is not present in this
-deployment. Do not force-install an unpublished or incompatible major solely to
-silence the audit. Recheck the advisory on each release and move to a supported
-patched version when a compatible 7.x backport or published 8.3+ upgrade is
-available.
+deployment. Do not force the audit's suggested downgrade to 7.11.0 solely to
+silence stale registry metadata. Recheck the installed version and upstream
+advisory on each release.
 
 This dependency adjustment requires the normal fresh `npm ci` and committed
 frontend build. It adds no backend command or environment change.
@@ -516,7 +516,7 @@ php artisan serve --host=127.0.0.1 --port=8000
 
 # Terminal 2: build and serve the production frontend bundle
 cd ~/kijo-frontend
-npm run build
+VITE_API_BASE=/proxy/ npm run build
 VITE_PROXY_TARGET=http://127.0.0.1:8000 npm run serve
 
 # Terminal 3: execute the destructive, self-cleaning fixture smoke
@@ -710,7 +710,9 @@ cd C:\laragon\www\kijoV2\backend-laravel
 php artisan serve --host=127.0.0.1 --port=8000
 
 cd C:\laragon\www\kijoV2\frontend
+$env:VITE_API_BASE = '/proxy/'
 npm run build
+$env:VITE_PROXY_TARGET = 'http://127.0.0.1:8000'
 npm run serve
 
 # In a third terminal, after both servers are ready:
@@ -721,6 +723,10 @@ $env:FRONTEND_URL = 'http://127.0.0.1:4173'
 npm run smoke:ih-pricing
 Remove-Item Env:SMOKE_EMAIL, Env:SMOKE_PASSWORD, Env:FRONTEND_URL
 ```
+
+The `/proxy/` build above is only for isolated local smoke testing. After the
+smoke passes, clear `VITE_API_BASE` and `VITE_PROXY_TARGET`, then run the normal
+production build again so committed assets target `https://api.amiosh.com/`.
 
 Local `.env` can keep:
 

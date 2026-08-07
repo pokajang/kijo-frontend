@@ -11,6 +11,7 @@ import {
   CRow,
 } from '@coreui/react'
 import '../shared/TrafficLightCard.css'
+import { compactCatalogDescription } from '../../../../utils/catalogDescription'
 
 export default function PricingInput({
   selectedItems,
@@ -45,7 +46,7 @@ export default function PricingInput({
       </CCardHeader>
       <CCardBody className={hasStatus ? statusClass : ''}>
         {selectedItems.map(({ value: item }) => {
-          const description = String(item.description || '')
+          const description = compactCatalogDescription(item.description)
           const itemName = item.item_name || item.itemName || 'Selected item'
 
           return (
@@ -54,9 +55,11 @@ export default function PricingInput({
                 <small className="text-muted">Category: {item.category_id || '-'}</small>
                 <br />
                 <strong>{itemName}</strong>
-                <br />
-                {description.length > 50 ? `${description.slice(0, 50)}...` : description}
-                <br />
+                {description && (
+                  <small className="text-muted d-block">
+                    <strong>Description:</strong> {description}
+                  </small>
+                )}
                 <small>
                   <strong>
                     <i>Notes:</i>

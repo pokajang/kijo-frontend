@@ -36,7 +36,7 @@ const project = {
   equipment_items: [
     {
       item_name: 'Gas detector',
-      description: 'Portable calibrated detector.',
+      description: 'Portable calibrated detector.\r\nIncludes:\r\n• charging dock',
       item_remarks: 'Compact enclosure; navy blue.',
     },
   ],
@@ -94,7 +94,11 @@ describe('VendorLoaCreateFlow', () => {
       null,
       expect.objectContaining({
         remarks: 'Use the client-approved navy colour scheme.',
-        services_description: expect.stringContaining('Compact enclosure; navy blue.'),
+        services_description: [
+          'Gas detector',
+          'Description: Portable calibrated detector.; Includes: charging dock',
+          'Remarks: Compact enclosure; navy blue.',
+        ].join('\n'),
       }),
     )
     expect(await screen.findByText('Vendor LOA Created')).toBeInTheDocument()

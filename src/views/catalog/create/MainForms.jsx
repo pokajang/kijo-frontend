@@ -15,6 +15,7 @@ import {
 } from '@coreui/react'
 import Select from '../../../components/forms/ThemedSelect'
 import PasteImage from './PasteImage'
+import CatalogDescriptionPreview from '../CatalogDescriptionPreview'
 import {
   handleChange,
   handleFileChange,
@@ -142,12 +143,14 @@ const MainForms = () => {
           <CCol md={12}>
             <CFormLabel htmlFor="description">Description</CFormLabel>
             <CFormTextarea
+              id="description"
               name="description"
               value={formData.description}
               onChange={(e) => handleChange(e, setFormData)}
               placeholder="Usage notes, specs, etc."
               rows={3}
             />
+            <CatalogDescriptionPreview value={formData.description} />
           </CCol>
 
           <CCol md={4}>

@@ -16,6 +16,7 @@ import {
 } from '@coreui/react'
 import Select from '../../../components/forms/ThemedSelect'
 import dialog from '../../../components/dialog/dialogService'
+import CatalogDescriptionPreview from '../CatalogDescriptionPreview'
 const CATEGORIES = [
   { category_id: 'Personal Protective Equipment', category_name: 'Personal Protective Equipment' },
   { category_id: 'Monitoring Device / Equipment', category_name: 'Monitoring Device / Equipment' },
@@ -188,11 +189,13 @@ const EditCatalogModal = ({ visible, onClose, item, onUpdate }) => {
               <CCol md={12}>
                 <CFormLabel>Description</CFormLabel>
                 <CFormTextarea
+                  id="editCatalogDescription"
                   name="description"
                   rows={3}
                   value={formData.description}
                   onChange={handleChange}
                 />
+                <CatalogDescriptionPreview value={formData.description || ''} />
               </CCol>
             </CRow>
 

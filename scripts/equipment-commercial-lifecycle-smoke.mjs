@@ -18,13 +18,14 @@ const today = new Date().toISOString().slice(0, 10)
 
 const quotationRemarks = `GENERAL_START ${'Client coordinated finish and delivery requirement. '.repeat(32)} GENERAL_END`
 const itemRemarks = `ITEM_START ${'Size XXL, matte navy-blue finish, individually labelled carton. '.repeat(27)} ITEM_END`
-const longDescription = `DESCRIPTION_START ${'Registered catalogue equipment description with calibration, enclosure, operating and handling detail. '.repeat(38)} DESCRIPTION_END`
-const servicesDescription = [
-  '1. Equipment supply lifecycle smoke item',
-  longDescription,
-  `Client specifications: ${itemRemarks}`,
-].join('\n')
-
+const longDescription = [
+  'DESCRIPTION_START Personal air sampling equipment',
+  'Includes:',
+  '• air sampling pump',
+  '• standard charging dock with power adapter',
+  '3) filter cassette holder',
+  `${'Registered catalogue equipment description with calibration, enclosure, operating and handling detail. '.repeat(32)} DESCRIPTION_END`,
+].join('\r\n')
 const results = []
 const assert = (condition, message) => {
   if (!condition) throw new Error(message)
@@ -46,6 +47,7 @@ const run = async () => {
 
   const runtimeIssues = []
   let csrfToken = ''
+  let catalogItemId = null
   let quoteId = null
   let projectId = null
   let invoiceId = null
@@ -142,6 +144,16 @@ const run = async () => {
     return label
   }
 
+  const selectOptionContaining = async (placeholder, expectedText) => {
+    const select = page.locator('.react-select-container').filter({ hasText: placeholder })
+    await select.getByRole('combobox').click()
+    const option = page.locator('.react-select__option').filter({ hasText: expectedText }).first()
+    await option.waitFor()
+    const label = (await option.textContent())?.trim() || expectedText
+    await option.click()
+    return label
+  }
+
   const assertDetailPage = async (route, heading, markers, screenshotName) => {
     await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' })
     await page.getByText(heading, { exact: true }).first().waitFor()
@@ -180,6 +192,27 @@ const run = async () => {
       return redactEmail(email)
     })
 
+    const catalogItemName = `SMOKE Equipment ${stamp}`
+    await step('create catalogue fixture with pasted bullets and line endings', async () => {
+      const catalogItem = await apiRequest({
+        route: 'catalog/items',
+        method: 'POST',
+        body: {
+          item_name: catalogItemName,
+          category_id: 'Monitoring Device / Equipment',
+          description: longDescription,
+          unit: 'unit',
+          supplier_name: 'Smoke Equipment Supplier',
+          supplier_price: 1,
+          price_date: today,
+          entry_remarks: 'Disposable equipment commercial lifecycle fixture.',
+        },
+      })
+      catalogItemId = Number(catalogItem.id || 0)
+      assert(catalogItemId > 0, 'Catalogue fixture response omitted ID.')
+      return `catalog_item=${catalogItemId}`
+    })
+
     let quote
     await step('create equipment quotation with long general and item remarks in UI', async () => {
       await page.goto(`${baseUrl}/crm/quotes?service=equipment`, { waitUntil: 'domcontentloaded' })
@@ -188,7 +221,7 @@ const run = async () => {
       await page.locator('#serviceType').selectOption('equipment')
       await selectFirstOption('Select Source...')
       await page.getByText('Equipment Supply List', { exact: true }).waitFor()
-      await selectFirstOption('Select equipment...')
+      await selectOptionContaining('Select equipment...', catalogItemName)
       await page.locator('#equipmentQuotationRemarks').fill(quotationRemarks)
       await page.getByLabel('Estimated Cost (RM)').fill('1')
       await page.getByText('Pricing Details', { exact: true }).waitFor()
@@ -452,7 +485,6 @@ const run = async () => {
           award_date: today,
           position: 'Equipment supplier',
           remarks: quotationRemarks,
-          services_description: servicesDescription,
           venue_details: clientAddress || 'Client site',
           fee_breakdown: `Equipment supply: RM ${lineTotal.toFixed(2)}`,
           payment_terms: '30 days from complete delivery.',
@@ -621,6 +653,15 @@ const run = async () => {
         }),
       )
     }
+    if (catalogItemId) {
+      await cleanup('cleanup: catalogue fixture', () =>
+        apiRequest({
+          route: `catalog/items/${catalogItemId}`,
+          method: 'DELETE',
+          expected: [200, 404],
+        }),
+      )
+    }
 
     await fs.writeFile(
       path.join(outputDir, 'result.json'),
@@ -629,7 +670,15 @@ const run = async () => {
           at: new Date().toISOString(),
           baseUrl,
           smokeAccount: redactEmail(email),
-          ids: { quoteId, projectId, invoiceId, deliveryOrderId, supplierPoId, vendorAssignmentId },
+          ids: {
+            catalogItemId,
+            quoteId,
+            projectId,
+            invoiceId,
+            deliveryOrderId,
+            supplierPoId,
+            vendorAssignmentId,
+          },
           markers: ['GENERAL_END', 'ITEM_END', 'DESCRIPTION_END'],
           results,
           runtimeIssues,

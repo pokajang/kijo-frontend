@@ -1,3 +1,5 @@
+import { compactCatalogDescription } from '../../../../utils/catalogDescription'
+
 const toFiniteNumber = (value, fallback = 0) => {
   const number = Number(value)
   return Number.isFinite(number) ? number : fallback
@@ -17,9 +19,11 @@ export const buildEquipmentServicesDescription = (project = {}) => {
     .map((item) =>
       [
         nullableText(item.item_name ?? item.item_description),
-        nullableText(item.description),
-        nullableText(item.item_remarks)
-          ? `Specifications / remarks:\n${nullableText(item.item_remarks)}`
+        nullableText(compactCatalogDescription(item.description))
+          ? `Description: ${compactCatalogDescription(item.description)}`
+          : null,
+        nullableText(compactCatalogDescription(item.item_remarks))
+          ? `Remarks: ${compactCatalogDescription(item.item_remarks)}`
           : null,
       ]
         .filter(Boolean)
