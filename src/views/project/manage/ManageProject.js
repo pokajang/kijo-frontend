@@ -6,6 +6,7 @@ import ProjectTable from './ProjectTable'
 import { fetchProjects, handleDeleteProject } from './actionHandlers'
 
 import CloseProjectModal from './CloseProjectModal'
+import ReactivateProjectModal from './ReactivateProjectModal'
 import dialog from '../../../components/dialog/dialogService'
 import { getPeriodRangePreset } from '../../../components/filters'
 import { PROJECT_CLOSE_TYPES } from './projectStatus'
@@ -26,6 +27,7 @@ export default function ManageProject() {
   const [selectedCloseType, setSelectedCloseType] = useState(PROJECT_CLOSE_TYPES.COMPLETED)
   const [modals, setModals] = useState({
     close: false,
+    reactivate: false,
   })
 
   const loadProjects = useCallback(
@@ -107,6 +109,7 @@ export default function ManageProject() {
           })
         }}
         onClose={(p, closeType) => open('close', p, { closeType })}
+        onReactivate={(p) => open('reactivate', p)}
         onGenerateInvoice={(p) => openCommercialCreatePage('invoice', p)}
         onGenerateDO={(p) => openCommercialCreatePage('delivery-order', p)}
         onGenerateJD14={(p) => openCommercialCreatePage('jd14', p)}
@@ -124,6 +127,18 @@ export default function ManageProject() {
           onClose={() => close('close')}
           onConfirm={() => {
             close('close')
+            loadProjects({ showLoader: false })
+          }}
+        />
+      )}
+
+      {modals.reactivate && selected && (
+        <ReactivateProjectModal
+          visible
+          project={selected}
+          onClose={() => close('reactivate')}
+          onConfirm={() => {
+            close('reactivate')
             loadProjects({ showLoader: false })
           }}
         />

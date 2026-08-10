@@ -7,6 +7,7 @@ import { DataTableActionButtonGroup, DataTableLoadingState } from '../../../comp
 import { handleDeleteProject } from './actionHandlers'
 import { getProjectDetails, getProjectFinanceData } from './projectApi'
 import CloseProjectModal from './CloseProjectModal'
+import ReactivateProjectModal from './ReactivateProjectModal'
 import ClientDetailsCard from './ManageProjectModal/ClientDetailsCard'
 import CommercialTrailsCard from './ManageProjectModal/CommercialTrailsCard'
 import CRMDetailsCard from './ManageProjectModal/CRMDetailsCard'
@@ -28,7 +29,7 @@ import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const projectActionGroups = [
   ['jd14', 'invoice', 'delivery-order', 'vendor-loa', 'supplier-po'],
-  ['complete', 'terminate'],
+  ['complete', 'terminate', 'reactivate'],
   ['delete'],
 ]
 const groupedProjectActionKeys = new Set(projectActionGroups.flat())
@@ -81,6 +82,7 @@ const ManageProjectPage = () => {
   const [selectedCloseType, setSelectedCloseType] = useState(PROJECT_CLOSE_TYPES.COMPLETED)
   const [modals, setModals] = useState({
     close: false,
+    reactivate: false,
   })
 
   const triggerProgressRefresh = useCallback(() => {
@@ -188,6 +190,7 @@ const ManageProjectPage = () => {
         openActionModal('close', { closeType: PROJECT_CLOSE_TYPES.COMPLETED }),
       onTerminateProject: () =>
         openActionModal('close', { closeType: PROJECT_CLOSE_TYPES.TERMINATED }),
+      onReactivateProject: () => openActionModal('reactivate'),
       onDeleteProject: handleDelete,
     })
   }, [deletingProjectId, handleDelete, openActionModal, openCommercialCreatePage, project])
@@ -405,6 +408,22 @@ const ManageProjectPage = () => {
             )
             refreshProject().catch((err) => {
               console.error('Failed to refresh project after close:', err)
+            })
+          }}
+        />
+      )}
+
+      {modals.reactivate && project && (
+        <ReactivateProjectModal
+          visible
+          project={project}
+          onClose={() => closeActionModal('reactivate')}
+          onConfirm={() => {
+            closeActionModal('reactivate')
+            setProject((current) => (current ? { ...current, status: 'Active' } : current))
+            triggerProgressRefresh()
+            refreshProject().catch((err) => {
+              console.error('Failed to refresh project after reactivation:', err)
             })
           }}
         />

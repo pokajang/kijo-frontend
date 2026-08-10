@@ -23,6 +23,7 @@ vi.mock('./ProjectTable', () => ({
     onPeriodRangeChange,
     onManage,
     onClose,
+    onReactivate,
     onGenerateInvoice,
     onGenerateDO,
     onGenerateJD14,
@@ -68,6 +69,19 @@ vi.mock('./ProjectTable', () => ({
         }
       >
         Complete Project
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onReactivate({
+            id: 12,
+            project_name: 'Project Alpha',
+            project_type: 'Equipment Supply',
+            status: 'Completed',
+          })
+        }
+      >
+        Reactivate Project
       </button>
       <button
         type="button"
@@ -167,6 +181,14 @@ vi.mock('./CloseProjectModal', () => ({
   default: ({ onConfirm }) => (
     <button type="button" onClick={onConfirm}>
       Confirm Close
+    </button>
+  ),
+}))
+
+vi.mock('./ReactivateProjectModal', () => ({
+  default: ({ onConfirm }) => (
+    <button type="button" onClick={onConfirm}>
+      Confirm Reactivate
     </button>
   ),
 }))
@@ -496,6 +518,17 @@ describe('ManageProject close flow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^complete project$/i }))
     fireEvent.click(screen.getByRole('button', { name: /^confirm close$/i }))
+
+    await waitFor(() => expect(fetchProjects).toHaveBeenCalledTimes(2))
+  })
+
+  it('refreshes project list after reactivation confirmation', async () => {
+    renderManageProject()
+
+    await waitFor(() => expect(fetchProjects).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /^reactivate project$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^confirm reactivate$/i }))
 
     await waitFor(() => expect(fetchProjects).toHaveBeenCalledTimes(2))
   })

@@ -226,6 +226,12 @@ export const closeProject = (projectId, payload) =>
     body: payload,
   })
 
+export const reactivateProject = (projectId, payload) =>
+  requestJson(`projects/${enc(projectId)}/reactivate`, {
+    method: 'POST',
+    body: payload,
+  })
+
 export const getProjectLoaUrl = (projectId, assignment = {}) => {
   const params = new URLSearchParams({
     project_id: String(projectId),

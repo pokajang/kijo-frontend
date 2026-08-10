@@ -255,6 +255,7 @@ export default function ProjectTable({
   onPeriodRangeChange,
   onManage,
   onClose,
+  onReactivate,
   onGenerateJD14,
   onGenerateInvoice,
   onGenerateDO,
@@ -449,6 +450,7 @@ export default function ProjectTable({
         onClose(selectedProject, PROJECT_CLOSE_TYPES.COMPLETED),
       onTerminateProject: (selectedProject) =>
         onClose(selectedProject, PROJECT_CLOSE_TYPES.TERMINATED),
+      onReactivateProject: onReactivate,
       onDeleteProject: onDelete,
     })
   }

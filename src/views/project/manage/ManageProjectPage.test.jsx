@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import ManageProjectPage from './ManageProjectPage'
@@ -32,7 +32,12 @@ vi.mock('../../../components/datatable', () => ({
       data-action-keys={actions.map((action) => action.key).join(',')}
     >
       {actions.map((action) => (
-        <button key={action.key || action.label} type="button">
+        <button
+          key={action.key || action.label}
+          type="button"
+          disabled={action.disabled}
+          onClick={action.onClick}
+        >
           {action.buttonLabel || action.label}
         </button>
       ))}
@@ -56,6 +61,14 @@ vi.mock('./projectApi', () => ({
 
 vi.mock('./CloseProjectModal', () => ({
   default: () => null,
+}))
+
+vi.mock('./ReactivateProjectModal', () => ({
+  default: ({ onConfirm }) => (
+    <button type="button" onClick={onConfirm}>
+      Confirm Reactivate
+    </button>
+  ),
 }))
 
 vi.mock('./ManageProjectModal/ClientDetailsCard', () => ({
@@ -116,6 +129,11 @@ const staleProject = {
   project_name: 'Old Name',
   project_type: 'Old Type',
   status: 'Active',
+}
+
+const completedProject = {
+  ...currentProject,
+  status: 'Completed',
 }
 
 describe('ManageProjectPage canonical routes', () => {
@@ -212,5 +230,25 @@ describe('ManageProjectPage canonical routes', () => {
     })
 
     await waitFor(() => expect(childProps.vendor.refreshKey).toBe(1))
+  })
+
+  it('shows and wires reactivation for a completed project', async () => {
+    routeState.location = { state: { project: completedProject } }
+    routeState.params = { id: '12', type: 'equipment-supply', name: 'project-alpha' }
+    getProjectDetails.mockResolvedValueOnce(completedProject).mockResolvedValueOnce(currentProject)
+
+    render(<ManageProjectPage />)
+
+    const reactivateButton = await screen.findByRole('button', { name: /^reactivate project$/i })
+    expect(screen.queryByRole('button', { name: /^complete project$/i })).not.toBeInTheDocument()
+
+    fireEvent.click(reactivateButton)
+    fireEvent.click(screen.getByRole('button', { name: /^confirm reactivate$/i }))
+
+    await waitFor(() => expect(getProjectDetails).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^complete project$/i })).toBeInTheDocument(),
+    )
+    expect(screen.queryByRole('button', { name: /^reactivate project$/i })).not.toBeInTheDocument()
   })
 })

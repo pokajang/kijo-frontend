@@ -22,6 +22,7 @@ export const buildProjectActions = ({
   onGenerateCommercialDocument,
   onCompleteProject,
   onTerminateProject,
+  onReactivateProject,
   onDeleteProject,
 } = {}) => {
   if (!project) return []
@@ -66,21 +67,29 @@ export const buildProjectActions = ({
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.SUPPLIER_PO, project),
     },
-    {
-      key: 'complete',
-      label: 'Complete Project',
-      disabled: closedProject,
-      tooltip: closedProject ? closedProjectTooltip : undefined,
-      onClick: () => onCompleteProject?.(project),
-    },
-    {
-      key: 'terminate',
-      label: 'Terminate Project',
-      disabled: closedProject,
-      tooltip: closedProject ? closedProjectTooltip : undefined,
-      danger: true,
-      onClick: () => onTerminateProject?.(project),
-    },
+    closedProject
+      ? {
+          key: 'reactivate',
+          label: 'Reactivate Project',
+          onClick: () => onReactivateProject?.(project),
+        }
+      : {
+          key: 'complete',
+          label: 'Complete Project',
+          disabled: false,
+          tooltip: undefined,
+          onClick: () => onCompleteProject?.(project),
+        },
+    closedProject
+      ? null
+      : {
+          key: 'terminate',
+          label: 'Terminate Project',
+          disabled: false,
+          tooltip: undefined,
+          danger: true,
+          onClick: () => onTerminateProject?.(project),
+        },
     {
       key: 'delete',
       label: 'Delete Project',

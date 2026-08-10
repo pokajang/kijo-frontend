@@ -68,7 +68,7 @@ describe('projectActions', () => {
   })
 
   it.each(['Completed', 'Terminated', 'Closed'])(
-    'disables close and commercial document actions for %s projects',
+    'swaps closing actions for reactivation and disables commercial actions for %s projects',
     (status) => {
       const actions = buildProjectActions({
         project: { ...activeSupplyProject, status },
@@ -83,18 +83,13 @@ describe('projectActions', () => {
           }),
         )
       })
-      expect(getAction(actions, 'complete')).toEqual(
+      expect(getAction(actions, 'reactivate')).toEqual(
         expect.objectContaining({
-          disabled: true,
-          tooltip: 'Project is already closed.',
+          label: 'Reactivate Project',
         }),
       )
-      expect(getAction(actions, 'terminate')).toEqual(
-        expect.objectContaining({
-          disabled: true,
-          tooltip: 'Project is already closed.',
-        }),
-      )
+      expect(getAction(actions, 'complete')).toBeUndefined()
+      expect(getAction(actions, 'terminate')).toBeUndefined()
     },
   )
 
@@ -135,6 +130,7 @@ describe('projectActions', () => {
     const onGenerateCommercialDocument = vi.fn()
     const onCompleteProject = vi.fn()
     const onTerminateProject = vi.fn()
+    const onReactivateProject = vi.fn()
     const onDeleteProject = vi.fn()
 
     const actions = buildProjectActions({
@@ -142,6 +138,7 @@ describe('projectActions', () => {
       onGenerateCommercialDocument,
       onCompleteProject,
       onTerminateProject,
+      onReactivateProject,
       onDeleteProject,
     })
 
@@ -179,4 +176,17 @@ describe('projectActions', () => {
     expect(onTerminateProject).toHaveBeenCalledWith(activeTrainingProject)
     expect(onDeleteProject).toHaveBeenCalledWith(activeTrainingProject)
   })
+
+  it.each(['Completed', 'Terminated', 'Closed'])(
+    'calls the reactivation callback for a %s project',
+    (status) => {
+      const project = { ...activeSupplyProject, status }
+      const onReactivateProject = vi.fn()
+      const actions = buildProjectActions({ project, onReactivateProject })
+
+      getAction(actions, 'reactivate').onClick()
+
+      expect(onReactivateProject).toHaveBeenCalledWith(project)
+    },
+  )
 })

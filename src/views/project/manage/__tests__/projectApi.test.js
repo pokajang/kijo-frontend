@@ -9,6 +9,7 @@ import {
   listActiveProjectOptions,
   normalizeStaffList,
   closeProject,
+  reactivateProject,
   deleteCommercialDeliveryOrder,
   deleteCommercialInvoice,
   deleteCommercialJd14,
@@ -218,6 +219,25 @@ describe('projectApi normalizers', () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('projects/158/close'),
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      }),
+    )
+  })
+
+  it('reactivates projects through the dedicated route', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success' }),
+    })
+
+    const payload = { reason: 'Client resumed the project.' }
+    await reactivateProject(158, payload)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('projects/158/reactivate'),
       expect.objectContaining({
         method: 'POST',
         credentials: 'include',
