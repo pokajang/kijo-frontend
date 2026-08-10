@@ -28,6 +28,7 @@ import { useRecordsFetch } from './useRecordsFetch'
 import { useRecordsModalWorkflow } from './useRecordsModalWorkflow'
 import { useRecordsTabRouting } from './useRecordsTabRouting'
 import { quoteApiUrl } from '../../quotes/quoteApi'
+import { fetchQuoteApprovals } from '../services/quoteApprovalService'
 import { dispatchAppNotificationsChanged } from '../../../../notifications/appNotificationEvents'
 import {
   buildRecordMovedToastMessage,
@@ -91,6 +92,7 @@ export const useRecordsController = () => {
   })
   const [isNegotiationSubmitting, setIsNegotiationSubmitting] = useState(false)
   const [approvalItems, setApprovalItems] = useState([])
+  const [approvalStatusUnavailable, setApprovalStatusUnavailable] = useState(true)
   const [approvalRecord, setApprovalRecord] = useState(null)
   const [approvalDecisionNotice, setApprovalDecisionNotice] = useState(null)
   const [approvalRemarks, setApprovalRemarks] = useState('')
@@ -101,13 +103,10 @@ export const useRecordsController = () => {
     [activeTab, fetchQuotes],
   )
   const refreshApprovals = useCallback(async () => {
+    setApprovalStatusUnavailable(true)
     try {
-      const response = await fetch(quoteApiUrl('quote-approvals'), { credentials: 'include' })
-      const result = await response.json()
-      if (!response.ok || !isSuccess(result)) {
-        throw new Error(getMessage(result, 'Failed to load quotation approvals.'))
-      }
-      setApprovalItems(Array.isArray(result.data) ? result.data : [])
+      setApprovalItems(await fetchQuoteApprovals())
+      setApprovalStatusUnavailable(false)
     } catch (error) {
       console.error('Failed to load quotation approvals:', error)
     }
@@ -124,7 +123,11 @@ export const useRecordsController = () => {
     const enriched = quotes.map((quote) => {
       const serviceTab = quote?.serviceTab || (!isAggregateTab ? activeTab : '')
       const service = getQuoteServiceFromRecordTab(serviceTab)
-      return { ...quote, approval: approvalByQuote.get(`${service}:${quote.id}`) || null }
+      return {
+        ...quote,
+        approval: approvalByQuote.get(`${service}:${quote.id}`) || null,
+        approvalStatusUnavailable,
+      }
     })
     const owned =
       activeTab === 'my-tab'
@@ -134,7 +137,15 @@ export const useRecordsController = () => {
     return approvalScope === 'mine'
       ? owned.filter((quote) => quote.approval?.status === 'pending' && quote.approval?.can_decide)
       : owned
-  }, [activeTab, approvalItems, isAggregateTab, location.search, quotes, user])
+  }, [
+    activeTab,
+    approvalItems,
+    approvalStatusUnavailable,
+    isAggregateTab,
+    location.search,
+    quotes,
+    user,
+  ])
 
   const pendingApprovals = useMemo(
     () => approvalItems.filter((item) => item.status === 'pending' && item.can_decide),

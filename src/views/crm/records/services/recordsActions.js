@@ -228,10 +228,39 @@ export const createHandlers = ({
     pdfWindow.opener = null
 
     try {
-      pdfWindow.location.replace(urls.generate(record.id))
+      const response = await fetch(urls.generate(record.id), {
+        credentials: 'include',
+        headers: { Accept: 'application/pdf' },
+      })
+      const contentType = response.headers.get('content-type') || ''
+
+      if (!response.ok) {
+        let payload = null
+        try {
+          payload = await response.json()
+        } catch {
+          // The fallback below covers non-JSON server errors.
+        }
+        throw new Error(
+          getMessage(payload, `The quotation PDF could not be opened (HTTP ${response.status}).`),
+        )
+      }
+
+      if (!contentType.toLowerCase().includes('application/pdf')) {
+        throw new Error('The quotation PDF response was invalid.')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const filenameMatch = disposition.match(/filename="?([^";]+)"?/i)
+      const filename = filenameMatch?.[1] || `quotation-${record.id}.pdf`
+      const pdfFile =
+        typeof File === 'function' ? new File([blob], filename, { type: 'application/pdf' }) : blob
+      const objectUrl = URL.createObjectURL(pdfFile)
+      pdfWindow.location.replace(objectUrl)
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
     } catch (error) {
       pdfWindow.close()
-      console.error('PDF window navigation failed:', error)
       await dialog.alert(
         `${error?.message || 'The quotation PDF could not be opened.'}\n\nThe quotation itself remains saved and unchanged.`,
       )

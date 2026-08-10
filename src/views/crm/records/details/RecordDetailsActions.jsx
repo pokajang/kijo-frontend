@@ -1,6 +1,7 @@
 import React from 'react'
-import { CButton, CCardBody, CCardHeader, CTooltip } from '@coreui/react'
+import { CAlert, CButton, CCardBody, CCardHeader, CTooltip } from '@coreui/react'
 import { useAuth } from '../../../../auth/AuthProvider'
+import { getQuoteIssuanceState } from '../utils/recordApproval'
 import { getQuoteDeleteRestriction } from '../utils/recordOwnership'
 
 const RecordDetailsActions = ({
@@ -20,6 +21,11 @@ const RecordDetailsActions = ({
 }) => {
   const { user } = useAuth()
   const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
+  const issuanceState = getQuoteIssuanceState(record)
+  const issuanceNoticeId = `quotation-issuance-status-${record?.id || 'unknown'}`
+  const issuanceProps = issuanceState.blocked
+    ? { disabled: true, 'aria-describedby': issuanceNoticeId }
+    : {}
   const deleteButton = (
     <CButton
       size="sm"
@@ -38,16 +44,33 @@ const RecordDetailsActions = ({
         <h2 className="h6 mb-0">Actions</h2>
       </CCardHeader>
       <CCardBody>
+        {issuanceState.blocked ? (
+          <CAlert color="warning" className="py-2 mb-3" id={issuanceNoticeId}>
+            <strong>Quote issuance unavailable.</strong> {issuanceState.message}
+          </CAlert>
+        ) : null}
         <div className="d-flex flex-wrap gap-2">
           <CButton size="sm" color="secondary" variant="outline" onClick={onFollowUp}>
             Follow Up
           </CButton>
           {record?.clientDetails?.email ? (
-            <CButton size="sm" color="secondary" variant="outline" onClick={onEmail}>
+            <CButton
+              size="sm"
+              color="secondary"
+              variant="outline"
+              onClick={onEmail}
+              {...issuanceProps}
+            >
               Email
             </CButton>
           ) : null}
-          <CButton size="sm" color="secondary" variant="outline" onClick={onSharePdf}>
+          <CButton
+            size="sm"
+            color="secondary"
+            variant="outline"
+            onClick={onSharePdf}
+            {...issuanceProps}
+          >
             Share PDF
           </CButton>
           <CButton
@@ -55,6 +78,7 @@ const RecordDetailsActions = ({
             color="secondary"
             variant="outline"
             onClick={() => handlers?.handleGeneratePdf?.(record)}
+            {...issuanceProps}
           >
             Generate Quote
           </CButton>
@@ -80,12 +104,24 @@ const RecordDetailsActions = ({
               <CButton size="sm" color="success" variant="outline" onClick={onUnAward}>
                 Un-Award
               </CButton>
-              <CButton size="sm" color="success" variant="outline" onClick={onReAward}>
+              <CButton
+                size="sm"
+                color="success"
+                variant="outline"
+                onClick={onReAward}
+                {...issuanceProps}
+              >
                 Re-Award
               </CButton>
             </>
           ) : (
-            <CButton size="sm" color="success" variant="outline" onClick={onChangeToSuccess}>
+            <CButton
+              size="sm"
+              color="success"
+              variant="outline"
+              onClick={onChangeToSuccess}
+              {...issuanceProps}
+            >
               Awarded
             </CButton>
           )}

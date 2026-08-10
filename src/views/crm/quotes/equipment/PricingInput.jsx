@@ -48,6 +48,9 @@ export default function PricingInput({
         {selectedItems.map(({ value: item }) => {
           const description = compactCatalogDescription(item.description)
           const itemName = item.item_name || item.itemName || 'Selected item'
+          const quantityId = `equipmentQuantity-${item.id}`
+          const markedUpPriceId = `equipmentMarkedUpPrice-${item.id}`
+          const lineTotalId = `equipmentLineTotal-${item.id}`
 
           return (
             <CRow key={item.id || item.item_id || itemName} className="align-items-center g-3 mb-3">
@@ -83,8 +86,9 @@ export default function PricingInput({
               </CCol>
 
               <CCol md={2}>
-                <CFormLabel>Quantity</CFormLabel>
+                <CFormLabel htmlFor={quantityId}>Quantity</CFormLabel>
                 <CFormInput
+                  id={quantityId}
                   type="number"
                   min="0"
                   value={quantities[item.id] || 0}
@@ -93,8 +97,9 @@ export default function PricingInput({
               </CCol>
 
               <CCol md={2}>
-                <CFormLabel>Marked Up Price (RM)</CFormLabel>
+                <CFormLabel htmlFor={markedUpPriceId}>Marked Up Price (RM)</CFormLabel>
                 <CFormInput
+                  id={markedUpPriceId}
                   type="number"
                   step="0.01"
                   min="0"
@@ -108,8 +113,9 @@ export default function PricingInput({
               </CCol>
 
               <CCol md={2}>
-                <CFormLabel>Line Total (RM)</CFormLabel>
+                <CFormLabel htmlFor={lineTotalId}>Line Total (RM)</CFormLabel>
                 <CFormInput
+                  id={lineTotalId}
                   type="number"
                   readOnly
                   value={(
@@ -127,13 +133,14 @@ export default function PricingInput({
         {/* Summary Charges */}
         <CRow className="align-items-end g-3 mt-4">
           <CCol md={2}>
-            <CFormLabel>Items Total (RM)</CFormLabel>
-            <CFormInput readOnly value={itemsTotal.toFixed(2)} />
+            <CFormLabel htmlFor="equipmentItemsTotal">Items Total (RM)</CFormLabel>
+            <CFormInput id="equipmentItemsTotal" readOnly value={itemsTotal.toFixed(2)} />
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>Delivery Charge (RM)</CFormLabel>
+            <CFormLabel htmlFor="equipmentDeliveryCharge">Delivery Charge (RM)</CFormLabel>
             <CFormInput
+              id="equipmentDeliveryCharge"
               type="number"
               step="0.01"
               min="0"
@@ -143,8 +150,9 @@ export default function PricingInput({
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>Miscellaneous Charge (RM)</CFormLabel>
+            <CFormLabel htmlFor="equipmentMiscCharge">Miscellaneous Charge (RM)</CFormLabel>
             <CFormInput
+              id="equipmentMiscCharge"
               type="number"
               step="0.01"
               min="0"
@@ -154,8 +162,9 @@ export default function PricingInput({
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>Discount (RM)</CFormLabel>
+            <CFormLabel htmlFor="equipmentDiscount">Discount (RM)</CFormLabel>
             <CFormInput
+              id="equipmentDiscount"
               type="number"
               step="0.01"
               min="0"
@@ -165,8 +174,9 @@ export default function PricingInput({
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>SST (%)</CFormLabel>
+            <CFormLabel htmlFor="equipmentSstPercent">SST (%)</CFormLabel>
             <CFormInput
+              id="equipmentSstPercent"
               type="number"
               step="0.01"
               min="0"
@@ -176,18 +186,18 @@ export default function PricingInput({
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>SST Amount (RM)</CFormLabel>
-            <CFormInput readOnly value={sstAmount.toFixed(2)} />
+            <CFormLabel htmlFor="equipmentSstAmount">SST Amount (RM)</CFormLabel>
+            <CFormInput id="equipmentSstAmount" readOnly value={sstAmount.toFixed(2)} />
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>Subtotal (RM)</CFormLabel>
-            <CFormInput readOnly value={subtotal.toFixed(2)} />
+            <CFormLabel htmlFor="equipmentSubtotal">Subtotal (RM)</CFormLabel>
+            <CFormInput id="equipmentSubtotal" readOnly value={subtotal.toFixed(2)} />
           </CCol>
 
           <CCol md={2}>
-            <CFormLabel>Grand Total (RM)</CFormLabel>
-            <CFormInput readOnly value={grandTotal.toFixed(2)} />
+            <CFormLabel htmlFor="equipmentGrandTotal">Grand Total (RM)</CFormLabel>
+            <CFormInput id="equipmentGrandTotal" readOnly value={grandTotal.toFixed(2)} />
           </CCol>
         </CRow>
       </CCardBody>

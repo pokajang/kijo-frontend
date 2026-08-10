@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchJsonCompat } from './compatApi'
 import { createHandlers } from './recordsActions'
@@ -65,6 +65,19 @@ beforeEach(() => {
   vi.clearAllMocks()
   dialog.confirm.mockResolvedValue(true)
   fetchJsonCompat.mockResolvedValue({ success: true })
+  vi.stubGlobal('fetch', vi.fn())
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    value: vi.fn(() => 'blob:quotation-pdf'),
+  })
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    value: vi.fn(),
+  })
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('recordsActions delete refresh behavior', () => {
@@ -102,26 +115,60 @@ describe('recordsActions PDF opening', () => {
     ['equipment-tab', 'equipment'],
     ['manpower-tab', 'manpower'],
     ['special-tab', 'special'],
-  ])(
-    'opens the %s endpoint directly so the response filename is preserved',
-    async (serviceKey, serviceRoute) => {
-      const popup = {
-        close: vi.fn(),
-        location: { replace: vi.fn() },
-      }
-      vi.spyOn(window, 'open').mockReturnValue(popup)
+  ])('loads the %s PDF before navigating the popup', async (serviceKey, serviceRoute) => {
+    const popup = {
+      close: vi.fn(),
+      location: { replace: vi.fn() },
+    }
+    vi.spyOn(window, 'open').mockReturnValue(popup)
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {
+        get: vi.fn((name) =>
+          name === 'content-type' ? 'application/pdf' : 'inline; filename="quotation-test.pdf"',
+        ),
+      },
+      blob: vi.fn(async () => new Blob(['pdf'], { type: 'application/pdf' })),
+    })
 
-      const { handlers } = createDeleteHarness({ serviceKey })
-      await handlers.handleGeneratePdf({ id: 68 })
+    const { handlers } = createDeleteHarness({ serviceKey })
+    await handlers.handleGeneratePdf({ id: 68 })
 
-      expect(window.open).toHaveBeenCalledWith('about:blank', '_blank')
-      expect(popup.opener).toBeNull()
-      expect(popup.close).not.toHaveBeenCalled()
-      expect(popup.location.replace).toHaveBeenCalledWith(
-        expect.stringContaining(`quote-records/${serviceRoute}/68/pdf`),
-      )
-    },
-  )
+    expect(window.open).toHaveBeenCalledWith('about:blank', '_blank')
+    expect(popup.opener).toBeNull()
+    expect(popup.close).not.toHaveBeenCalled()
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`quote-records/${serviceRoute}/68/pdf`),
+      expect.objectContaining({ credentials: 'include' }),
+    )
+    expect(popup.location.replace).toHaveBeenCalledWith('blob:quotation-pdf')
+  })
+
+  it('closes the popup and explains an approval-blocked PDF response', async () => {
+    const popup = {
+      close: vi.fn(),
+      location: { replace: vi.fn() },
+    }
+    vi.spyOn(window, 'open').mockReturnValue(popup)
+    fetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      headers: { get: vi.fn(() => 'application/json') },
+      json: vi.fn(async () => ({
+        message: 'This quotation requires BD approval before it can be issued or awarded.',
+      })),
+    })
+
+    const { handlers } = createDeleteHarness({ serviceKey: 'equipment-tab' })
+    await handlers.handleGeneratePdf({ id: 68 })
+
+    expect(popup.close).toHaveBeenCalledTimes(1)
+    expect(popup.location.replace).not.toHaveBeenCalled()
+    expect(dialog.alert).toHaveBeenCalledWith(
+      expect.stringContaining('requires BD approval before it can be issued'),
+    )
+  })
 
   it('explains how to continue when the PDF popup is blocked', async () => {
     vi.spyOn(window, 'open').mockReturnValue(null)

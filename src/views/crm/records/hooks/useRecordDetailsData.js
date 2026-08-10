@@ -7,7 +7,12 @@ import {
   fetchSpecialQuotes,
   fetchTrainingQuotes,
 } from '../services/quoteService'
-import { getRecordListPath, normalizeRecordTab } from '../config/recordTabs'
+import {
+  getQuoteServiceFromRecordTab,
+  getRecordListPath,
+  normalizeRecordTab,
+} from '../config/recordTabs'
+import { fetchQuoteApprovals, findQuoteApproval } from '../services/quoteApprovalService'
 import { getQuotationAgeDays } from '../utils/recordFilters'
 import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 
@@ -85,9 +90,7 @@ export const useRecordDetailsData = () => {
           if (isMountedRef.current && loadSeq === loadSeqRef.current) {
             setError('')
             setRecord(stateRecord)
-            if (withSpinner) setLoading(false)
           }
-          return
         }
       }
 
@@ -96,14 +99,31 @@ export const useRecordDetailsData = () => {
         setError('')
       }
       try {
-        const rows = await serviceConfig.fetcher()
+        const [rows, approvalResult] = await Promise.all([
+          serviceConfig.fetcher(),
+          fetchQuoteApprovals()
+            .then((approvals) => ({ approvals, error: null }))
+            .catch((approvalError) => ({ approvals: [], error: approvalError })),
+        ])
         if (!isMountedRef.current || loadSeq !== loadSeqRef.current) return
 
         const found = rows.find((row) => Number(row?.id) === parsedId) || null
         if (!found) {
           setError('Record not found.')
         }
-        setRecord(found)
+        if (approvalResult.error) {
+          console.error('Failed loading quotation approval status:', approvalResult.error)
+        }
+        const service = getQuoteServiceFromRecordTab(serviceTab)
+        setRecord(
+          found
+            ? {
+                ...found,
+                approval: findQuoteApproval(approvalResult.approvals, service, parsedId),
+                approvalStatusUnavailable: Boolean(approvalResult.error),
+              }
+            : null,
+        )
       } catch (err) {
         if (!isMountedRef.current || loadSeq !== loadSeqRef.current) return
         console.error('Failed loading record details:', err)

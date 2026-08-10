@@ -3,6 +3,7 @@ import { DataTableActionMenu } from '../../../../../components/datatable'
 import { useAuth } from '../../../../../auth/AuthProvider'
 import { getRecordEmailAddress } from '../../utils/recordEmail'
 import { getQuoteDeleteRestriction, isQuoteOwnedByUser } from '../../utils/recordOwnership'
+import { getQuoteIssuanceState } from '../../utils/recordApproval'
 import { canRecordTabRequestNegotiation } from '../../config/recordTabs'
 
 const canRequestNegotiation = (record, user) => {
@@ -47,12 +48,9 @@ const RecordActionMenu = ({
   const negotiationAllowed = canRequestNegotiation(record, user)
   const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
   const approval = record?.approval
-  const issuanceBlocked = Boolean(approval && !approval.can_issue)
-  const approvalMessage = issuanceBlocked
-    ? approval.status === 'rejected'
-      ? 'Revise this rejected quotation before issuing it.'
-      : `${String(approval.required_step || 'required').toUpperCase()} approval is pending.`
-    : undefined
+  const issuanceState = getQuoteIssuanceState(record)
+  const issuanceBlocked = issuanceState.blocked
+  const approvalMessage = issuanceState.message || undefined
 
   const actions = [
     { key: 'view', label: 'View', onClick: onView, hidden: !onView },

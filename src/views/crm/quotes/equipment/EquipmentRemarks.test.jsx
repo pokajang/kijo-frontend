@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -74,6 +74,9 @@ describe('equipment quotation remarks', () => {
 
     expect(onRemarksChange).toHaveBeenCalledWith(701, 'Colour: navy blue')
     expect(screen.getAllByDisplayValue('150.00')).toHaveLength(4)
+    expect(screen.getByLabelText('Quantity')).toHaveValue(1)
+    expect(screen.getByLabelText('Marked Up Price (RM)')).toHaveValue(150)
+    expect(screen.getByLabelText('Grand Total (RM)')).toHaveValue('150.00')
   })
 
   it('shows the complete catalogue description as compact muted quotation text', () => {
@@ -140,6 +143,9 @@ describe('equipment quotation remarks', () => {
 
     expect(screen.getByText('Deliver all equipment together.')).toBeInTheDocument()
     expect(screen.getByText(/Specifications: Colour: navy blue/)).toBeInTheDocument()
+    const mobileSummary = screen.getByLabelText('Equipment quotation summary')
+    expect(within(mobileSummary).getByText('Gas detector')).toBeInTheDocument()
+    expect(within(mobileSummary).getAllByText('RM 150.00')).toHaveLength(3)
   })
 
   it('carries item specifications separately from downstream invoice descriptions', () => {
