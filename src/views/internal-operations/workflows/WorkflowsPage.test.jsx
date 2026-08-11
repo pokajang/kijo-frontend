@@ -121,6 +121,28 @@ describe('WorkflowsPage', () => {
         })
       }
 
+      if (String(url).includes('workflows/templates/client-first-touch-conflict')) {
+        return Promise.resolve({
+          can_edit: true,
+          active_staff: [{ staff_id: 30, full_name: 'Manager Example', name_code: 'MGR' }],
+          template: {
+            key: 'client-first-touch-conflict',
+            label: 'First Touch Conflicts',
+            steps: [
+              {
+                id: 91,
+                stepKey: 'review',
+                levelNo: 1,
+                label: 'Conflict Reviewers',
+                fallbackLabel: 'Manager, System Admin',
+                recipients: [],
+                usingDefault: true,
+              },
+            ],
+          },
+        })
+      }
+
       if (String(url).includes('workflows/templates/salary-application')) {
         return Promise.resolve({
           can_edit: true,
@@ -214,5 +236,16 @@ describe('WorkflowsPage', () => {
         }),
       )
     })
+  })
+
+  it('renders First Touch as an independent conflict review workflow', async () => {
+    renderPage('/workflows/client-first-touch-conflict')
+
+    expect(await screen.findByText('First-Touch Conflict Review Setup')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Routine first-touch submissions do not require approval/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Conflict Reviewers')).toBeInTheDocument()
+    expect(screen.getByText('Fallback: Manager, System Admin')).toBeInTheDocument()
   })
 })

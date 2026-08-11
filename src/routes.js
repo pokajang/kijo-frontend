@@ -42,6 +42,12 @@ const ClientRoiPage = React.lazy(() => import('./views/client/manage/roi/ClientR
 const ClientRoiDetailPage = React.lazy(
   () => import('./views/client/manage/roi/ClientRoiDetailPage'),
 )
+const ClientFirstTouchPage = React.lazy(
+  () => import('./views/client/manage/first-touch/ClientFirstTouchPage'),
+)
+const ClientFirstTouchDetailPage = React.lazy(
+  () => import('./views/client/manage/first-touch/ClientFirstTouchDetailPage'),
+)
 const ClientVendorRegistrationPage = React.lazy(
   () => import('./views/client/manage/vendor-registration/ClientVendorRegistrationPage'),
 )
@@ -521,6 +527,12 @@ const routes = [
 
   // Client paths
   { path: '/client/create', name: 'Create Client', element: CreateClient },
+  {
+    path: '/client/first-touch/:companyId',
+    name: 'Client Origin and Contribution',
+    element: ClientFirstTouchDetailPage,
+  },
+  { path: '/client/first-touch', name: 'First Touch', element: ClientFirstTouchPage },
   {
     path: '/client/roi/:companyId',
     name: 'Client Commercial History',

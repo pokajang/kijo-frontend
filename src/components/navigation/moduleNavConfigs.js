@@ -16,6 +16,12 @@ export const pipelineCrmModuleTabs = [
 
 export const clientModuleTabs = [
   { key: 'records', label: 'Client Records', to: '/client/manage' },
+  {
+    key: 'first-touch',
+    label: 'First Touch',
+    to: '/client/first-touch',
+    notificationTabKey: 'client.first-touch',
+  },
   { key: 'roi', label: 'ROI per Client', to: '/client/roi' },
   {
     key: 'vendor-registration',
@@ -117,6 +123,11 @@ export const workflowModuleTabs = [
   { key: 'leave-application', label: 'Leave Application', to: '/workflows/leave-application' },
   { key: 'quote-price-exception', label: 'Negotiation', to: '/workflows/quote-price-exception' },
   { key: 'quote-approval', label: 'Quotation Approval', to: '/workflows/quote-approval' },
+  {
+    key: 'client-first-touch-conflict',
+    label: 'First Touch',
+    to: '/workflows/client-first-touch-conflict',
+  },
 ]
 
 export const financialModuleTabs = [

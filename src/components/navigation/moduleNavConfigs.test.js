@@ -6,6 +6,7 @@ import {
   supportModuleTabs,
   systemAdminModuleTabs,
   vendorModuleTabs,
+  workflowModuleTabs,
 } from './moduleNavConfigs'
 
 describe('supportModuleTabs', () => {
@@ -23,6 +24,19 @@ describe('supportModuleTabs', () => {
 })
 
 describe('clientModuleTabs', () => {
+  it('includes the First Touch tab', () => {
+    expect(clientModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'first-touch',
+          label: 'First Touch',
+          to: '/client/first-touch',
+          notificationTabKey: 'client.first-touch',
+        }),
+      ]),
+    )
+  })
+
   it('includes the ROI per Client tab', () => {
     expect(clientModuleTabs).toEqual(
       expect.arrayContaining([
@@ -42,6 +56,20 @@ describe('clientModuleTabs', () => {
           key: 'vendor-registration',
           label: 'Vendor Registration',
           to: '/client/vendor-registration',
+        }),
+      ]),
+    )
+  })
+})
+
+describe('workflowModuleTabs', () => {
+  it('includes First Touch conflict settings', () => {
+    expect(workflowModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'client-first-touch-conflict',
+          label: 'First Touch',
+          to: '/workflows/client-first-touch-conflict',
         }),
       ]),
     )

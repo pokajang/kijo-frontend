@@ -13,4 +13,9 @@ describe('payment queue notification registry', () => {
     expect(getRouteNotificationBadge('/support/feedback')?.title).toContain('Feedback')
     expect(getTabNotificationBadge('support.feedback')?.title).toContain('Feedback')
   })
+
+  it('maps first-touch actions to the Clients route and First Touch tab', () => {
+    expect(getRouteNotificationBadge('/client/first-touch')?.title).toContain('First-touch')
+    expect(getTabNotificationBadge('client.first-touch')?.title).toContain('First-touch')
+  })
 })

@@ -1,3 +1,5 @@
+import { inquirySourceValues } from '../../../features/client-origin/sourceCatalog'
+
 export const API_BASE = import.meta.env.VITE_API_BASE
 export const MAX_PROOF_IMAGE_BYTES = 500 * 1024
 
@@ -25,32 +27,7 @@ export const entryTypeValues = entryTypes.map((type) => type.value)
 export const entryTypeAllowsEstimatedRm = (entryType) => ['proposal', 'closed'].includes(entryType)
 export const legalComplianceAssessmentSource = 'Free Legal Compliance Assessment'
 
-export const entrySources = [
-  legalComplianceAssessmentSource,
-  'Management Provided',
-  'Online Pitching',
-  'Physical Meeting',
-  'Call Office',
-  'Call Personal',
-  'Email Info Admin',
-  'Email Personal',
-  'Email Marketing',
-  'WhatsApp Training',
-  'WhatsApp Health',
-  'WhatsApp Manpower',
-  'WhatsApp Personal',
-  'WhatsApp Group',
-  'Telegram Group',
-  'Telegram Personal',
-  'LinkedIn Chat',
-  'LinkedIn Post',
-  'Facebook Post',
-  'Facebook Chat',
-  'Instagram Post',
-  'Instagram Chat',
-  'Ex-Staff',
-  'OSH Practitioners Group',
-]
+export const entrySources = [legalComplianceAssessmentSource, ...inquirySourceValues]
 export const entrySourceOptions = entrySources.map((source) => ({
   label: source,
   value: source,

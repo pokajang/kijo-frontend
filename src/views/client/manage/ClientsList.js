@@ -191,6 +191,11 @@ const ClientsList = () => {
         filteredClients={filteredClients}
         loading={clientsLoading}
         onViewCompany={(client) => openCompanyRoute(client)}
+        onViewFirstTouch={(client) =>
+          navigate(`/client/first-touch/${client.company_id}`, {
+            state: { returnTo: getCurrentReturnTo(location) },
+          })
+        }
         onEditCompany={handleEditCompany}
         onDeleteCompany={handleDeleteCompany}
         onSeeBranches={(client) => openCompanyRoute(client, '#branches')}

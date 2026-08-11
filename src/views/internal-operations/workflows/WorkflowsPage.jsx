@@ -50,6 +50,12 @@ export const workflowTabs = [
     to: '/workflows/quote-approval',
     workflowSetupKey: 'quote-approval',
   },
+  {
+    key: 'client-first-touch-conflict',
+    label: 'First Touch',
+    to: '/workflows/client-first-touch-conflict',
+    workflowSetupKey: 'client-first-touch-conflict',
+  },
 ]
 
 const workflowHeaderText = {
@@ -68,6 +74,9 @@ const workflowHeaderText = {
   'quote-approval': {
     title: 'Quotation Traffic-Light Approval Setup',
   },
+  'client-first-touch-conflict': {
+    title: 'First-Touch Conflict Review Setup',
+  },
 }
 
 const workflowIntroText = {
@@ -81,6 +90,8 @@ const workflowIntroText = {
     'Choose who approves negotiation or price exception requests. The approver checks the requested discount or price change before it can be used in the quotation.',
   'quote-approval':
     'Choose who receives Yellow HOD reviews and Red BD final approvals. If a step has no assigned recipients, the configured default email for that step is used.',
+  'client-first-touch-conflict':
+    'Choose the managers or system administrators who independently review competing first-touch evidence. Routine first-touch submissions do not require approval.',
 }
 
 const staffLabel = (staff) =>

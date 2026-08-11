@@ -324,6 +324,15 @@ const itemEnhancements = {
       'company address',
     ],
   },
+  '/client/first-touch': {
+    aliases: ['first touch', 'client origin', 'acquisition evidence'],
+    intentPhrases: [
+      'how client found us',
+      'first encounter',
+      'source proof',
+      'client contribution by source',
+    ],
+  },
   '/client/roi': {
     aliases: ['roi', 'client roi', 'commercial history'],
     intentPhrases: ['return on investment', 'client sales history', 'customer commercial history'],
@@ -442,6 +451,10 @@ const itemEnhancements = {
   '/workflows/quote-price-exception': {
     aliases: ['negotiation workflow', 'quote price exception workflow'],
     intentPhrases: ['negotiation approval setup', 'quote approval workflow'],
+  },
+  '/workflows/client-first-touch-conflict': {
+    aliases: ['first touch workflow', 'client origin conflict reviewers'],
+    intentPhrases: ['configure first touch reviewers', 'first touch conflict workflow'],
   },
 }
 

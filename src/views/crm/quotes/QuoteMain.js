@@ -28,6 +28,7 @@ import {
   removeQuoteInquirySource,
   writeQuoteInquirySource,
 } from './quoteInquirySource'
+import { inquirySourceOptions } from '../../../features/client-origin/sourceCatalog'
 import {
   clearQuoteMainDraft,
   clearQuoteServiceDraft,
@@ -375,31 +376,7 @@ const QuoteMain = () => {
     writeQuoteInquirySource(inquiryPayload)
   }, [selectedClient, selectedService, inquiryData, isEditMode, isNegotiationApply])
 
-  const inquirySources = [
-    { label: 'Management Provided', value: 'Management Provided' },
-    { label: 'Online Pitching', value: 'Online Pitching' },
-    { label: 'Physical Meeting', value: 'Physical Meeting' },
-    { label: 'Call Office', value: 'Call Office' },
-    { label: 'Call Personal', value: 'Call Personal' },
-    { label: 'Email Info Admin', value: 'Email Info Admin' },
-    { label: 'Email Personal', value: 'Email Personal' },
-    { label: 'Email Marketing', value: 'Email Marketing' },
-    { label: 'WhatsApp Training', value: 'WhatsApp Training' },
-    { label: 'WhatsApp Health', value: 'WhatsApp Health' },
-    { label: 'WhatsApp Manpower', value: 'WhatsApp Manpower' },
-    { label: 'WhatsApp Personal', value: 'WhatsApp Personal' },
-    { label: 'WhatsApp Group', value: 'WhatsApp Group' },
-    { label: 'Telegram Group', value: 'Telegram Group' },
-    { label: 'Telegram Personal', value: 'Telegram Personal' },
-    { label: 'LinkedIn Chat', value: 'LinkedIn Chat' },
-    { label: 'LinkedIn Post', value: 'LinkedIn Post' },
-    { label: 'Facebook Post', value: 'Facebook Post' },
-    { label: 'Facebook Chat', value: 'Facebook Chat' },
-    { label: 'Instagram Post', value: 'Instagram Post' },
-    { label: 'Instagram Chat', value: 'Instagram Chat' },
-    { label: 'Ex-Staff', value: 'Ex-Staff' },
-    { label: 'OSH Practitioners Group', value: 'OSH Practitioners Group' },
-  ]
+  const inquirySources = inquirySourceOptions
 
   const routeError = hasInvalidServiceParam
     ? `Unsupported quote service "${serviceQueryParam}". Select a valid service to continue.`

@@ -8,7 +8,7 @@ import {
 } from '../../../components/datatable'
 import DeleteCompanyModal from './components/DeleteCompanyModal'
 import { getClientPaymentTermsMeta } from '../../../shared/paymentTerms'
-import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { getCurrentReturnTo, getDetailReturnTo } from '../../../utils/navigation/returnTo'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const emptyValue = '-'
@@ -211,6 +211,14 @@ const ClientCompanyDetailPage = () => {
           key: 'edit',
           label: 'Edit',
           onClick: openEditPage,
+        },
+        {
+          key: 'first-touch',
+          label: 'View First Touch',
+          onClick: () =>
+            navigate(`/client/first-touch/${company.company_id}`, {
+              state: { returnTo: getCurrentReturnTo(location) },
+            }),
         },
         {
           key: 'delete',

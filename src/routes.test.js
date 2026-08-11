@@ -23,6 +23,17 @@ describe('client ROI routes', () => {
   })
 })
 
+describe('client first-touch routes', () => {
+  it('includes the detail route before the list route', () => {
+    const detailIndex = routes.findIndex((route) => route.path === '/client/first-touch/:companyId')
+    const listIndex = routes.findIndex((route) => route.path === '/client/first-touch')
+
+    expect(detailIndex).toBeGreaterThanOrEqual(0)
+    expect(listIndex).toBeGreaterThanOrEqual(0)
+    expect(detailIndex).toBeLessThan(listIndex)
+  })
+})
+
 describe('client vendor registration routes', () => {
   it('includes the vendor registration tab and form page routes', () => {
     expect(routes).toEqual(

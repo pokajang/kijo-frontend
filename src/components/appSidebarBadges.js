@@ -47,7 +47,9 @@ export const applySidebarBadges = (
       badge: {
         color: badgeConfig.color,
         text: String(count),
-        title: badgeConfig.title,
+        title: routeKeys.includes('/client/first-touch')
+          ? 'Client records need attention'
+          : badgeConfig.title,
       },
     }
   })

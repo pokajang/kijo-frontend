@@ -1,3 +1,5 @@
+import { inquirySourceValues } from '../../../features/client-origin/sourceCatalog'
+
 export const inquiryStorageKey = 'marketing.inquiries.records.v1'
 export const MAX_PROOF_IMAGE_BYTES = 500 * 1024
 export const API_BASE = import.meta.env.VITE_API_BASE
@@ -14,31 +16,7 @@ export const getInquiryProofUrl = (inquiryId, proof) => {
   )
 }
 
-export const inquirySources = [
-  'Management Provided',
-  'Online Pitching',
-  'Physical Meeting',
-  'Call Office',
-  'Call Personal',
-  'Email Info Admin',
-  'Email Personal',
-  'Email Marketing',
-  'WhatsApp Training',
-  'WhatsApp Health',
-  'WhatsApp Manpower',
-  'WhatsApp Personal',
-  'WhatsApp Group',
-  'Telegram Group',
-  'Telegram Personal',
-  'LinkedIn Chat',
-  'LinkedIn Post',
-  'Facebook Post',
-  'Facebook Chat',
-  'Instagram Post',
-  'Instagram Chat',
-  'Ex-Staff',
-  'OSH Practitioners Group',
-]
+export const inquirySources = inquirySourceValues
 
 export const serviceOptions = [
   { value: '', label: 'Not classified' },

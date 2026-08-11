@@ -48,10 +48,12 @@ const _nav = [
     activePaths: [
       '/client/manage',
       '/client/create',
+      '/client/first-touch',
       '/client/roi',
       '/client/vendor-registration',
       '/client/past-pics',
     ],
+    notificationRouteGroups: ['/client/first-touch'],
     icon: <CIcon icon={cilAddressBook} customClassName="nav-icon" />,
   },
   {

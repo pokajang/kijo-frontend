@@ -28,6 +28,28 @@ describe('applySidebarBadges', () => {
     expect(rows[0].badge).toBeUndefined()
   })
 
+  it('combines vendor-registration and first-touch attention under Clients', () => {
+    const rows = applySidebarBadges(
+      [
+        {
+          name: 'Clients',
+          to: '/client/manage',
+          notificationRouteGroups: ['/client/first-touch'],
+        },
+      ],
+      {
+        getRouteGroupCount: (route) =>
+          route === '/client/manage' ? 2 : route === '/client/first-touch' ? 1 : 0,
+      },
+    )
+
+    expect(rows[0].badge).toEqual({
+      color: 'warning',
+      text: '3',
+      title: 'Client records need attention',
+    })
+  })
+
   it('adds the workflow action badge to Staff Management', () => {
     const rows = applySidebarBadges([{ name: 'Staff Management', to: '/staff/leaves' }], {
       getRouteGroupCount: (route) => (route === '/staff/leaves' ? 1 : 0),

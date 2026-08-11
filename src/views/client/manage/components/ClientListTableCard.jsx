@@ -224,6 +224,7 @@ const ClientListTableCard = ({
   filteredClients = [],
   loading = false,
   onViewCompany,
+  onViewFirstTouch,
   onEditCompany,
   onDeleteCompany,
   onSeeBranches,
@@ -352,6 +353,11 @@ const ClientListTableCard = ({
       key: 'view',
       label: 'View',
       onClick: () => onViewCompany(client),
+    },
+    {
+      key: 'first-touch',
+      label: 'First Touch',
+      onClick: () => onViewFirstTouch(client),
     },
     {
       key: 'edit',

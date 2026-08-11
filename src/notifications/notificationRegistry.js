@@ -13,6 +13,10 @@ export const routeNotificationBadges = {
     color: notificationCountBadgeColor,
     title: 'Vendor registrations need attention',
   },
+  '/client/first-touch': {
+    color: notificationCountBadgeColor,
+    title: 'First-touch conflicts need attention',
+  },
   '/staff/leaves': {
     color: notificationCountBadgeColor,
     title: 'Leave requests need attention',
@@ -67,6 +71,10 @@ export const tabNotificationBadges = {
   'client.vendor-registration': {
     color: notificationCountBadgeColor,
     title: 'Vendor registrations need attention',
+  },
+  'client.first-touch': {
+    color: notificationCountBadgeColor,
+    title: 'First-touch conflicts need attention',
   },
   'staff.leaves': {
     color: notificationCountBadgeColor,
