@@ -112,10 +112,17 @@ const ClientOriginPanel = ({
                   <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                     <div>
                       <div>{workflow.label}.</div>
-                      {workflow.detail ? <div className="small text-muted">{workflow.detail}</div> : null}
+                      {workflow.detail ? (
+                        <div className="small text-muted">{workflow.detail}</div>
+                      ) : null}
                     </div>
                     {onReviewConflict ? (
-                      <CButton color="warning" variant="outline" size="sm" onClick={onReviewConflict}>
+                      <CButton
+                        color="warning"
+                        variant="outline"
+                        size="sm"
+                        onClick={onReviewConflict}
+                      >
                         Review conflict
                       </CButton>
                     ) : null}

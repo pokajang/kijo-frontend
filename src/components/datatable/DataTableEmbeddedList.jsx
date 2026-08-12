@@ -325,7 +325,9 @@ const DataTableEmbeddedList = ({
                 <div className="records-mobile-item-main">
                   {columns.map((column) => (
                     <div key={column.key} className="records-mobile-meta-row">
-                      <span className="records-mobile-meta-label">{column.label}</span>
+                      <span className="records-mobile-meta-label">
+                        {column.mobileLabel || column.label}
+                      </span>
                       <span className="records-mobile-meta-value">
                         {renderBodyCell(row, column, rowIndex)}
                       </span>

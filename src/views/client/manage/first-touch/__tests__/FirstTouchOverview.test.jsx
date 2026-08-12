@@ -37,11 +37,11 @@ describe('First Touch relationship timeline', () => {
     expect(screen.getAllByText('Sales owner: Daniel Lee')).not.toHaveLength(0)
   })
 
-  it('keeps long timelines compact until earlier events are requested', () => {
+  it('shows the newest timeline events first and keeps earlier events compact', () => {
     render(
       <FirstTouchTimeline
         entries={[
-          { id: 'first', date: '2021-01-01', title: 'First touch' },
+          { id: 'first', date: '2021-01-01', title: 'Oldest event' },
           { id: 'second', date: '2022-01-01', title: 'Second' },
           { id: 'third', date: '2023-01-01', title: 'Third' },
           { id: 'fourth', date: '2024-01-01', title: 'Fourth' },
@@ -50,9 +50,9 @@ describe('First Touch relationship timeline', () => {
       />,
     )
 
-    expect(screen.getAllByText('First touch')).not.toHaveLength(0)
-    expect(screen.queryByText('Second')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Show 1 earlier event' }))
-    expect(screen.getAllByText('Second')).not.toHaveLength(0)
+    expect(screen.getAllByText('Fifth')).not.toHaveLength(0)
+    expect(screen.queryAllByText('Oldest event')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 more event' }))
+    expect(screen.getAllByText('Oldest event')).not.toHaveLength(0)
   })
 })

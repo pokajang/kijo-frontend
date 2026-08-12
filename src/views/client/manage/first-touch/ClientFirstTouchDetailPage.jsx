@@ -341,12 +341,7 @@ const ClientFirstTouchDetailPage = () => {
         </CAlert>
       ) : null}
 
-      <CCard className="mb-3">
-        <DataTableCardHeader title="Relationship timeline" />
-        <CCardBody className="p-0">
-          <FirstTouchTimeline firstTouch={record.firstTouch} entries={record.timeline} />
-        </CCardBody>
-      </CCard>
+      <FirstTouchTimeline firstTouch={record.firstTouch} entries={record.timeline} />
 
       {hasEvidenceHistory ? (
         <CCard className="mb-4">
