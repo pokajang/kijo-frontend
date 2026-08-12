@@ -1,6 +1,10 @@
 import React, { useMemo } from 'react'
 import { CAlert } from '@coreui/react'
-import { formatFirstTouchDate } from '../clientFirstTouchUtils'
+import {
+  formatFirstTouchDate,
+  getFirstTouchClarificationStatusLabel,
+  getFirstTouchDisputeStatusLabel,
+} from '../clientFirstTouchUtils'
 import EvidenceCard from './FirstTouchEvidencePreview'
 
 const EvidenceGrid = ({ proofs = [] }) =>
@@ -47,6 +51,7 @@ const FirstTouchReviewSupplementalEvidence = ({ record }) => {
               <div className="d-flex justify-content-between gap-2 flex-wrap">
                 <strong>{item.reason || 'Dispute'}</strong>
                 <span className="small text-muted">
+                  {getFirstTouchDisputeStatusLabel(item.status)} ·{' '}
                   {formatFirstTouchDate(item.submittedAt)} · {item.submittedBy || 'Staff'}
                 </span>
               </div>
@@ -58,7 +63,8 @@ const FirstTouchReviewSupplementalEvidence = ({ record }) => {
               <div className="d-flex justify-content-between gap-2 flex-wrap">
                 <strong>Clarification requested from {item.requestedFrom}</strong>
                 <span className="small text-muted">
-                  {formatFirstTouchDate(item.createdAt)} · {item.status}
+                  {getFirstTouchClarificationStatusLabel(item)} ·{' '}
+                  {formatFirstTouchDate(item.createdAt)}
                 </span>
               </div>
               <div className="mt-2">{item.requestNote}</div>
@@ -70,7 +76,9 @@ const FirstTouchReviewSupplementalEvidence = ({ record }) => {
                   {item.response}
                 </CAlert>
               ) : (
-                <div className="small text-warning-emphasis mt-2">Response pending.</div>
+                <div className="small text-warning-emphasis mt-2">
+                  {getFirstTouchClarificationStatusLabel(item)}.
+                </div>
               )}
               <EvidenceGrid proofs={item.proofs} />
             </article>

@@ -4,6 +4,7 @@ import { getClientFirstTouchRowActions } from '../clientFirstTouchActionPolicy'
 const handlers = {
   onSubmit: vi.fn(),
   onDispute: vi.fn(),
+  onReviewConflict: vi.fn(),
 }
 
 const record = (hasFirstTouch = true) => ({
@@ -53,6 +54,21 @@ describe('clientFirstTouchActionPolicy', () => {
     expect(
       getClientFirstTouchRowActions(restrictedRecord, handlers).map((action) => action.label),
     ).toEqual(['Submit Evidence', 'Dispute Evidence'])
+  })
+
+  it('offers conflict review only to an authorized reviewer', () => {
+    const contestedRecord = {
+      ...record(true),
+      firstTouch: { ...record(true).firstTouch, status: 'contested' },
+      conflict: { id: 42, status: 'open' },
+      permissions: { canReviewConflict: true },
+    }
+
+    const actions = getClientFirstTouchRowActions(contestedRecord, handlers)
+
+    expect(actions.map((item) => item.label)).toEqual(['Review Conflict', 'Submit Evidence'])
+    actions.find((item) => item.key === 'review-conflict').onClick()
+    expect(handlers.onReviewConflict).toHaveBeenCalledWith(contestedRecord)
   })
 
   it('routes each action through its handler with the correct context', () => {

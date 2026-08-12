@@ -1,11 +1,23 @@
 const statusLabels = {
-  current: 'Current first touch',
-  contested: 'Current - contested',
-  competing: 'Competing claim',
-  unresolved: 'Unresolved',
-  rejected: 'Rejected',
-  superseded: 'Superseded',
-  missing: 'No evidence',
+  current: 'First touch recorded',
+  contested: 'Awaiting independent review',
+  competing: 'Awaiting independent review',
+  unresolved: 'No current first touch',
+  rejected: 'Not selected after review',
+  superseded: 'Replaced by accepted evidence',
+  missing: 'No first-touch evidence',
+}
+
+const disputeStatusLabels = {
+  open: 'Awaiting independent review',
+  dismissed: 'Closed — current claim upheld',
+  resolved: 'Closed — conflict resolved',
+}
+
+const clarificationStatusLabels = {
+  pending: 'Awaiting clarification',
+  responded: 'Clarification received',
+  resolved: 'Clarification reviewed',
 }
 
 export const getFirstTouchStatus = (record) => {
@@ -15,6 +27,65 @@ export const getFirstTouchStatus = (record) => {
 }
 
 export const getFirstTouchStatusLabel = (status) => statusLabels[status] || 'Not documented'
+
+export const getFirstTouchStatusNextStep = (status) => {
+  if (status === 'current') return 'No action required.'
+  if (status === 'contested' || status === 'competing') {
+    return 'Pending independent review.'
+  }
+  if (status === 'unresolved' || status === 'missing') return 'New evidence is required.'
+  return ''
+}
+
+export const getFirstTouchWorkflowSummary = (record, options = {}) => {
+  const conflict = record?.conflict
+
+  if (!record?.firstTouch) {
+    return {
+      label: 'No first-touch evidence recorded',
+      detail: 'Submit evidence to record the earliest known encounter.',
+    }
+  }
+
+  if (conflict?.status === 'clarification_requested') {
+    const recipient = conflict.clarificationRecipient || 'the requested submitter'
+    return {
+      label: options.isClarificationRecipient
+        ? 'Clarification needed from you'
+        : `Awaiting clarification from ${recipient}`,
+      detail: options.isClarificationRecipient
+        ? 'Provide the requested clarification to continue review.'
+        : 'Independent review continues after the clarification is received.',
+    }
+  }
+
+  if (conflict?.status === 'open' || record?.firstTouch?.status === 'contested') {
+    return {
+      label: 'Awaiting independent review',
+      detail: options.canReviewConflict
+        ? 'Review the competing evidence or dispute.'
+        : 'A manager or system administrator will review the evidence.',
+    }
+  }
+
+  return {
+    label: 'First touch recorded',
+    detail: '',
+  }
+}
+
+export const getFirstTouchDisputeStatusLabel = (status) =>
+  disputeStatusLabels[status] || 'Dispute status unavailable'
+
+export const getFirstTouchClarificationStatusLabel = (clarification) => {
+  const status = clarification?.status
+  const recipient = clarification?.requestedFrom || 'the requested submitter'
+  const respondent = clarification?.respondedBy || recipient
+
+  if (status === 'pending') return `Awaiting clarification from ${recipient}`
+  if (status === 'responded') return `Clarification received from ${respondent}`
+  return clarificationStatusLabels[status] || 'Clarification status unavailable'
+}
 
 export const getFirstTouchStatusTone = (status) => {
   if (status === 'current') return 'success'

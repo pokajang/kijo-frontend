@@ -13,8 +13,6 @@ import FirstTouchClaimsHistory from './components/FirstTouchClaimsHistory'
 import FirstTouchConflictResolutionModal from './components/FirstTouchConflictResolutionModal'
 import { FirstTouchEvidenceGalleryModal } from './components/FirstTouchEvidencePreview'
 import FirstTouchTimeline from './components/FirstTouchTimeline'
-import ProjectSalesCreditTable from './components/ProjectSalesCreditTable'
-import SalespersonContributionPanel from './components/SalespersonContributionPanel'
 import { getFirstTouchActionAvailability } from './clientFirstTouchActionPolicy'
 import {
   getClientFirstTouch,
@@ -29,7 +27,7 @@ import {
 import { useAppNotifications } from '../../../../notifications/AppNotificationProvider'
 import { hasOpenFirstTouchConflict } from './clientFirstTouchState'
 import { formatCompactContributionMoney, formatFirstTouchDate } from './clientFirstTouchUtils'
-import { hasFirstTouchEvidenceHistory } from './salespersonContribution'
+import { hasFirstTouchEvidenceHistory } from './firstTouchEvidenceHistory'
 
 const ClientFirstTouchDetailPage = () => {
   const { companyId } = useParams()
@@ -243,8 +241,6 @@ const ClientFirstTouchDetailPage = () => {
     setMessage('Clarification submitted. The independent reviewers have been notified.')
   }
 
-  const openCommercialHistory = () => navigate(`/client/roi/${record.companyId}?period=all`)
-
   if (loading || !record) {
     return (
       <>
@@ -294,14 +290,13 @@ const ClientFirstTouchDetailPage = () => {
                 >
                   View Client Details
                 </CButton>
-                {canReviewConflicts && hasOpenFirstTouchConflict(record) ? (
+                {firstTouchActions.canSubmit ? (
                   <CButton
                     size="sm"
-                    color="warning"
-                    variant="outline"
-                    onClick={() => setConflictReviewVisible(true)}
+                    color="primary"
+                    onClick={() => setClaimMode(record.firstTouch ? 'competing' : 'create')}
                   >
-                    Review Conflict
+                    + Submit Evidence
                   </CButton>
                 ) : null}
                 <CButton
@@ -314,12 +309,7 @@ const ClientFirstTouchDetailPage = () => {
                 </CButton>
               </div>
             </DataTableCardHeader>
-            <CCardBody>
-              {statsVisible ? <StatsStrip items={contributionStats} /> : null}
-              <CAlert color="info" className="mb-0">
-                Commercial context only. Sales credit is assigned per project or job.
-              </CAlert>
-            </CCardBody>
+            <CCardBody>{statsVisible ? <StatsStrip items={contributionStats} /> : null}</CCardBody>
           </CCard>
         </CCol>
       </CRow>
@@ -328,14 +318,16 @@ const ClientFirstTouchDetailPage = () => {
         <CCol xs={12}>
           <ClientOriginPanel
             firstTouch={record.firstTouch}
-            onSubmit={
-              firstTouchActions.canSubmit
-                ? () => setClaimMode(record.firstTouch ? 'competing' : 'create')
-                : undefined
-            }
+            record={record}
             onViewEvidence={() => setEvidenceVisible(true)}
             onEdit={firstTouchActions.canEdit ? () => setClaimMode('edit') : undefined}
             onDispute={firstTouchActions.canDispute ? () => setClaimMode('dispute') : undefined}
+            onReviewConflict={
+              canReviewConflicts && hasOpenFirstTouchConflict(record)
+                ? () => setConflictReviewVisible(true)
+                : undefined
+            }
+            isClarificationRecipient={Boolean(pendingClarification)}
           />
         </CCol>
       </CRow>
@@ -346,7 +338,7 @@ const ClientFirstTouchDetailPage = () => {
           className="d-flex align-items-center justify-content-between gap-3 flex-wrap"
         >
           <div>
-            <strong>Clarification requested.</strong> {pendingClarification.requestNote}
+            <strong>Clarification needed from you.</strong> {pendingClarification.requestNote}
           </div>
           <CButton color="warning" size="sm" onClick={() => setClarificationVisible(true)}>
             Provide Clarification
@@ -354,36 +346,15 @@ const ClientFirstTouchDetailPage = () => {
         </CAlert>
       ) : null}
 
-      <CRow className="g-3 mb-3">
-        <CCol xs={12}>
-          <SalespersonContributionPanel
-            projects={record.projects}
-            onOpenCommercialHistory={openCommercialHistory}
-          />
-        </CCol>
-      </CRow>
-
-      {record.projects?.length ? (
-        <CCard className="mb-3 first-touch-contribution-card">
-          <CCardBody>
-            <ProjectSalesCreditTable
-              projects={record.projects}
-              onOpenProject={(project) => navigate(`/project/manage/${project.id}`)}
-            />
-          </CCardBody>
-        </CCard>
-      ) : null}
-
-      {record.firstTouch || record.timeline?.length ? (
-        <CCard className="mb-3 first-touch-contribution-card">
-          <CCardBody>
-            <FirstTouchTimeline firstTouch={record.firstTouch} entries={record.timeline} />
-          </CCardBody>
-        </CCard>
-      ) : null}
+      <CCard className="mb-3">
+        <DataTableCardHeader title="Relationship timeline" />
+        <CCardBody className="p-0">
+          <FirstTouchTimeline firstTouch={record.firstTouch} entries={record.timeline} />
+        </CCardBody>
+      </CCard>
 
       {hasEvidenceHistory ? (
-        <CCard className="mb-4 first-touch-contribution-card">
+        <CCard className="mb-4">
           <CCardBody>
             <CButton
               color="secondary"
@@ -419,6 +390,14 @@ const ClientFirstTouchDetailPage = () => {
       <FirstTouchEvidenceGalleryModal
         visible={evidenceVisible}
         proofs={record.firstTouch?.proofs || []}
+        onEdit={
+          firstTouchActions.canEdit
+            ? () => {
+                setEvidenceVisible(false)
+                setClaimMode('edit')
+              }
+            : undefined
+        }
         onClose={() => setEvidenceVisible(false)}
       />
       <FirstTouchConflictResolutionModal

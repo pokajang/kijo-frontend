@@ -1,7 +1,7 @@
 import React from 'react'
 import { CButton, CCol, CModal, CModalBody, CModalHeader, CModalTitle, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilExternalLink, cilImage } from '@coreui/icons'
+import { cilExternalLink } from '@coreui/icons'
 
 const EvidenceCard = ({ proof, compact = false }) => (
   <article className={`first-touch-evidence ${compact ? 'first-touch-evidence--compact' : ''}`}>
@@ -30,7 +30,7 @@ const EvidenceCard = ({ proof, compact = false }) => (
   </article>
 )
 
-export const FirstTouchEvidenceGalleryModal = ({ visible, proofs = [], onClose }) => (
+export const FirstTouchEvidenceGalleryModal = ({ visible, proofs = [], onEdit, onClose }) => (
   <CModal visible={visible} onClose={onClose} alignment="center" size="xl">
     <CModalHeader>
       <CModalTitle>First-touch evidence</CModalTitle>
@@ -48,9 +48,13 @@ export const FirstTouchEvidenceGalleryModal = ({ visible, proofs = [], onClose }
           ))}
         </CRow>
       ) : (
-        <div className="first-touch-empty-state">
-          <CIcon icon={cilImage} size="xl" aria-hidden="true" />
-          <div className="fw-semibold mt-2">No evidence attached</div>
+        <div className="text-center p-4">
+          <div className="text-muted">No evidence attached.</div>
+          {onEdit ? (
+            <CButton color="primary" variant="outline" size="sm" className="mt-3" onClick={onEdit}>
+              Edit evidence
+            </CButton>
+          ) : null}
         </div>
       )}
     </CModalBody>

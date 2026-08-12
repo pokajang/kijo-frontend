@@ -30,10 +30,10 @@ import {
 } from './clientFirstTouchUtils'
 
 const statusLabels = {
-  current: 'Current first touch',
-  contested: 'Current - contested',
-  unresolved: 'Unresolved',
-  missing: 'No evidence',
+  current: 'First touch recorded',
+  contested: 'Awaiting independent review',
+  unresolved: 'No current first touch',
+  missing: 'Needs first-touch evidence',
 }
 
 const ClientFirstTouchPage = () => {
@@ -115,29 +115,29 @@ const ClientFirstTouchPage = () => {
       },
       {
         key: 'current',
-        label: 'Current First Touches',
+        label: 'Recorded First Touches',
         value: String(current),
         tone: 'success',
         size: 'sm',
         icon: cilCheckCircle,
         onClick: () => applyStatFilter('current'),
-        actionTooltip: 'Show clients with a current first touch',
+        actionTooltip: 'Show clients with a recorded first touch',
       },
       {
         key: 'contested',
-        label: 'Contested Clients',
+        label: 'Awaiting Review',
         value: String(contested),
         tone: 'warning',
         size: 'sm',
         icon: cilWarning,
         onClick: () => applyStatFilter('contested'),
-        actionTooltip: 'Show contested clients',
+        actionTooltip: 'Show clients awaiting independent review',
       },
       {
         key: 'coverage',
         label: 'Evidence Coverage',
         value: `${withEvidence} / ${records.length}`,
-        sublabel: `${withoutEvidence} not documented`,
+        sublabel: `${withoutEvidence} need evidence`,
         tone: 'info',
         size: 'lg',
         icon: cilImage,
@@ -224,6 +224,10 @@ const ClientFirstTouchPage = () => {
     getClientFirstTouchRowActions(record, {
       onSubmit: openClaim,
       onDispute: (targetRecord) => openClaim(targetRecord, 'dispute'),
+      onReviewConflict: (targetRecord) =>
+        navigate(
+          `/client/first-touch/${targetRecord.companyId}?reviewConflict=${targetRecord.conflict.id}`,
+        ),
     })
 
   return (
@@ -274,10 +278,10 @@ const ClientFirstTouchPage = () => {
                     onChange={(event) => setStatus(event.target.value)}
                   >
                     <option value="">All</option>
-                    <option value="current">Current first touch</option>
-                    <option value="contested">Current - contested</option>
-                    <option value="unresolved">Unresolved</option>
-                    <option value="missing">No evidence</option>
+                    <option value="current">First touch recorded</option>
+                    <option value="contested">Awaiting independent review</option>
+                    <option value="unresolved">No current first touch</option>
+                    <option value="missing">Needs first-touch evidence</option>
                   </CFormSelect>
                 </CCol>
                 <CCol xs={12} md={4} lg={3}>

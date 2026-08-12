@@ -1,18 +1,6 @@
 import React, { useState } from 'react'
-import { CButton } from '@coreui/react'
-import CIcon from '@coreui/icons-react'
-import { cilBriefcase, cilCalendar, cilCheckCircle, cilHistory, cilPeople } from '@coreui/icons'
+import { CButton, CTable, CTableBody, CTableHead, CTableHeaderCell, CTableRow } from '@coreui/react'
 import { formatFirstTouchDate } from '../clientFirstTouchUtils'
-
-const icons = {
-  origin: cilCheckCircle,
-  evidence: cilHistory,
-  review: cilCheckCircle,
-  withdrawal: cilHistory,
-  inquiry: cilHistory,
-  meeting: cilPeople,
-  award: cilBriefcase,
-}
 
 const compactTimeline = (timeline, initialLimit) => {
   if (timeline.length <= initialLimit) return timeline
@@ -21,79 +9,102 @@ const compactTimeline = (timeline, initialLimit) => {
 
 const FirstTouchTimeline = ({ firstTouch, entries = [], initialLimit = 4 }) => {
   const [showAll, setShowAll] = useState(false)
-  const auditEntries = firstTouch
-    ? [
-        firstTouch.submittedAt
-          ? {
-              id: `evidence-submitted-${firstTouch.id || 'current'}`,
-              date: firstTouch.submittedAt,
-              title: 'First-touch evidence recorded',
-              description: `Recorded by ${firstTouch.submittedBy || 'Staff'} as the current first touch.`,
-              type: 'evidence',
-            }
-          : null,
-      ].filter(Boolean)
-    : []
   const fallbackEntries = firstTouch
     ? [
         {
           id: 'origin',
           date: firstTouch.occurredAt,
           time: firstTouch.occurredTime || '',
-          title: 'First-touch claim',
-          description: firstTouch.notes || 'Documented first encounter with Amiosh.',
+          title: 'First documented encounter',
+          context: firstTouch.clientContact || firstTouch.sourceValue || '',
+          staffName: firstTouch.amioshContact || firstTouch.referrerName || '',
+          staffCode: firstTouch.amioshContactCode || firstTouch.referrerCode || '',
+          staffRole: firstTouch.amioshContact ? 'Handled by' : 'Referred through',
           type: 'origin',
         },
       ]
     : []
-  const timeline = [...(entries.length ? entries : fallbackEntries), ...auditEntries].sort(
+  const timeline = [...(entries.length ? entries : fallbackEntries)].sort(
     (left, right) => new Date(left.date || 0).getTime() - new Date(right.date || 0).getTime(),
   )
   const visibleTimeline = showAll ? timeline : compactTimeline(timeline, initialLimit)
   const hiddenCount = timeline.length - visibleTimeline.length
 
-  if (!timeline.length) {
-    return (
-      <div className="first-touch-empty-state py-5">
-        <CIcon icon={cilCalendar} size="xl" aria-hidden="true" />
-        <h2 className="h5 mt-3 mb-1">No relationship events documented</h2>
-        <p className="text-muted mb-0">
-          The timeline will begin when first-touch evidence is recorded.
-        </p>
-      </div>
-    )
+  const staffLabel = (entry) => {
+    const staff = [entry.staffName, entry.staffCode ? `(${entry.staffCode})` : '']
+      .filter(Boolean)
+      .join(' ')
+    if (!staff) return '—'
+    return entry.staffRole ? `${entry.staffRole}: ${staff}` : staff
   }
 
+  const eventContext = (entry) => entry.context || entry.description || '—'
+
   return (
-    <section aria-labelledby="first-touch-timeline-title">
-      <h2 id="first-touch-timeline-title" className="h5 mb-1">
-        Relationship timeline
-      </h2>
-      <p className="text-muted mb-4">First touch and the later commercial milestones.</p>
-      <ol className="first-touch-timeline list-unstyled mb-0">
-        {visibleTimeline.map((entry) => (
-          <li className="first-touch-timeline__item" key={entry.id}>
-            <span className="first-touch-timeline__marker" aria-hidden="true">
-              <CIcon icon={icons[entry.type] || cilHistory} />
-            </span>
-            <div className="first-touch-timeline__content">
-              <div className="small text-muted">
-                {formatFirstTouchDate(entry.date)}
-                {entry.time ? ` at ${entry.time}` : ''}
+    <section aria-label="Relationship timeline">
+      {timeline.length ? (
+        <>
+          <div className="d-none d-md-block table-responsive">
+            <CTable className="mb-0 align-middle first-touch-timeline-table">
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Interaction</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Client / project</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Amiosh staff involved</CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {visibleTimeline.map((entry) => (
+                  <CTableRow key={entry.id}>
+                    <td>
+                      {formatFirstTouchDate(entry.date)}
+                      {entry.time ? ` at ${entry.time}` : ''}
+                    </td>
+                    <td className="fw-medium">{entry.title}</td>
+                    <td>{eventContext(entry)}</td>
+                    <td>{staffLabel(entry)}</td>
+                  </CTableRow>
+                ))}
+              </CTableBody>
+            </CTable>
+          </div>
+          <div className="d-md-none first-touch-timeline-mobile">
+            {visibleTimeline.map((entry) => (
+              <div className="first-touch-timeline-mobile__row" key={entry.id}>
+                <div className="small text-muted">
+                  {formatFirstTouchDate(entry.date)}
+                  {entry.time ? ` at ${entry.time}` : ''}
+                </div>
+                <div className="fw-medium">{entry.title}</div>
+                <div>{eventContext(entry)}</div>
+                <div className="small text-muted mt-1">{staffLabel(entry)}</div>
               </div>
-              <div className="fw-semibold mt-1">{entry.title}</div>
-              <div className="text-muted mt-1">{entry.description}</div>
-            </div>
-          </li>
-        ))}
-      </ol>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="px-3 py-4 text-muted">No relationship events recorded.</div>
+      )}
       {hiddenCount > 0 ? (
-        <CButton color="secondary" variant="ghost" size="sm" onClick={() => setShowAll(true)}>
+        <CButton
+          className="m-3"
+          color="secondary"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAll(true)}
+        >
           Show {hiddenCount} earlier event{hiddenCount === 1 ? '' : 's'}
         </CButton>
       ) : null}
       {showAll && timeline.length > initialLimit ? (
-        <CButton color="secondary" variant="ghost" size="sm" onClick={() => setShowAll(false)}>
+        <CButton
+          className="m-3"
+          color="secondary"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAll(false)}
+        >
           Show less
         </CButton>
       ) : null}

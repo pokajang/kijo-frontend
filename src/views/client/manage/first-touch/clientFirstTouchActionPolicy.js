@@ -14,6 +14,11 @@ export const getClientFirstTouchRowActions = (record, handlers) => {
   })
 
   return [
+    availability.canReviewConflict
+      ? action('review-conflict', 'Review Conflict', () => handlers.onReviewConflict(record), {
+          buttonColor: 'warning',
+        })
+      : null,
     availability.canSubmit
       ? action('submit-evidence', 'Submit Evidence', () =>
           handlers.onSubmit(record, record.firstTouch ? 'competing' : 'create'),
@@ -38,6 +43,7 @@ export const getFirstTouchActionAvailability = (record, permissions = {}) => {
     canSubmit: permissions.canSubmitEvidence !== false,
     canEdit: hasCurrentClaim && !conflictIsOpen && permissions.canEditEvidence !== false,
     canDispute: hasCurrentClaim && !conflictIsOpen && permissions.canDisputeEvidence !== false,
+    canReviewConflict: conflictIsOpen && permissions.canReviewConflict === true,
   }
 }
 

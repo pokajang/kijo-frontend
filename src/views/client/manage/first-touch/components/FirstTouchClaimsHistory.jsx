@@ -2,9 +2,12 @@ import React from 'react'
 import { CAlert, CCol, CRow } from '@coreui/react'
 import {
   formatFirstTouchDate,
+  getFirstTouchClarificationStatusLabel,
+  getFirstTouchDisputeStatusLabel,
   getFirstTouchEmploymentStatusLabel,
   getFirstTouchPersonName,
   getFirstTouchSourceLabel,
+  getFirstTouchStatusNextStep,
 } from '../clientFirstTouchUtils'
 import FirstTouchStatusBadge from './FirstTouchStatusBadge'
 
@@ -70,23 +73,18 @@ const FirstTouchClaimsHistory = ({ record }) => {
       <h2 id="first-touch-claims-title" className="h5 mb-1">
         Claims and decision history
       </h2>
-      <p className="text-muted mb-4">
-        Each submission remains auditable. Only the current uncontested or resolved claim is used in
-        source reporting.
-      </p>
+      <p className="text-muted mb-4">Each submission remains auditable.</p>
       {record.conflict?.status === 'resolved' ? (
         <CAlert color="info">
-          Resolved by {record.conflict.resolvedBy} on{' '}
+          <strong>Review completed.</strong> Resolved by {record.conflict.resolvedBy} on{' '}
           {formatFirstTouchDate(record.conflict.resolvedAt)}. {record.conflict.comment}
         </CAlert>
       ) : null}
       {['open', 'clarification_requested'].includes(record.conflict?.status) ? (
         <CAlert color="warning">
-          This client has an open conflict. The current claim remains visible but is excluded from
-          source aggregation until a manager or system administrator resolves it.
-          {record.conflict?.clarificationRecipient
-            ? ` Clarification is required from ${record.conflict.clarificationRecipient}.`
-            : ''}
+          {record.conflict?.status === 'clarification_requested'
+            ? `Awaiting clarification from ${record.conflict.clarificationRecipient || 'the requested submitter'}.`
+            : 'Awaiting independent review by a manager or system administrator.'}
         </CAlert>
       ) : null}
       <CRow className="g-3">
@@ -102,7 +100,12 @@ const FirstTouchClaimsHistory = ({ record }) => {
                     submitted by {claim.submittedBy}
                   </div>
                 </div>
-                <FirstTouchStatusBadge status={claim.status} />
+                <div className="text-end">
+                  <FirstTouchStatusBadge status={claim.status} />
+                  <div className="small text-muted mt-1">
+                    {getFirstTouchStatusNextStep(claim.status)}
+                  </div>
+                </div>
               </div>
               {claim.notes ? <p className="mb-0 mt-3">{claim.notes}</p> : null}
               {getFirstTouchPersonName(claim) ? (
@@ -137,7 +140,7 @@ const FirstTouchClaimsHistory = ({ record }) => {
                 <div className="small text-muted mt-1">
                   Submitted by {dispute.submittedBy} · {formatFirstTouchDate(dispute.submittedAt)}
                   {' · '}
-                  {dispute.status}
+                  {getFirstTouchDisputeStatusLabel(dispute.status)}
                   {dispute.proofs?.length ? ` · ${dispute.proofs.length} attachment(s)` : ''}
                 </div>
               </div>
@@ -159,7 +162,7 @@ const FirstTouchClaimsHistory = ({ record }) => {
                   </div>
                 ) : null}
                 <div className="small text-muted mt-1">
-                  {clarification.status}
+                  {getFirstTouchClarificationStatusLabel(clarification)}
                   {clarification.respondedBy ? ` · responded by ${clarification.respondedBy}` : ''}
                   {clarification.proofs?.length
                     ? ` · ${clarification.proofs.length} attachment(s)`
