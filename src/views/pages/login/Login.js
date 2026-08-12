@@ -109,7 +109,11 @@ const Login = () => {
         return
       }
 
-      setMessage('Invalid email or password.')
+      setMessage(
+        response.kind === 'service'
+          ? response.message || 'Login service is unavailable. Please try again later.'
+          : 'Invalid email or password.',
+      )
     } catch (err) {
       console.error('Login error:', err)
       setMessage(

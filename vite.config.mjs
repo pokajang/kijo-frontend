@@ -15,6 +15,7 @@ const resolveMeta = (metaPath) => {
 
 export default defineConfig(({ command }) => {
   const isBuild = command === 'build'
+  const apiBase = process.env.VITE_API_BASE || (isBuild ? 'https://api.amiosh.com/' : '/')
   const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8000'
   const metaPath = path.resolve(__dirname, 'public', 'meta.json')
   const existingMeta = resolveMeta(metaPath)
@@ -58,6 +59,7 @@ export default defineConfig(({ command }) => {
     define: isBuild
       ? {
           'import.meta.env.VITE_APP_VERSION': JSON.stringify(version),
+          'import.meta.env.VITE_API_BASE': JSON.stringify(apiBase),
         }
       : {},
     build: {

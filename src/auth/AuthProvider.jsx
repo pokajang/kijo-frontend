@@ -6,6 +6,10 @@ export const AuthContext = createContext(undefined)
 const API_BASE = import.meta.env.VITE_API_BASE || '/' // ensure trailing path segments resolve
 const SESSION_CHECK_INTERVAL_MS = 2 * 60 * 1000
 const PUBLIC_PATH_PREFIXES = ['/share/workload/', '/reset-password/']
+const LOGIN_SERVICE_ERROR = 'Login service returned an unexpected response. Please try again later.'
+
+const isJsonResponse = (response) =>
+  (response.headers.get('content-type') || '').toLowerCase().includes('application/json')
 
 const isPublicPath = (path) =>
   PUBLIC_PATH_PREFIXES.some((prefix) => String(path || '').startsWith(prefix))
@@ -159,6 +163,10 @@ const AuthProvider = ({ children }) => {
       body: JSON.stringify(credentials),
     })
 
+    if (!isJsonResponse(res)) {
+      return { ok: false, kind: 'service', message: LOGIN_SERVICE_ERROR }
+    }
+
     const data = await res.json().catch(() => ({}))
     setCsrfToken(data?.csrf_token)
 
@@ -168,7 +176,11 @@ const AuthProvider = ({ children }) => {
           ? 'Login service is unavailable. Please try again later.'
           : 'Invalid credentials.'
 
-      return { ok: false, message: data?.message || data?.error || fallbackMessage }
+      return {
+        ok: false,
+        kind: res.status >= 500 ? 'service' : 'credentials',
+        message: data?.message || data?.error || fallbackMessage,
+      }
     }
 
     const sessionUser = normalizeSessionUser(data)
@@ -178,8 +190,7 @@ const AuthProvider = ({ children }) => {
       return { ok: true, data }
     }
 
-    const message = data?.message || 'Invalid credentials.'
-    return { ok: false, message }
+    return { ok: false, kind: 'service', message: LOGIN_SERVICE_ERROR }
   }, [])
 
   const requestPasswordReset = useCallback(async ({ email }) => {
