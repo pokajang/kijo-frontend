@@ -1,5 +1,5 @@
 import React from 'react'
-import { CAlert, CButton, CSpinner, CTooltip } from '@coreui/react'
+import { CAlert, CBadge, CButton, CSpinner, CTooltip } from '@coreui/react'
 import {
   differenceInCalendarDays,
   intervalToDuration,
@@ -16,7 +16,7 @@ import {
 } from '../clientFirstTouchUtils'
 
 const actionColumnWidth = '56px'
-const columnStorageKey = 'client.first-touch.visible-columns.v2'
+const columnStorageKey = 'client.first-touch.visible-columns.v3'
 
 const formatDurationPart = (value, unit) => `${value} ${unit}${value === 1 ? '' : 's'}`
 
@@ -75,8 +75,8 @@ const dataColumns = [
     sortType: 'string',
   },
   {
-    key: 'collected',
-    label: 'Collected to Date',
+    key: 'awarded',
+    label: 'Total Awarded',
     width: '160px',
     sortable: true,
     sortType: 'number',
@@ -108,17 +108,19 @@ const defaultVisibleColumns = Object.fromEntries(dataColumns.map((column) => [co
 const requiredColumns = new Set(['companyName'])
 
 const normalizeRecord = (record) => {
-  const encounterDate = record.firstTouch?.occurredAt || ''
+  const firstRecordedInteraction = record.firstRecordedInteraction || {}
+  const encounterDate = firstRecordedInteraction.date || record.firstTouch?.occurredAt || ''
   const clientAge = getClientAge(encounterDate)
 
   return {
     ...record,
-    sourceLabel: getFirstTouchSourceLabel(record.firstTouch),
+    firstRecordedInteraction,
+    sourceLabel: record.firstTouch ? getFirstTouchSourceLabel(record.firstTouch) : 'Not documented',
     encounterDate,
     clientAgeDays: clientAge?.totalDays ?? null,
     clientAgeLabel: clientAge?.compactLabel || '',
     clientAgeExactLabel: clientAge?.exactLabel || '',
-    collected: Number(record.contribution?.collected || 0),
+    awarded: Number(record.contribution?.awarded || 0),
   }
 }
 
@@ -181,7 +183,20 @@ const ClientFirstTouchTable = ({
         />
       )
     }
-    if (column.key === 'encounterDate') return formatFirstTouchDate(record.encounterDate)
+    if (column.key === 'encounterDate') {
+      if (!record.encounterDate) return '-'
+
+      return (
+        <div className="d-inline-flex flex-column align-items-center gap-1">
+          <span>{formatFirstTouchDate(record.encounterDate)}</span>
+          {record.firstRecordedInteraction.origin === 'inferred_quote' ? (
+            <CBadge color="secondary" shape="rounded-pill" className="fw-normal">
+              Inferred · {record.firstRecordedInteraction.quoteReference}
+            </CBadge>
+          ) : null}
+        </div>
+      )
+    }
     if (column.key === 'clientAgeDays') {
       if (!record.clientAgeLabel) return '-'
       return (
@@ -190,8 +205,8 @@ const ClientFirstTouchTable = ({
         </CTooltip>
       )
     }
-    if (column.key === 'collected') {
-      return <span className="fw-semibold">{formatCompactContributionMoney(record.collected)}</span>
+    if (column.key === 'awarded') {
+      return <span className="fw-semibold">{formatCompactContributionMoney(record.awarded)}</span>
     }
     return record[column.key] || '-'
   }
@@ -241,12 +256,12 @@ const ClientFirstTouchTable = ({
       getMobileTitle={(record) => record.companyName}
       getMobileSubtitle={(record) => record.sourceLabel}
       getMobileMeta={(record) =>
-        `${formatFirstTouchDate(record.encounterDate)} | ${record.clientAgeLabel || 'Age unavailable'} | Collected ${formatCompactContributionMoney(record.collected)}`
+        `${formatFirstTouchDate(record.encounterDate)} | ${record.clientAgeLabel || 'Age unavailable'} | Awarded ${formatCompactContributionMoney(record.awarded)}`
       }
       mobileFieldKeys={{
         title: 'companyName',
         subtitle: 'sourceLabel',
-        meta: ['encounterDate', 'clientAgeDays', 'collected'],
+        meta: ['encounterDate', 'clientAgeDays', 'awarded'],
       }}
       initialSortField="companyName"
       initialSortDir="asc"
