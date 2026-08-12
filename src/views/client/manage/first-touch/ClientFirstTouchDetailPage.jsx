@@ -310,25 +310,20 @@ const ClientFirstTouchDetailPage = () => {
               </div>
             </DataTableCardHeader>
             <CCardBody>{statsVisible ? <StatsStrip items={contributionStats} /> : null}</CCardBody>
+            <ClientOriginPanel
+              firstTouch={record.firstTouch}
+              record={record}
+              onViewEvidence={() => setEvidenceVisible(true)}
+              onEdit={firstTouchActions.canEdit ? () => setClaimMode('edit') : undefined}
+              onDispute={firstTouchActions.canDispute ? () => setClaimMode('dispute') : undefined}
+              onReviewConflict={
+                canReviewConflicts && hasOpenFirstTouchConflict(record)
+                  ? () => setConflictReviewVisible(true)
+                  : undefined
+              }
+              isClarificationRecipient={Boolean(pendingClarification)}
+            />
           </CCard>
-        </CCol>
-      </CRow>
-
-      <CRow className="g-3 mb-3">
-        <CCol xs={12}>
-          <ClientOriginPanel
-            firstTouch={record.firstTouch}
-            record={record}
-            onViewEvidence={() => setEvidenceVisible(true)}
-            onEdit={firstTouchActions.canEdit ? () => setClaimMode('edit') : undefined}
-            onDispute={firstTouchActions.canDispute ? () => setClaimMode('dispute') : undefined}
-            onReviewConflict={
-              canReviewConflicts && hasOpenFirstTouchConflict(record)
-                ? () => setConflictReviewVisible(true)
-                : undefined
-            }
-            isClarificationRecipient={Boolean(pendingClarification)}
-          />
         </CCol>
       </CRow>
 
