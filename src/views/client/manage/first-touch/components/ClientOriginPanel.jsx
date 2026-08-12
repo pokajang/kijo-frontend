@@ -39,10 +39,16 @@ const ClientOriginPanel = ({ firstTouch, onSubmit, onViewEvidence, onEdit, onDis
               Submit the earliest encounter supported by a screenshot or other image evidence. The
               first submission becomes current immediately.
             </p>
-            <CButton color="primary" onClick={onSubmit}>
-              <CIcon icon={cilPlus} className="me-2" aria-hidden="true" />
-              Submit evidence
-            </CButton>
+            {onSubmit ? (
+              <CButton color="primary" onClick={onSubmit}>
+                <CIcon icon={cilPlus} className="me-2" aria-hidden="true" />
+                Submit evidence
+              </CButton>
+            ) : (
+              <p className="small text-muted mb-0">
+                You can view this client, but you do not have permission to submit evidence.
+              </p>
+            )}
           </div>
         </CCardBody>
       </CCard>
@@ -122,9 +128,11 @@ const ClientOriginPanel = ({ firstTouch, onSubmit, onViewEvidence, onEdit, onDis
                 Dispute evidence
               </CButton>
             ) : null}
-            <CButton color="secondary" variant="outline" size="sm" onClick={onSubmit}>
-              Submit evidence
-            </CButton>
+            {onSubmit ? (
+              <CButton color="secondary" variant="outline" size="sm" onClick={onSubmit}>
+                Submit evidence
+              </CButton>
+            ) : null}
           </div>
         </div>
       </CCardBody>

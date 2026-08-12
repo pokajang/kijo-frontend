@@ -1,6 +1,5 @@
 .first-touch-origin-card,
 .first-touch-contribution-card,
-.first-touch-detail-tabs-card,
 .first-touch-list-card {
   border-color: var(--cui-border-color);
   box-shadow: none;
@@ -108,8 +107,7 @@
   min-height: 330px;
 }
 
-.first-touch-empty-state__icon,
-.first-touch-related-history__icon {
+.first-touch-empty-state__icon {
   display: inline-grid;
   width: 3rem;
   height: 3rem;
@@ -308,44 +306,18 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.first-touch-detail-tabs {
-  display: flex;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--cui-border-color);
+.first-touch-sales-summary {
+  --cui-table-bg: transparent;
+  margin-bottom: 0;
 }
 
-.first-touch-detail-tab {
-  position: relative;
-  flex: 0 0 auto;
-  padding: 0.9rem 1.1rem;
-  border: 0;
-  background: transparent;
-  color: var(--cui-secondary-color);
-  font-weight: 500;
+.first-touch-sales-summary th,
+.first-touch-sales-summary td {
+  padding-block: 0.85rem;
 }
 
-.first-touch-detail-tab::after {
-  position: absolute;
-  right: 1rem;
-  bottom: -1px;
-  left: 1rem;
-  height: 2px;
-  background: transparent;
-  content: '';
-}
-
-.first-touch-detail-tab:hover,
-.first-touch-detail-tab:focus-visible,
-.first-touch-detail-tab.is-active {
-  color: var(--cui-primary);
-}
-
-.first-touch-detail-tab.is-active::after {
-  background: var(--cui-primary);
-}
-
-.first-touch-tab-panel {
-  min-height: 300px;
+.first-touch-project-disclosure {
+  min-height: 2.5rem;
 }
 
 .first-touch-timeline {
@@ -388,36 +360,6 @@
   border-bottom: 1px solid var(--cui-border-color);
 }
 
-.first-touch-related-history {
-  display: flex;
-  min-height: 270px;
-  max-width: 680px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-inline: auto;
-  text-align: center;
-}
-
-.first-touch-related-history__icon {
-  background: var(--cui-primary-bg-subtle);
-  color: var(--cui-primary-text-emphasis);
-}
-
-.first-touch-credit-boundary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--cui-primary-border-subtle);
-  border-radius: var(--cui-border-radius-lg);
-  background: var(--cui-primary-bg-subtle);
-  color: var(--cui-primary-text-emphasis);
-  font-weight: 600;
-  text-align: center;
-}
-
 @media (max-width: 767.98px) {
   .first-touch-origin-audit {
     align-items: stretch;
@@ -428,11 +370,6 @@
     grid-template-columns: 1fr;
   }
 
-  .first-touch-credit-boundary {
-    align-items: center;
-    flex-direction: column;
-    gap: 0.65rem;
-  }
 }
 
 @media (max-width: 479.98px) {

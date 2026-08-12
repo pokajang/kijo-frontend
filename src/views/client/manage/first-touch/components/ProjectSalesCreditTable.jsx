@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react'
-import { CBadge, CButton } from '@coreui/react'
+import React, { useMemo, useState } from 'react'
+import { CButton, CCollapse } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilArrowRight, cilWarning } from '@coreui/icons'
+import { cilArrowRight } from '@coreui/icons'
 import { DataTableEmbeddedList, DataTableStatusBadge } from '../../../../../components/datatable'
 import {
   formatContributionMoney,
@@ -10,6 +10,7 @@ import {
 } from '../clientFirstTouchUtils'
 
 const ProjectSalesCreditTable = ({ projects = [], onOpenProject }) => {
+  const [detailsVisible, setDetailsVisible] = useState(false)
   const totals = useMemo(
     () =>
       projects.reduce(
@@ -67,10 +68,7 @@ const ProjectSalesCreditTable = ({ projects = [], onOpenProject }) => {
             <span>{project.salesOwner}</span>
           </div>
         ) : (
-          <CBadge color="warning" className="d-inline-flex align-items-center gap-1">
-            <CIcon icon={cilWarning} size="sm" aria-hidden="true" />
-            Unassigned
-          </CBadge>
+          'Unassigned'
         ),
     },
     {
@@ -130,90 +128,108 @@ const ProjectSalesCreditTable = ({ projects = [], onOpenProject }) => {
       ]
     : []
 
+  if (!projects.length) return null
+
+  const detailsId = 'client-first-touch-project-credit-details'
+
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+    <section
+      className="first-touch-project-disclosure"
+      aria-labelledby="first-touch-project-credit-title"
+    >
+      <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
         <div>
-          <h2 className="h5 mb-1">Sales delivered by responsible salesperson</h2>
-          <p className="text-muted mb-0">
-            Every row keeps its own project-level sales credit. First-touch staff are not inferred.
-          </p>
+          <h2 id="first-touch-project-credit-title" className="h6 mb-1">
+            Project-level sales credit
+          </h2>
+          <p className="small text-muted mb-0">Review the project figures behind the summary.</p>
         </div>
-        {projects.some((project) => !project.salesOwner) ? (
-          <CBadge color="warning" className="px-3 py-2">
-            Sales credit requires assignment
-          </CBadge>
-        ) : null}
+        <CButton
+          color="secondary"
+          variant="outline"
+          size="sm"
+          aria-expanded={detailsVisible}
+          aria-controls={detailsId}
+          onClick={() => setDetailsVisible((visible) => !visible)}
+        >
+          {detailsVisible
+            ? 'Hide project detail'
+            : `View project-level sales credit (${projects.length})`}
+        </CButton>
       </div>
 
-      <DataTableEmbeddedList
-        rows={projects}
-        columns={columns}
-        footerRows={footerRows}
-        renderMobileFooterItem={() => (
-          <div className="data-table-mobile-item first-touch-project-totals-mobile">
-            <div className="fw-semibold mb-2">Shown project totals</div>
-            <dl className="first-touch-mobile-metrics mb-0">
-              <div>
-                <dt>Awarded</dt>
-                <dd>{formatContributionMoney(totals.awarded)}</dd>
+      <CCollapse id={detailsId} visible={detailsVisible}>
+        <div className="mt-3">
+          <DataTableEmbeddedList
+            rows={projects}
+            columns={columns}
+            footerRows={footerRows}
+            renderMobileFooterItem={() => (
+              <div className="data-table-mobile-item first-touch-project-totals-mobile">
+                <div className="fw-semibold mb-2">Shown project totals</div>
+                <dl className="first-touch-mobile-metrics mb-0">
+                  <div>
+                    <dt>Awarded</dt>
+                    <dd>{formatContributionMoney(totals.awarded)}</dd>
+                  </div>
+                  <div>
+                    <dt>Invoiced</dt>
+                    <dd>{formatContributionMoney(totals.invoiced)}</dd>
+                  </div>
+                  <div>
+                    <dt>Collected</dt>
+                    <dd>{formatContributionMoney(totals.collected)}</dd>
+                  </div>
+                  <div>
+                    <dt>Gross profit</dt>
+                    <dd>{formatContributionMoney(totals.grossProfit)}</dd>
+                  </div>
+                </dl>
               </div>
-              <div>
-                <dt>Invoiced</dt>
-                <dd>{formatContributionMoney(totals.invoiced)}</dd>
-              </div>
-              <div>
-                <dt>Collected</dt>
-                <dd>{formatContributionMoney(totals.collected)}</dd>
-              </div>
-              <div>
-                <dt>Gross profit</dt>
-                <dd>{formatContributionMoney(totals.grossProfit)}</dd>
-              </div>
-            </dl>
-          </div>
-        )}
-        getRowKey={(project) => project.id}
-        emptyMessage="No awarded projects or jobs found for this client."
-        renderMobileItem={(project) => (
-          <article className="data-table-mobile-item first-touch-project-mobile">
-            <div className="d-flex justify-content-between align-items-start gap-2">
-              <div>
-                <div className="fw-semibold">{project.name}</div>
-                <div className="small text-muted mt-1">
-                  Collected {formatContributionMoney(project.collected)}
+            )}
+            getRowKey={(project) => project.id}
+            emptyMessage="No awarded projects or jobs found for this client."
+            renderMobileItem={(project) => (
+              <article className="data-table-mobile-item first-touch-project-mobile">
+                <div className="d-flex justify-content-between align-items-start gap-2">
+                  <div>
+                    <div className="fw-semibold">{project.name}</div>
+                    <div className="small text-muted mt-1">
+                      Collected {formatContributionMoney(project.collected)}
+                    </div>
+                  </div>
+                  <DataTableStatusBadge tone={getProjectStatusTone(project.status)}>
+                    {getProjectStatusLabel(project.status)}
+                  </DataTableStatusBadge>
                 </div>
-              </div>
-              <DataTableStatusBadge tone={getProjectStatusTone(project.status)}>
-                {getProjectStatusLabel(project.status)}
-              </DataTableStatusBadge>
-            </div>
-            <dl className="first-touch-mobile-metrics mt-3 mb-3">
-              <div>
-                <dt>Awarded</dt>
-                <dd>{formatContributionMoney(project.awarded)}</dd>
-              </div>
-              <div>
-                <dt>Gross profit</dt>
-                <dd>{formatContributionMoney(project.grossProfit)}</dd>
-              </div>
-              <div>
-                <dt>Sales credit</dt>
-                <dd>{project.salesOwner || 'Unassigned'}</dd>
-              </div>
-            </dl>
-            <CButton
-              color="primary"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenProject(project)}
-            >
-              Open project
-            </CButton>
-          </article>
-        )}
-      />
-    </div>
+                <dl className="first-touch-mobile-metrics mt-3 mb-3">
+                  <div>
+                    <dt>Awarded</dt>
+                    <dd>{formatContributionMoney(project.awarded)}</dd>
+                  </div>
+                  <div>
+                    <dt>Gross profit</dt>
+                    <dd>{formatContributionMoney(project.grossProfit)}</dd>
+                  </div>
+                  <div>
+                    <dt>Sales credit</dt>
+                    <dd>{project.salesOwner || 'Unassigned'}</dd>
+                  </div>
+                </dl>
+                <CButton
+                  color="primary"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenProject(project)}
+                >
+                  Open project
+                </CButton>
+              </article>
+            )}
+          />
+        </div>
+      </CCollapse>
+    </section>
   )
 }
 

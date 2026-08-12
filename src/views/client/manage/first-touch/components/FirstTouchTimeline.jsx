@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { CButton } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilBriefcase, cilCalendar, cilCheckCircle, cilHistory, cilPeople } from '@coreui/icons'
 import { formatFirstTouchDate } from '../clientFirstTouchUtils'
@@ -13,7 +14,13 @@ const icons = {
   award: cilBriefcase,
 }
 
-const FirstTouchTimeline = ({ firstTouch, entries = [] }) => {
+const compactTimeline = (timeline, initialLimit) => {
+  if (timeline.length <= initialLimit) return timeline
+  return [timeline[0], ...timeline.slice(-(initialLimit - 1))]
+}
+
+const FirstTouchTimeline = ({ firstTouch, entries = [], initialLimit = 4 }) => {
+  const [showAll, setShowAll] = useState(false)
   const auditEntries = firstTouch
     ? [
         firstTouch.submittedAt
@@ -42,6 +49,8 @@ const FirstTouchTimeline = ({ firstTouch, entries = [] }) => {
   const timeline = [...(entries.length ? entries : fallbackEntries), ...auditEntries].sort(
     (left, right) => new Date(left.date || 0).getTime() - new Date(right.date || 0).getTime(),
   )
+  const visibleTimeline = showAll ? timeline : compactTimeline(timeline, initialLimit)
+  const hiddenCount = timeline.length - visibleTimeline.length
 
   if (!timeline.length) {
     return (
@@ -58,14 +67,11 @@ const FirstTouchTimeline = ({ firstTouch, entries = [] }) => {
   return (
     <section aria-labelledby="first-touch-timeline-title">
       <h2 id="first-touch-timeline-title" className="h5 mb-1">
-        Relationship and evidence timeline
+        Relationship timeline
       </h2>
-      <p className="text-muted mb-4">
-        A chronological record of the documented origin and later commercial milestones. Claim
-        conflicts and decisions are available in Claims &amp; history.
-      </p>
+      <p className="text-muted mb-4">First touch and the later commercial milestones.</p>
       <ol className="first-touch-timeline list-unstyled mb-0">
-        {timeline.map((entry) => (
+        {visibleTimeline.map((entry) => (
           <li className="first-touch-timeline__item" key={entry.id}>
             <span className="first-touch-timeline__marker" aria-hidden="true">
               <CIcon icon={icons[entry.type] || cilHistory} />
@@ -81,6 +87,16 @@ const FirstTouchTimeline = ({ firstTouch, entries = [] }) => {
           </li>
         ))}
       </ol>
+      {hiddenCount > 0 ? (
+        <CButton color="secondary" variant="ghost" size="sm" onClick={() => setShowAll(true)}>
+          Show {hiddenCount} earlier event{hiddenCount === 1 ? '' : 's'}
+        </CButton>
+      ) : null}
+      {showAll && timeline.length > initialLimit ? (
+        <CButton color="secondary" variant="ghost" size="sm" onClick={() => setShowAll(false)}>
+          Show less
+        </CButton>
+      ) : null}
     </section>
   )
 }

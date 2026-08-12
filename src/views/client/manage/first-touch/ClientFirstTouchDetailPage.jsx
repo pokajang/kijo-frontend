@@ -1,7 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CAlert, CButton, CCard, CCardBody, CCol, CRow, CSpinner } from '@coreui/react'
-import CIcon from '@coreui/icons-react'
-import { cilArrowRight, cilHistory, cilList } from '@coreui/icons'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { CAlert, CButton, CCard, CCardBody, CCollapse, CCol, CRow, CSpinner } from '@coreui/react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import { DataTableCardHeader, DataTableStatsToggle } from '../../../../components/datatable'
@@ -16,6 +14,7 @@ import FirstTouchConflictResolutionModal from './components/FirstTouchConflictRe
 import { FirstTouchEvidenceGalleryModal } from './components/FirstTouchEvidencePreview'
 import FirstTouchTimeline from './components/FirstTouchTimeline'
 import ProjectSalesCreditTable from './components/ProjectSalesCreditTable'
+import SalespersonContributionPanel from './components/SalespersonContributionPanel'
 import { getFirstTouchActionAvailability } from './clientFirstTouchActionPolicy'
 import {
   getClientFirstTouch,
@@ -30,41 +29,13 @@ import {
 import { useAppNotifications } from '../../../../notifications/AppNotificationProvider'
 import { hasOpenFirstTouchConflict } from './clientFirstTouchState'
 import { formatCompactContributionMoney, formatFirstTouchDate } from './clientFirstTouchUtils'
-
-const tabs = [
-  { key: 'sales', label: 'Sales by project & salesperson' },
-  { key: 'claims', label: 'Claims & history' },
-  { key: 'timeline', label: 'Touchpoint timeline' },
-  { key: 'payments', label: 'Invoices & payments' },
-  { key: 'quotes', label: 'Quotations' },
-]
-
-const RelatedHistoryPanel = ({ type, companyId, onOpen }) => (
-  <div className="first-touch-related-history">
-    <span className="first-touch-related-history__icon" aria-hidden="true">
-      <CIcon icon={type === 'payments' ? cilHistory : cilList} size="xl" />
-    </span>
-    <h2 className="h5 mt-3">
-      {type === 'payments' ? 'Invoices and payments' : 'Quotation history'}
-    </h2>
-    <p className="text-muted">
-      Open the client commercial history to review the complete underlying records and payment
-      details.
-    </p>
-    <CButton color="primary" variant="outline" onClick={() => onOpen(companyId)}>
-      Open current commercial history
-      <CIcon icon={cilArrowRight} className="ms-2" aria-hidden="true" />
-    </CButton>
-  </div>
-)
+import { hasFirstTouchEvidenceHistory } from './salespersonContribution'
 
 const ClientFirstTouchDetailPage = () => {
   const { companyId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const requestedTab = searchParams.get('tab')
-  const activeTab = tabs.some((tab) => tab.key === requestedTab) ? requestedTab : 'sales'
   const [record, setRecord] = useState(null)
   const [staffOptions, setStaffOptions] = useState([])
   const [inquiryOptions, setInquiryOptions] = useState([])
@@ -75,7 +46,7 @@ const ClientFirstTouchDetailPage = () => {
   const [message, setMessage] = useState('')
   const [conflictReviewVisible, setConflictReviewVisible] = useState(false)
   const [clarificationVisible, setClarificationVisible] = useState(false)
-  const tabRefs = useRef({})
+  const [evidenceHistoryVisible, setEvidenceHistoryVisible] = useState(false)
   const { user } = useAuth()
   const { consumeEntity } = useAppNotifications()
   const sessionStaffId = Number(user?.staff_id || 0)
@@ -165,11 +136,8 @@ const ClientFirstTouchDetailPage = () => {
   }, [canReviewConflicts, consumeEntity, pendingClarification, record, searchParams])
 
   const returnTo = location.state?.returnTo || '/client/first-touch'
-  const unassignedProjects = useMemo(
-    () => (record?.projects || []).filter((project) => !project.salesOwner).length,
-    [record?.projects],
-  )
   const firstTouchActions = getFirstTouchActionAvailability(record, record?.permissions)
+  const hasEvidenceHistory = hasFirstTouchEvidenceHistory(record)
   const contributionStats = useMemo(
     () => [
       {
@@ -277,23 +245,6 @@ const ClientFirstTouchDetailPage = () => {
 
   const openCommercialHistory = () => navigate(`/client/roi/${record.companyId}?period=all`)
 
-  const activateTab = (tabKey, focus = false) => {
-    setSearchParams({ tab: tabKey }, { replace: true })
-    if (focus) requestAnimationFrame(() => tabRefs.current[tabKey]?.focus())
-  }
-
-  const handleTabKeyDown = (event, tabIndex) => {
-    let nextIndex = tabIndex
-    if (event.key === 'ArrowRight') nextIndex = (tabIndex + 1) % tabs.length
-    else if (event.key === 'ArrowLeft') nextIndex = (tabIndex - 1 + tabs.length) % tabs.length
-    else if (event.key === 'Home') nextIndex = 0
-    else if (event.key === 'End') nextIndex = tabs.length - 1
-    else return
-
-    event.preventDefault()
-    activateTab(tabs[nextIndex].key, true)
-  }
-
   if (loading || !record) {
     return (
       <>
@@ -348,10 +299,7 @@ const ClientFirstTouchDetailPage = () => {
                     size="sm"
                     color="warning"
                     variant="outline"
-                    onClick={() => {
-                      activateTab('claims')
-                      setConflictReviewVisible(true)
-                    }}
+                    onClick={() => setConflictReviewVisible(true)}
                   >
                     Review Conflict
                   </CButton>
@@ -369,8 +317,7 @@ const ClientFirstTouchDetailPage = () => {
             <CCardBody>
               {statsVisible ? <StatsStrip items={contributionStats} /> : null}
               <CAlert color="info" className="mb-0">
-                These all-time client totals provide commercial context only. Sales credit remains
-                with the salesperson assigned to each project or job.
+                Commercial context only. Sales credit is assigned per project or job.
               </CAlert>
             </CCardBody>
           </CCard>
@@ -381,7 +328,11 @@ const ClientFirstTouchDetailPage = () => {
         <CCol xs={12}>
           <ClientOriginPanel
             firstTouch={record.firstTouch}
-            onSubmit={() => setClaimMode(record.firstTouch ? 'competing' : 'create')}
+            onSubmit={
+              firstTouchActions.canSubmit
+                ? () => setClaimMode(record.firstTouch ? 'competing' : 'create')
+                : undefined
+            }
             onViewEvidence={() => setEvidenceVisible(true)}
             onEdit={firstTouchActions.canEdit ? () => setClaimMode('edit') : undefined}
             onDispute={firstTouchActions.canDispute ? () => setClaimMode('dispute') : undefined}
@@ -403,77 +354,55 @@ const ClientFirstTouchDetailPage = () => {
         </CAlert>
       ) : null}
 
-      {unassignedProjects > 0 ? (
-        <CAlert color="warning" className="d-flex align-items-start gap-2">
-          <div>
-            <strong>{unassignedProjects} project requires sales-credit assignment.</strong> Its
-            value remains in the client contribution total but is not credited to first-touch staff
-            or any salesperson.
-          </div>
-        </CAlert>
-      ) : null}
+      <CRow className="g-3 mb-3">
+        <CCol xs={12}>
+          <SalespersonContributionPanel
+            projects={record.projects}
+            onOpenCommercialHistory={openCommercialHistory}
+          />
+        </CCol>
+      </CRow>
 
-      <CCard className="mb-4 first-touch-detail-tabs-card">
-        <div className="first-touch-detail-tabs" role="tablist" aria-label="Client origin details">
-          {tabs.map((tab, tabIndex) => (
-            <button
-              key={tab.key}
-              id={`first-touch-tab-${tab.key}`}
-              type="button"
-              className={`first-touch-detail-tab ${activeTab === tab.key ? 'is-active' : ''}`}
-              role="tab"
-              aria-selected={activeTab === tab.key}
-              aria-controls={`first-touch-panel-${tab.key}`}
-              tabIndex={activeTab === tab.key ? 0 : -1}
-              ref={(node) => {
-                tabRefs.current[tab.key] = node
-              }}
-              onClick={() => activateTab(tab.key)}
-              onKeyDown={(event) => handleTabKeyDown(event, tabIndex)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <CCardBody
-          id={`first-touch-panel-${activeTab}`}
-          className="first-touch-tab-panel"
-          role="tabpanel"
-          aria-labelledby={`first-touch-tab-${activeTab}`}
-          tabIndex={0}
-        >
-          {activeTab === 'sales' ? (
+      {record.projects?.length ? (
+        <CCard className="mb-3 first-touch-contribution-card">
+          <CCardBody>
             <ProjectSalesCreditTable
               projects={record.projects}
               onOpenProject={(project) => navigate(`/project/manage/${project.id}`)}
             />
-          ) : null}
-          {activeTab === 'claims' ? <FirstTouchClaimsHistory record={record} /> : null}
-          {activeTab === 'timeline' ? (
-            <FirstTouchTimeline firstTouch={record.firstTouch} entries={record.timeline} />
-          ) : null}
-          {activeTab === 'payments' ? (
-            <RelatedHistoryPanel
-              type="payments"
-              companyId={record.companyId}
-              onOpen={openCommercialHistory}
-            />
-          ) : null}
-          {activeTab === 'quotes' ? (
-            <RelatedHistoryPanel
-              type="quotes"
-              companyId={record.companyId}
-              onOpen={openCommercialHistory}
-            />
-          ) : null}
-        </CCardBody>
-      </CCard>
+          </CCardBody>
+        </CCard>
+      ) : null}
 
-      <div className="first-touch-credit-boundary mb-4" role="note">
-        <span>First touch establishes documented client origin</span>
-        <CIcon icon={cilArrowRight} aria-hidden="true" />
-        <span>Each project retains its own salesperson credit</span>
-      </div>
+      {record.firstTouch || record.timeline?.length ? (
+        <CCard className="mb-3 first-touch-contribution-card">
+          <CCardBody>
+            <FirstTouchTimeline firstTouch={record.firstTouch} entries={record.timeline} />
+          </CCardBody>
+        </CCard>
+      ) : null}
+
+      {hasEvidenceHistory ? (
+        <CCard className="mb-4 first-touch-contribution-card">
+          <CCardBody>
+            <CButton
+              color="secondary"
+              variant="ghost"
+              className="px-0"
+              aria-expanded={evidenceHistoryVisible}
+              aria-controls="client-first-touch-evidence-history"
+              onClick={() => setEvidenceHistoryVisible((visible) => !visible)}
+            >
+              {evidenceHistoryVisible ? 'Hide evidence history' : 'View evidence history'}
+            </CButton>
+            <CCollapse id="client-first-touch-evidence-history" visible={evidenceHistoryVisible}>
+              <div className="pt-3">
+                <FirstTouchClaimsHistory record={record} />
+              </div>
+            </CCollapse>
+          </CCardBody>
+        </CCard>
+      ) : null}
 
       <FirstTouchClaimModal
         visible={Boolean(claimMode)}

@@ -222,9 +222,7 @@ const ClientFirstTouchTable = ({
       actionColumnWidth={actionColumnWidth}
       getRowKey={(record) => record.companyId}
       renderCell={renderCell}
-      onRowOpen={(record) =>
-        record.firstTouch || record.claims?.length ? onOpen(record) : onSubmit(record)
-      }
+      onRowOpen={onOpen}
       getActions={(record) =>
         getRowActions?.(record) || [
           record.firstTouch
