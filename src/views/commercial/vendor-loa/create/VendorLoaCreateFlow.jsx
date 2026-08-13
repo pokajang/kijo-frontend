@@ -33,7 +33,7 @@ import {
 import VendorLoaReviewStep from './VendorLoaReviewStep'
 import VendorLoaSuccessStep from './VendorLoaSuccessStep'
 
-const paymentTermOptions = ['14 days', '30 days', '45 days', '60 days']
+const paymentTermOptions = ['Before pickup/delivery', '14 days', '30 days', '45 days', '60 days']
 
 const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
   const navigate = useNavigate()

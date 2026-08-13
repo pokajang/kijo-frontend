@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
+import { CAlert, CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
 
 import dialog from '../../../../components/dialog/dialogService'
 import {
@@ -50,6 +50,16 @@ const getProjectPaymentTerms = (project = {}) => {
 }
 
 const MONEY_TOLERANCE = 0.01
+
+const focusFirstFieldError = (fieldErrors = {}) => {
+  const firstPath = Object.keys(fieldErrors)[0]
+  if (!firstPath) return
+  requestAnimationFrame(() => {
+    const input = document.querySelector(`[data-field-path="${firstPath}"]`)
+    input?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    input?.focus?.({ preventScroll: true })
+  })
+}
 
 const toMoneyNumber = (value) => {
   const number = Number(value)
@@ -106,7 +116,12 @@ const fetchersByType = {
     fetchManpowerQuoteData(project.quote_id, setters.setQuoteDetails, setters.setPricing),
   ],
   'Industrial Hygiene': (project, setters) => [
-    fetchHygieneQuoteData(project.quote_id, setters.setQuoteDetails, setters.setPricing),
+    fetchHygieneQuoteData(
+      project.quote_id,
+      setters.setQuoteDetails,
+      setters.setPricing,
+      setters.setQuoteError,
+    ),
   ],
   'Special Service': (project, setters) => [
     fetchSpecialQuoteData(project.quote_id, setters.setQuoteDetails, setters.setPricing),
@@ -223,6 +238,12 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const [createdInvoice, setCreatedInvoice] = useState(null)
   const [reviewPayload, setReviewPayload] = useState(null)
   const [closeProject, setCloseProject] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [deviationReason, setDeviationReason] = useState('')
+  const [deviationAcknowledged, setDeviationAcknowledged] = useState(false)
+  const [deviationError, setDeviationError] = useState('')
+  const [quoteLoadError, setQuoteLoadError] = useState('')
+  const [quoteFetchAttempt, setQuoteFetchAttempt] = useState(0)
   const effectivePaymentMethod =
     paymentMethodOverride || (quoteDetails?.payment_method || '').trim().toLowerCase()
   const missingTrainingDates =
@@ -247,6 +268,12 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     setCreatedInvoice(null)
     setReviewPayload(null)
     setCloseProject(false)
+    setFieldErrors({})
+    setDeviationReason('')
+    setDeviationAcknowledged(false)
+    setDeviationError('')
+    setQuoteLoadError('')
+    setQuoteFetchAttempt(0)
     setLoaNo(project?.po_loa_number || project?.client_award_ref_no || '')
     setClientOverrides({
       clientName: project?.client_name || '',
@@ -328,15 +355,20 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     if (!project?.quote_id || fetchedRef.current) return
     fetchedRef.current = true
     const factory = fetchersByType[project.project_type]
+    const setPricingFromQuote = (updater) => {
+      if (draftAppliedRef.current) return
+      setPricing(updater)
+    }
     const aborts = factory
       ? factory(project, {
           setQuoteDetails,
-          setPricing,
+          setPricing: setPricingFromQuote,
           setGrantApprovalNo,
+          setQuoteError: setQuoteLoadError,
         })
       : []
     return () => aborts.forEach((abort) => abort && abort())
-  }, [project])
+  }, [project, quoteFetchAttempt])
 
   useEffect(() => {
     if (!quoteDetails) return
@@ -445,11 +477,17 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
 
     const built = buildInvoiceCreatePayload(project.project_type, getCreateInvoiceArgs())
     if (!built.success) {
+      if (built.fieldErrors) {
+        setFieldErrors(built.fieldErrors)
+        focusFirstFieldError(built.fieldErrors)
+        return
+      }
       dialog.alert(built.message || 'Invoice cannot be created.')
       return
     }
 
     setReviewPayload(built.payload)
+    setFieldErrors({})
     setCloseProject(false)
     setStep('review')
   }
@@ -466,12 +504,40 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
 
   const handleConfirmCreateInvoice = async () => {
     if (submitting) return
+    if (
+      projectInvoiceSummary.remainingAfter !== null &&
+      projectInvoiceSummary.remainingAfter < -MONEY_TOLERANCE
+    ) {
+      if (!deviationReason.trim() || !deviationAcknowledged) {
+        setDeviationError(
+          !deviationReason.trim()
+            ? 'Briefly explain why this invoice exceeds the project value.'
+            : 'Confirm the project-value difference to continue.',
+        )
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const result = await submitInvoicePayload({
         ...reviewPayload,
+        deviation_reason: deviationReason.trim() || null,
+        deviation_acknowledged: deviationAcknowledged,
         close_project: Boolean(closeProject && projectInvoiceSummary.canCloseProject),
       })
+      if (result?.fieldErrors) {
+        const pricingErrors = Object.fromEntries(
+          Object.entries(result.fieldErrors).filter(([path]) => path.startsWith('pricing.')),
+        )
+        if (Object.keys(pricingErrors).length > 0) {
+          setFieldErrors(pricingErrors)
+          setStep('edit')
+          focusFirstFieldError(pricingErrors)
+        } else {
+          setDeviationError(result.message || 'Review the project-value difference to continue.')
+        }
+        return
+      }
       if (result?.openExisting && result.invoiceId) {
         navigate(`/commercial/invoice/${result.invoiceId}`)
         return
@@ -526,6 +592,28 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const renderEditStep = () => (
     <>
       {showCommercialDocsNotice && <CCardBody>{commercialDocsNotice}</CCardBody>}
+      {quoteLoadError ? (
+        <CCardBody className="pb-0">
+          <CAlert
+            color="warning"
+            className="d-flex align-items-center justify-content-between gap-2"
+          >
+            <span>{quoteLoadError}</span>
+            <CButton
+              color="warning"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                fetchedRef.current = false
+                setQuoteLoadError('')
+                setQuoteFetchAttempt((value) => value + 1)
+              }}
+            >
+              Retry
+            </CButton>
+          </CAlert>
+        </CCardBody>
+      ) : null}
       {draftReady ? (
         <InvoiceFormShell
           mode="create"
@@ -564,6 +652,15 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
           }}
           pricing={pricing}
           setPricing={setPricing}
+          fieldErrors={fieldErrors}
+          onClearFieldError={(path) =>
+            setFieldErrors((prev) => {
+              if (!prev[path]) return prev
+              const next = { ...prev }
+              delete next[path]
+              return next
+            })
+          }
           grantApprovalNo={grantApprovalNo}
           onGrantApprovalChange={(event) => setGrantApprovalNo(event.target.value)}
         />
@@ -622,6 +719,17 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
           submitting={submitting}
           onBack={() => setStep('edit')}
           onConfirm={handleConfirmCreateInvoice}
+          deviationReason={deviationReason}
+          deviationAcknowledged={deviationAcknowledged}
+          deviationError={deviationError}
+          onDeviationReasonChange={(value) => {
+            setDeviationReason(value)
+            setDeviationError('')
+          }}
+          onDeviationAcknowledgedChange={(value) => {
+            setDeviationAcknowledged(value)
+            setDeviationError('')
+          }}
         />
       )}
       {step === 'success' && (

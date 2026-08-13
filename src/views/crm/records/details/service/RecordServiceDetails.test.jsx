@@ -53,6 +53,31 @@ describe('RecordServiceDetails', () => {
     expect(amountFor('subtotal')).toBe(12900)
   })
 
+  it('recognizes the gross-subtotal convention used by some legacy Hygiene quotes', () => {
+    const rows = buildHygieneCalculationRows({
+      subtotal: 3000,
+      discountAmount: 50,
+      sstAmount: 0,
+      grandTotal: 2950,
+      formData: {
+        sampleCounts: 2,
+        numWorkUnits: 1,
+        unitPrice: 1500,
+        pricingRuleVersion: 'ih_complexity_v1',
+        complexityRating: 1,
+        travelCharge: 0,
+        discount: 50,
+        sstPercent: 0,
+      },
+    })
+    const amountFor = (key) => rows.find((row) => row.key === key)?.amount
+
+    expect(amountFor('service-cost')).toBe(3000)
+    expect(amountFor('gross-subtotal')).toBe(3000)
+    expect(amountFor('subtotal')).toBe(2950)
+    expect(amountFor('grand-total')).toBe(2950)
+  })
+
   it('renders complete Industrial Hygiene details and an ordered calculation', () => {
     renderService('ih-tab', {
       estimatedCost: 1000,

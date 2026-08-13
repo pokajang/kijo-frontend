@@ -40,6 +40,7 @@ import {
 import { formatProjectMoney } from '../projectDetailFormatters'
 import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
 const PAYMENT_TERM_OPTIONS = [
+  { value: 'Before pickup/delivery', label: 'Before pickup / delivery' },
   { value: '14 days', label: '14 days' },
   { value: '30 days', label: '30 days' },
   { value: '45 days', label: '45 days' },

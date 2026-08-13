@@ -37,6 +37,7 @@ vi.mock('../../../components/forms/ThemedSelect', () => ({
     isDisabled,
     isLoading,
     noOptionsMessage,
+    formatOptionLabel,
   }) => (
     <div>
       <select
@@ -55,6 +56,13 @@ vi.mock('../../../components/forms/ThemedSelect', () => ({
           </option>
         ))}
       </select>
+      {formatOptionLabel && options.length > 0 ? (
+        <div data-testid={`${placeholder}-formatted-options`}>
+          {options.map((option) => (
+            <div key={option.value}>{formatOptionLabel(option, { context: 'menu' })}</div>
+          ))}
+        </div>
+      ) : null}
       {!isLoading && options.length === 0 && noOptionsMessage ? (
         <div>
           {typeof noOptionsMessage === 'function' ? noOptionsMessage({}) : noOptionsMessage}
@@ -84,6 +92,7 @@ const mockFetchForProjectFlow = ({ assignedVendors = [] } = {}) => {
             {
               id: 101,
               projectName: 'Linked Active Project',
+              clientName: 'Acme Client',
               projectType: 'Training',
               status: 'Active',
             },
@@ -149,7 +158,8 @@ describe('PayVendor project vendor selection', () => {
     renderPayVendor()
 
     fireEvent.click(screen.getByRole('radio', { name: /project-related/i }))
-    await screen.findByText('Linked Active Project (Active)')
+    await screen.findByText('Linked Active Project')
+    expect(screen.getByText('Acme Client · #101')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Select project'), { target: { value: '101' } })
 
@@ -170,7 +180,7 @@ describe('PayVendor project vendor selection', () => {
     renderPayVendor()
 
     fireEvent.click(screen.getByRole('radio', { name: /project-related/i }))
-    await screen.findByText('Linked Active Project (Active)')
+    await screen.findByText('Linked Active Project')
     fireEvent.change(screen.getByLabelText('Select project'), { target: { value: '101' } })
 
     expect(await screen.findByText('No vendor assigned to this project.')).toBeInTheDocument()
@@ -228,7 +238,7 @@ describe('PayVendor project vendor selection', () => {
     renderPayVendor()
 
     fireEvent.click(screen.getByRole('radio', { name: /project-related/i }))
-    await screen.findByText('Linked Active Project (Active)')
+    await screen.findByText('Linked Active Project')
     fireEvent.change(screen.getByLabelText('Select project'), { target: { value: '101' } })
     await screen.findByText('Amount Guard Vendor')
     fireEvent.change(screen.getByLabelText('Select vendor'), { target: { value: '9' } })

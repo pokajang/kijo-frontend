@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildStoredHygieneTotals,
   calculateHygieneTotals,
+  HYGIENE_SUBTOTAL_CONVENTION,
   INTERMEDIATE_HYGIENE_PRICING_RULE,
   LEGACY_HYGIENE_PRICING_RULE,
   STANDARD_HYGIENE_PRICING_RULE,
@@ -170,6 +171,29 @@ describe('calculateHygieneTotals', () => {
     expect(totals.serviceTotal).toBe(9500)
     expect(totals.subTotal).toBe(9300)
     expect(totals.grandTotal).toBe(9300)
+    expect(totals.subtotalConvention).toBe(HYGIENE_SUBTOTAL_CONVENTION.NET)
+  })
+
+  it('recognizes the legacy gross-subtotal storage convention', () => {
+    const totals = buildStoredHygieneTotals({
+      sampleCounts: 2,
+      numWorkUnits: 1,
+      unitPrice: 1500,
+      discount: 50,
+      subTotal: 3000,
+      sstAmount: 0,
+      grandTotal: 2950,
+      pricingRuleVersion: LEGACY_HYGIENE_PRICING_RULE,
+      complexityRating: 1,
+    })
+
+    expect(totals.subtotalConvention).toBe(HYGIENE_SUBTOTAL_CONVENTION.GROSS)
+    expect(totals.serviceTotal).toBe(3000)
+    expect(totals.subtotalBeforeDiscount).toBe(3000)
+    expect(totals.taxableTotal).toBe(2950)
+    expect(totals.subTotal).toBe(3000)
+    expect(totals.grandTotal).toBe(2950)
+    expect(totals.isReconciled).toBe(true)
   })
 
   it('fails closed for unknown pricing rules', () => {

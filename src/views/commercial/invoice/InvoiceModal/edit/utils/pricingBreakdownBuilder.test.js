@@ -200,7 +200,7 @@ describe('buildBreakdownFromPricing Industrial Hygiene', () => {
       unit_price: 79.17,
       travel_charge: 0,
       discount: 200,
-      sub_total: 9300,
+      sub_total: 9500,
       pricing_rule_version: 'ih_standard_v1',
       complexity_rating: 4,
       hygiene_items: [{ item_description: 'Must be ignored', quantity: 1, unit_price: 500 }],
@@ -213,5 +213,32 @@ describe('buildBreakdownFromPricing Industrial Hygiene', () => {
     })
     expect(breakdown[0].description).toContain('preserved historical quoted amount')
     expect(breakdown).toHaveLength(3)
+  })
+
+  it('keeps a legacy gross subtotal from receiving a second discount add-back', () => {
+    const breakdown = buildBreakdownFromPricing('Industrial Hygiene', {
+      service_title: 'LEV Inspection',
+      sample_counts: 2,
+      sample_unit: 'sample(s)',
+      num_work_units: 1,
+      unit_price: 1500,
+      travel_charge: 0,
+      discount: 50,
+      discount_qty: 1,
+      discount_unit_price: 50,
+      sub_total: 3000,
+      pricing_rule_version: 'ih_complexity_v1',
+      complexity_rating: 1,
+      hygiene_items: [],
+    })
+
+    expect(breakdown[0]).toMatchObject({
+      quantity: 2,
+      unit_price: 1500,
+    })
+    expect(breakdown.at(-1)).toMatchObject({
+      item_description: 'Discount',
+      unit_price: -50,
+    })
   })
 })

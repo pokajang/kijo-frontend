@@ -24,3 +24,4 @@ Use it only when the deployed release explicitly requires it.
 - [Legal compliance assessment snapshots](legal-compliance-snapshots.md)
 - [Workload classification and snapshots](workload-classification-and-snapshots.md)
 - [Dashboard monthly report generation](dashboard-monthly-report.md)
+- [IH invoice calculation metadata and vendor-payment lifecycle](ih-invoice-and-vendor-payment-lifecycle.md)

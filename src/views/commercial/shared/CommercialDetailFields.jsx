@@ -32,7 +32,12 @@ export const DetailSection = ({ title, children }) => (
 export const ItemsTable = ({ items = [], columns = [] }) => (
   <div className="embedded-data-table-wrap">
     {/* datatable-exempt: existing embedded/layout table */}
-    <CTable hover responsive className="mb-0 data-table-compact embedded-data-table">
+    <CTable
+      hover
+      responsive
+      className="mb-0 data-table-compact embedded-data-table"
+      style={columns.length >= 5 ? { minWidth: '48rem' } : undefined}
+    >
       <CTableHead>
         <CTableRow>
           <CTableHeaderCell className="text-center">#</CTableHeaderCell>

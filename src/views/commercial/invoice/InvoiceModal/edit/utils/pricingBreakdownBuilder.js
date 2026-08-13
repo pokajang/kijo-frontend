@@ -203,15 +203,20 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         pricing.discount_unit_price ??
           (discountQty ? toNumber(pricing.discount) / discountQty : pricing.discount),
       )
-      const hygieneItems =
-        pricingRuleVersion === STANDARD_HYGIENE_PRICING_RULE && Array.isArray(pricing.hygiene_items)
-          ? pricing.hygiene_items
-          : []
+      const hygieneItems = Array.isArray(pricing.hygiene_items)
+        ? isHistoricalPricing
+          ? pricing.hygiene_items.filter((item) => item?.is_custom)
+          : pricing.hygiene_items
+        : []
       const calculatedUnitPrice = toNumber(pricing.unit_price) * complexityMultiplier
       const calculatedServiceTotal = baseQty * calculatedUnitPrice
+      const customItemsTotal = hygieneItems.reduce(
+        (total, item) => total + toNumber(item.quantity) * toNumber(item.unit_price),
+        0,
+      )
       const contractualServiceTotal = Math.max(
         0,
-        toNumber(pricing.sub_total) + toNumber(pricing.discount) - toNumber(pricing.travel_charge),
+        toNumber(pricing.sub_total) - toNumber(pricing.travel_charge) - customItemsTotal,
       )
       const hasStoredHistoricalSubtotal =
         pricing.sub_total !== null && pricing.sub_total !== undefined
@@ -224,6 +229,8 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         {
           id: null,
           item_description: buildHygieneBaseLabel(pricing.service_title),
+          line_type: 'service',
+          source_line_key: 'quote_ih_service',
           unit: hasHistoricalVariance ? 'Lump Sum' : displayUnit,
           quantity: hasHistoricalVariance ? 1 : baseQty,
           unit_price: hasHistoricalVariance ? contractualServiceTotal : calculatedUnitPrice,
@@ -234,6 +241,8 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         {
           id: null,
           item_description: 'Travel Charge',
+          line_type: 'travel',
+          source_line_key: 'quote_ih_travel',
           unit: travelUnit,
           quantity: travelQty,
           unit_price: toNumber(travelUnitPrice),
@@ -241,6 +250,8 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         },
         ...hygieneItems.map((item) => ({
           id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+          line_type: item.line_type || 'custom',
+          source_line_key: item.source_line_key || null,
           item_description: item.item_description || '',
           description: item.description || '',
           unit: item.unit || 'Lot',
@@ -250,6 +261,8 @@ export const buildBreakdownFromPricing = (serviceType, pricing, quoteDetails) =>
         {
           id: null,
           item_description: 'Discount',
+          line_type: 'discount',
+          source_line_key: 'quote_ih_discount',
           unit: discountUnit,
           quantity: discountQty,
           unit_price: toNegative(discountUnitPrice),

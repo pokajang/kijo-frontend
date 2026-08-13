@@ -49,8 +49,42 @@ const PAYMENT_CONTEXT_OPTIONS = [
 const getProjectId = (project) => project?.project_id ?? project?.id
 const getProjectName = (project) => project?.project_name ?? project?.projectName ?? ''
 const getProjectType = (project) => project?.project_type ?? project?.projectType ?? ''
+const getClientName = (project) =>
+  project?.client_name ?? project?.clientName ?? project?.company_name ?? project?.companyName ?? ''
+const PROJECT_META_SEPARATOR = ' · '
+const formatProjectIdentity = (project) => {
+  const projectId = getProjectId(project)
+  const clientName = String(getClientName(project) || '').trim()
+
+  if (clientName && projectId) return `${clientName}${PROJECT_META_SEPARATOR}#${projectId}`
+  if (clientName) return clientName
+  return projectId ? `Project #${projectId}` : ''
+}
+const buildProjectOption = (project) => {
+  const projectName = getProjectName(project) || 'Unnamed project'
+  const identity = formatProjectIdentity(project)
+
+  return {
+    value: getProjectId(project),
+    label: [projectName, identity].filter(Boolean).join(' '),
+    projectName,
+    identity,
+    data: project,
+  }
+}
+const formatProjectOptionLabel = (option) => (
+  <span className="d-block text-start py-1">
+    <span className="d-block fw-semibold text-truncate">{option.projectName}</span>
+    {option.identity ? (
+      <span className="d-block small opacity-75 text-truncate">{option.identity}</span>
+    ) : null}
+  </span>
+)
 const getVendorId = (vendor) => vendor?.vendor_id ?? vendor?.id
 const getVendorName = (vendor) => vendor?.vendor_name ?? vendor?.vendorName ?? ''
+const createIdempotencyKey = () =>
+  globalThis.crypto?.randomUUID?.() ||
+  `vendor-payment-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 const loadActiveVendors = ({ signal } = {}) =>
   fetchAllPagedRecords({
@@ -64,25 +98,32 @@ const loadActiveVendors = ({ signal } = {}) =>
 const PayVendor = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const handoffProjectId = location.state?.paymentProjectId
-  const handoffVendorId = location.state?.paymentVendorId
+  const existingRecord = location.state?.editRecord || location.state?.resubmitRecord || null
+  const isEditing = Boolean(location.state?.editRecord)
+  const isResubmitting = Boolean(location.state?.resubmitRecord)
+  const handoffProjectId = location.state?.paymentProjectId || existingRecord?.project_id
+  const handoffVendorId = location.state?.paymentVendorId || existingRecord?.vendor_id
 
   const [allProjects, setAllProjects] = useState([])
   const [vendors, setVendors] = useState([])
   const [selectedProject, setSelectedProject] = useState(null)
   const [selectedVendor, setSelectedVendor] = useState(null)
   const [paymentContext, setPaymentContext] = useState(
-    location.state?.paymentContext || (handoffProjectId ? 'Project' : ''),
+    existingRecord?.payment_context ||
+      location.state?.paymentContext ||
+      (handoffProjectId ? 'Project' : ''),
   )
   const [loadingProjects, setLoadingProjects] = useState(false)
   const [loadingVendors, setLoadingVendors] = useState(false)
   const [selectionError, setSelectionError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey)
 
   const [formData, setFormData] = useState({
-    type: '',
-    amount: '',
-    method: '',
-    remarks: '',
+    type: existingRecord?.payment_type || '',
+    amount: existingRecord?.amount || '',
+    method: existingRecord?.method || '',
+    remarks: existingRecord?.remarks || '',
     receipt: null,
   })
 
@@ -195,15 +236,7 @@ const PayVendor = () => {
     selectedProject,
   ])
 
-  const projectOptions = useMemo(
-    () =>
-      allProjects.map((project) => ({
-        value: getProjectId(project),
-        label: `${getProjectName(project)} (${project.status || '-'})`,
-        data: project,
-      })),
-    [allProjects],
-  )
+  const projectOptions = useMemo(() => allProjects.map(buildProjectOption), [allProjects])
 
   const vendorOptions = useMemo(
     () =>
@@ -220,9 +253,8 @@ const PayVendor = () => {
     const selectedId = getProjectId(selectedProject)
     return (
       projectOptions.find((option) => String(option.value) === String(selectedId)) || {
+        ...buildProjectOption(selectedProject),
         value: selectedId,
-        label: `${getProjectName(selectedProject)} (${selectedProject.status || '-'})`,
-        data: selectedProject,
       }
     )
   }, [projectOptions, selectedProject])
@@ -285,7 +317,22 @@ const PayVendor = () => {
     })
   }
 
-  const handleSubmitPayment = () => {
+  const handleReceiptChange = (event) => {
+    const file = event.target.files?.[0] || null
+    if (!file) {
+      setFormData((current) => ({ ...current, receipt: null }))
+      return
+    }
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png']
+    if (!allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
+      dialog.alert('Upload a PDF, JPG, or PNG invoice no larger than 5 MB.')
+      event.target.value = ''
+      return
+    }
+    setFormData((current) => ({ ...current, receipt: file }))
+  }
+
+  const handleSubmitPayment = async () => {
     const vendorId = getVendorId(selectedVendor)
     const vendorName = getVendorName(selectedVendor)
     const amount = Number(formData.amount)
@@ -315,7 +362,7 @@ const PayVendor = () => {
       return
     }
 
-    if (!formData.receipt) {
+    if (!formData.receipt && !existingRecord?.receipt_path && !existingRecord?.receipt_url) {
       dialog.alert('Please upload the invoice before submitting.')
       return
     }
@@ -329,41 +376,51 @@ const PayVendor = () => {
     submitData.append('vendor_id', vendorId)
     submitData.append('vendor_name', vendorName)
     submitData.append('project_id', getProjectId(selectedProject) || '')
+    if (paymentContext === 'Project' && selectedVendor?.id) {
+      submitData.append('project_vendor_assignment_id', selectedVendor.id)
+    }
     submitData.append('payment_context', paymentContext)
     submitData.append('payment_type', formData.type)
     submitData.append('amount', amount.toFixed(2))
     submitData.append('method', formData.method)
     submitData.append('remarks', formData.remarks)
-    submitData.append('receipt', formData.receipt)
+    if (formData.receipt) submitData.append('receipt', formData.receipt)
+    if (!isEditing) submitData.append('idempotency_key', idempotencyKey)
+    if (existingRecord?.version) submitData.append('version', existingRecord.version)
+    if (isEditing) submitData.append('_method', 'PATCH')
 
-    apiFetch(`${API_BASE}vendor-payments`, {
-      method: 'POST',
-      body: submitData,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.status === 'success' || data?.success === true) {
-          dialog.alert('Payment request submitted.')
-          dispatchAppNotificationsChanged()
+    const endpoint = isResubmitting
+      ? `${API_BASE}vendor-payments/${existingRecord.id}/resubmit`
+      : isEditing
+        ? `${API_BASE}vendor-payments/${existingRecord.id}`
+        : `${API_BASE}vendor-payments`
 
-          setFormData({
-            type: '',
-            amount: '',
-            method: '',
-            remarks: '',
-            receipt: null,
-          })
-          clearVendorSelection()
-          if (paymentContext !== 'Project') {
-            setSelectedProject(null)
-          }
-        } else {
-          dialog.alert('Submission failed: ' + data.message)
-        }
+    setSubmitting(true)
+    try {
+      const res = await apiFetch(endpoint, {
+        method: 'POST',
+        body: submitData,
       })
-      .catch((err) => {
-        dialog.alert('Submission failed: ' + err.message)
-      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || (data?.status !== 'success' && data?.success !== true)) {
+        throw new Error(data?.message || `Request failed with status ${res.status}`)
+      }
+
+      await dialog.alert(
+        isResubmitting
+          ? 'Payment request amended and resubmitted.'
+          : isEditing
+            ? 'Payment request updated.'
+            : 'Payment request submitted.',
+      )
+      dispatchAppNotificationsChanged()
+      setIdempotencyKey(createIdempotencyKey())
+      navigate(`/vendor/payment-records/${data.id || existingRecord?.id}`)
+    } catch (err) {
+      dialog.alert('Submission failed: ' + err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -372,7 +429,13 @@ const PayVendor = () => {
 
       <CCard className="mb-4">
         <CCardHeader>
-          <strong>Request Vendor Payment</strong>
+          <strong>
+            {isResubmitting
+              ? 'Amend & Resubmit Vendor Payment'
+              : isEditing
+                ? 'Edit Vendor Payment'
+                : 'Request Vendor Payment'}
+          </strong>
         </CCardHeader>
         <CCardBody>
           <section>
@@ -416,6 +479,11 @@ const PayVendor = () => {
                     onChange={handleProjectSelect}
                     isClearable
                     isLoading={loadingProjects}
+                    formatOptionLabel={formatProjectOptionLabel}
+                    styles={{
+                      control: (base) => ({ ...base, minHeight: '3.5rem' }),
+                      option: (base) => ({ ...base, padding: '0.5rem 0.75rem' }),
+                    }}
                     placeholder="Select project"
                     loadingMessage={() => 'Loading linked projects...'}
                     noOptionsMessage={() =>
@@ -493,7 +561,15 @@ const PayVendor = () => {
                       />
                     </CCol>
 
-                    <CCol md={6}>
+                    <CCol md={3}>
+                      <CFormLabel>Payment Terms</CFormLabel>
+                      <CFormInput
+                        value={selectedVendor?.payment_terms || 'Not specified'}
+                        disabled
+                      />
+                    </CCol>
+
+                    <CCol md={3}>
                       <CFormLabel>Scope of Award</CFormLabel>
                       <CFormTextarea rows={1} value={selectedVendor?.position || '-'} disabled />
                     </CCol>
@@ -545,8 +621,14 @@ const PayVendor = () => {
                     id="vendorPaymentReceipt"
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={(e) => setFormData({ ...formData, receipt: e.target.files[0] })}
+                    onChange={handleReceiptChange}
                   />
+                  {formData.receipt && (
+                    <small className="text-muted d-block mt-1">
+                      {formData.receipt.name} ({(formData.receipt.size / 1024 / 1024).toFixed(2)}{' '}
+                      MB)
+                    </small>
+                  )}
                 </CCol>
 
                 <CCol md={4}>
@@ -576,8 +658,19 @@ const PayVendor = () => {
                 </CCol>
 
                 <CCol md={12} className="d-flex justify-content-end">
-                  <CButton color="primary" size="sm" onClick={handleSubmitPayment}>
-                    Submit Payment
+                  <CButton
+                    color="primary"
+                    size="sm"
+                    onClick={handleSubmitPayment}
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? 'Submitting…'
+                      : isResubmitting
+                        ? 'Resubmit Payment'
+                        : isEditing
+                          ? 'Save Changes'
+                          : 'Submit Payment'}
                   </CButton>
                 </CCol>
               </CRow>

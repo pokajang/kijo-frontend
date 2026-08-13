@@ -209,6 +209,10 @@ Backfills are not part of the reusable deployment checklist unless the release
 explicitly requires one. Identify them during local review and link the exact
 release note before pushing.
 
+The coordinated IH invoice calculation and vendor-payment lifecycle release
+must follow
+[its release-specific migration and rollback note](deployment/release-notes/ih-invoice-and-vendor-payment-lifecycle.md).
+
 The archived procedures and their prerequisites live in
 [deployment/release-notes/README.md](deployment/release-notes/README.md). Do not
 run an archived command solely because it is documented there.

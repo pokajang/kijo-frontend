@@ -1,5 +1,6 @@
 import dialog from '../../../../components/dialog/dialogService'
 import { normalizeEquipmentInvoiceItem } from '../../../../shared/invoice/equipmentInvoiceUtils'
+import { buildHygieneInvoicePricingSeed } from '../../../../shared/invoice/hygienePricing'
 import { normalizeTrainingHrdCharge } from '../../../crm/quotes/training/trainingHrd'
 import { buildInvoiceCreatePayload } from './invoiceCreatePayload'
 
@@ -43,6 +44,44 @@ const fetchQuotePayload = async (url, signal) => {
   }
 
   return normalizeApiPayload(json)
+}
+
+export const mapInvoiceFieldErrors = (fieldErrors = {}, breakdown = []) => {
+  const mapped = {}
+  Object.entries(fieldErrors).forEach(([path, messages]) => {
+    if (path === 'sst_percent') {
+      mapped['pricing.sst_percent'] = messages
+      return
+    }
+    const match = path.match(/^breakdown\.(\d+)\.(.+)$/)
+    if (!match) {
+      mapped[path] = messages
+      return
+    }
+    const lineIndex = Number(match[1])
+    const field = match[2]
+    const line = breakdown[lineIndex] || {}
+    const type = line.line_type
+    if (type === 'service') {
+      const serviceField = {
+        quantity: 'sample_counts',
+        unit_price: 'unit_price',
+        item_description: 'service_title',
+        unit: 'sample_unit',
+      }[field]
+      mapped[`pricing.${serviceField || field}`] = messages
+    } else if (type === 'travel')
+      mapped[`pricing.travel_${field === 'quantity' ? 'qty' : field}`] = messages
+    else if (type === 'discount')
+      mapped[`pricing.discount_${field === 'quantity' ? 'qty' : field}`] = messages
+    else {
+      const customIndex = breakdown
+        .slice(0, lineIndex)
+        .filter((candidate) => (candidate.line_type || 'custom') === 'custom').length
+      mapped[`pricing.hygiene_items.${customIndex}.${field}`] = messages
+    }
+  })
+  return mapped
 }
 
 export const useTrainingQuoteData = (quoteId, setQuoteDetails, setPricing) => {
@@ -130,7 +169,7 @@ export const useManpowerQuoteData = (quoteId, setQuoteDetails, setPricing) => {
   return () => controller.abort()
 }
 
-export const useHygieneQuoteData = (quoteId, setQuoteDetails, setPricing) => {
+export const useHygieneQuoteData = (quoteId, setQuoteDetails, setPricing, setQuoteError) => {
   if (!quoteId) return
   const controller = new AbortController()
   fetchQuotePayload(
@@ -138,28 +177,16 @@ export const useHygieneQuoteData = (quoteId, setQuoteDetails, setPricing) => {
     controller.signal,
   )
     .then((data) => {
+      setQuoteError?.('')
       setQuoteDetails(data)
-      setPricing((prev) => ({
-        ...prev,
-        sub_total: parseFloat(data.sub_total || 0),
-        discount: parseFloat(data.discount || 0),
-        sst_percent: parseFloat(data.sst_percent || 0),
-        sst_amount: parseFloat(data.sst_amount || 0),
-        grand_total: parseFloat(data.grand_total || 0),
-        hygiene_items: Array.isArray(data.hygiene_items)
-          ? data.hygiene_items.map((item) => ({
-              id: item.id,
-              item_description: item.item_description || '',
-              description: item.description || '',
-              quantity: parseFloat(item.quantity || 0),
-              unit: item.unit || 'Lot',
-              unit_price: parseFloat(item.unit_price || 0),
-            }))
-          : [],
-      }))
+      const seed = buildHygieneInvoicePricingSeed(data)
+      setPricing((prev) => ({ ...prev, ...seed }))
     })
     .catch((err) => {
-      if (err.name !== 'AbortError') console.error('Hygiene data fetch error:', err)
+      if (err.name !== 'AbortError') {
+        console.error('Hygiene data fetch error:', err)
+        setQuoteError?.('Quote values could not be loaded. Your draft is retained.')
+      }
     })
   return () => controller.abort()
 }
@@ -239,11 +266,20 @@ export const submitInvoicePayload = async (payload) => {
       )
       return { success: false, invoiceId: data.invoice_id, openExisting }
     }
+    const responseFieldErrors = data.field_errors || data.errors
+    if (responseFieldErrors) {
+      return {
+        success: false,
+        code: data.code || 'invoice_validation_failed',
+        message: data.message || 'Some invoice fields require attention.',
+        fieldErrors: mapInvoiceFieldErrors(responseFieldErrors, payload.breakdown || []),
+      }
+    }
     dialog.alert('Invoice creation failed: ' + (data.message || 'Unknown error.'))
     return { success: false }
   } catch (err) {
     console.error('Invoice creation error:', err)
-    dialog.alert('Server error occurred.')
+    dialog.alert('Invoice could not be saved. Your draft is retained. Please try again.')
     return { success: false }
   }
 }

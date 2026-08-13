@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
   CAlert,
   CButton,
   CCardBody,
   CCardFooter,
   CFormCheck,
+  CFormInput,
+  CFormFeedback,
   CTable,
   CTableBody,
   CTableDataCell,
@@ -48,7 +50,14 @@ const InvoiceReviewStep = ({
   submitting,
   onBack,
   onConfirm,
+  deviationReason,
+  deviationAcknowledged,
+  deviationError,
+  onDeviationReasonChange,
+  onDeviationAcknowledgedChange,
 }) => {
+  const deviationReasonRef = useRef(null)
+  const deviationAcknowledgementRef = useRef(null)
   const lineItems = Array.isArray(payload?.breakdown) ? payload.breakdown : []
   const remainingAfter = displayRemainingMoney(projectInvoiceSummary?.remainingAfter)
   const remainingAfterLabel =
@@ -63,6 +72,15 @@ const InvoiceReviewStep = ({
   ]
     .filter(Boolean)
     .join(', ')
+
+  useEffect(() => {
+    if (!deviationError) return
+    const target = String(deviationReason || '').trim()
+      ? deviationAcknowledgementRef.current
+      : deviationReasonRef.current
+    target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    target?.focus?.({ preventScroll: true })
+  }, [deviationError, deviationReason])
 
   return (
     <>
@@ -110,6 +128,37 @@ const InvoiceReviewStep = ({
                 Project status will be marked Completed after this invoice is created.
               </div>
             </div>
+          ) : null}
+          {remainingAfter !== null && remainingAfter < 0 ? (
+            <CAlert color="warning" className="mt-3 mb-0">
+              <div className="fw-semibold mb-2">
+                This invoice is {formatMoney(Math.abs(remainingAfter))} above the remaining project
+                value.
+              </div>
+              <CFormInput
+                ref={deviationReasonRef}
+                value={deviationReason || ''}
+                onChange={(event) => onDeviationReasonChange?.(event.target.value)}
+                placeholder="Brief reason"
+                invalid={Boolean(deviationError && !String(deviationReason || '').trim())}
+                data-field-path="deviation_reason"
+                aria-label="Reason for exceeding project value"
+              />
+              <CFormCheck
+                ref={deviationAcknowledgementRef}
+                className="mt-2"
+                id="invoice-deviation-acknowledgement"
+                checked={Boolean(deviationAcknowledged)}
+                onChange={(event) => onDeviationAcknowledgedChange?.(event.target.checked)}
+                label="I confirm this project-value difference."
+                data-field-path="deviation_acknowledged"
+              />
+              {deviationError ? (
+                <CFormFeedback invalid className="d-block">
+                  {deviationError}
+                </CFormFeedback>
+              ) : null}
+            </CAlert>
           ) : null}
         </div>
 

@@ -15,15 +15,19 @@ import {
   CButton,
   CBadge,
   CTooltip,
+  CAlert,
+  CFormFeedback,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
 import {
   buildStoredHygieneTotals,
+  buildHygieneInvoicePricingSeed,
   calculateHygieneTotals,
   isHistoricalHygienePricingRule,
   STANDARD_HYGIENE_PRICING_RULE,
 } from './hygienePricing'
+import dialog from '../../components/dialog/dialogService'
 
 /**
  * Industrial Hygiene invoice form (table-based, consistent with other services).
@@ -33,7 +37,16 @@ import {
  * - pricing: form values
  * - setPricing: setter
  */
-const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create' }) => {
+const HygieneInvoiceForm = ({
+  quoteDetails,
+  pricing,
+  setPricing,
+  fieldErrors = {},
+  onClearFieldError,
+  financialLocked = false,
+  financialLockMessage = '',
+  onDirty,
+}) => {
   const buildHygieneBaseLabel = (value) => {
     const raw = String(value || '').trim()
     if (!raw) return 'Industrial Hygiene'
@@ -56,57 +69,46 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
     unit_price: '',
   })
 
-  // Seed from quote
+  const errorFor = (path) => fieldErrors?.[path]?.[0] || fieldErrors?.[path] || ''
+  const inputErrorProps = (path) => ({
+    invalid: Boolean(errorFor(path)),
+    'aria-invalid': Boolean(errorFor(path)),
+    'aria-describedby': errorFor(path) ? `${path.replaceAll('.', '-')}-error` : undefined,
+    'data-field-path': path,
+  })
+  const clearError = (path) => onClearFieldError?.(path)
+  const markDirty = () => onDirty?.()
+  const shouldSeedFromQuote = Boolean(
+    quoteDetails &&
+      !pricing.pricing_rule_version &&
+      !pricing.service_title &&
+      !(Number(pricing.sample_counts) > 0) &&
+      !(Number(pricing.sub_total) > 0) &&
+      items.length === 0,
+  )
+
   useEffect(() => {
-    if (!quoteDetails) return
-    const title =
-      `${quoteDetails.service_title}` +
-      ` (${quoteDetails.service_code})` +
-      ` at ${quoteDetails.site_address}`
+    if (!shouldSeedFromQuote) return
+    setPricing((prev) => ({ ...prev, ...buildHygieneInvoicePricingSeed(quoteDetails) }))
+  }, [quoteDetails, setPricing, shouldSeedFromQuote])
 
-    const travelUnitPrice = parseFloat(quoteDetails.travel_charge) || 0
-    const discountUnitPrice = parseFloat(quoteDetails.discount) || 0
-
-    const rawWorkUnits = parseFloat(quoteDetails.num_work_units)
-    const seededWorkUnits = Number.isFinite(rawWorkUnits) && rawWorkUnits > 0 ? rawWorkUnits : ''
-
-    setPricing((prev) => ({
-      ...prev,
-      service_title: title,
-      sample_counts: quoteDetails.sample_counts ?? 0,
-      sample_unit: quoteDetails.sample_unit ?? prev.sample_unit ?? 'sample(s)',
-      num_work_units: seededWorkUnits,
-      unit_price: quoteDetails.unit_price ?? 0,
-      pricing_rule_version: quoteDetails.pricing_rule_version || STANDARD_HYGIENE_PRICING_RULE,
-      complexity_rating: quoteDetails.complexity_rating ?? 1,
-      travel_qty: prev.travel_qty ?? 1,
-      travel_unit: prev.travel_unit ?? 'Lot',
-      travel_unit_price: travelUnitPrice,
-      travel_charge: (prev.travel_qty ?? 1) * travelUnitPrice,
-      discount_qty: prev.discount_qty ?? 1,
-      discount_unit: prev.discount_unit ?? 'Lot',
-      discount_unit_price: discountUnitPrice,
-      discount: (prev.discount_qty ?? 1) * discountUnitPrice,
-      hygiene_items:
-        quoteDetails.pricing_rule_version === STANDARD_HYGIENE_PRICING_RULE &&
-        Array.isArray(quoteDetails.hygiene_items)
-          ? quoteDetails.hygiene_items.map((item) => ({
-              id: item.id,
-              item_description: item.item_description || '',
-              description: item.description || '',
-              unit: item.unit || 'Lot',
-              quantity: parseFloat(item.quantity || 0),
-              unit_price: parseFloat(item.unit_price || 0),
-            }))
-          : [],
-      sst_percent: quoteDetails.sst_percent ?? 0,
-      sst_amount: quoteDetails.sst_amount ?? 0,
-      sub_total: quoteDetails.sub_total ?? 0,
-      grand_total: quoteDetails.grand_total ?? 0,
-      remarks: quoteDetails.inquiry_remarks ?? '',
-    }))
+  const handleResetFromQuote = async () => {
+    if (!quoteDetails || financialLocked) return
+    if (
+      pricingDirty &&
+      !(await dialog.confirm('Reset invoice pricing to the quotation values?', {
+        title: 'Reset from Quote',
+        confirmText: 'Reset',
+        cancelText: 'Keep changes',
+      }))
+    ) {
+      return
+    }
+    const seed = buildHygieneInvoicePricingSeed(quoteDetails)
+    markDirty()
+    setPricing((prev) => ({ ...prev, ...seed }))
     setPricingDirty(false)
-  }, [quoteDetails, setPricing])
+  }
 
   const sampleCounts = parseFloat(pricing.sample_counts) || 0
   const rawWorkUnits = parseFloat(pricing.num_work_units)
@@ -130,20 +132,32 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   const discountUnitPrice = parseFloat(pricing.discount_unit_price) || 0
   const discountTotal = discountQty * discountUnitPrice
 
-  const preserveHistoricalSnapshot = isHistoricalPricing && !pricingDirty && quoteDetails
+  const storedHistoricalTotals =
+    isHistoricalPricing && quoteDetails
+      ? buildStoredHygieneTotals({
+          sampleCounts: quoteDetails.sample_counts,
+          numWorkUnits: quoteDetails.num_work_units,
+          travelCharge: quoteDetails.travel_charge,
+          discount: quoteDetails.discount,
+          sstPercent: quoteDetails.sst_percent,
+          sstAmount: quoteDetails.sst_amount,
+          subTotal: quoteDetails.sub_total,
+          grandTotal: quoteDetails.grand_total,
+          pricingRuleVersion,
+          complexityRating: quoteDetails.complexity_rating,
+        })
+      : null
+  const preserveHistoricalSnapshot =
+    isHistoricalPricing &&
+    !pricingDirty &&
+    quoteDetails &&
+    items.length === 0 &&
+    Math.abs(
+      (parseFloat(pricing.sub_total) || 0) - storedHistoricalTotals.subtotalBeforeDiscount,
+    ) <= 0.01 &&
+    Math.abs((parseFloat(pricing.grand_total) || 0) - storedHistoricalTotals.grandTotal) <= 0.01
   const totals = preserveHistoricalSnapshot
-    ? buildStoredHygieneTotals({
-        sampleCounts: quoteDetails.sample_counts,
-        numWorkUnits: quoteDetails.num_work_units,
-        travelCharge: quoteDetails.travel_charge,
-        discount: quoteDetails.discount,
-        sstPercent: quoteDetails.sst_percent,
-        sstAmount: quoteDetails.sst_amount,
-        subTotal: quoteDetails.sub_total,
-        grandTotal: quoteDetails.grand_total,
-        pricingRuleVersion,
-        complexityRating: quoteDetails.complexity_rating,
-      })
+    ? storedHistoricalTotals
     : calculateHygieneTotals({
         sampleCounts,
         numWorkUnits: pricing.num_work_units,
@@ -159,25 +173,32 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
 
   // Recompute summary
   useEffect(() => {
+    if (shouldSeedFromQuote) return
     setPricing((prev) => ({
       ...prev,
-      sub_total: totals.subTotal,
+      // Invoice amount is always the gross amount before discount and SST.
+      // Historical quote storage may use either gross or net subtotal semantics.
+      sub_total: totals.subtotalBeforeDiscount,
       sst_amount: totals.sstAmount,
       grand_total: totals.grandTotal,
       travel_charge: parseFloat(travelCharge.toFixed(2)),
       discount: parseFloat(discountTotal.toFixed(2)),
     }))
   }, [
-    totals.subTotal,
+    totals.subtotalBeforeDiscount,
     totals.sstAmount,
     totals.grandTotal,
     travelCharge,
     discountTotal,
     setPricing,
+    shouldSeedFromQuote,
   ])
 
   const handleChange = (field) => (e) => {
     const { value } = e.target
+    clearError(`pricing.${field}`)
+    markDirty()
+    if (field !== 'remarks') setPricingDirty(true)
     if (['service_title', 'remarks', 'sample_unit'].includes(field)) {
       setPricing((prev) => ({ ...prev, [field]: value }))
       return
@@ -198,6 +219,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleBaseQtyChange = (e) => {
+    clearError('pricing.sample_counts')
+    markDirty()
     setPricingDirty(true)
     const total = parseFloat(e.target.value)
     if (!Number.isFinite(total)) {
@@ -212,6 +235,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleChargeQtyChange = (type) => (e) => {
+    clearError(`pricing.${type}_qty`)
+    markDirty()
     setPricingDirty(true)
     const qty = parseFloat(e.target.value)
     setPricing((prev) => {
@@ -234,6 +259,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleChargeUnitChange = (type) => (e) => {
+    markDirty()
+    setPricingDirty(true)
     const unit = e.target.value
     if (type === 'travel') {
       setPricing((prev) => ({ ...prev, travel_unit: unit }))
@@ -243,6 +270,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleChargeUnitPriceChange = (type) => (e) => {
+    clearError(`pricing.${type}_unit_price`)
+    markDirty()
     setPricingDirty(true)
     const price = parseFloat(e.target.value)
     setPricing((prev) => {
@@ -265,6 +294,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleItemChange = (index, field) => (e) => {
+    clearError(`pricing.hygiene_items.${index}.${field}`)
+    markDirty()
     setPricingDirty(true)
     const { value } = e.target
     setPricing((prev) => {
@@ -276,6 +307,7 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleNewItemChange = (field) => (e) => {
+    markDirty()
     const { value } = e.target
     setNewItem((prev) => ({ ...prev, [field]: value }))
   }
@@ -288,6 +320,7 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
       return
     }
     setPricingDirty(true)
+    markDirty()
 
     setPricing((prev) => {
       const nextItems = Array.isArray(prev.hygiene_items) ? [...prev.hygiene_items] : []
@@ -313,6 +346,7 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
   }
 
   const handleRemoveItem = (index) => () => {
+    markDirty()
     setPricingDirty(true)
     setPricing((prev) => {
       const nextItems = Array.isArray(prev.hygiene_items) ? [...prev.hygiene_items] : []
@@ -337,6 +371,25 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
         <strong>Invoice Breakdown (Industrial Hygiene)</strong>
       </CCardHeader>
       <CCardBody>
+        {quoteDetails ? (
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <span className="small text-body-secondary">
+              Loaded from Quote · {isHistoricalPricing ? 'Historical pricing' : 'Standard pricing'}
+            </span>
+            <CButton
+              color="secondary"
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFromQuote}
+              disabled={financialLocked}
+            >
+              Reset from Quote
+            </CButton>
+          </div>
+        ) : null}
+        {financialLocked ? (
+          <CAlert color="warning">{financialLockMessage || 'Financial values are locked.'}</CAlert>
+        ) : null}
         {/* Service Title */}
         <CRow className="mb-3">
           <CCol md={12}>
@@ -345,7 +398,14 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
               type="text"
               value={pricing.service_title || ''}
               onChange={handleChange('service_title')}
+              disabled={financialLocked}
+              {...inputErrorProps('pricing.service_title')}
             />
+            {errorFor('pricing.service_title') ? (
+              <CFormFeedback invalid id="pricing-service_title-error">
+                {errorFor('pricing.service_title')}
+              </CFormFeedback>
+            ) : null}
           </CCol>
         </CRow>
 
@@ -357,7 +417,14 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
               type="number"
               value={pricing.sample_counts ?? ''}
               onChange={handleChange('sample_counts')}
+              disabled={financialLocked}
+              {...inputErrorProps('pricing.sample_counts')}
             />
+            {errorFor('pricing.sample_counts') ? (
+              <CFormFeedback invalid id="pricing-sample_counts-error">
+                {errorFor('pricing.sample_counts')}
+              </CFormFeedback>
+            ) : null}
           </CCol>
           <CCol md={4}>
             <CFormLabel>Sample Unit</CFormLabel>
@@ -365,6 +432,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
               type="text"
               value={pricing.sample_unit ?? ''}
               onChange={handleChange('sample_unit')}
+              disabled={financialLocked}
+              {...inputErrorProps('pricing.sample_unit')}
             />
           </CCol>
           <CCol md={4}>
@@ -373,6 +442,8 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
               type="number"
               value={pricing.num_work_units ?? ''}
               onChange={handleChange('num_work_units')}
+              disabled={financialLocked}
+              {...inputErrorProps('pricing.num_work_units')}
             />
           </CCol>
         </CRow>
@@ -407,7 +478,14 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                 <div className="text-muted small">{baseNote}</div>
               </CTableDataCell>
               <CTableDataCell className="text-center">
-                <CFormInput type="number" min="0" value={baseQty} onChange={handleBaseQtyChange} />
+                <CFormInput
+                  type="number"
+                  min="0"
+                  value={baseQty}
+                  onChange={handleBaseQtyChange}
+                  disabled={financialLocked}
+                  {...inputErrorProps('pricing.sample_counts')}
+                />
               </CTableDataCell>
               <CTableDataCell className="text-end">
                 <CFormInput type="text" value={displayUnit} readOnly />
@@ -418,7 +496,14 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                   min="0"
                   value={pricing.unit_price ?? ''}
                   onChange={handleChange('unit_price')}
+                  disabled={financialLocked}
+                  {...inputErrorProps('pricing.unit_price')}
                 />
+                {errorFor('pricing.unit_price') ? (
+                  <CFormFeedback invalid id="pricing-unit_price-error">
+                    {errorFor('pricing.unit_price')}
+                  </CFormFeedback>
+                ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-end">{baseTotal.toFixed(2)}</CTableDataCell>
             </CTableRow>
@@ -432,13 +517,21 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                   min="0"
                   value={pricing.travel_qty ?? 1}
                   onChange={handleChargeQtyChange('travel')}
+                  disabled={financialLocked}
+                  {...inputErrorProps('pricing.travel_qty')}
                 />
+                {errorFor('pricing.travel_qty') ? (
+                  <CFormFeedback invalid id="pricing-travel_qty-error">
+                    {errorFor('pricing.travel_qty')}
+                  </CFormFeedback>
+                ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="text"
                   value={pricing.travel_unit ?? 'Lot'}
                   onChange={handleChargeUnitChange('travel')}
+                  disabled={financialLocked}
                 />
               </CTableDataCell>
               <CTableDataCell className="text-end">
@@ -447,98 +540,136 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                   min="0"
                   value={pricing.travel_unit_price ?? ''}
                   onChange={handleChargeUnitPriceChange('travel')}
+                  disabled={financialLocked}
+                  {...inputErrorProps('pricing.travel_unit_price')}
                 />
+                {errorFor('pricing.travel_unit_price') ? (
+                  <CFormFeedback invalid id="pricing-travel_unit_price-error">
+                    {errorFor('pricing.travel_unit_price')}
+                  </CFormFeedback>
+                ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-end">{travelCharge.toFixed(2)}</CTableDataCell>
             </CTableRow>
 
-            {!isHistoricalPricing &&
-              items.map((item, idx) => {
-                const qty = parseFloat(item.quantity) || 0
-                const price = parseFloat(item.unit_price) || 0
-                const rowNum = itemRowStart + idx
-                const showRemove = mode === 'edit' || item.is_custom
-                return (
-                  <CTableRow key={item.id || rowNum}>
-                    <CTableDataCell className="text-center">
-                      {showRemove ? (
-                        <div className="d-flex flex-column gap-1">
-                          <div className="d-flex align-items-center gap-2">
-                            <span>{rowNum}</span>
-                            {item.is_custom ? (
-                              <CBadge color="info" className="text-dark">
-                                New
-                              </CBadge>
-                            ) : null}
-                          </div>
-                          <CTooltip content="Remove item" placement="top">
-                            <CButton
-                              color="danger"
-                              variant="link"
-                              size="sm"
-                              onClick={handleRemoveItem(idx)}
-                              className="p-0 text-danger border-0"
-                              style={{ textDecoration: 'none' }}
-                            >
-                              <CIcon icon={cilTrash} size="sm" />
-                            </CButton>
-                          </CTooltip>
+            {items.map((item, idx) => {
+              const qty = parseFloat(item.quantity) || 0
+              const price = parseFloat(item.unit_price) || 0
+              const rowNum = itemRowStart + idx
+              const showRemove = true
+              return (
+                <CTableRow key={item.id || rowNum}>
+                  <CTableDataCell className="text-center">
+                    {showRemove ? (
+                      <div className="d-flex flex-column gap-1">
+                        <div className="d-flex align-items-center gap-2">
+                          <span>{rowNum}</span>
+                          {item.is_custom ? (
+                            <CBadge color="info" className="text-dark">
+                              New
+                            </CBadge>
+                          ) : null}
                         </div>
-                      ) : (
-                        <span>{rowNum}</span>
-                      )}
-                    </CTableDataCell>
-                    <CTableDataCell className="text-center">
-                      <CFormInput
-                        type="text"
-                        value={item.item_description ?? ''}
-                        onChange={handleItemChange(idx, 'item_description')}
-                        placeholder="Item"
-                        className="mb-1"
-                      />
-                      <CFormInput
-                        type="text"
-                        value={item.description ?? ''}
-                        onChange={handleItemChange(idx, 'description')}
-                        placeholder="Description"
-                        className="form-control-sm"
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell className="text-center">
-                      <CFormInput
-                        type="number"
-                        min="0"
-                        value={item.quantity ?? ''}
-                        onChange={handleItemChange(idx, 'quantity')}
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell className="text-end">
-                      <CFormInput
-                        type="text"
-                        value={item.unit ?? ''}
-                        onChange={handleItemChange(idx, 'unit')}
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <CFormInput
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unit_price ?? ''}
-                        onChange={handleItemChange(idx, 'unit_price')}
-                      />
-                    </CTableDataCell>
-                    <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
-                  </CTableRow>
-                )
-              })}
+                        <CTooltip content="Remove item" placement="top">
+                          <CButton
+                            color="danger"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveItem(idx)}
+                            disabled={financialLocked}
+                            className="p-0 text-danger border-0"
+                            style={{ textDecoration: 'none' }}
+                          >
+                            <CIcon icon={cilTrash} size="sm" />
+                          </CButton>
+                        </CTooltip>
+                      </div>
+                    ) : (
+                      <span>{rowNum}</span>
+                    )}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CFormInput
+                      type="text"
+                      value={item.item_description ?? ''}
+                      onChange={handleItemChange(idx, 'item_description')}
+                      placeholder="Item"
+                      className="mb-1"
+                      disabled={financialLocked}
+                      {...inputErrorProps(`pricing.hygiene_items.${idx}.item_description`)}
+                    />
+                    {errorFor(`pricing.hygiene_items.${idx}.item_description`) ? (
+                      <CFormFeedback
+                        invalid
+                        className="d-block"
+                        id={`pricing-hygiene_items-${idx}-item_description-error`}
+                      >
+                        {errorFor(`pricing.hygiene_items.${idx}.item_description`)}
+                      </CFormFeedback>
+                    ) : null}
+                    <CFormInput
+                      type="text"
+                      value={item.description ?? ''}
+                      onChange={handleItemChange(idx, 'description')}
+                      placeholder="Description"
+                      className="form-control-sm"
+                      disabled={financialLocked}
+                    />
+                  </CTableDataCell>
+                  <CTableDataCell className="text-center">
+                    <CFormInput
+                      type="number"
+                      min="0"
+                      value={item.quantity ?? ''}
+                      onChange={handleItemChange(idx, 'quantity')}
+                      disabled={financialLocked}
+                      {...inputErrorProps(`pricing.hygiene_items.${idx}.quantity`)}
+                    />
+                    {errorFor(`pricing.hygiene_items.${idx}.quantity`) ? (
+                      <CFormFeedback
+                        invalid
+                        className="d-block"
+                        id={`pricing-hygiene_items-${idx}-quantity-error`}
+                      >
+                        {errorFor(`pricing.hygiene_items.${idx}.quantity`)}
+                      </CFormFeedback>
+                    ) : null}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    <CFormInput
+                      type="text"
+                      value={item.unit ?? ''}
+                      onChange={handleItemChange(idx, 'unit')}
+                      disabled={financialLocked}
+                    />
+                  </CTableDataCell>
+                  <CTableDataCell>
+                    <CFormInput
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.unit_price ?? ''}
+                      onChange={handleItemChange(idx, 'unit_price')}
+                      disabled={financialLocked}
+                      {...inputErrorProps(`pricing.hygiene_items.${idx}.unit_price`)}
+                    />
+                    {errorFor(`pricing.hygiene_items.${idx}.unit_price`) ? (
+                      <CFormFeedback invalid id={`pricing-hygiene_items-${idx}-unit_price-error`}>
+                        {errorFor(`pricing.hygiene_items.${idx}.unit_price`)}
+                      </CFormFeedback>
+                    ) : null}
+                  </CTableDataCell>
+                  <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
+                </CTableRow>
+              )
+            })}
 
             <CTableRow>
               <CTableDataCell colSpan={5} className="text-end fw-semibold align-middle text-nowrap">
-                Subtotal (RM)
+                Gross Subtotal (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {(parseFloat(pricing.sub_total) || 0).toFixed(2)}
+                {totals.subtotalBeforeDiscount.toFixed(2)}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -550,13 +681,21 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                   min="0"
                   value={pricing.discount_qty ?? 1}
                   onChange={handleChargeQtyChange('discount')}
+                  disabled={financialLocked}
+                  {...inputErrorProps('pricing.discount_qty')}
                 />
+                {errorFor('pricing.discount_qty') ? (
+                  <CFormFeedback invalid id="pricing-discount_qty-error">
+                    {errorFor('pricing.discount_qty')}
+                  </CFormFeedback>
+                ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-center">
                 <CFormInput
                   type="text"
                   value={pricing.discount_unit ?? 'Lot'}
                   onChange={handleChargeUnitChange('discount')}
+                  disabled={financialLocked}
                 />
               </CTableDataCell>
               <CTableDataCell className="text-end">
@@ -565,7 +704,14 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                   min="0"
                   value={pricing.discount_unit_price ?? ''}
                   onChange={handleChargeUnitPriceChange('discount')}
+                  disabled={financialLocked}
+                  {...inputErrorProps('pricing.discount_unit_price')}
                 />
+                {errorFor('pricing.discount_unit_price') ? (
+                  <CFormFeedback invalid id="pricing-discount_unit_price-error">
+                    {errorFor('pricing.discount_unit_price')}
+                  </CFormFeedback>
+                ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-end">
                 {(-Math.abs(discountTotal)).toFixed(2)}
@@ -579,9 +725,16 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
                     value={pricing.sst_percent ?? 0}
                     onChange={handleChange('sst_percent')}
                     style={{ width: '64px', minWidth: '64px' }}
+                    disabled={financialLocked}
+                    {...inputErrorProps('pricing.sst_percent')}
                   />
                   <span className="text-nowrap">SST Rate (%)</span>
                 </div>
+                {errorFor('pricing.sst_percent') ? (
+                  <div className="invalid-feedback d-block" id="pricing-sst_percent-error">
+                    {errorFor('pricing.sst_percent')}
+                  </div>
+                ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
                 {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
@@ -598,20 +751,19 @@ const HygieneInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'create'
           </CTableBody>
         </CTable>
 
-        {!isHistoricalPricing && (
-          <div className="mb-3 d-flex justify-content-start">
-            <CButton
-              color={showAddItemRow ? 'secondary' : 'primary'}
-              size="sm"
-              variant={showAddItemRow ? 'outline' : undefined}
-              onClick={() => setShowAddItemRow((prev) => !prev)}
-            >
-              {showAddItemRow ? 'Cancel Add Item' : 'Add New Item'}
-            </CButton>
-          </div>
-        )}
+        <div className="mb-3 d-flex justify-content-start">
+          <CButton
+            color={showAddItemRow ? 'secondary' : 'primary'}
+            size="sm"
+            variant={showAddItemRow ? 'outline' : undefined}
+            onClick={() => setShowAddItemRow((prev) => !prev)}
+            disabled={financialLocked}
+          >
+            {showAddItemRow ? 'Cancel Add Item' : 'Add New Item'}
+          </CButton>
+        </div>
 
-        {!isHistoricalPricing && showAddItemRow && (
+        {showAddItemRow && (
           <CRow className="mb-4 g-2 align-items-end">
             <CCol md={3}>
               <CFormLabel>Item</CFormLabel>

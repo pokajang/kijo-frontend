@@ -407,6 +407,8 @@ const run = async () => {
     )
     await page.locator('input[name="unitPrice"]').waitFor()
     await page.locator('input[name="unitPrice"]').fill('600')
+    await page.getByRole('button', { name: 'Continue and Recalculate' }).click()
+    await page.getByText('Historical pricing inputs changed').waitFor({ state: 'hidden' })
     const legacyRevisionResponsePromise = page.waitForResponse(
       (response) =>
         response.url().includes(`/proxy/quotes/ih/${legacyQuoteId}`) &&

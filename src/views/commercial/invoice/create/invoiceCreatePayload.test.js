@@ -631,7 +631,7 @@ describe('buildInvoiceCreatePayload', () => {
         unit_price: 79.17,
         travel_charge: 0,
         discount: 200,
-        sub_total: 9300,
+        sub_total: 9500,
         grand_total: 9300,
         pricing_rule_version: 'ih_standard_v1',
         complexity_rating: 4,
@@ -647,5 +647,54 @@ describe('buildInvoiceCreatePayload', () => {
     })
     expect(result.payload.breakdown[0].description).toContain('preserved historical quoted amount')
     expect(result.payload.breakdown).toHaveLength(3)
+    expect(result.payload.amount).toBe(9500)
+  })
+
+  it('reconciles a legacy IH quote that stored gross subtotal before discount', () => {
+    const result = buildInvoiceCreatePayload('Industrial Hygiene', {
+      ...baseArgs,
+      project: {
+        id: 21,
+        quote_id: 31,
+        project_name: 'Legacy Gross IH Project',
+        project_type: 'Industrial Hygiene',
+      },
+      quoteDetails: {
+        id: 31,
+        service_title: 'LEV Inspection',
+        pricing_rule_version: 'ih_complexity_v1',
+        complexity_rating: 1,
+      },
+      pricing: {
+        ...baseArgs.pricing,
+        service_title: 'LEV Inspection',
+        sample_counts: 2,
+        sample_unit: 'sample(s)',
+        num_work_units: 1,
+        unit_price: 1500,
+        travel_charge: 0,
+        discount: 50,
+        discount_qty: 1,
+        discount_unit_price: 50,
+        sub_total: 3000,
+        sst_amount: 0,
+        grand_total: 2950,
+        pricing_rule_version: 'ih_complexity_v1',
+        complexity_rating: 1,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.payload.amount).toBe(3000)
+    expect(result.payload.grand_total).toBe(2950)
+    expect(result.payload.breakdown[0]).toMatchObject({
+      quantity: 2,
+      unit_price: 1500,
+    })
+    expect(result.payload.breakdown.at(-1)).toMatchObject({
+      item_description: 'Discount',
+      quantity: 1,
+      unit_price: -50,
+    })
   })
 })

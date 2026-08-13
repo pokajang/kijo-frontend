@@ -4,6 +4,36 @@ import { buildBreakdownFromPricing } from './pricingBreakdownBuilder'
 import { normalizePaymentMethod } from './paymentUtils'
 
 describe('invoice edit utilities', () => {
+  it('derives an unstored SST rate from the taxable subtotal after discount', () => {
+    const { pricing } = buildPricingFromInvoice({
+      service_type: 'Industrial Hygiene',
+      amount: 3000,
+      sst_amount: 236,
+      grand_total: 3186,
+      breakdown: [
+        {
+          line_type: 'service',
+          item_description: 'LEV Inspection',
+          description: '2 sample(s) x 1 work units',
+          quantity: 2,
+          unit: 'sample(s)',
+          unit_price: 1500,
+        },
+        {
+          line_type: 'discount',
+          item_description: 'Commercial adjustment',
+          quantity: 1,
+          unit: 'Lot',
+          unit_price: -50,
+        },
+      ],
+    })
+
+    expect(pricing.sst_percent).toBe(8)
+    expect(pricing.sub_total).toBe(3000)
+    expect(pricing.grand_total).toBe(3186)
+  })
+
   it('maps training breakdown lines including HRD row and keeps HRD out of training items', () => {
     const { pricing } = buildPricingFromInvoice({
       service_type: 'Training',
@@ -285,22 +315,22 @@ describe('invoice edit utilities', () => {
     expect(pricing.unit_price).toBe(500)
     expect(pricing.discount).toBe(300)
     expect(pricing.hygiene_items).toEqual([
-      {
+      expect.objectContaining({
         id: 22,
         item_description: 'Smoke sample analysis',
         description: 'Smoke lab analysis row',
         unit: 'sample',
         quantity: 2,
         unit_price: 120,
-      },
-      {
+      }),
+      expect.objectContaining({
         id: 23,
         item_description: 'Smoke professional fee',
         description: 'Smoke report writing',
         unit: 'Lot',
         quantity: 1,
         unit_price: 300,
-      },
+      }),
     ])
   })
 

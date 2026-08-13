@@ -8,6 +8,10 @@ import {
   CModalFooter,
   CButton,
   CCard,
+  CAlert,
+  CFormCheck,
+  CFormFeedback,
+  CFormInput,
 } from '@coreui/react'
 import InvoiceFormShell from '../../../../../shared/invoice/InvoiceFormShell'
 import dialog from '../../../../../components/dialog/dialogService'
@@ -16,12 +20,40 @@ import { buildPricingFromInvoice } from './utils/invoicePricingMapper'
 import { normalizePaymentMethod } from './utils/paymentUtils'
 import { buildBreakdownFromPricing } from './utils/pricingBreakdownBuilder'
 import { toNumber } from './utils/numberUtils'
+import { validateHygieneInvoicePricing } from '../../create/invoiceCreatePayload'
+import { mapInvoiceFieldErrors } from '../../create/invoiceCreateApi'
+
+const focusFirstFieldError = (fieldErrors = {}) => {
+  const firstPath = Object.keys(fieldErrors)[0]
+  if (!firstPath) return
+  requestAnimationFrame(() => {
+    const input = document.querySelector(`[data-field-path="${firstPath}"]`)
+    input?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    input?.focus?.({ preventScroll: true })
+  })
+}
+
+const focusDeviationField = (hasReason) => {
+  requestAnimationFrame(() => {
+    const path = hasReason ? 'deviation_acknowledged' : 'deviation_reason'
+    const input = document.querySelector(`[data-field-path="${path}"]`)
+    input?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    input?.focus?.({ preventScroll: true })
+  })
+}
 
 const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
   const [form, setForm] = useState(null)
   const [pricing, setPricing] = useState(null)
   const [quoteDetails, setQuoteDetails] = useState(null)
   const [projectDetails, setProjectDetails] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [deviationContext, setDeviationContext] = useState(null)
+  const [deviationReason, setDeviationReason] = useState('')
+  const [deviationAcknowledged, setDeviationAcknowledged] = useState(false)
+  const [deviationError, setDeviationError] = useState('')
 
   useEffect(() => {
     if (!form || !pricing) return
@@ -48,6 +80,12 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
 
     const mapped = buildPricingFromInvoice(inv)
     setPricing(mapped.pricing)
+    setFieldErrors({})
+    setDirty(false)
+    setDeviationContext(null)
+    setDeviationReason('')
+    setDeviationAcknowledged(false)
+    setDeviationError('')
     setQuoteDetails(mapped.quoteDetails)
     setProjectDetails({
       project_name: inv.project_name || inv.invoice_purpose || '',
@@ -112,7 +150,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
   }, [invoice])
 
   useEffect(() => {
-    if (!invoice) return
+    if (!visible || !invoice) return
     const inv = invoice.raw || invoice
     const projectId = inv.project_id || inv.projectId
     if (!projectId) return
@@ -132,16 +170,19 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
         }
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
+        // Chromium can report an aborted fetch as a generic TypeError. The
+        // controller state is the reliable signal when the modal unmounts.
+        if (!controller.signal.aborted && err.name !== 'AbortError') {
           console.error('Failed to load project details:', err)
         }
       })
 
     return () => controller.abort()
-  }, [invoice])
+  }, [invoice, visible])
 
   // generic field handler
   const handleChange = (e) => {
+    setDirty(true)
     const { name, value, type, checked } = e.target
     if (name === 'overridePaymentTerms') {
       setForm((prev) => ({
@@ -168,6 +209,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
 
   // payment method toggle handler
   const handlePaymentMethodChange = (input) => {
+    setDirty(true)
     const selected = typeof input === 'string' ? input : input?.target?.value
     const normalized = String(selected || '')
       .trim()
@@ -203,7 +245,6 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
   // save payload
   const handleSave = async () => {
     if (!form || !pricing) return
-    if (!(await dialog.confirm('Save changes to this invoice?'))) return
 
     const isHrdPayment =
       String(form.paymentMethod || '')
@@ -223,6 +264,25 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
           )
         : breakdown
 
+    if (form.serviceType === 'Industrial Hygiene') {
+      const nextErrors = validateHygieneInvoicePricing(pricing)
+      if (Object.keys(nextErrors).length > 0) {
+        setFieldErrors(nextErrors)
+        focusFirstFieldError(nextErrors)
+        return
+      }
+    }
+    if (deviationContext && (!deviationReason.trim() || !deviationAcknowledged)) {
+      setDeviationError(
+        !deviationReason.trim()
+          ? 'Briefly explain why this invoice exceeds the project value.'
+          : 'Confirm the project-value difference to continue.',
+      )
+      focusDeviationField(Boolean(deviationReason.trim()))
+      return
+    }
+    if (!(await dialog.confirm('Save changes to this invoice?'))) return
+
     const purpose =
       form.serviceType === 'Manpower Supply' ? pricing.service_title || form.purpose : form.purpose
 
@@ -233,8 +293,11 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       invoice_date: form.dateIssued,
       status: form.status,
       amount: baseAmount,
+      sst_percent: toNumber(pricing.sst_percent ?? pricing.sst_rate),
       sst_amount: toNumber(pricing.sst_amount),
       grand_total: toNumber(pricing.grand_total),
+      calculation_version:
+        form.serviceType === 'Industrial Hygiene' ? 'typed_lines_v1' : 'legacy_service_v1',
       payment_method: form.paymentMethod,
       grant_approval_no: isTraining && isHrdPayment ? form.grantApprovalNo : null,
       remarks: pricing.remarks || '',
@@ -257,6 +320,8 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
       invoice_pic_position: form.picPosition,
 
       breakdown: normalizedBreakdown,
+      deviation_reason: deviationReason.trim() || null,
+      deviation_acknowledged: deviationAcknowledged,
     }
 
     if (form.paymentTermsTouched) {
@@ -267,32 +332,59 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
     }
 
     try {
+      setSaving(true)
       const res = await fetch(`${import.meta.env.VITE_API_BASE}invoices`, {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) {
-        const text = await res.text()
-        dialog.alert(`Update failed (${res.status}). ${text}`)
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok || result.status !== 'success') {
+        if (result.code === 'invoice_over_project_value') {
+          const responseErrors = result.field_errors || {}
+          const reasonMissing = Boolean(responseErrors.deviation_reason)
+          setDeviationContext(result.context || {})
+          setDeviationError(
+            responseErrors.deviation_reason?.[0] ||
+              responseErrors.deviation_acknowledged?.[0] ||
+              result.message ||
+              'Confirm the project-value difference to continue.',
+          )
+          focusDeviationField(!reasonMissing)
+          return
+        }
+        const responseFieldErrors = result.field_errors || result.errors
+        if (responseFieldErrors) {
+          const nextErrors = mapInvoiceFieldErrors(responseFieldErrors, normalizedBreakdown)
+          setFieldErrors(nextErrors)
+          focusFirstFieldError(nextErrors)
+          return
+        }
+        dialog.alert(result.message || 'Invoice could not be saved. Your changes are retained.')
         return
       }
-      const result = await res.json()
       if (result.status === 'success') {
         showToast('Invoice updated.')
+        setDirty(false)
         await Promise.resolve(onSaved?.())
         onClose()
-      } else {
-        dialog.alert(result.message || 'Update failed.')
       }
     } catch (err) {
-      dialog.alert('Save error. Please try again.')
+      dialog.alert('Invoice could not be saved. Your changes are retained. Please try again.')
       console.error('Save error:', err)
+    } finally {
+      setSaving(false)
     }
   }
 
   if (!visible || !form || !pricing) return null
+
+  const handleRequestClose = async () => {
+    if (saving) return
+    if (dirty && !(await dialog.confirm('Discard unsaved invoice changes?'))) return
+    onClose()
+  }
 
   const projectForForm = {
     ...(projectDetails || {}),
@@ -303,17 +395,25 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
     service_end_date: projectDetails?.service_end_date || '',
     description: projectDetails?.description || '',
   }
+  const statusLower = String(form.status || '').toLowerCase()
+  const hasPayment = toNumber(form.paidAmount) > 0 || statusLower === 'paid'
+  const financialLocked = hasPayment || ['cancelled', 'canceled', 'void'].includes(statusLower)
+  const financialLockMessage = hasPayment
+    ? 'Financial values are locked because payment has already been recorded.'
+    : financialLocked
+      ? 'Financial values are locked for a cancelled or void invoice.'
+      : ''
 
   return (
     <CModal
       size="lg"
       visible={visible}
-      onClose={onClose}
+      onClose={handleRequestClose}
       backdrop="static"
       alignment="center"
       scrollable
     >
-      <CModalHeader onClose={onClose}>
+      <CModalHeader onClose={handleRequestClose}>
         <CModalTitle>Edit Invoice</CModalTitle>
       </CModalHeader>
       <CModalBody>
@@ -334,15 +434,70 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
             setPricing={setPricing}
             grantApprovalNo={form.grantApprovalNo}
             onGrantApprovalChange={handleChange}
+            fieldErrors={fieldErrors}
+            onClearFieldError={(path) =>
+              setFieldErrors((prev) => {
+                if (!prev[path]) return prev
+                const next = { ...prev }
+                delete next[path]
+                return next
+              })
+            }
+            financialLocked={financialLocked}
+            financialLockMessage={financialLockMessage}
+            onDirty={() => {
+              setDirty(true)
+              if (deviationContext) {
+                setDeviationAcknowledged(false)
+                setDeviationError('')
+              }
+            }}
           />
+          {deviationContext ? (
+            <CAlert color="warning" className="mx-3 mb-3">
+              <div className="fw-semibold mb-2">
+                This invoice is RM {toNumber(deviationContext.overage).toFixed(2)} above the
+                remaining project value.
+              </div>
+              <CFormInput
+                value={deviationReason}
+                onChange={(event) => {
+                  setDeviationReason(event.target.value)
+                  setDeviationError('')
+                  setDirty(true)
+                }}
+                placeholder="Brief reason"
+                aria-label="Reason for exceeding project value"
+                data-field-path="deviation_reason"
+                invalid={Boolean(deviationError && !deviationReason.trim())}
+              />
+              <CFormCheck
+                className="mt-2"
+                id="edit-invoice-deviation-acknowledgement"
+                label="I confirm this project-value difference."
+                checked={deviationAcknowledged}
+                onChange={(event) => {
+                  setDeviationAcknowledged(event.target.checked)
+                  setDeviationError('')
+                  setDirty(true)
+                }}
+                data-field-path="deviation_acknowledged"
+              />
+              {deviationError ? (
+                <CFormFeedback invalid className="d-block">
+                  {deviationError}
+                </CFormFeedback>
+              ) : null}
+            </CAlert>
+          ) : null}
         </CCard>
       </CModalBody>
       <CModalFooter>
-        <CButton color="secondary" variant="outline" size="sm" onClick={onClose}>
+        <CButton color="secondary" variant="outline" size="sm" onClick={handleRequestClose}>
           Cancel
         </CButton>
-        <CButton color="primary" size="sm" onClick={handleSave}>
-          Save
+        <CButton color="primary" size="sm" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving...' : 'Save'}
         </CButton>
       </CModalFooter>
     </CModal>

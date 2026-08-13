@@ -123,12 +123,12 @@ const legacyCurrentStage = (payment = {}) => {
   if (payment.status === 'Checked') {
     return { stageType: 'approval', label: 'Approval', state: 'current', status: 'Pending' }
   }
-  if (payment.status === 'Approved') {
+  if (['Approved', 'Partially Paid'].includes(payment.status)) {
     return {
       stageType: 'finance',
       label: 'Finance',
       state: 'current',
-      status: 'Ready for payment',
+      status: payment.status === 'Partially Paid' ? 'Partially paid' : 'Ready for payment',
     }
   }
   return null

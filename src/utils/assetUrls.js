@@ -58,8 +58,13 @@ export const resolveAssetUrl = (value) => {
 
   if (/^(data:|blob:)/i.test(raw) || raw.startsWith('//')) return raw
 
-  const legacyUploadsPrefix = /^\/?(?:backend(?:-legacy)?\/)?uploads\//i
   const cleanPath = raw.replace(/^\/+/, '')
+  const privateApiRoute = /^\/?vendor-payments\/\d+\/invoice(?:[?#].*)?$/i
+  if (privateApiRoute.test(raw)) {
+    return toApiAssetUrl(cleanPath)
+  }
+
+  const legacyUploadsPrefix = /^\/?(?:backend(?:-legacy)?\/)?uploads\//i
   const apiBasePath = apiBase.replace(/^\/+/, '')
   if (raw.startsWith('/') && apiBasePath && cleanPath.startsWith(`${apiBasePath}/`)) {
     try {

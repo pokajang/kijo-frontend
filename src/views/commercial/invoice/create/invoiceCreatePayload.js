@@ -10,6 +10,63 @@ import { normalizeTrainingHrdCharge } from '../../../crm/quotes/training/trainin
 const toNumber = (value) => parseFloat(value) || 0
 const toNegative = (value) => -Math.abs(toNumber(value))
 
+export const validateHygieneInvoicePricing = (pricing = {}) => {
+  const fieldErrors = {}
+  const add = (path, message) => {
+    fieldErrors[path] = [message]
+  }
+  const sampleCounts = Number(pricing.sample_counts)
+  const unitPrice = Number(pricing.unit_price)
+  const travelQty = Number(pricing.travel_qty ?? 1)
+  const travelUnitPrice = Number(pricing.travel_unit_price ?? 0)
+  const discountQty = Number(pricing.discount_qty ?? 1)
+  const discountUnitPrice = Number(pricing.discount_unit_price ?? 0)
+  const discount = discountQty * discountUnitPrice
+  const grossSubtotal = toNumber(pricing.sub_total)
+  const sstPercent = Number(pricing.sst_percent ?? 0)
+
+  if (!Number.isFinite(sampleCounts) || sampleCounts <= 0) {
+    add('pricing.sample_counts', 'Enter a sample count greater than zero.')
+  }
+  if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+    add('pricing.unit_price', 'Enter a valid unit price.')
+  }
+  if (!Number.isFinite(travelQty) || travelQty < 0) {
+    add('pricing.travel_qty', 'Enter a travel quantity of zero or more.')
+  }
+  if (!Number.isFinite(travelUnitPrice) || travelUnitPrice < 0) {
+    add('pricing.travel_unit_price', 'Enter a valid travel unit price.')
+  }
+  if (!Number.isFinite(discountQty) || discountQty < 0) {
+    add('pricing.discount_qty', 'Enter a discount quantity of zero or more.')
+  }
+  if (!Number.isFinite(discountUnitPrice) || discountUnitPrice < 0) {
+    add('pricing.discount_unit_price', 'Enter a valid discount amount.')
+  }
+  if (!Number.isFinite(sstPercent) || sstPercent < 0 || sstPercent > 100) {
+    add('pricing.sst_percent', 'SST rate must be between 0 and 100.')
+  }
+  if (discount > grossSubtotal + 0.01) {
+    add(
+      'pricing.discount_unit_price',
+      `Discount cannot exceed the gross subtotal of RM ${grossSubtotal.toFixed(2)}.`,
+    )
+  }
+  ;(Array.isArray(pricing.hygiene_items) ? pricing.hygiene_items : []).forEach((item, index) => {
+    if (!String(item?.item_description || '').trim()) {
+      add(`pricing.hygiene_items.${index}.item_description`, 'Enter an item name.')
+    }
+    if (!Number.isFinite(Number(item?.quantity)) || Number(item.quantity) <= 0) {
+      add(`pricing.hygiene_items.${index}.quantity`, 'Enter a quantity greater than zero.')
+    }
+    if (!Number.isFinite(Number(item?.unit_price)) || Number(item.unit_price) < 0) {
+      add(`pricing.hygiene_items.${index}.unit_price`, 'Enter a valid unit price.')
+    }
+  })
+
+  return fieldErrors
+}
+
 const getLocalISODate = () => {
   const now = new Date()
   const offsetMs = now.getTimezoneOffset() * 60 * 1000
@@ -46,6 +103,18 @@ export const buildInvoiceCreatePayload = (
   const resolvedQuoteId = quoteDetails?.id ?? project?.quote_id ?? null
   if (!resolvedQuoteId && !allowWithoutQuote) {
     return { success: false, message: 'Missing quote reference. Cannot create invoice.' }
+  }
+
+  if (serviceType === 'Industrial Hygiene') {
+    const fieldErrors = validateHygieneInvoicePricing(pricing)
+    if (Object.keys(fieldErrors).length > 0) {
+      return {
+        success: false,
+        code: 'invoice_validation_failed',
+        message: 'Some invoice fields require attention.',
+        fieldErrors,
+      }
+    }
   }
 
   const baseAmount =
@@ -113,10 +182,14 @@ export const buildInvoiceCreatePayload = (
     invoice_pic_email: clientOverrides.picEmail,
     invoice_pic_position: clientOverrides.picPosition,
     amount: baseAmount,
+    sst_percent: toNumber(pricing.sst_percent ?? pricing.sst_rate),
     sst_amount: toNumber(pricing.sst_amount),
     hrd_rate: isHrdPayment ? hrdRate : 0,
     hrd_amount: isHrdPayment ? hrdAmount : 0,
     grand_total: resolvedGrandTotal,
+    calculation_version:
+      serviceType === 'Industrial Hygiene' ? 'typed_lines_v1' : 'legacy_service_v1',
+    source_snapshot: pricing.source_snapshot || null,
     breakdown: [],
   }
 
@@ -125,6 +198,7 @@ export const buildInvoiceCreatePayload = (
       payload.breakdown = [
         {
           item_description: 'Training Fee',
+          line_type: 'service',
           unit: pricing.training_unit || 'Lot',
           quantity: toNumber(pricing.training_qty),
           unit_price: toNumber(pricing.training_total),
@@ -132,6 +206,7 @@ export const buildInvoiceCreatePayload = (
         },
         {
           item_description: 'Meal Total',
+          line_type: 'custom',
           unit: pricing.meal_unit || 'Lot',
           quantity: toNumber(pricing.meal_qty),
           unit_price: toNumber(pricing.meal_total),
@@ -139,6 +214,7 @@ export const buildInvoiceCreatePayload = (
         },
         {
           item_description: 'Mobilization Charge',
+          line_type: 'travel',
           unit: pricing.mobilization_unit || 'Lot',
           quantity: toNumber(pricing.mobilization_qty),
           unit_price: toNumber(pricing.mobilization_cost),
@@ -146,6 +222,7 @@ export const buildInvoiceCreatePayload = (
         },
         ...(pricing.training_items || []).map((item) => ({
           id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+          line_type: item.line_type || 'custom',
           item_description: item.item_description || '',
           description: item.description || '',
           unit: item.unit || 'Lot',
@@ -154,6 +231,7 @@ export const buildInvoiceCreatePayload = (
         })),
         {
           item_description: 'Discount',
+          line_type: 'discount',
           unit: pricing.discount_unit || 'Lot',
           quantity: toNumber(pricing.discount_qty),
           unit_price: toNegative(pricing.discount_amount),
@@ -163,6 +241,7 @@ export const buildInvoiceCreatePayload = (
           ? [
               {
                 item_description: `${hrdRate}% HRD Charge`,
+                line_type: 'hrd',
                 unit: pricing.hrd_unit || 'Lot',
                 quantity: hrdQty,
                 unit_price: hrdUnitPrice,
@@ -181,6 +260,7 @@ export const buildInvoiceCreatePayload = (
       const equipmentItems = pricingItems.length > 0 ? pricingItems : quoteItems
       payload.breakdown = equipmentItems.map((item) => ({
         item_id: item.item_id ?? null,
+        line_type: item.line_type || 'custom',
         item_description: item.item_name,
         description: item.description || '',
         item_remarks: item.item_remarks ?? item.itemRemarks ?? '',
@@ -211,6 +291,7 @@ export const buildInvoiceCreatePayload = (
       payload.breakdown.push(
         {
           item_description: 'Discount',
+          line_type: 'discount',
           unit: discountUnit,
           quantity: discountQty,
           unit_price: toNegative(discountUnitPrice),
@@ -218,6 +299,7 @@ export const buildInvoiceCreatePayload = (
         },
         {
           item_description: 'Delivery Charge',
+          line_type: 'delivery',
           unit: deliveryUnit,
           quantity: deliveryQty,
           unit_price: toNumber(deliveryUnitPrice),
@@ -225,6 +307,7 @@ export const buildInvoiceCreatePayload = (
         },
         {
           item_description: 'Misc Charge',
+          line_type: 'misc',
           unit: miscUnit,
           quantity: miscQty,
           unit_price: toNumber(miscUnitPrice),
@@ -250,6 +333,7 @@ export const buildInvoiceCreatePayload = (
       payload.breakdown = [
         {
           item_description: manpowerTitle,
+          line_type: 'service',
           unit: pricing.unit || 'pax-mth',
           quantity: paxMonths,
           unit_price: toNumber(pricing.unit_cost),
@@ -257,6 +341,7 @@ export const buildInvoiceCreatePayload = (
         },
         ...manpowerItems.map((item) => ({
           id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+          line_type: item.line_type || 'custom',
           item_description: item.item_description || '',
           description: item.description || '',
           unit: item.unit || 'Lot',
@@ -265,6 +350,7 @@ export const buildInvoiceCreatePayload = (
         })),
         {
           item_description: 'Discount',
+          line_type: 'discount',
           unit: pricing.discount_unit || 'Lot',
           quantity: toNumber(pricing.discount_qty ?? 1),
           unit_price: toNegative(pricing.discount),
@@ -323,17 +409,22 @@ export const buildInvoiceCreatePayload = (
       const quoteHygieneItems = Array.isArray(quoteDetails?.hygiene_items)
         ? quoteDetails.hygiene_items
         : []
-      const hygieneItems =
-        pricingRuleVersion === STANDARD_HYGIENE_PRICING_RULE
-          ? pricingHygieneItems.length > 0
-            ? pricingHygieneItems
-            : quoteHygieneItems
-          : []
+      const hygieneItems = isHistoricalPricing
+        ? pricingHygieneItems.filter((item) => item?.is_custom)
+        : pricing.hygiene_items_initialized || pricingHygieneItems.length > 0
+          ? pricingHygieneItems
+          : pricingRuleVersion === STANDARD_HYGIENE_PRICING_RULE
+            ? quoteHygieneItems
+            : []
       const calculatedUnitPrice = toNumber(pricing.unit_price) * complexityMultiplier
       const calculatedServiceTotal = baseQty * calculatedUnitPrice
+      const customItemsTotal = hygieneItems.reduce(
+        (total, item) => total + toNumber(item.quantity) * toNumber(item.unit_price),
+        0,
+      )
       const contractualServiceTotal = Math.max(
         0,
-        toNumber(pricing.sub_total) + toNumber(pricing.discount) - toNumber(pricing.travel_charge),
+        toNumber(pricing.sub_total) - toNumber(pricing.travel_charge) - customItemsTotal,
       )
       const hasStoredHistoricalSubtotal =
         pricing.sub_total !== null && pricing.sub_total !== undefined
@@ -355,6 +446,8 @@ export const buildInvoiceCreatePayload = (
           item_description: buildHygieneBaseLabel(
             pricing.service_title || quoteDetails.service_title,
           ),
+          line_type: 'service',
+          source_line_key: 'quote_ih_service',
           unit: invoiceBaseUnit,
           quantity: invoiceBaseQty,
           unit_price: invoiceBaseUnitPrice,
@@ -362,6 +455,8 @@ export const buildInvoiceCreatePayload = (
         },
         {
           item_description: 'Travel Charge',
+          line_type: 'travel',
+          source_line_key: 'quote_ih_travel',
           unit: travelUnit,
           quantity: travelQty,
           unit_price: toNumber(travelUnitPrice),
@@ -369,6 +464,8 @@ export const buildInvoiceCreatePayload = (
         },
         ...hygieneItems.map((item) => ({
           id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+          line_type: item.line_type || 'custom',
+          source_line_key: item.source_line_key || null,
           item_description: item.item_description || '',
           description: item.description || '',
           unit: item.unit || 'Lot',
@@ -377,6 +474,8 @@ export const buildInvoiceCreatePayload = (
         })),
         {
           item_description: 'Discount',
+          line_type: 'discount',
+          source_line_key: 'quote_ih_discount',
           unit: discountUnit,
           quantity: discountQty,
           unit_price: toNegative(discountUnitPrice),
@@ -394,6 +493,7 @@ export const buildInvoiceCreatePayload = (
           : quoteDetails?.special_items || []
       payload.breakdown = specialItems.map((item) => ({
         id: Number.isFinite(Number(item.id)) ? Number(item.id) : null,
+        line_type: item.line_type || 'custom',
         item_description: item.item_description || item.line_item_title || '',
         description: item.description || '',
         unit: item.unit || 'Lot',
@@ -402,6 +502,7 @@ export const buildInvoiceCreatePayload = (
       }))
       payload.breakdown.push({
         item_description: 'Discount',
+        line_type: 'discount',
         unit: pricing.discount_unit || 'Lot',
         quantity: toNumber(pricing.discount_qty ?? 1),
         unit_price: toNegative(pricing.discount),

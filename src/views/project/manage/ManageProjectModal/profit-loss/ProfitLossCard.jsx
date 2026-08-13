@@ -72,13 +72,19 @@ const ProfitLossCard = ({ project, vendorPayments, projectExpenses, onDataRefres
   }
 
   const revenue = getCurrentProjectValue(project, 0)
-  const approvedStatuses = ['approved', 'paid', 'completed', 'transferred']
+  const approvedStatuses = ['approved', 'paid', 'partially paid', 'completed', 'transferred']
   const approved = vendorPayments.filter((p) =>
     approvedStatuses.includes((p.status || '').toLowerCase()),
   )
   const pending = vendorPayments.filter((p) => (p.status || '').toLowerCase() === 'pending')
 
-  const totalApproved = approved.reduce((sum, p) => sum + toFiniteNumber(p.amount), 0)
+  const totalApproved = approved.reduce((sum, payment) => {
+    const status = (payment.status || '').toLowerCase()
+    const recognizedAmount = ['paid', 'partially paid'].includes(status)
+      ? (payment.paid_amount ?? payment.amount)
+      : payment.amount
+    return sum + toFiniteNumber(recognizedAmount)
+  }, 0)
   const totalPending = pending.reduce((sum, p) => sum + toFiniteNumber(p.amount), 0)
   const totalManualExpenses = projectExpenses.reduce((sum, e) => sum + toFiniteNumber(e.amount), 0)
 
