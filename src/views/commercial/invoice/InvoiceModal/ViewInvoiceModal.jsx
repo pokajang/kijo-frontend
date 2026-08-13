@@ -21,6 +21,10 @@ import {
   CTableDataCell,
 } from '@coreui/react'
 import { getInvoicePaymentTermsSourceLabel } from '../../../../shared/paymentTerms'
+import {
+  formatInvoiceMoney,
+  resolveStoredInvoiceTotals,
+} from '../../../../shared/invoice/invoiceStoredTotals'
 
 const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
   if (!visible || !invoice) return null
@@ -63,28 +67,19 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
     payment_method,
     grant_approval_no,
     remarks,
-    sst_amount,
-    grand_total,
     breakdown = [],
     paid_date,
     paid_amount,
     paid_remarks,
   } = raw
 
-  const { dateIssued, dueInDays, amount, paymentTermsDays, dueDate } = invoice
+  const { dateIssued, dueInDays, paymentTermsDays, dueDate } = invoice
   const servicePeriod =
     service_start_date && service_end_date
       ? `${service_start_date} to ${service_end_date}`
       : service_start_date || service_end_date || '-'
-  const subtotalAmount = parseFloat(amount) || 0
-  const parsedSstAmount = parseFloat(sst_amount) || 0
-  const parsedGrandTotal = parseFloat(grand_total) || 0
-  const rawSstRate = raw.sst_rate ?? raw.sst_percent
-  const derivedSstRate = subtotalAmount > 0 ? (parsedSstAmount / subtotalAmount) * 100 : 0
-  const sstRateValue = Number.isFinite(parseFloat(rawSstRate))
-    ? parseFloat(rawSstRate)
-    : derivedSstRate
-  const sstRateLabel = `${sstRateValue.toFixed(2)}% SST (RM)`
+  const { subtotalBeforeSst, sstAmount, sstPercent, grandTotal } =
+    resolveStoredInvoiceTotals(invoice)
 
   const normalizeText = (value) =>
     String(value || '')
@@ -403,16 +398,16 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
                     Subtotal (Before SST) (RM)
                   </CTableDataCell>
                   <CTableDataCell className="text-end">
-                    RM {subtotalAmount.toFixed(2)}
+                    {formatInvoiceMoney(subtotalBeforeSst)}
                   </CTableDataCell>
                 </CTableRow>
-                {parsedSstAmount > 0 ? (
+                {sstAmount > 0 ? (
                   <CTableRow>
                     <CTableDataCell colSpan={5} className="text-end">
-                      {sstRateLabel}
+                      {sstPercent.toFixed(2)}% SST (RM)
                     </CTableDataCell>
                     <CTableDataCell className="text-end">
-                      RM {parsedSstAmount.toFixed(2)}
+                      {formatInvoiceMoney(sstAmount)}
                     </CTableDataCell>
                   </CTableRow>
                 ) : null}
@@ -421,7 +416,7 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
                     <strong>Grand Total (RM)</strong>
                   </CTableDataCell>
                   <CTableDataCell className="text-end">
-                    <strong>RM {parsedGrandTotal.toFixed(2)}</strong>
+                    <strong>{formatInvoiceMoney(grandTotal)}</strong>
                   </CTableDataCell>
                 </CTableRow>
               </CTableBody>

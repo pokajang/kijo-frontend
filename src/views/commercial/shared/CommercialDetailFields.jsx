@@ -29,7 +29,7 @@ export const DetailSection = ({ title, children }) => (
   </div>
 )
 
-export const ItemsTable = ({ items = [], columns = [] }) => (
+export const ItemsTable = ({ items = [], columns = [], summaryRows = [] }) => (
   <div className="embedded-data-table-wrap">
     {/* datatable-exempt: existing embedded/layout table */}
     <CTable
@@ -67,6 +67,14 @@ export const ItemsTable = ({ items = [], columns = [] }) => (
             </CTableDataCell>
           </CTableRow>
         )}
+        {summaryRows.map((row) => (
+          <CTableRow key={row.key || row.label} className={row.strong ? 'fw-semibold' : undefined}>
+            <CTableDataCell colSpan={columns.length} className="text-end">
+              {row.label}
+            </CTableDataCell>
+            <CTableDataCell className="text-end">{row.value}</CTableDataCell>
+          </CTableRow>
+        ))}
       </CTableBody>
     </CTable>
   </div>

@@ -101,6 +101,32 @@ const run = async () => {
     }
   }
 
+  const assertInvoiceDetailTotals = async ({ subtotal, sstRate, sstAmount, grandTotal }) => {
+    const section = page.getByRole('heading', { name: 'Item Breakdown' }).locator('xpath=..')
+    const table = section.getByRole('table')
+    await table.waitFor()
+
+    const subtotalRow = table.getByText('Subtotal (Before SST)', { exact: true }).locator('..')
+    const grandTotalRow = table.getByText('Grand Total', { exact: true }).locator('..')
+    assert((await subtotalRow.innerText()).includes(subtotal), 'Stored subtotal is not shown.')
+    assert(
+      (await grandTotalRow.innerText()).includes(grandTotal),
+      'Stored grand total is not shown.',
+    )
+
+    if (sstAmount) {
+      const sstRow = table.getByText(`${sstRate} SST`, { exact: true }).locator('..')
+      assert((await sstRow.innerText()).includes(sstAmount), 'Stored SST is not shown.')
+    } else {
+      assert(
+        (await table.getByText(/% SST$/, { exact: false }).count()) === 0,
+        'A zero-value SST row is shown.',
+      )
+    }
+
+    return section
+  }
+
   const apiRequest = async ({ route, method = 'GET', body, expected = [200] }) => {
     const response = await page.request.fetch(`${apiBase}/${String(route).replace(/^\/+/, '')}`, {
       method,
@@ -374,6 +400,19 @@ const run = async () => {
       return `types=${lineTypes.join(',')}`
     })
 
+    await step('current invoice detail footer reconciles stored SST totals', async () => {
+      const section = await assertInvoiceDetailTotals({
+        subtotal: 'RM 1,350.00',
+        sstRate: '8.00%',
+        sstAmount: 'RM 108.00',
+        grandTotal: 'RM 1,458.00',
+      })
+      await section.screenshot({
+        path: path.join(screenshotDir, '02a-current-invoice-detail-totals.png'),
+      })
+      return 'RM 1,350.00 + RM 108.00 SST = RM 1,458.00'
+    })
+
     await step('unpaid invoice edit uses guided overage recovery and persists', async () => {
       await page.getByRole('button', { name: 'Edit', exact: true }).click()
       const modal = page.getByRole('dialog').filter({ hasText: 'Edit Invoice' })
@@ -561,6 +600,21 @@ const run = async () => {
       )
       const pdf = await downloadPdf('ih-legacy-invoice', `invoices/${legacyInvoiceId}/pdf`)
       return `${legacyInvoiceRef}, gross=3000.00, total=2950.00, PDF ${pdf}`
+    })
+
+    await step('legacy invoice detail footer deducts discount once', async () => {
+      await page.goto(`${baseUrl}/commercial/invoice/${legacyInvoiceId}`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.getByText('Invoice Details', { exact: true }).waitFor()
+      const section = await assertInvoiceDetailTotals({
+        subtotal: 'RM 2,950.00',
+        grandTotal: 'RM 2,950.00',
+      })
+      await section.screenshot({
+        path: path.join(screenshotDir, '07-legacy-invoice-detail-totals.png'),
+      })
+      return 'RM 3,000.00 gross - RM 50.00 discount = RM 2,950.00'
     })
 
     await step('related documents and browser runtime are healthy', async () => {

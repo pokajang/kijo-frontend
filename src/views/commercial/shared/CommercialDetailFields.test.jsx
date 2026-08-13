@@ -28,4 +28,24 @@ describe('ItemsTable responsive sizing', () => {
 
     expect(screen.getByRole('table')).not.toHaveStyle({ minWidth: '48rem' })
   })
+
+  it('renders optional summary rows across the table footer columns', () => {
+    render(
+      <ItemsTable
+        items={[{ id: 1, description: 'Service', subtotal: '3000.00' }]}
+        columns={[
+          { key: 'description', label: 'Description' },
+          { key: 'subtotal', label: 'Subtotal' },
+        ]}
+        summaryRows={[
+          { key: 'subtotal', label: 'Subtotal (Before SST)', value: 'RM 2,950.00' },
+          { key: 'grand-total', label: 'Grand Total', value: 'RM 2,950.00', strong: true },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('Subtotal (Before SST)')).toBeInTheDocument()
+    expect(screen.getByText('Grand Total').closest('tr')).toHaveClass('fw-semibold')
+    expect(screen.getAllByText('RM 2,950.00')).toHaveLength(2)
+  })
 })
