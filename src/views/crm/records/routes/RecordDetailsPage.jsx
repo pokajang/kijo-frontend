@@ -6,6 +6,8 @@ import ChangeToFailModal from '../modals/shared/ChangeToFailModal.jsx'
 import ChangeToSuccessModal from '../modals/shared/ChangeToSuccessModal.jsx'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import FollowUpModal from '../modals/shared/FollowUpModal.jsx'
+import QuotationPdfPreviewModal from '../modals/shared/QuotationPdfPreviewModal.jsx'
+import LegacyTrainingCostModal from '../modals/training/LegacyTrainingCostModal.jsx'
 import RecordDetailsActions from '../details/RecordDetailsActions'
 import RecordActivityDetails from '../details/RecordActivityDetails'
 import RecordDetailsCard from '../details/RecordDetailsCard'
@@ -83,6 +85,12 @@ const RecordDetailsPage = () => {
     handleEmailOpenGmailDraft,
     handleEmailConfirm,
     handleSharePdf,
+    legacyPdfPrompt,
+    closeLegacyPdfPrompt,
+    handleLegacyPdfGenerate,
+    handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   } = useRecordDetailsActions({
     serviceTab,
     record,
@@ -210,6 +218,21 @@ const RecordDetailsPage = () => {
         onOpenGmailDraft={handleEmailOpenGmailDraft}
         onConfirm={handleEmailConfirm}
         isSubmitting={isEmailSending}
+      />
+
+      <LegacyTrainingCostModal
+        visible={Boolean(legacyPdfPrompt)}
+        mode={legacyPdfPrompt?.mode}
+        record={legacyPdfPrompt?.record}
+        onCancel={closeLegacyPdfPrompt}
+        onEdit={handleLegacyPdfEdit}
+        onGenerate={handleLegacyPdfGenerate}
+      />
+
+      <QuotationPdfPreviewModal
+        visible={Boolean(pdfPreviewRequest)}
+        request={pdfPreviewRequest}
+        onClose={closePdfPreview}
       />
     </CRow>
   )

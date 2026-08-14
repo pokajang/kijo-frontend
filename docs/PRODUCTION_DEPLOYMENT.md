@@ -227,6 +227,110 @@ For every applicable data operation:
 - Keep repair/inference backfills out of migrations unless the release design
   intentionally requires an automatic transactional transformation.
 
+### Legacy Training Quotation Approval and Estimated-Cost Compatibility (2026-08-14)
+
+This coordinated backend and frontend release prevents the current
+estimated-cost policy from retroactively blocking genuine legacy Training
+quotations. A legacy quotation is recognized only when its Training rule
+version is blank, its estimated total cost is missing, and it predates the
+configured rollout cutoff. Independent approval triggers, including special
+Training pricing and qualifying discounts, remain enforceable.
+
+The frontend adds guidance to the Generate PDF journey only. A normal legacy
+quotation offers **Generate PDF**, **Edit quotation**, and **Cancel**. Editing
+requires a positive estimated internal cost and moves the quotation to the
+current policy. This release does not change the frontend Generate Word
+journey.
+
+This release adds no migration, dependency, scheduler entry, or recurring
+command. It adds one idempotent Artisan reconciliation command for existing
+current approval rows. The command retains superseded approval history,
+resolves stale approval notifications, and may send a replacement pending
+notification when an independent approval trigger remains valid.
+
+Before deployment:
+
+- Back up `quotes_training`, `quote_approval_requests`, and
+  `in_app_notifications`.
+- Confirm the backend and frontend commits belong to the same release.
+- Record the current approval state for any known affected quotations.
+- Plan to deploy the backend first and the fresh frontend build immediately
+  afterward.
+
+After pulling the backend and installing production dependencies, refresh the
+configuration cache before reconciliation. The new Training policy version and
+legacy cutoff must be active when the command evaluates quotations:
+
+```bash
+cd ~/kijo-laravel
+
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+php artisan list --raw \
+  | grep '^quotes:reconcile-legacy-training-approvals'
+```
+
+Run and retain the read-only preview before allowing any approval changes:
+
+```bash
+php artisan quotes:reconcile-legacy-training-approvals --dry-run \
+  | tee "$HOME/legacy-training-approvals-dry-run.txt"
+```
+
+Stop before the write if the preview contains unexpected quotations, omits a
+known affected quotation, classifies a normal legacy quotation as requiring
+approval, or removes a legitimate special-pricing or discount trigger. Never
+enter or infer estimated costs for historical quotations as part of this
+deployment.
+
+After reviewing the complete preview, run the reconciliation once:
+
+```bash
+php artisan quotes:reconcile-legacy-training-approvals \
+  | tee "$HOME/legacy-training-approvals-reconcile.txt"
+```
+
+The command is safe to rerun: unchanged policy fingerprints reuse the current
+approval instead of creating duplicates. For the currently known affected
+records, the expected result is:
+
+- Training quotes 154 and 155 become green/approved under the grandfathered
+  historical basis.
+- Training quote 157 remains red/pending for BD because its special-pricing
+  trigger is legitimate; its missing-cost reason is removed.
+- Previous incorrect approval rows remain non-current and available for audit.
+
+Deploy the frontend production build after the backend reconciliation. Then
+perform these authenticated smoke checks:
+
+- Open a normal legacy Training quotation and choose Generate PDF. Confirm the
+  legacy-cost modal appears and Cancel makes no change.
+- Reopen the modal, choose Generate PDF, and confirm the PDF opens without a BD
+  approval error.
+- Choose Edit quotation and confirm the form explains the policy migration and
+  cannot save without a positive estimated internal cost.
+- Confirm a legacy quotation with special pricing remains blocked pending the
+  correct approval and does not offer the legacy PDF override.
+- Confirm a current-policy quotation with missing cost offers Edit quotation
+  but not Generate PDF.
+- Confirm no duplicate error toast and dialog appear for one failed PDF action.
+
+There is no destructive data rollback command for this release. If application
+rollback is required, roll back the frontend and backend commits together and
+repeat the normal Laravel cache-clear/cache-rebuild and frontend deployment
+steps. Do not delete reconciled approval rows: they are audit history. Be aware
+that the previous backend policy can classify a still-unedited legacy quote as
+missing-cost red again when it is next evaluated; coordinate rollback with the
+quotation and approval owners. Restore the database backup only for a verified
+data-integrity problem, not merely to reverse application behavior.
+
 ### Receivable Payment Lifecycle Navigation and Audit History
 
 The debtor lifecycle release adds Outstanding, Partially Paid, Paid,

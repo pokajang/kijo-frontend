@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import dialog from '../../../../components/dialog/dialogService'
@@ -46,6 +46,15 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
   const [emailDraftBody, setEmailDraftBody] = useState('')
   const [isEmailSending, setIsEmailSending] = useState(false)
   const [emailSendError, setEmailSendError] = useState('')
+  const [legacyPdfPrompt, setLegacyPdfPrompt] = useState(null)
+  const [pdfPreviewRequest, setPdfPreviewRequest] = useState(null)
+  const openLegacyPdfPrompt = useCallback((prompt) => setLegacyPdfPrompt(prompt), [])
+  const openPdfPreview = useCallback((request) => setPdfPreviewRequest(request), [])
+  const closePdfPreview = useCallback(() => setPdfPreviewRequest(null), [])
+  const refreshApprovalState = useCallback(
+    async () => loadRecord({ preferState: false, withSpinner: false }),
+    [loadRecord],
+  )
 
   const detailModalBindings = useMemo(
     () =>
@@ -93,6 +102,9 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
       showToast(message || (status ? buildRecordDetailStatusToastMessage(status) : ''))
     },
     modalBindings: detailModalBindings,
+    onLegacyPdfPrompt: openLegacyPdfPrompt,
+    onApprovalStateChanged: refreshApprovalState,
+    onOpenPdfPreview: openPdfPreview,
   })
 
   const handlers = useMemo(() => {
@@ -122,6 +134,8 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     setEmailDraftSubject('')
     setEmailDraftBody('')
     setEmailSendError('')
+    setLegacyPdfPrompt(null)
+    setPdfPreviewRequest(null)
   }, [record?.id, returnTo, serviceTab])
 
   const openFailModal = () => {
@@ -298,6 +312,18 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     }
   }
 
+  const closeLegacyPdfPrompt = () => setLegacyPdfPrompt(null)
+  const handleLegacyPdfGenerate = () => {
+    const generate = legacyPdfPrompt?.onGenerate
+    setLegacyPdfPrompt(null)
+    generate?.()
+  }
+  const handleLegacyPdfEdit = () => {
+    const edit = legacyPdfPrompt?.onEdit
+    setLegacyPdfPrompt(null)
+    edit?.()
+  }
+
   return {
     currentUserName,
     currentUserEmail,
@@ -357,5 +383,11 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     handleEmailOpenGmailDraft,
     handleEmailConfirm,
     handleSharePdf,
+    legacyPdfPrompt,
+    closeLegacyPdfPrompt,
+    handleLegacyPdfGenerate,
+    handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   }
 }

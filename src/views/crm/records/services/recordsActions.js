@@ -2,6 +2,7 @@ import dialog from '../../../../components/dialog/dialogService'
 import { getRecordListPath } from '../config/recordTabs'
 import { fetchJsonCompat, getMessage, isSuccess } from './compatApi'
 import { RECORD_ACTION_TOAST_MESSAGES } from '../utils/recordActionToastMessages'
+import { getQuoteIssuanceState } from '../utils/recordApproval'
 // crm/records/services/recordsActions.js
 
 const quoteRecordRoutes = (service) => {
@@ -30,6 +31,25 @@ export const endpointsByService = {
 }
 
 const safeArray = (value) => (Array.isArray(value) ? value : [])
+
+export const legacyTrainingPdfAcknowledgementKey = (record) =>
+  `legacy-training-pdf:${record?.id || 'unknown'}:${record?.revisionNo ?? record?.revision_no ?? 0}`
+
+const hasLegacyTrainingPdfAcknowledgement = (record) => {
+  try {
+    return window.sessionStorage.getItem(legacyTrainingPdfAcknowledgementKey(record)) === '1'
+  } catch {
+    return false
+  }
+}
+
+const rememberLegacyTrainingPdfAcknowledgement = (record) => {
+  try {
+    window.sessionStorage.setItem(legacyTrainingPdfAcknowledgementKey(record), '1')
+  } catch {
+    // PDF generation remains available when browser storage is unavailable.
+  }
+}
 
 const buildRelatedRecordGroups = (related = {}) => {
   const groups = []
@@ -162,6 +182,9 @@ export const createHandlers = ({
   onActionSuccess,
   refreshAfterLocalDelete = false,
   getReturnTo,
+  onLegacyPdfPrompt,
+  onApprovalStateChanged,
+  onOpenPdfPreview,
 }) => {
   const urls = endpointsByService[serviceKey] || {}
   const getActionReturnTo = () =>
@@ -217,54 +240,73 @@ export const createHandlers = ({
     return isSuccess(relatedPayload) ? relatedPayload.data || {} : null
   }
 
-  const openQuotationPdf = async (record) => {
-    const pdfWindow = window.open('about:blank', '_blank')
-    if (!pdfWindow) {
-      await dialog.alert(
-        'The PDF window was blocked by the browser. Allow pop-ups for this site, then retry.',
-      )
-      return
+  const openQuotationPdf = (record, { onLoadSuccess } = {}) => {
+    if (!record?.id || !urls.generate) {
+      dialog.alert('The quotation PDF is not available for this record.')
+      return false
     }
-    pdfWindow.opener = null
+    if (typeof onOpenPdfPreview !== 'function') {
+      dialog.alert('The quotation PDF preview is unavailable. Refresh the page and try again.')
+      return false
+    }
 
-    try {
-      const response = await fetch(urls.generate(record.id), {
-        credentials: 'include',
-        headers: { Accept: 'application/pdf' },
+    onOpenPdfPreview({
+      record,
+      serviceKey,
+      url: urls.generate(record.id),
+      onLoadSuccess,
+      onApprovalStateChanged,
+    })
+    return true
+  }
+
+  const openEditQuotation = (record) => {
+    const svc = serviceKey.replace('-tab', '')
+    navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record.id}`, {
+      state: { returnTo: getActionReturnTo() },
+    })
+  }
+
+  const generateQuotationPdf = async (record) => {
+    const context = record?.issuanceContext || record?.issuance_context
+    if (
+      serviceKey === 'training-tab' &&
+      context?.estimated_cost_required === true &&
+      typeof onLegacyPdfPrompt === 'function'
+    ) {
+      onLegacyPdfPrompt({
+        mode: 'cost-required',
+        record,
+        onEdit: () => openEditQuotation(record),
       })
-      const contentType = response.headers.get('content-type') || ''
-
-      if (!response.ok) {
-        let payload = null
-        try {
-          payload = await response.json()
-        } catch {
-          // The fallback below covers non-JSON server errors.
-        }
-        throw new Error(
-          getMessage(payload, `The quotation PDF could not be opened (HTTP ${response.status}).`),
-        )
-      }
-
-      if (!contentType.toLowerCase().includes('application/pdf')) {
-        throw new Error('The quotation PDF response was invalid.')
-      }
-
-      const blob = await response.blob()
-      const disposition = response.headers.get('content-disposition') || ''
-      const filenameMatch = disposition.match(/filename="?([^";]+)"?/i)
-      const filename = filenameMatch?.[1] || `quotation-${record.id}.pdf`
-      const pdfFile =
-        typeof File === 'function' ? new File([blob], filename, { type: 'application/pdf' }) : blob
-      const objectUrl = URL.createObjectURL(pdfFile)
-      pdfWindow.location.replace(objectUrl)
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
-    } catch (error) {
-      pdfWindow.close()
-      await dialog.alert(
-        `${error?.message || 'The quotation PDF could not be opened.'}\n\nThe quotation itself remains saved and unchanged.`,
-      )
+      return false
     }
+
+    const issuanceState = getQuoteIssuanceState(record)
+    if (issuanceState.blocked) {
+      await dialog.alert(issuanceState.message)
+      return false
+    }
+
+    const needsLegacyPrompt =
+      serviceKey === 'training-tab' &&
+      context?.is_grandfathered === true &&
+      !hasLegacyTrainingPdfAcknowledgement(record)
+
+    if (needsLegacyPrompt && typeof onLegacyPdfPrompt === 'function') {
+      onLegacyPdfPrompt({
+        mode: 'legacy',
+        record,
+        onGenerate: () =>
+          openQuotationPdf(record, {
+            onLoadSuccess: () => rememberLegacyTrainingPdfAcknowledgement(record),
+          }),
+        onEdit: () => openEditQuotation(record),
+      })
+      return false
+    }
+
+    return openQuotationPdf(record)
   }
 
   return {
@@ -510,12 +552,7 @@ export const createHandlers = ({
     },
 
     // Handle Edit Action
-    handleEdit: (record) => {
-      const svc = serviceKey.replace('-tab', '')
-      navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record.id}`, {
-        state: { returnTo: getActionReturnTo() },
-      })
-    },
+    handleEdit: (record) => openEditQuotation(record),
 
     // Handle Revise Action
     handleRevise: (record) => {
@@ -526,7 +563,7 @@ export const createHandlers = ({
     },
 
     // Handle Generate PDF
-    handleGeneratePdf: (record) => openQuotationPdf(record),
+    handleGeneratePdf: (record) => generateQuotationPdf(record),
 
     // Sync Client Details
     handleSyncClientDetails: async (record) => {

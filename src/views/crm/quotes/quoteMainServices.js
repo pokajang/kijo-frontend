@@ -197,8 +197,7 @@ export const serviceConfig = {
         hrdCharge: toFloat(pick(row, 'hrd_charge', 'hrdCharge'), 0),
         targetGroups: pick(row, 'target_groups', 'targetGroups') || '',
         estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
-        trafficLightRuleVersion:
-          pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
+        issuanceContext: pick(row, 'issuance_context', 'issuanceContext') || null,
         attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
         proposal_id: pick(row, 'proposal_id', 'proposalId') || '',
         proposalLanguage: pick(row, 'proposal_language', 'proposalLanguage') || 'en',

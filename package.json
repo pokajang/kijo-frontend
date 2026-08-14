@@ -30,6 +30,7 @@
     "smoke:ih-commercial": "node scripts/ih-commercial-lifecycle-smoke.mjs",
     "smoke:equipment-remarks": "node scripts/equipment-quotation-remarks-smoke.mjs",
     "smoke:equipment-commercial": "node scripts/equipment-commercial-lifecycle-smoke.mjs",
+    "uat:pdf-filenames": "node scripts/pdf-download-filename-uat.mjs",
     "smoke:training-hrd": "node scripts/training-hrd-flow-smoke.mjs",
     "smoke:vendor-payment-workflow": "node scripts/vendor-payment-workflow-ui-smoke.mjs",
     "release:ih-readiness": "node scripts/ih-release-readiness.mjs",

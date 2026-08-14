@@ -97,6 +97,8 @@ export const useRecordsController = () => {
   const [approvalDecisionNotice, setApprovalDecisionNotice] = useState(null)
   const [approvalRemarks, setApprovalRemarks] = useState('')
   const [isApprovalSubmitting, setIsApprovalSubmitting] = useState(false)
+  const [legacyPdfPrompt, setLegacyPdfPrompt] = useState(null)
+  const [pdfPreviewRequest, setPdfPreviewRequest] = useState(null)
   const { quotes, setQuotes, quotesLoading, fetchQuotes } = useRecordsFetch(activeTab)
   const refreshQuotesInPlace = useCallback(
     (tabKey = activeTab) => fetchQuotes(tabKey, { showLoader: false }),
@@ -111,6 +113,24 @@ export const useRecordsController = () => {
       console.error('Failed to load quotation approvals:', error)
     }
   }, [])
+  const openLegacyPdfPrompt = useCallback((prompt) => setLegacyPdfPrompt(prompt), [])
+  const openPdfPreview = useCallback((request) => setPdfPreviewRequest(request), [])
+  const closePdfPreview = useCallback(() => setPdfPreviewRequest(null), [])
+  const refreshApprovalState = useCallback(
+    async () => Promise.all([refreshApprovals(), refreshQuotesInPlace()]),
+    [refreshApprovals, refreshQuotesInPlace],
+  )
+  const closeLegacyPdfPrompt = useCallback(() => setLegacyPdfPrompt(null), [])
+  const handleLegacyPdfGenerate = useCallback(() => {
+    const generate = legacyPdfPrompt?.onGenerate
+    setLegacyPdfPrompt(null)
+    generate?.()
+  }, [legacyPdfPrompt])
+  const handleLegacyPdfEdit = useCallback(() => {
+    const edit = legacyPdfPrompt?.onEdit
+    setLegacyPdfPrompt(null)
+    edit?.()
+  }, [legacyPdfPrompt])
 
   useEffect(() => {
     refreshApprovals()
@@ -413,6 +433,9 @@ export const useRecordsController = () => {
     refreshAfterLocalDelete: true,
     modalBindings: defaultModalBindings,
     getReturnTo: () => getCurrentReturnTo(location),
+    onLegacyPdfPrompt: openLegacyPdfPrompt,
+    onApprovalStateChanged: refreshApprovalState,
+    onOpenPdfPreview: openPdfPreview,
   })
 
   const buildStateAwareHandlers = useRecordsActionBuilder({
@@ -423,6 +446,9 @@ export const useRecordsController = () => {
     refreshAfterLocalDelete: true,
     modalBindings: modalStateBindings,
     getReturnTo: () => getCurrentReturnTo(location),
+    onLegacyPdfPrompt: openLegacyPdfPrompt,
+    onApprovalStateChanged: refreshApprovalState,
+    onOpenPdfPreview: openPdfPreview,
   })
 
   const handlers = useMemo(() => {
@@ -787,5 +813,11 @@ export const useRecordsController = () => {
     isFailModalSubmitting,
     isSuccessModalSubmitting,
     isFollowUpModalSubmitting,
+    legacyPdfPrompt,
+    closeLegacyPdfPrompt,
+    handleLegacyPdfGenerate,
+    handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   }
 }

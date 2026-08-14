@@ -244,6 +244,7 @@ export async function fetchTrainingQuotes() {
           ? Number(row.price_exception_request_id)
           : null,
         activeNegotiationRequestCount: Number(row.active_price_exception_request_count || 0),
+        issuanceContext: row.issuance_context || null,
 
         clientDetails: {
           fullName: row.pic_name,
@@ -286,7 +287,7 @@ export async function fetchTrainingQuotes() {
           mealPrice: parseFloat(row.meal_price ?? 0),
           estimated_cost: estimatedCost,
           estimatedTotalCost: estimatedCost,
-          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
+          trafficLightRuleVersion: row.traffic_light_rule_version ?? null,
 
           discountType: row.discount_type,
           discountValue: parseFloat(row.discount_value ?? 0),

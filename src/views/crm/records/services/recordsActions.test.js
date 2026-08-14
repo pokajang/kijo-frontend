@@ -31,6 +31,9 @@ const modalBindings = {
 const createDeleteHarness = ({
   refreshAfterLocalDelete = false,
   serviceKey = 'training-tab',
+  onLegacyPdfPrompt = vi.fn(),
+  onApprovalStateChanged = vi.fn(),
+  onOpenPdfPreview = vi.fn(),
 } = {}) => {
   let quotes = [
     { id: 1, serviceTab: serviceKey },
@@ -38,6 +41,7 @@ const createDeleteHarness = ({
   ]
   const fetchQuotes = vi.fn()
   const onActionSuccess = vi.fn()
+  const navigate = vi.fn()
   const setQuotes = vi.fn((updater) => {
     quotes = typeof updater === 'function' ? updater(quotes) : updater
   })
@@ -46,8 +50,11 @@ const createDeleteHarness = ({
     serviceKey,
     fetchQuotes,
     setQuotes,
-    navigate: vi.fn(),
+    navigate,
     onActionSuccess,
+    onLegacyPdfPrompt,
+    onApprovalStateChanged,
+    onOpenPdfPreview,
     refreshAfterLocalDelete,
     ...modalBindings,
   })
@@ -57,6 +64,10 @@ const createDeleteHarness = ({
     fetchQuotes,
     handlers,
     onActionSuccess,
+    onLegacyPdfPrompt,
+    navigate,
+    onApprovalStateChanged,
+    onOpenPdfPreview,
     setQuotes,
   }
 }
@@ -66,6 +77,7 @@ beforeEach(() => {
   dialog.confirm.mockResolvedValue(true)
   fetchJsonCompat.mockResolvedValue({ success: true })
   vi.stubGlobal('fetch', vi.fn())
+  window.sessionStorage.clear()
   Object.defineProperty(URL, 'createObjectURL', {
     configurable: true,
     value: vi.fn(() => 'blob:quotation-pdf'),
@@ -115,70 +127,100 @@ describe('recordsActions PDF opening', () => {
     ['equipment-tab', 'equipment'],
     ['manpower-tab', 'manpower'],
     ['special-tab', 'special'],
-  ])('loads the %s PDF before navigating the popup', async (serviceKey, serviceRoute) => {
-    const popup = {
-      close: vi.fn(),
-      location: { replace: vi.fn() },
-    }
-    vi.spyOn(window, 'open').mockReturnValue(popup)
-    fetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: {
-        get: vi.fn((name) =>
-          name === 'content-type' ? 'application/pdf' : 'inline; filename="quotation-test.pdf"',
-        ),
-      },
-      blob: vi.fn(async () => new Blob(['pdf'], { type: 'application/pdf' })),
+  ])('opens the %s PDF in the application preview', async (serviceKey, serviceRoute) => {
+    const { handlers, onOpenPdfPreview, onApprovalStateChanged } = createDeleteHarness({
+      serviceKey,
     })
-
-    const { handlers } = createDeleteHarness({ serviceKey })
     await handlers.handleGeneratePdf({ id: 68 })
 
-    expect(window.open).toHaveBeenCalledWith('about:blank', '_blank')
-    expect(popup.opener).toBeNull()
-    expect(popup.close).not.toHaveBeenCalled()
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining(`quote-records/${serviceRoute}/68/pdf`),
-      expect.objectContaining({ credentials: 'include' }),
+    expect(onOpenPdfPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        record: expect.objectContaining({ id: 68 }),
+        serviceKey,
+        url: expect.stringContaining(`quote-records/${serviceRoute}/68/pdf`),
+        onApprovalStateChanged,
+      }),
     )
-    expect(popup.location.replace).toHaveBeenCalledWith('blob:quotation-pdf')
+    expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('closes the popup and explains an approval-blocked PDF response', async () => {
-    const popup = {
-      close: vi.fn(),
-      location: { replace: vi.fn() },
-    }
-    vi.spyOn(window, 'open').mockReturnValue(popup)
-    fetch.mockResolvedValue({
-      ok: false,
-      status: 409,
-      headers: { get: vi.fn(() => 'application/json') },
-      json: vi.fn(async () => ({
-        message: 'This quotation requires BD approval before it can be issued or awarded.',
-      })),
-    })
-
-    const { handlers } = createDeleteHarness({ serviceKey: 'equipment-tab' })
-    await handlers.handleGeneratePdf({ id: 68 })
-
-    expect(popup.close).toHaveBeenCalledTimes(1)
-    expect(popup.location.replace).not.toHaveBeenCalled()
-    expect(dialog.alert).toHaveBeenCalledWith(
-      expect.stringContaining('requires BD approval before it can be issued'),
-    )
-  })
-
-  it('explains how to continue when the PDF popup is blocked', async () => {
+  it('does not depend on browser popup permission', async () => {
     vi.spyOn(window, 'open').mockReturnValue(null)
-
-    const { handlers } = createDeleteHarness()
+    const { handlers, onOpenPdfPreview } = createDeleteHarness()
     await handlers.handleGeneratePdf({ id: 68 })
 
-    expect(dialog.alert).toHaveBeenCalledWith(
-      'The PDF window was blocked by the browser. Allow pop-ups for this site, then retry.',
+    expect(onOpenPdfPreview).toHaveBeenCalledTimes(1)
+    expect(dialog.alert).not.toHaveBeenCalled()
+  })
+
+  it('prompts before generating a grandfathered Training PDF and remembers a successful choice', async () => {
+    const onLegacyPdfPrompt = vi.fn()
+    const onOpenPdfPreview = vi.fn()
+    const { handlers } = createDeleteHarness({ onLegacyPdfPrompt, onOpenPdfPreview })
+    const record = {
+      id: 154,
+      revisionNo: 0,
+      serviceTab: 'training-tab',
+      issuanceContext: { is_grandfathered: true, requires_approval: false },
+    }
+
+    await handlers.handleGeneratePdf(record)
+
+    expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
+
+    onLegacyPdfPrompt.mock.calls[0][0].onGenerate()
+    expect(onOpenPdfPreview).toHaveBeenCalledTimes(1)
+    expect(window.sessionStorage.getItem('legacy-training-pdf:154:0')).toBeNull()
+
+    onOpenPdfPreview.mock.calls[0][0].onLoadSuccess()
+    expect(window.sessionStorage.getItem('legacy-training-pdf:154:0')).toBe('1')
+
+    await handlers.handleGeneratePdf(record)
+    expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
+    expect(onOpenPdfPreview).toHaveBeenCalledTimes(2)
+  })
+
+  it('never offers legacy generation while a Training approval trigger is unresolved', async () => {
+    const onLegacyPdfPrompt = vi.fn()
+    const onOpenPdfPreview = vi.fn()
+    const { handlers } = createDeleteHarness({ onLegacyPdfPrompt, onOpenPdfPreview })
+
+    await handlers.handleGeneratePdf({
+      id: 157,
+      serviceTab: 'training-tab',
+      issuanceContext: {
+        is_grandfathered: true,
+        requires_approval: true,
+        required_step: 'bd',
+        reasons: ['Special training or special-client pricing requires BD final approval.'],
+      },
+    })
+
+    expect(onLegacyPdfPrompt).not.toHaveBeenCalled()
+    expect(onOpenPdfPreview).not.toHaveBeenCalled()
+    expect(dialog.alert).toHaveBeenCalledWith(expect.stringContaining('Special training'))
+  })
+
+  it('guides an invalid current-policy Training quote to Edit without offering generation', async () => {
+    const onLegacyPdfPrompt = vi.fn()
+    const onOpenPdfPreview = vi.fn()
+    const { handlers } = createDeleteHarness({ onLegacyPdfPrompt, onOpenPdfPreview })
+
+    await handlers.handleGeneratePdf({
+      id: 201,
+      serviceTab: 'training-tab',
+      issuanceContext: { estimated_cost_required: true },
+    })
+
+    expect(onLegacyPdfPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'cost-required',
+        record: expect.objectContaining({ id: 201 }),
+        onEdit: expect.any(Function),
+      }),
     )
+    expect(onLegacyPdfPrompt.mock.calls[0][0].onGenerate).toBeUndefined()
+    expect(onOpenPdfPreview).not.toHaveBeenCalled()
   })
 })
 
