@@ -2,6 +2,7 @@ import dialog from '../../../../components/dialog/dialogService'
 import { getRecordListPath } from '../config/recordTabs'
 import { fetchJsonCompat, getMessage, isSuccess } from './compatApi'
 import { RECORD_ACTION_TOAST_MESSAGES } from '../utils/recordActionToastMessages'
+import { getQuoteIssuanceState } from '../utils/recordApproval'
 // crm/records/services/recordsActions.js
 
 const quoteRecordRoutes = (service) => {
@@ -52,6 +53,32 @@ export const endpointsByService = {
 }
 
 const safeArray = (value) => (Array.isArray(value) ? value : [])
+const legacyCostServiceKeys = new Set(['training-tab', 'equipment-tab', 'manpower-tab'])
+const costRecoveryServiceKeys = new Set([...legacyCostServiceKeys, 'ih-tab'])
+
+export const legacyQuotationPdfAcknowledgementKey = (record, serviceKey) => {
+  const context = record?.issuanceContext || record?.issuance_context
+  const revision = record?.revisionNo ?? record?.revision_no ?? 0
+  const ruleVersion = context?.rule_version || 'legacy'
+
+  return `legacy-cost-pdf:${serviceKey}:${record?.id || 'unknown'}:${revision}:${ruleVersion}`
+}
+
+const hasLegacyPdfAcknowledgement = (record, serviceKey) => {
+  try {
+    return window.sessionStorage.getItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey)) === '1'
+  } catch {
+    return false
+  }
+}
+
+const rememberLegacyPdfAcknowledgement = (record, serviceKey) => {
+  try {
+    window.sessionStorage.setItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey), '1')
+  } catch {
+    // PDF generation remains available when browser storage is unavailable.
+  }
+}
 
 const buildRelatedRecordGroups = (related = {}) => {
   const groups = []
@@ -184,6 +211,8 @@ export const createHandlers = ({
   onActionSuccess,
   refreshAfterLocalDelete = false,
   getReturnTo,
+  onLegacyPdfPrompt,
+  onApprovalStateChanged,
 }) => {
   const urls = endpointsByService[serviceKey] || {}
   const getActionReturnTo = () =>
@@ -245,13 +274,14 @@ export const createHandlers = ({
       await dialog.alert(
         'The PDF window was blocked by the browser. Allow pop-ups for this site, then retry.',
       )
-      return
+      return false
     }
     pdfWindow.opener = null
 
     try {
       const response = await fetch(urls.generate(record.id), {
         credentials: 'include',
+        silentError: true,
         headers: { Accept: 'application/pdf' },
       })
       const contentType = response.headers.get('content-type') || ''
@@ -262,6 +292,9 @@ export const createHandlers = ({
           payload = await response.json()
         } catch {
           // The fallback below covers non-JSON server errors.
+        }
+        if (response.status === 409 && (payload?.approval || payload?.issuance_context)) {
+          await onApprovalStateChanged?.(payload)
         }
         throw new Error(
           getMessage(payload, `The quotation PDF could not be opened (HTTP ${response.status}).`),
@@ -281,12 +314,64 @@ export const createHandlers = ({
       const objectUrl = URL.createObjectURL(pdfFile)
       pdfWindow.location.replace(objectUrl)
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+      return true
     } catch (error) {
       pdfWindow.close()
       await dialog.alert(
         `${error?.message || 'The quotation PDF could not be opened.'}\n\nThe quotation itself remains saved and unchanged.`,
       )
+      return false
     }
+  }
+
+  const openEditQuotation = (record) => {
+    const svc = serviceKey.replace('-tab', '')
+    navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record.id}`, {
+      state: { returnTo: getActionReturnTo() },
+    })
+  }
+
+  const generateQuotationPdf = async (record) => {
+    const context = record?.issuanceContext || record?.issuance_context
+    if (
+      costRecoveryServiceKeys.has(serviceKey) &&
+      context?.estimated_cost_required === true &&
+      typeof onLegacyPdfPrompt === 'function'
+    ) {
+      onLegacyPdfPrompt({
+        mode: 'cost-required',
+        record,
+        onEdit: () => openEditQuotation(record),
+      })
+      return false
+    }
+
+    const issuanceState = getQuoteIssuanceState(record)
+    if (issuanceState.blocked) {
+      await dialog.alert(issuanceState.message)
+      return false
+    }
+
+    const needsLegacyPrompt =
+      legacyCostServiceKeys.has(serviceKey) &&
+      context?.is_grandfathered === true &&
+      !hasLegacyPdfAcknowledgement(record, serviceKey)
+
+    if (needsLegacyPrompt && typeof onLegacyPdfPrompt === 'function') {
+      onLegacyPdfPrompt({
+        mode: 'legacy',
+        record,
+        onGenerate: async () => {
+          const generated = await openQuotationPdf(record)
+          if (generated) rememberLegacyPdfAcknowledgement(record, serviceKey)
+          return generated
+        },
+        onEdit: () => openEditQuotation(record),
+      })
+      return false
+    }
+
+    return openQuotationPdf(record)
   }
 
   const downloadQuotationWord = async (record) => {
@@ -295,6 +380,7 @@ export const createHandlers = ({
     try {
       const response = await fetch(urls.word(record.id), {
         credentials: 'include',
+        silentError: true,
         headers: {
           Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         },
@@ -307,6 +393,9 @@ export const createHandlers = ({
           payload = await response.json()
         } catch {
           // The fallback below covers non-JSON server errors.
+        }
+        if (response.status === 409 && (payload?.approval || payload?.issuance_context)) {
+          await onApprovalStateChanged?.(payload)
         }
         throw new Error(
           getMessage(
@@ -585,12 +674,7 @@ export const createHandlers = ({
     },
 
     // Handle Edit Action
-    handleEdit: (record) => {
-      const svc = serviceKey.replace('-tab', '')
-      navigate(`/crm/quotes?service=${svc}&edit=true&quoteId=${record.id}`, {
-        state: { returnTo: getActionReturnTo() },
-      })
-    },
+    handleEdit: (record) => openEditQuotation(record),
 
     // Handle Revise Action
     handleRevise: (record) => {
@@ -601,7 +685,7 @@ export const createHandlers = ({
     },
 
     // Handle Generate PDF
-    handleGeneratePdf: (record) => openQuotationPdf(record),
+    handleGeneratePdf: (record) => generateQuotationPdf(record),
 
     // Handle Generate Word
     handleGenerateWord: urls.word ? (record) => downloadQuotationWord(record) : undefined,

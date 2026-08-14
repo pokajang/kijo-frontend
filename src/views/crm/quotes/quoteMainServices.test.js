@@ -30,4 +30,54 @@ describe('equipment quote edit mapping', () => {
     })
     expect(mapped.grandTotal).toBe(300)
   })
+
+  it('preserves the backend legacy cost context without accepting a client rule version', () => {
+    const issuanceContext = { is_grandfathered: true, requires_cost_on_edit: true }
+    const mapped = serviceConfig.equipment.mapRowToFormData({
+      estimated_total_cost: null,
+      traffic_light_rule_version: null,
+      issuance_context: issuanceContext,
+      items: [],
+    })
+
+    expect(mapped.estimatedTotalCost).toBe('')
+    expect(mapped.issuanceContext).toEqual(issuanceContext)
+    expect(mapped).not.toHaveProperty('trafficLightRuleVersion')
+  })
+})
+
+describe('manpower quote edit mapping', () => {
+  it('preserves the backend legacy cost context without accepting a client rule version', () => {
+    const issuanceContext = { is_grandfathered: true, requires_cost_on_edit: true }
+    const mapped = serviceConfig.manpower.mapRowToFormData({
+      estimated_total_cost: null,
+      traffic_light_rule_version: null,
+      issuance_context: issuanceContext,
+    })
+
+    expect(mapped.estimatedTotalCost).toBe('')
+    expect(mapped.issuanceContext).toEqual(issuanceContext)
+    expect(mapped).not.toHaveProperty('trafficLightRuleVersion')
+  })
+})
+
+describe('training quote edit mapping', () => {
+  it('preserves the backend legacy context that makes cost mandatory on save', () => {
+    const issuanceContext = {
+      is_grandfathered: true,
+      requires_cost_on_edit: true,
+    }
+
+    const mapped = serviceConfig.training.mapRowToFormData({
+      training_id: 8,
+      training_title: 'Legacy Training',
+      estimated_total_cost: null,
+      traffic_light_rule_version: null,
+      issuance_context: issuanceContext,
+    })
+
+    expect(mapped.estimatedTotalCost).toBe('')
+    expect(mapped.issuanceContext).toEqual(issuanceContext)
+    expect(mapped).not.toHaveProperty('trafficLightRuleVersion')
+  })
 })

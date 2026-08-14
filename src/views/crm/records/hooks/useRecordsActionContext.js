@@ -67,6 +67,8 @@ export const useRecordsActionBuilder = ({
   refreshAfterLocalDelete = false,
   modalBindings,
   getReturnTo,
+  onLegacyPdfPrompt,
+  onApprovalStateChanged,
 }) =>
   useMemo(
     () => (serviceKey) =>
@@ -78,6 +80,8 @@ export const useRecordsActionBuilder = ({
         onActionSuccess,
         refreshAfterLocalDelete,
         getReturnTo,
+        onLegacyPdfPrompt,
+        onApprovalStateChanged,
         ...modalBindings,
       }),
     [
@@ -86,6 +90,8 @@ export const useRecordsActionBuilder = ({
       modalBindings,
       navigate,
       onActionSuccess,
+      onLegacyPdfPrompt,
+      onApprovalStateChanged,
       refreshAfterLocalDelete,
       setQuotes,
     ],

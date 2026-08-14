@@ -50,6 +50,9 @@ const RecordActionMenu = ({
   const approval = record?.approval
   const issuanceState = getQuoteIssuanceState(record)
   const issuanceBlocked = issuanceState.blocked
+  const estimatedCostEditRequired = Boolean(
+    (record?.issuanceContext || record?.issuance_context)?.estimated_cost_required,
+  )
   const approvalMessage = issuanceState.message || undefined
 
   const actions = [
@@ -91,7 +94,7 @@ const RecordActionMenu = ({
       label: 'Generate PDF',
       onClick: (item) => onGenerate?.(item, 'pdf'),
       hidden: !onGenerate,
-      disabled: issuanceBlocked,
+      disabled: issuanceBlocked && !estimatedCostEditRequired,
       tooltip: approvalMessage,
     },
     {

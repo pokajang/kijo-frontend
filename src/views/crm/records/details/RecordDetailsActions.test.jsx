@@ -76,6 +76,28 @@ describe('RecordDetailsActions issuance safeguards', () => {
     expect(screen.getByRole('button', { name: 'Awarded' })).toBeEnabled()
   })
 
+  it('keeps PDF recovery available while other issuance actions remain blocked for missing cost', () => {
+    render(
+      <RecordDetailsActions
+        {...actions}
+        serviceTab="equipment-tab"
+        record={{
+          id: 33,
+          serviceTab: 'equipment-tab',
+          issuanceContext: { estimated_cost_required: true },
+          clientDetails: { email: 'client@example.test' },
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Generate PDF' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Generate Word' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Email' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Share PDF' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Awarded' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled()
+  })
+
   it.each(['training-tab', 'ih-tab', 'manpower-tab', 'special-tab'])(
     'shows Generate Word for %s',
     (serviceTab) => {

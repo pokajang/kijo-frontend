@@ -1,7 +1,7 @@
 // TrainingQuotationForm.jsx
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { CCol } from '@coreui/react'
+import { CAlert, CCol } from '@coreui/react'
 
 import TrainingDetailsCard from './TrainingDetailsCard'
 import PricingDetailsCard from './PricingDetailsCard'
@@ -30,7 +30,7 @@ import {
   calculateHRD,
   calculateGrandTotal,
 } from './calculations'
-import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+import { getTrafficLightStatus } from '../shared/trafficLightConfig'
 
 const presetPaymentMethods = ['HRD Grant', 'Self-Payment', 'E-Perolehan']
 const defaultPaymentMethod = 'HRD Grant'
@@ -93,7 +93,6 @@ const TrainingQuotationForm = ({
     sstRate: 0,
     hrdCharge: 0,
     estimatedTotalCost: '',
-    trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
     attachProposal: true,
     proposalLanguage,
   }
@@ -170,10 +169,6 @@ const TrainingQuotationForm = ({
           typeof initialFormData.estimatedTotalCost === 'number'
             ? initialFormData.estimatedTotalCost
             : toNumberOrEmpty(initialFormData.estimatedTotalCost),
-        trafficLightRuleVersion:
-          initialFormData.trafficLightRuleVersion ||
-          initialFormData.traffic_light_rule_version ||
-          TRAFFIC_LIGHT_RULE_VERSION,
       }))
     }
   }, [initialFormData, priceExceptionRequestId, proposalLanguage])
@@ -412,6 +407,9 @@ const TrainingQuotationForm = ({
   }
 
   const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+  const isLegacyMigration = Boolean(
+    isEditMode && initialFormData?.issuanceContext?.requires_cost_on_edit,
+  )
 
   return (
     <>
@@ -423,6 +421,16 @@ const TrainingQuotationForm = ({
         presetPaymentMethods={presetPaymentMethods}
         proposalLanguage={proposalLanguage}
       />
+
+      {isLegacyMigration && (
+        <CCol xs={12}>
+          <CAlert color="warning" className="mb-4" role="status">
+            <strong>Estimated internal cost required.</strong> Saving this legacy quotation will
+            move it to the current approval policy. Enter an estimated total cost to continue;
+            cancelling leaves the original quotation unchanged.
+          </CAlert>
+        </CCol>
+      )}
 
       {selectedClient?.company_name && isTrainingDetailsComplete && (
         <CCol xs={12}>

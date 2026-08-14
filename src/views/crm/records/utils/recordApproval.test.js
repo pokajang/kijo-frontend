@@ -47,4 +47,69 @@ describe('getQuoteIssuanceState', () => {
       message: 'Approval status could not be verified. Refresh the quotation before issuing it.',
     })
   })
+
+  it.each(['training-tab', 'equipment-tab', 'manpower-tab'])(
+    'allows a grandfathered %s quote to reach the legacy PDF confirmation',
+    (serviceTab) => {
+      expect(
+        getQuoteIssuanceState({
+          serviceTab,
+          issuanceContext: {
+            is_grandfathered: true,
+            requires_approval: false,
+            estimated_cost_required: false,
+          },
+        }),
+      ).toEqual({ blocked: false, message: '' })
+    },
+  )
+
+  it('ignores an approval row produced by the superseded Training policy', () => {
+    expect(
+      getQuoteIssuanceState({
+        serviceTab: 'training-tab',
+        approval: {
+          can_issue: false,
+          status: 'pending',
+          required_step: 'bd',
+          rule_version: 'traffic-light-220626-v1',
+        },
+        issuanceContext: {
+          is_grandfathered: true,
+          requires_approval: false,
+          rule_version: 'traffic-light-training-202608-v2',
+        },
+      }),
+    ).toEqual({ blocked: false, message: '' })
+  })
+
+  it('blocks a grandfathered quote that still has a genuine approval trigger', () => {
+    expect(
+      getQuoteIssuanceState({
+        serviceTab: 'manpower-tab',
+        issuanceContext: {
+          is_grandfathered: true,
+          requires_approval: true,
+          required_step: 'bd',
+          reasons: ['The selected manpower rate requires management approval.'],
+        },
+      }),
+    ).toEqual({
+      blocked: true,
+      message:
+        'BD approval is required. The selected manpower rate requires management approval.',
+    })
+  })
+
+  it('requires editing when a current quote has no estimated cost', () => {
+    expect(
+      getQuoteIssuanceState({
+        serviceTab: 'equipment-tab',
+        issuanceContext: { estimated_cost_required: true },
+      }),
+    ).toEqual({
+      blocked: true,
+      message: 'Add an estimated total cost before issuing this current-policy quotation.',
+    })
+  })
 })

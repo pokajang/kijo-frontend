@@ -15,7 +15,14 @@ export const getQuoteIssuanceState = (record) => {
   }
 
   const approval = record?.approval
-  if (approval?.can_issue === false) {
+  const issuanceContext = record?.issuanceContext || record?.issuance_context
+  const approvalUsesCurrentPolicy =
+    !approval ||
+    !issuanceContext?.rule_version ||
+    !approval?.rule_version ||
+    approval.rule_version === issuanceContext.rule_version
+
+  if (approvalUsesCurrentPolicy && approval?.can_issue === false) {
     return {
       blocked: true,
       message:
@@ -25,11 +32,32 @@ export const getQuoteIssuanceState = (record) => {
     }
   }
 
-  if (approval?.can_issue === true) {
+  if (approvalUsesCurrentPolicy && approval?.can_issue === true) {
     return { blocked: false, message: '' }
   }
 
   const serviceKey = getQuoteServiceFromRecordTab(record?.serviceTab)
+
+  if (issuanceContext?.estimated_cost_required) {
+    return {
+      blocked: true,
+      message: 'Add an estimated total cost before issuing this current-policy quotation.',
+    }
+  }
+
+  if (issuanceContext?.requires_approval) {
+    const step = approvalStepLabel(issuanceContext.required_step)
+    const reason = Array.isArray(issuanceContext.reasons) ? issuanceContext.reasons.at(-1) : ''
+    return {
+      blocked: true,
+      message: reason ? `${step} approval is required. ${reason}` : `${step} approval is required.`,
+    }
+  }
+
+  if (issuanceContext) {
+    return { blocked: false, message: '' }
+  }
+
   if (serviceKey !== 'equipment') {
     return { blocked: false, message: '' }
   }

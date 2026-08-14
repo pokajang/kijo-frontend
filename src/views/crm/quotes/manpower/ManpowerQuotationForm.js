@@ -1,6 +1,7 @@
 ﻿// src/views/crm/quotes/manpower/ManpowerQuotationForm.js
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { CAlert } from '@coreui/react'
 import ManpowerDetailsCard from './ManpowerDetailsCard'
 import ReviewManpowerQuoteCard from './ReviewManpowerQuoteCard'
 import {
@@ -15,7 +16,7 @@ import dialog from '../../../../components/dialog/dialogService'
 import { getManpowerRate, getManpowerRateOption, inferManpowerRateType } from './manpowerRates'
 import { fetchPriceException } from '../priceException'
 import TrafficLightCard from '../shared/TrafficLightCard'
-import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+import { getTrafficLightStatus } from '../shared/trafficLightConfig'
 
 const getApprovedNegotiationDiscount = (row) =>
   Number(row?.approved_discount_amount || row?.requested_discount_amount || 0)
@@ -381,7 +382,6 @@ export default function ManpowerQuotationForm({
       grand_total: formData.grandTotal,
       estimated_total_cost:
         formData.estimatedTotalCost === '' ? null : Number(formData.estimatedTotalCost),
-      traffic_light_rule_version: TRAFFIC_LIGHT_RULE_VERSION,
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -390,6 +390,9 @@ export default function ManpowerQuotationForm({
   }
 
   const hasEstimatedCost = Number(formData.estimatedTotalCost) > 0
+  const isLegacyMigration = Boolean(
+    isEditMode && initialFormData?.issuanceContext?.requires_cost_on_edit,
+  )
   const trafficLightStatus = getTrafficLightStatus({
     serviceKey: 'manpower',
     quoteTotal: formData.grandTotal,
@@ -405,6 +408,14 @@ export default function ManpowerQuotationForm({
 
   return (
     <>
+      {isLegacyMigration && (
+        <CAlert color="warning" className="mb-4" role="status">
+          <strong>Estimated internal cost required.</strong> Saving this legacy quotation will move
+          it to the current approval policy. Enter the estimated total cost below to continue;
+          cancelling leaves the original quotation unchanged.
+        </CAlert>
+      )}
+
       <ManpowerDetailsCard
         formData={formData}
         setFormData={setFormData}

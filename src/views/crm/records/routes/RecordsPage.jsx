@@ -11,6 +11,7 @@ import { useRecordsController } from '../hooks/useRecordsController'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import NegotiationRequestModal from '../modals/shared/NegotiationRequestModal.jsx'
 import QuoteApprovalReviewModal from '../modals/shared/QuoteApprovalReviewModal.jsx'
+import LegacyQuotationCostModal from '../modals/shared/LegacyQuotationCostModal.jsx'
 
 const RecordsPage = () => {
   const location = useLocation()
@@ -62,6 +63,10 @@ const RecordsPage = () => {
     closeApprovalReview,
     handleApprovalDecision,
     isApprovalSubmitting,
+    legacyPdfPrompt,
+    closeLegacyPdfPrompt,
+    handleLegacyPdfGenerate,
+    handleLegacyPdfEdit,
   } = useRecordsController()
   const [headerScopeLabel, setHeaderScopeLabel] = useState('')
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
@@ -264,6 +269,15 @@ const RecordsPage = () => {
           onCancel={closeApprovalReview}
           onDecision={handleApprovalDecision}
           isSubmitting={isApprovalSubmitting}
+        />
+
+        <LegacyQuotationCostModal
+          visible={Boolean(legacyPdfPrompt)}
+          mode={legacyPdfPrompt?.mode}
+          record={legacyPdfPrompt?.record}
+          onCancel={closeLegacyPdfPrompt}
+          onEdit={handleLegacyPdfEdit}
+          onGenerate={handleLegacyPdfGenerate}
         />
       </CRow>
     </>

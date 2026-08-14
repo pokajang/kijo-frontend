@@ -1,7 +1,7 @@
 // src/views/crm/quotes/equipment/EquipmentQuotationForm.jsx
 
 import React from 'react'
-import { CCol, CCard } from '@coreui/react'
+import { CAlert, CCol, CCard } from '@coreui/react'
 import EquipmentSelection from './EquipmentSelection'
 import PricingInput from './PricingInput'
 import ReviewQuotation from './ReviewQuotation'
@@ -41,7 +41,6 @@ export default function EquipmentQuotationForm({
     setAttachProposal,
     estimatedTotalCost,
     setEstimatedTotalCost,
-    trafficLightRuleVersion,
     itemsTotal,
     subtotal,
     sstAmount,
@@ -56,6 +55,9 @@ export default function EquipmentQuotationForm({
   })
 
   const hasEstimatedCost = Number(estimatedTotalCost) > 0
+  const isLegacyMigration = Boolean(
+    isEditMode && initialFormData?.issuanceContext?.requires_cost_on_edit,
+  )
   const pricingCardStatus = getTrafficLightStatus({
     serviceKey: 'equipment',
     estimatedTotalCost,
@@ -71,6 +73,14 @@ export default function EquipmentQuotationForm({
   return (
     <CCol md={12}>
       <CCard className="mb-4">
+        {isLegacyMigration && (
+          <CAlert color="warning" className="m-3 mb-0" role="status">
+            <strong>Estimated internal cost required.</strong> Saving this legacy quotation will
+            move it to the current approval policy. Enter the estimated total cost below to
+            continue; cancelling leaves the original quotation unchanged.
+          </CAlert>
+        )}
+
         <EquipmentSelection
           isEditMode={isEditMode}
           selectOptions={selectOptions}

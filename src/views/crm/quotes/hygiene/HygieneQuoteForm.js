@@ -22,7 +22,7 @@ import {
   STANDARD_HYGIENE_PRICING_RULE,
 } from '../../../../shared/invoice/hygienePricing'
 import TrafficLightCard from '../shared/TrafficLightCard'
-import { getTrafficLightStatus, TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
+import { getTrafficLightStatus } from '../shared/trafficLightConfig'
 
 const IH_PRICING_INPUT_FIELDS = [
   'sampleCounts',
@@ -106,7 +106,6 @@ export default function HygieneQuotationForm({
       subTotal: '0.00',
       grandTotal: '0.00',
       estimatedTotalCost: '',
-      trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
       attachProposal: true,
       proposalLanguage,
     }),
@@ -167,10 +166,6 @@ export default function HygieneQuotationForm({
           typeof initialFormData.estimatedTotalCost === 'number'
             ? initialFormData.estimatedTotalCost
             : toNumberOrEmpty(initialFormData.estimatedTotalCost),
-        trafficLightRuleVersion:
-          initialFormData.trafficLightRuleVersion ||
-          initialFormData.traffic_light_rule_version ||
-          TRAFFIC_LIGHT_RULE_VERSION,
         serviceTitle: initialFormData.serviceTitle ?? defaultForm.serviceTitle,
         serviceCode: initialFormData.serviceCode ?? defaultForm.serviceCode,
         attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
@@ -451,7 +446,6 @@ export default function HygieneQuotationForm({
       sub_total: quoteTotals.subTotal,
       grand_total: quoteTotals.grandTotal,
       estimated_total_cost: estimatedCostPayload,
-      traffic_light_rule_version: formData.trafficLightRuleVersion || TRAFFIC_LIGHT_RULE_VERSION,
       complexity_rating: toInteger(formData.complexityRating, 1),
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,

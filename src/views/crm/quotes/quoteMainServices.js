@@ -197,8 +197,7 @@ export const serviceConfig = {
         hrdCharge: toFloat(pick(row, 'hrd_charge', 'hrdCharge'), 0),
         targetGroups: pick(row, 'target_groups', 'targetGroups') || '',
         estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
-        trafficLightRuleVersion:
-          pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
+        issuanceContext: pick(row, 'issuance_context', 'issuanceContext') || null,
         attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
         proposal_id: pick(row, 'proposal_id', 'proposalId') || '',
         proposalLanguage: pick(row, 'proposal_language', 'proposalLanguage') || 'en',
@@ -225,8 +224,7 @@ export const serviceConfig = {
       pricingState: pick(row, 'pricing_state', 'pricingState') || null,
       complexityRating: toInt(pick(row, 'complexity_rating', 'complexityRating'), 1),
       estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
-      trafficLightRuleVersion:
-        pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
+      issuanceContext: pick(row, 'issuance_context', 'issuanceContext') || null,
       travelCharge: toFloat(pick(row, 'travel_charge', 'travelCharge'), 0),
       inquiryRemarks: pick(row, 'inquiry_remarks', 'inquiryRemarks') || '',
       unitPrice: toFloat(pick(row, 'unit_price', 'unitPrice'), 0),
@@ -267,8 +265,7 @@ export const serviceConfig = {
       sstAmount: toFloat(pick(row, 'sst_amount', 'sstAmount'), 0),
       grandTotal: toFloat(pick(row, 'grand_total', 'grandTotal'), 0),
       estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
-      trafficLightRuleVersion:
-        pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
+      issuanceContext: pick(row, 'issuance_context', 'issuanceContext') || null,
       attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
       inquiryRemarks: pick(row, 'inquiry_remarks', 'inquiryRemarks') || '',
       proposalLanguage: pick(row, 'proposal_language', 'proposalLanguage') || 'en',
@@ -302,8 +299,7 @@ export const serviceConfig = {
       subtotal: toFloat(pick(row, 'subtotal', 'sub_total', 'subTotal'), 0),
       grandTotal: toFloat(pick(row, 'grand_total', 'grandTotal'), 0),
       estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimated_total_cost', 'estimatedTotalCost')),
-      trafficLightRuleVersion:
-        pick(row, 'traffic_light_rule_version', 'trafficLightRuleVersion') || 'v1',
+      issuanceContext: pick(row, 'issuance_context', 'issuanceContext') || null,
       attachProposal: toBool(pick(row, 'attach_proposal', 'attachProposal')),
     }),
   },
