@@ -13,6 +13,16 @@ const isCancelledInvoice = (status) =>
       .trim()
       .toLowerCase(),
   )
+const isPaidInvoice = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase() === 'paid'
+const isEquipmentService = (serviceType) =>
+  ['equipment', 'equipment supply'].includes(
+    String(serviceType || '')
+      .trim()
+      .toLowerCase(),
+  )
 
 const defaultVisibleColumns = {
   invoice: true,
@@ -205,6 +215,7 @@ const InvoiceTable = ({
           String(inv?.paymentMethod || '')
             .toLowerCase()
             .includes('hrd')
+        const isEquipment = inv.isEquipment ?? isEquipmentService(serviceType)
 
         return {
           ...inv,
@@ -232,6 +243,7 @@ const InvoiceTable = ({
           totalDisplay: inv.grandTotal || emptyValue,
           status: inv.status || emptyValue,
           isHrdTraining,
+          isEquipment,
           internalPicDisplay:
             inv.internalPic?.code || inv.internalPic?.name || inv.internalPic?.id || emptyValue,
         }
@@ -308,11 +320,25 @@ const InvoiceTable = ({
         label: 'PDF Invoice',
         onClick: () => onAction('generate', inv),
       },
-      inv.status === 'Paid'
+      inv.isEquipment
+        ? {
+            key: 'generate-word',
+            label: 'Word Invoice',
+            onClick: () => onAction('generateWord', inv),
+          }
+        : null,
+      isPaidInvoice(inv.status)
         ? {
             key: 'receipt',
             label: 'PDF Receipt',
             onClick: () => onAction('receipt', inv),
+          }
+        : null,
+      inv.isEquipment && isPaidInvoice(inv.status)
+        ? {
+            key: 'receipt-word',
+            label: 'Word Receipt',
+            onClick: () => onAction('receiptWord', inv),
           }
         : null,
       !isCancelledInvoice(inv.status)

@@ -7,6 +7,7 @@ import DoViewModal from './DoModal/DoViewModal'
 import DoEditModalMain from './DoModal/DoEditModalMain'
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
 import {
   DataTableCardHeader,
   DataTableRecordControls,
@@ -331,6 +332,14 @@ const DeliveryOrder = () => {
     window.open(`${import.meta.env.VITE_API_BASE}delivery-orders/${doItem.do_id}/pdf`, '_blank')
   }
 
+  const handleGenerateWord = (doItem) => {
+    if (!doItem?.do_id) return
+    return downloadCommercialWord(
+      `${import.meta.env.VITE_API_BASE}delivery-orders/${doItem.do_id}/word`,
+      `delivery-order-${doItem.do_number || doItem.do_id}.docx`,
+    )
+  }
+
   const filteredDos = useMemo(
     () =>
       deliveryOrders.filter((doItem) => {
@@ -516,6 +525,11 @@ const DeliveryOrder = () => {
       key: 'generate-pdf',
       label: 'Generate PDF',
       onClick: handleGeneratePdf,
+    },
+    {
+      key: 'generate-word',
+      label: 'Generate Word',
+      onClick: handleGenerateWord,
     },
     {
       key: 'delete',

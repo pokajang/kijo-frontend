@@ -33,6 +33,10 @@ const isCancelledInvoice = (status) =>
       .trim()
       .toLowerCase(),
   )
+const isPaidInvoice = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase() === 'paid'
 
 const InvoiceDetailPage = () => {
   const navigate = useNavigate()
@@ -114,12 +118,28 @@ const InvoiceDetailPage = () => {
           buttonColor: 'secondary',
           onClick: () => runAction('generate'),
         },
-        invoice.status === 'Paid'
+        invoice.isEquipment
+          ? {
+              key: 'generate-word',
+              label: 'Word Invoice',
+              buttonColor: 'secondary',
+              onClick: () => runAction('generateWord'),
+            }
+          : null,
+        isPaidInvoice(invoice.status)
           ? {
               key: 'receipt',
               label: 'PDF Receipt',
               buttonColor: 'secondary',
               onClick: () => runAction('receipt'),
+            }
+          : null,
+        invoice.isEquipment && isPaidInvoice(invoice.status)
+          ? {
+              key: 'receipt-word',
+              label: 'Word Receipt',
+              buttonColor: 'secondary',
+              onClick: () => runAction('receiptWord'),
             }
           : null,
         !isCancelledInvoice(invoice.status)

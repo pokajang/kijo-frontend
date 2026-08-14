@@ -28,6 +28,7 @@ import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
 import CommercialProjectPickerModal from '../shared/CommercialProjectPickerModal'
 
 const emptyValue = '-'
@@ -229,6 +230,12 @@ export default function SupplierPoRecords() {
     const url = `${import.meta.env.VITE_API_BASE}catalog/purchase-orders/${po.po_id}/pdf`
     window.open(url, '_blank')
   }
+
+  const handleGenerateWord = (po) =>
+    downloadCommercialWord(
+      `${import.meta.env.VITE_API_BASE}catalog/purchase-orders/${po.po_id}/word`,
+      `supplier-po-${po.po_ref_no || po.po_id}.docx`,
+    )
 
   const handleViewPo = (po) => {
     navigate(`/commercial/supplier-po/${po.po_id}`, {
@@ -467,6 +474,11 @@ export default function SupplierPoRecords() {
         key: 'export-pdf',
         label: 'PDF PO',
         onClick: handleGeneratePdf,
+      },
+      {
+        key: 'export-word',
+        label: 'Word PO',
+        onClick: handleGenerateWord,
       },
       {
         key: 'mark-paid',

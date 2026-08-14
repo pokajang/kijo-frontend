@@ -17,7 +17,29 @@ const quoteRecordRoutes = (service) => {
     followUp: (id) => withId(id, '/follow-up'),
     syncClient: (id) => withId(id, '/sync-client'),
     syncClientDiscover: (id) => withId(id, '/related-docs'),
+    word: (id) => withId(id, '/word'),
   }
+}
+
+const docxFilename = (disposition, fallback) => {
+  const encodedMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i)
+  const plainMatch = disposition.match(/filename\s*=\s*"?([^";]+)"?/i)
+  let candidate = plainMatch?.[1] || fallback
+
+  if (encodedMatch?.[1]) {
+    try {
+      candidate = decodeURIComponent(encodedMatch[1].trim().replace(/^"|"$/g, ''))
+    } catch {
+      // Use the safe ASCII filename or local fallback when percent-decoding fails.
+    }
+  }
+
+  const basename = candidate
+    .split(/[\\/]/)
+    .pop()
+    ?.replace(/[\r\n"]/g, '')
+    .trim()
+  return basename?.toLowerCase().endsWith('.docx') ? basename : fallback
 }
 
 // Centralized endpoints for all service types
@@ -263,6 +285,59 @@ export const createHandlers = ({
       pdfWindow.close()
       await dialog.alert(
         `${error?.message || 'The quotation PDF could not be opened.'}\n\nThe quotation itself remains saved and unchanged.`,
+      )
+    }
+  }
+
+  const downloadQuotationWord = async (record) => {
+    if (!urls.word) return
+
+    try {
+      const response = await fetch(urls.word(record.id), {
+        credentials: 'include',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        },
+      })
+      const contentType = response.headers.get('content-type') || ''
+
+      if (!response.ok) {
+        let payload = null
+        try {
+          payload = await response.json()
+        } catch {
+          // The fallback below covers non-JSON server errors.
+        }
+        throw new Error(
+          getMessage(
+            payload,
+            `The quotation Word document could not be downloaded (HTTP ${response.status}).`,
+          ),
+        )
+      }
+
+      if (
+        !contentType
+          .toLowerCase()
+          .includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+      ) {
+        throw new Error('The quotation Word document response was invalid.')
+      }
+
+      const blob = await response.blob()
+      const disposition = response.headers.get('content-disposition') || ''
+      const filename = docxFilename(disposition, `quotation-${record.id}.docx`)
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+    } catch (error) {
+      await dialog.alert(
+        `${error?.message || 'The quotation Word document could not be downloaded.'}\n\nThe quotation itself remains saved and unchanged.`,
       )
     }
   }
@@ -527,6 +602,9 @@ export const createHandlers = ({
 
     // Handle Generate PDF
     handleGeneratePdf: (record) => openQuotationPdf(record),
+
+    // Handle Generate Word
+    handleGenerateWord: urls.word ? (record) => downloadQuotationWord(record) : undefined,
 
     // Sync Client Details
     handleSyncClientDetails: async (record) => {

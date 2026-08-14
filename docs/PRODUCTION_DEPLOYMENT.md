@@ -223,6 +223,72 @@ For every applicable data operation:
 - Keep repair/inference backfills out of migrations unless the release design
   intentionally requires an automatic transactional transformation.
 
+### Quotation and Equipment Commercial-Cycle DOCX Export
+
+The DOCX export is a coordinated backend and frontend release. It adds the
+`phpoffice/phpword` Composer dependency and authenticated Word routes for all
+quotation services plus the Equipment commercial documents:
+
+- `GET quote-records/{training|equipment|ih|manpower|special}/{id}/word`
+- `GET catalog/purchase-orders/{poId}/word`
+- `GET delivery-orders/{id}/word`
+- `GET invoices/{id}/word`
+- `GET invoices/{id}/receipt-word`
+
+The invoice and receipt Word routes are intentionally limited to records whose
+service type is `Equipment` or `Equipment Supply`; unsupported service types
+return HTTP 422 and the frontend does not expose those Word actions. PDF
+invoice and receipt behavior remains unchanged for every service type.
+
+It adds no migration, backfill, queue, scheduler entry, or special Artisan
+command. Receipt PDF and Word generation use the same transactional receipt
+number allocator; test paid-receipt generation on a production-safe record.
+
+Before deployment, confirm the production PHP CLI used by Composer and Laravel
+has the extensions required by PHPWord, including XMLWriter:
+
+```bash
+cd ~/kijo-laravel
+php -r "foreach (['dom','gd','zip','xml','xmlwriter'] as \$extension) { echo \$extension.': '.(extension_loaded(\$extension) ? 'yes' : 'NO').PHP_EOL; }"
+php -r "echo 'temp directory: '.sys_get_temp_dir().PHP_EOL.'writable: '.(is_writable(sys_get_temp_dir()) ? 'yes' : 'NO').PHP_EOL;"
+php ~/composer.phar check-platform-reqs
+```
+
+Any `NO` result is a release stop. Enable the missing extension for the same
+PHP runtime that serves `api.amiosh.com`, and confirm the temporary directory is
+writable before deploying.
+
+Deploy the backend first, run the normal cache-clear/cache-rebuild commands,
+and verify the new route is present:
+
+```bash
+php ~/composer.phar install --no-dev --optimize-autoloader
+php artisan route:list --path=word --method=GET
+```
+
+Then deploy a fresh frontend production build. With authorized test records,
+verify each quotation service and Supplier PO, Delivery Order, Invoice, and paid
+Receipt download a non-empty `.docx` whose filename uses its commercial
+reference and which opens without a repair warning. Confirm client/vendor data,
+line items, totals, terms, header, footer, language variants, and quotation
+approval behavior. Also confirm Generate PDF still works for the same records.
+
+Special proposals created in Write mode are emitted as native Word content.
+Special proposals supplied as uploaded PDFs remain external PDF sources: the
+DOCX includes an explicit attachment notice and captured filenames because
+embedding PDF/OLE content is not reliably portable across Microsoft Word,
+LibreOffice, WPS, macOS, mobile, and browser processors.
+
+The automated browser UAT intercepts API responses and does not replace this
+integrated post-deploy smoke. Microsoft Word rendering is part of the local
+release gate. LibreOffice and WPS rendering should be recorded separately when
+those applications are available.
+
+Rollback requires reverting the coordinated frontend and backend application
+commits, running Composer install for the restored lock file, rebuilding the
+frontend, and clearing/rebuilding Laravel caches. No database rollback is
+required.
+
 ### Receivable Payment Lifecycle Navigation and Audit History
 
 The debtor lifecycle release adds Outstanding, Partially Paid, Paid,

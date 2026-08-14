@@ -1,5 +1,6 @@
 ﻿import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
 
 /**
  * Centralized endpoints for each invoice action
@@ -7,6 +8,9 @@ import { showToast } from '../../../components/toast/toastService'
 const endpoints = {
   generate: (id) => `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/pdf`,
   receipt: (id) => `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/receipt-pdf`,
+  generateWord: (id) => `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/word`,
+  receiptWord: (id) =>
+    `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(id)}/receipt-word`,
   updateStatus: (id) =>
     `${import.meta.env.VITE_API_BASE}receivables/invoice/${encodeURIComponent(id)}/payments`,
   reversePayment: (id) =>
@@ -91,6 +95,10 @@ export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = t
           String(payment_method || '')
             .toLowerCase()
             .includes('hrd')
+        const normalizedServiceType = String(service_type || '')
+          .trim()
+          .toLowerCase()
+        const isEquipment = ['equipment', 'equipment supply'].includes(normalizedServiceType)
 
         const billedAddress = [
           row.invoice_client_address,
@@ -160,6 +168,7 @@ export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = t
           paymentMethod: payment_method,
           hrdClaimRef: hrd_claim_ref || '',
           isHrdTraining,
+          isEquipment,
 
           // Use the aliased field here
           loaNo: loa_number || '',
@@ -201,6 +210,13 @@ export const handleAction = async (
 
   const { raw } = invoice
   const endpoint = getEndpoint(action)
+
+  if (action === 'generateWord' || action === 'receiptWord') {
+    if (!endpoint) return
+    const prefix = action === 'receiptWord' ? 'receipt' : 'invoice'
+    await downloadCommercialWord(endpoint(raw.id), `${prefix}-${raw.id}.docx`)
+    return
+  }
 
   if (action === 'generate' || action === 'receipt') {
     if (!endpoint) {

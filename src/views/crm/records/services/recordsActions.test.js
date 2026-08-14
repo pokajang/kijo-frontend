@@ -182,6 +182,76 @@ describe('recordsActions PDF opening', () => {
   })
 })
 
+describe('recordsActions Word download', () => {
+  it.each([
+    ['training-tab', 'training'],
+    ['ih-tab', 'ih'],
+    ['equipment-tab', 'equipment'],
+    ['manpower-tab', 'manpower'],
+    ['special-tab', 'special'],
+  ])(
+    'downloads a %s quotation DOCX using the response filename',
+    async (serviceKey, serviceRoute) => {
+      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+      fetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: {
+          get: vi.fn((name) =>
+            name === 'content-type'
+              ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+              : 'attachment; filename="QEQ26-0068_Client.docx"; filename*=UTF-8\'\'QEQ26-0068_Client.docx',
+          ),
+        },
+        blob: vi.fn(async () => new Blob(['docx'])),
+      })
+
+      const { handlers } = createDeleteHarness({ serviceKey })
+      await handlers.handleGenerateWord({ id: 68 })
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`quote-records/${serviceRoute}/68/word`),
+        expect.objectContaining({
+          credentials: 'include',
+          headers: {
+            Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          },
+        }),
+      )
+      expect(click).toHaveBeenCalled()
+      expect(click.mock.instances.at(-1).download).toBe('QEQ26-0068_Client.docx')
+      expect(URL.createObjectURL).toHaveBeenCalled()
+    },
+  )
+
+  it('rejects an unsafe response filename and uses the local DOCX fallback', async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {
+        get: vi.fn((name) =>
+          name === 'content-type'
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            : 'attachment; filename="not-a-doc.txt"',
+        ),
+      },
+      blob: vi.fn(async () => new Blob(['docx'])),
+    })
+
+    const { handlers } = createDeleteHarness({ serviceKey: 'equipment-tab' })
+    await handlers.handleGenerateWord({ id: 68 })
+
+    expect(click.mock.instances[0].download).toBe('quotation-68.docx')
+  })
+
+  it('exposes Word generation for every issued quotation service', () => {
+    const { handlers } = createDeleteHarness({ serviceKey: 'training-tab' })
+
+    expect(handlers.handleGenerateWord).toEqual(expect.any(Function))
+  })
+})
+
 describe('recordsActions un-award safeguards', () => {
   it.each([
     ['training-tab', 'training'],

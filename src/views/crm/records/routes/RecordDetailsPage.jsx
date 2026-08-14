@@ -128,6 +128,7 @@ const RecordDetailsPage = () => {
               <RecordDetailsActions
                 handlers={handlers}
                 record={record}
+                serviceTab={serviceTab}
                 isAwarded={isAwarded}
                 isSyncingClient={isSyncingClient}
                 onFollowUp={handleFollowUp}

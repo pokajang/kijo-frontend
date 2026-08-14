@@ -243,6 +243,43 @@ describe('Debtors payment table wiring', () => {
     })
   })
 
+  it('offers Word invoices only for the equipment commercial cycle', async () => {
+    fetchJson.mockResolvedValue({
+      status: 'success',
+      debtors: [
+        {
+          sourceType: 'invoice',
+          sourceId: 21,
+          invoiceRef: 'INV-EQUIPMENT',
+          serviceType: 'Equipment Supply',
+          client: 'Equipment Client',
+          status: 'Open',
+        },
+        {
+          sourceType: 'invoice',
+          sourceId: 22,
+          invoiceRef: 'INV-TRAINING',
+          serviceType: 'Training',
+          client: 'Training Client',
+          status: 'Open',
+        },
+      ],
+    })
+
+    render(
+      <MemoryRouter>
+        <Debtors />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(recordListMock.mock.calls.at(-1)[0].rows).toHaveLength(2))
+    const props = recordListMock.mock.calls.at(-1)[0]
+    expect(props.getActions(props.rows[0]).map((action) => action.label)).toContain('Word Invoice')
+    expect(props.getActions(props.rows[1]).map((action) => action.label)).not.toContain(
+      'Word Invoice',
+    )
+  })
+
   it('ignores an older debtor response after a newer search finishes', async () => {
     let resolveOldRequest
     fetchJson

@@ -8,6 +8,7 @@ import MarkSupplierPaid from './SupplierModal/MarkSupplierPaid '
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
 
 const money = (value) => `RM ${Number.parseFloat(value || 0).toFixed(2)}`
 
@@ -62,6 +63,12 @@ const SupplierPoDetailPage = () => {
       '_blank',
     )
   }
+
+  const handleGenerateWord = () =>
+    downloadCommercialWord(
+      `${import.meta.env.VITE_API_BASE}catalog/purchase-orders/${record.po_id}/word`,
+      `supplier-po-${record.po_ref_no || record.po_id}.docx`,
+    )
 
   const handleDelete = async () => {
     const confirmed = await dialog.confirm(
@@ -140,6 +147,7 @@ const SupplierPoDetailPage = () => {
               }
             : null,
           { key: 'pdf', label: 'Export PDF', onClick: handleGeneratePdf },
+          { key: 'word', label: 'Export Word', onClick: handleGenerateWord },
           { key: 'mark-paid', label: 'Mark Paid', onClick: () => setMarkPaidVisible(true) },
           {
             key: 'delete',

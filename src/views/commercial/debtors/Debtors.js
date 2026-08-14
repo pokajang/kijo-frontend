@@ -28,6 +28,7 @@ import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
 import DebtorUpdatePaymentModal from './DebtorUpdatePaymentModal'
 import DebtorLifecycleTabs from './DebtorLifecycleTabs'
 import { buildDebtorStats } from './debtorStats'
@@ -456,6 +457,22 @@ const Debtors = () => {
               window.open(
                 `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(record.sourceId)}/pdf`,
                 '_blank',
+              ),
+          }
+        : null,
+      debtor.sourceType === 'invoice' &&
+      ['equipment', 'equipment supply'].includes(
+        String(debtor.serviceType || '')
+          .trim()
+          .toLowerCase(),
+      )
+        ? {
+            key: 'word',
+            label: 'Word Invoice',
+            onClick: (record) =>
+              downloadCommercialWord(
+                `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(record.sourceId)}/word`,
+                `invoice-${record.sourceId}.docx`,
               ),
           }
         : null,

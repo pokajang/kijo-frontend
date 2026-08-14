@@ -7,6 +7,7 @@ import { getQuoteDeleteRestriction } from '../utils/recordOwnership'
 const RecordDetailsActions = ({
   handlers,
   record,
+  serviceTab,
   isAwarded,
   isSyncingClient,
   onEmail,
@@ -80,8 +81,19 @@ const RecordDetailsActions = ({
             onClick={() => handlers?.handleGeneratePdf?.(record)}
             {...issuanceProps}
           >
-            Generate Quote
+            Generate PDF
           </CButton>
+          {handlers?.handleGenerateWord ? (
+            <CButton
+              size="sm"
+              color="secondary"
+              variant="outline"
+              onClick={() => handlers.handleGenerateWord(record)}
+              {...issuanceProps}
+            >
+              Generate Word
+            </CButton>
+          ) : null}
           <CButton
             size="sm"
             color="secondary"
