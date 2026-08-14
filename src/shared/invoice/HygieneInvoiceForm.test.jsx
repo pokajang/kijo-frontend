@@ -1,7 +1,15 @@
 import React, { useState } from 'react'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import HygieneInvoiceForm from './HygieneInvoiceForm'
+
+const confirmMock = vi.hoisted(() => vi.fn())
+
+vi.mock('../../components/dialog/dialogService', () => ({
+  default: {
+    confirm: confirmMock,
+  },
+}))
 
 const Harness = ({ quoteDetails }) => {
   const [pricing, setPricing] = useState({})
@@ -15,6 +23,10 @@ const Harness = ({ quoteDetails }) => {
 }
 
 describe('HygieneInvoiceForm historical pricing', () => {
+  beforeEach(() => {
+    confirmMock.mockResolvedValue(true)
+  })
+
   afterEach(cleanup)
 
   it('preserves an unchanged intermediate quote snapshot and excludes fee rows', async () => {
@@ -128,5 +140,33 @@ describe('HygieneInvoiceForm historical pricing', () => {
     expect(
       screen.getByText('Discount cannot exceed the gross subtotal of RM 100.00.'),
     ).toBeInTheDocument()
+  })
+
+  it('confirms and restores quotation pricing after an advisory value is edited', async () => {
+    render(
+      <Harness
+        quoteDetails={{
+          id: 31,
+          service_title: 'LEV Inspection',
+          sample_counts: 2,
+          sample_unit: 'sample(s)',
+          num_work_units: 1,
+          unit_price: 1500,
+          travel_charge: 0,
+          discount: 50,
+          sst_percent: 0,
+          pricing_rule_version: 'ih_complexity_v1',
+          complexity_rating: 1,
+          hygiene_items: [],
+        }}
+      />,
+    )
+
+    const unitPrice = await screen.findByDisplayValue('1500')
+    fireEvent.change(unitPrice, { target: { value: '1600' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Reset from Quote' }))
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(unitPrice).toHaveValue(1500))
   })
 })

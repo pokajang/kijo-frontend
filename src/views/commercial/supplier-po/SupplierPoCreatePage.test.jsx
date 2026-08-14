@@ -1,5 +1,5 @@
 import React from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,6 +7,7 @@ import SupplierPoCreatePage from './SupplierPoCreatePage'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const supplierPoMock = vi.hoisted(() => vi.fn())
+const choiceMock = vi.hoisted(() => vi.fn())
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -24,6 +25,12 @@ vi.mock('../../catalog/supplier-po/SupplierPo', () => ({
         Mock Create Supplier PO
       </button>
     )
+  },
+}))
+
+vi.mock('../../../components/dialog/dialogService', () => ({
+  default: {
+    choice: choiceMock,
   },
 }))
 
@@ -56,6 +63,8 @@ const renderCreatePage = (entry) =>
 describe('SupplierPoCreatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
+    choiceMock.mockResolvedValue('list')
   })
 
   afterEach(() => {
@@ -78,18 +87,16 @@ describe('SupplierPoCreatePage', () => {
     )
   })
 
-  it('shows page-level success actions after creation', () => {
+  it('shows the shared success choice and follows the selected action', async () => {
     renderCreatePage()
 
     fireEvent.click(screen.getByRole('button', { name: /mock create supplier po/i }))
 
-    expect(screen.getByText('Supplier PO Created')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /return to supplier po list/i }))
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    expect(choiceMock.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ title: 'Supplier PO Created' }),
+    )
     expect(navigateMock).toHaveBeenCalledWith('/commercial/supplier-po')
-
-    fireEvent.click(screen.getByRole('button', { name: /manage project/i }))
-    expect(navigateMock).toHaveBeenCalledWith('/project/manage/12')
   })
 
   it('derives a stable project from the route when route state is missing', () => {

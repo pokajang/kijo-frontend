@@ -82,7 +82,7 @@ const InvoiceCreatePage = () => {
         <CCol xs={12}>
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-              <strong>Generate Invoice</strong>
+              <strong>Create Invoice</strong>
               <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
                 {origin === 'invoice-list' ? 'Back to Invoice List' : 'Back to Project'}
               </CButton>

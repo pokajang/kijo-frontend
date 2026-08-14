@@ -8,6 +8,7 @@ import { submitInvoicePayload } from './invoiceCreateApi'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const submitInvoicePayloadMock = vi.hoisted(() => vi.fn())
+const choiceMock = vi.hoisted(() => vi.fn())
 const commercialDocsMock = vi.hoisted(() => ({
   docs: {
     invoices: [],
@@ -31,6 +32,7 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../../../../components/dialog/dialogService', () => ({
   default: {
     alert: vi.fn(),
+    choice: choiceMock,
     confirm: vi.fn(),
   },
 }))
@@ -169,12 +171,15 @@ const clickReviewInvoice = async () => {
   const reviewButton = screen.getByRole('button', { name: /^review invoice$/i })
   await waitFor(() => expect(reviewButton).not.toBeDisabled())
   fireEvent.click(reviewButton)
+  await screen.findByText(/Review the invoice details below/i)
 }
 
 describe('InvoiceCreateFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+    sessionStorage.clear()
+    choiceMock.mockResolvedValue('project')
     commercialDocsMock.docs = { invoices: [] }
     commercialDocsMock.groups = []
     commercialDocsMock.loading = false
@@ -236,8 +241,11 @@ describe('InvoiceCreateFlow', () => {
         breakdown: expect.any(Array),
       }),
     )
-    expect(await screen.findAllByText('Invoice Created')).toHaveLength(2)
-    expect(screen.getByText(/INV-123 was created successfully/i)).toBeInTheDocument()
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    expect(choiceMock).toHaveBeenCalledWith(
+      expect.stringContaining('Invoice INV-123 was created successfully.'),
+      expect.objectContaining({ title: 'Invoice Created' }),
+    )
   })
 
   it('allows manually created Special projects to review an invoice without a quote id', async () => {
@@ -278,30 +286,46 @@ describe('InvoiceCreateFlow', () => {
     expect(submitInvoicePayload).not.toHaveBeenCalled()
   })
 
-  it('success actions navigate to invoice list and manage project', async () => {
+  it('can continue to the invoice list after creation', async () => {
+    choiceMock.mockResolvedValue('list')
     renderFlow({ origin: 'invoice-list' })
 
     await clickReviewInvoice()
     await screen.findByText(/Review the invoice details below/i)
     fireEvent.click(screen.getByRole('button', { name: /^create invoice$/i }))
-    await screen.findAllByText('Invoice Created')
-
-    fireEvent.click(screen.getByRole('button', { name: /return to invoice list/i }))
-    expect(navigateMock).toHaveBeenCalledWith('/commercial/invoice')
-
-    fireEvent.click(screen.getByRole('button', { name: /manage project/i }))
-    expect(navigateMock).toHaveBeenCalledWith('/project/manage/44')
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/commercial/invoice'))
   })
 
-  it('preserves project-origin behavior by navigating to invoice detail after creation', async () => {
+  it('shows project-origin success and preserves context when viewing the invoice', async () => {
+    choiceMock.mockResolvedValue('view')
     renderFlow()
 
     await clickReviewInvoice()
     await screen.findByText(/Review the invoice details below/i)
     fireEvent.click(screen.getByRole('button', { name: /^create invoice$/i }))
 
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/commercial/invoice/123'))
-    expect(screen.queryByText(/INV-123 was created successfully/i)).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/commercial/invoice/123?from=project&projectId=44',
+        { state: { from: 'project-manage', fromProjectId: '44' } },
+      ),
+    )
+  })
+
+  it('keeps recovery actions available when creation succeeds without a detail id', async () => {
+    submitInvoicePayload.mockResolvedValue({
+      success: true,
+      invoiceRefNo: 'INV-REF-ONLY',
+    })
+    renderFlow()
+
+    await clickReviewInvoice()
+    fireEvent.click(screen.getByRole('button', { name: /^create invoice$/i }))
+
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    const [, options] = choiceMock.mock.calls[0]
+    expect(options.actions.map((action) => action.key)).toEqual(['project', 'list'])
+    expect(navigateMock).toHaveBeenCalledWith('/project/manage/44')
   })
 
   it('can request project closure when this invoice leaves no uninvoiced value', async () => {
@@ -331,7 +355,8 @@ describe('InvoiceCreateFlow', () => {
         close_project: true,
       }),
     )
-    expect(await screen.findByText('Project status was marked Completed.')).toBeInTheDocument()
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    expect(choiceMock.mock.calls[0][0]).toContain('Project status was marked Completed.')
   })
 
   it('displays tolerance-sized remaining value as zero when project can close', async () => {

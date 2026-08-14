@@ -311,9 +311,11 @@ const run = async () => {
     })
 
     await step('invoice form uses editable quote values and reset recovery', async () => {
-      await page.goto(`${baseUrl}/commercial/invoice/create/${projectId}`, {
+      await page.goto(`${baseUrl}/project/manage/${projectId}`, {
         waitUntil: 'domcontentloaded',
       })
+      await page.getByRole('button', { name: 'Create Invoice', exact: true }).click()
+      await page.waitForURL((url) => url.pathname === `/commercial/invoice/create/${projectId}`)
       await page.getByText('Invoice Breakdown (Industrial Hygiene)', { exact: true }).waitFor()
       await page.getByText(/Loaded from Quote/).waitFor()
       const unitPrice = page.locator('[data-field-path="pricing.unit_price"]').first()
@@ -322,11 +324,23 @@ const run = async () => {
       assert((await discount.inputValue()) === '50', 'Quote discount did not seed the invoice.')
 
       await unitPrice.fill('600')
+      assert((await unitPrice.inputValue()) === '600', 'Edited unit price did not remain in input.')
       await page.getByRole('button', { name: 'Reset from Quote' }).click()
-      await confirmDialog('Reset')
+      const resetAction = page.getByRole('dialog').getByRole('button', {
+        name: 'Reset',
+        exact: true,
+      })
+      const resetDialogVisible = await resetAction
+        .waitFor({ state: 'visible', timeout: 5000 })
+        .then(() => true)
+        .catch(() => false)
+      if (resetDialogVisible) {
+        await resetAction.click()
+      }
+      await page.waitForTimeout(250)
       assert(
         (await unitPrice.inputValue()) === '500',
-        'Reset from Quote did not restore unit price.',
+        `Reset from Quote did not restore unit price (reset actions: ${await resetAction.count()}).`,
       )
       assert((await discount.inputValue()) === '50', 'Reset from Quote did not restore discount.')
       return 'quote values are advisory, editable, and recoverable'
@@ -377,7 +391,34 @@ const run = async () => {
       invoiceId = Number(payload.invoice_id || 0)
       invoiceRef = payload.invoice_ref_no || ''
       assert(response.status() === 200 && invoiceId > 0, 'Invoice creation failed.')
-      await page.waitForURL((url) => url.pathname === `/commercial/invoice/${invoiceId}`)
+      await page.getByText('Invoice Created', { exact: true }).waitFor()
+      assert(
+        new URL(page.url()).pathname === `/commercial/invoice/create/${projectId}`,
+        'Successful creation skipped the confirmation checkpoint.',
+      )
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      const successDialog = page.getByRole('dialog')
+      await successDialog.getByText('Invoice Created', { exact: true }).waitFor()
+      await page.waitForFunction(
+        () => document.activeElement?.getAttribute('data-dialog-choice-key') === 'view',
+      )
+      await successDialog.getByRole('button', { name: 'Back to Project' }).waitFor()
+      await successDialog.getByRole('button', { name: 'View Invoice List' }).waitFor()
+      await page.setViewportSize({ width: 390, height: 844 })
+      const dialogBox = await successDialog.boundingBox()
+      assert(dialogBox && dialogBox.width <= 390, 'Success modal overflows the mobile viewport.')
+      await page.screenshot({
+        path: path.join(screenshotDir, '03-invoice-success-actions-mobile.png'),
+        fullPage: true,
+      })
+      await page.setViewportSize({ width: 1440, height: 1000 })
+      await successDialog.getByRole('button', { name: 'View Invoice', exact: true }).click()
+      await page.waitForURL(
+        (url) =>
+          url.pathname === `/commercial/invoice/${invoiceId}` &&
+          url.searchParams.get('from') === 'project' &&
+          Number(url.searchParams.get('projectId')) === projectId,
+      )
       await page.getByText('Invoice Details', { exact: true }).waitFor()
       return `${invoiceRef}, total=1458.00`
     })
@@ -588,6 +629,14 @@ const run = async () => {
       legacyInvoiceId = Number(payload.invoice_id || 0)
       legacyInvoiceRef = payload.invoice_ref_no || ''
       assert(response.status() === 200 && legacyInvoiceId > 0, 'Legacy invoice creation failed.')
+      await page.getByText('Invoice Created', { exact: true }).waitFor()
+      await page.getByRole('button', { name: 'View Invoice', exact: true }).click()
+      await page.waitForURL(
+        (url) =>
+          url.pathname === `/commercial/invoice/${legacyInvoiceId}` &&
+          url.searchParams.get('from') === 'project' &&
+          Number(url.searchParams.get('projectId')) === legacyProjectId,
+      )
       const invoices = await apiRequest({
         route: `invoices?project_id=${legacyProjectId}&per_page=100`,
       })

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
 
 import EmployerDetails from './JD14EmployerDetailsStep'
@@ -14,14 +13,24 @@ import {
 import { getCurrentProjectValue } from '../../../project/manage/projectApi'
 import { buildJD14CreatePayload, createJD14Form } from './jd14CreatePayload'
 import JD14ReviewStep from './JD14ReviewStep'
-import JD14SuccessStep from './JD14SuccessStep'
+import useCommercialCreationSuccess from '../../shared/useCommercialCreationSuccess'
 
 const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
-  const navigate = useNavigate()
   const commercialDocs = useProjectCommercialDocs(project?.id, true)
+  const presentCreationSuccess = useCommercialCreationSuccess({
+    documentType: 'jd14',
+    documentLabel: 'JD14',
+    projectId: project?.id,
+    projectLabel: project?.project_name || `Project #${project?.id}`,
+    origin,
+    listOrigin: 'jd14-list',
+    listPath: '/commercial/jd14',
+    detailPath: '/commercial/jd14',
+    viewLabel: 'View JD14',
+    listLabel: 'View JD14 List',
+  })
   const [step, setStep] = useState('edit')
   const [submitting, setSubmitting] = useState(false)
-  const [createdResult, setCreatedResult] = useState(null)
   const [employerDetails, setEmployerDetails] = useState({
     employerName: '',
     address: '',
@@ -114,13 +123,9 @@ const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
     try {
       const result = await createJD14Form(payload)
       if (result.status === 'success') {
-        if (origin === 'jd14-list') {
-          setCreatedResult(result)
-          setStep('success')
-          return
-        }
-        navigate(`/commercial/jd14/${result.form_number}`, {
-          state: { fromProjectId: project?.id },
+        await presentCreationSuccess({
+          detailId: result.form_number,
+          reference: result.form_number,
         })
         return
       }
@@ -135,8 +140,13 @@ const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
 
   return (
     <CCard className="mb-4">
-      <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-        <strong>Create JD14</strong>
+      <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div style={{ minWidth: 0 }}>
+          <strong>Create JD14</strong>
+          <div className="small text-body-secondary text-truncate">
+            For project: {project?.project_name || `Project #${project?.id}`}
+          </div>
+        </div>
         <CButton
           color="secondary"
           size="sm"
@@ -144,7 +154,7 @@ const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
           onClick={onBack}
           disabled={submitting}
         >
-          Back
+          {origin === 'jd14-list' ? 'Back to JD14 List' : 'Back to Project'}
         </CButton>
       </CCardHeader>
       {project?.project_type !== 'Training' ? (
@@ -198,14 +208,6 @@ const JD14CreateFlow = ({ project, origin = 'project', onBack }) => {
           submitting={submitting}
           onBack={() => setStep('edit')}
           onCreate={handleCreate}
-        />
-      )}
-      {step === 'success' && (
-        <JD14SuccessStep
-          result={createdResult}
-          onReturnToList={() => navigate('/commercial/jd14')}
-          onManageProject={() => navigate(`/project/manage/${project?.id}`)}
-          onViewJD14={() => navigate(`/commercial/jd14/${createdResult?.form_number}`)}
         />
       )}
     </CCard>

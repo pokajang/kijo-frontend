@@ -35,6 +35,9 @@ export default function SupplierPo({
   initialProject,
   lockProject = false,
   onCreated,
+  contextLabel,
+  backLabel,
+  onBack,
 } = {}) {
   const {
     supplierList,
@@ -61,6 +64,7 @@ export default function SupplierPo({
     handleProjectChange,
     handleReset,
     handleSave,
+    submitting,
     quotationRemarks,
     setQuotationRemarks,
     equipmentSnapshotItem,
@@ -111,10 +115,20 @@ export default function SupplierPo({
       />
       <CCard className="mb-4">
         {/* Supplier & Project */}
-        <CCardHeader>
-          <strong>
-            {module === 'commercial' ? 'Create Supplier PO' : 'Select Supplier and Project'}
-          </strong>
+        <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+          <div style={{ minWidth: 0 }}>
+            <strong>
+              {module === 'commercial' ? 'Create Supplier PO' : 'Select Supplier and Project'}
+            </strong>
+            {contextLabel ? (
+              <div className="small text-body-secondary text-truncate">{contextLabel}</div>
+            ) : null}
+          </div>
+          {onBack ? (
+            <CButton color="secondary" size="sm" variant="outline" onClick={onBack}>
+              {backLabel || 'Back'}
+            </CButton>
+          ) : null}
         </CCardHeader>
         <CCardBody>
           <CRow>
@@ -349,11 +363,17 @@ export default function SupplierPo({
         </CCardBody>
         {selectedItems && selectedItems.length > 0 && (
           <CCardFooter className="d-flex justify-content-end gap-2">
-            <CButton color="secondary" variant="outline" size="sm" onClick={handleReset}>
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              disabled={submitting}
+            >
               Reset
             </CButton>
-            <CButton color="primary" size="sm" onClick={handleSave}>
-              Create PO
+            <CButton color="primary" size="sm" onClick={handleSave} disabled={submitting}>
+              {submitting ? 'Creating PO...' : 'Create PO'}
             </CButton>
           </CCardFooter>
         )}

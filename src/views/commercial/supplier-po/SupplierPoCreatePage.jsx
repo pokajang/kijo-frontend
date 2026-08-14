@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CButton, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 
 import SupplierPo from '../../catalog/supplier-po/SupplierPo'
+import useCommercialCreationSuccess from '../shared/useCommercialCreationSuccess'
 
 const getProjectId = (project = {}) => project.id ?? project.project_id
 
@@ -11,7 +11,6 @@ const SupplierPoCreatePage = () => {
   const location = useLocation()
   const { projectId } = useParams()
   const [searchParams] = useSearchParams()
-  const [createdPo, setCreatedPo] = useState(null)
 
   const origin = searchParams.get('from') || 'project'
   const project = useMemo(
@@ -24,41 +23,23 @@ const SupplierPoCreatePage = () => {
     [location.state?.project, projectId],
   )
   const resolvedProjectId = getProjectId(project) || projectId
-  const successLead = createdPo?.poId ? `Supplier PO #${createdPo.poId}` : 'The Supplier PO'
-
-  if (createdPo) {
-    return (
-      <CRow>
-        <CCol xs={12}>
-          <CCard className="mb-4">
-            <CCardHeader>
-              <strong>Supplier PO Created</strong>
-            </CCardHeader>
-            <CCardBody>
-              <p className="mb-3">{successLead} has been created.</p>
-              <div className="d-flex justify-content-end flex-wrap gap-2">
-                <CButton
-                  color="secondary"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/commercial/supplier-po')}
-                >
-                  Return to Supplier PO List
-                </CButton>
-                <CButton
-                  color="primary"
-                  size="sm"
-                  onClick={() => navigate(`/project/manage/${resolvedProjectId}`)}
-                >
-                  Manage Project
-                </CButton>
-              </div>
-            </CCardBody>
-          </CCard>
-        </CCol>
-      </CRow>
-    )
-  }
+  const isListOrigin = origin === 'supplier-po-list'
+  const presentCreationSuccess = useCommercialCreationSuccess({
+    documentType: 'supplier-po',
+    documentLabel: 'Supplier PO',
+    projectId: resolvedProjectId,
+    projectLabel: project.project_name || `Project #${resolvedProjectId}`,
+    origin,
+    listOrigin: 'supplier-po-list',
+    listPath: '/commercial/supplier-po',
+    detailPath: '/commercial/supplier-po',
+    viewLabel: 'View Supplier PO',
+    listLabel: 'View Supplier PO List',
+  })
+  const handleBack = () =>
+    isListOrigin
+      ? navigate('/commercial/supplier-po')
+      : navigate(`/project/manage/${resolvedProjectId}`)
 
   return (
     <SupplierPo
@@ -66,8 +47,14 @@ const SupplierPoCreatePage = () => {
       initialProjectId={resolvedProjectId}
       initialProject={project}
       lockProject
-      onCreated={(result) => {
-        setCreatedPo({ ...result, origin })
+      contextLabel={`For project: ${project.project_name || `Project #${resolvedProjectId}`}`}
+      backLabel={isListOrigin ? 'Back to Supplier PO List' : 'Back to Project'}
+      onBack={handleBack}
+      onCreated={async (result) => {
+        await presentCreationSuccess({
+          detailId: result?.poId,
+          reference: result?.poId ? `#${result.poId}` : '',
+        })
       }}
     />
   )

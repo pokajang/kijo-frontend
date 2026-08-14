@@ -25,7 +25,8 @@ import {
   useTrainingQuoteData as fetchTrainingQuoteData,
 } from './invoiceCreateApi'
 import InvoiceReviewStep from './InvoiceReviewStep'
-import InvoiceSuccessStep from './InvoiceSuccessStep'
+import { navigateToProjectDocument } from '../../shared/commercialReturnNavigation'
+import useCommercialCreationSuccess from '../../shared/useCommercialCreationSuccess'
 
 const getLocalISODate = () => {
   const now = new Date()
@@ -192,6 +193,18 @@ const getInitialPricing = () => ({
 const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const navigate = useNavigate()
   const isInvoiceListOrigin = origin === 'invoice-list'
+  const presentCreationSuccess = useCommercialCreationSuccess({
+    documentType: 'invoice',
+    documentLabel: 'Invoice',
+    projectId: project.id,
+    projectLabel: project.project_name || `Project #${project.id}`,
+    origin,
+    listOrigin: 'invoice-list',
+    listPath: '/commercial/invoice',
+    detailPath: '/commercial/invoice',
+    viewLabel: 'View Invoice',
+    listLabel: 'View Invoice List',
+  })
   const commercialDocs = useProjectCommercialDocs(project?.id, true)
   const showCommercialDocsNotice =
     commercialDocs.loading ||
@@ -235,7 +248,6 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const [draftReady, setDraftReady] = useState(false)
   const [loadedDraftKey, setLoadedDraftKey] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [createdInvoice, setCreatedInvoice] = useState(null)
   const [reviewPayload, setReviewPayload] = useState(null)
   const [closeProject, setCloseProject] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
@@ -265,7 +277,6 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     setQuoteDetails(null)
     setPricing(getInitialPricing())
     setGrantApprovalNo('')
-    setCreatedInvoice(null)
     setReviewPayload(null)
     setCloseProject(false)
     setFieldErrors({})
@@ -539,22 +550,18 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
         return
       }
       if (result?.openExisting && result.invoiceId) {
-        navigate(`/commercial/invoice/${result.invoiceId}`)
+        const detailPath = `/commercial/invoice/${result.invoiceId}`
+        if (isInvoiceListOrigin) navigate(detailPath)
+        else navigateToProjectDocument(navigate, detailPath, project.id)
         return
       }
       if (result?.success) {
         if (draftKey) localStorage.removeItem(draftKey)
-        if (isInvoiceListOrigin) {
-          setCreatedInvoice({
-            invoiceId: result.invoiceId,
-            invoiceRefNo: result.invoiceRefNo,
-            projectClosed: result.projectClosed,
-            projectId: project.id,
-          })
-          setStep('success')
-          return
-        }
-        if (result.invoiceId) navigate(`/commercial/invoice/${result.invoiceId}`)
+        await presentCreationSuccess({
+          detailId: result.invoiceId,
+          reference: result.invoiceRefNo || result.invoiceId,
+          detailLines: result.projectClosed ? ['Project status was marked Completed.'] : [],
+        })
       }
     } finally {
       setSubmitting(false)
@@ -693,19 +700,16 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
 
   return (
     <CCard className="mb-4">
-      <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-        <strong>
-          {step === 'review'
-            ? 'Review Invoice'
-            : step === 'success'
-              ? 'Invoice Created'
-              : 'Generate Invoice'}
-        </strong>
-        {step !== 'success' && (
-          <CButton color="secondary" size="sm" variant="outline" onClick={onBack}>
-            Back
-          </CButton>
-        )}
+      <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div style={{ minWidth: 0 }}>
+          <strong>{step === 'review' ? 'Review Invoice' : 'Create Invoice'}</strong>
+          <div className="small text-body-secondary text-truncate">
+            For project: {project?.project_name || `Project #${project?.id}`}
+          </div>
+        </div>
+        <CButton color="secondary" size="sm" variant="outline" onClick={onBack}>
+          {isInvoiceListOrigin ? 'Back to Invoice List' : 'Back to Project'}
+        </CButton>
       </CCardHeader>
 
       {step === 'edit' && renderEditStep()}
@@ -730,15 +734,6 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
             setDeviationAcknowledged(value)
             setDeviationError('')
           }}
-        />
-      )}
-      {step === 'success' && (
-        <InvoiceSuccessStep
-          invoice={createdInvoice}
-          onReturnToList={() => navigate('/commercial/invoice')}
-          onManageProject={() =>
-            navigate(`/project/manage/${createdInvoice?.projectId || project.id}`)
-          }
         />
       )}
     </CCard>

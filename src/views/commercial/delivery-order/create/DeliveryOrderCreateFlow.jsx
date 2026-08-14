@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
 
 import DeliveryDetails from './DeliveryOrderDeliveryDetailsStep'
@@ -18,7 +17,7 @@ import {
   shouldIncludeInvoiceItem,
 } from './deliveryOrderCreatePayload'
 import DeliveryOrderReviewStep from './DeliveryOrderReviewStep'
-import DeliveryOrderSuccessStep from './DeliveryOrderSuccessStep'
+import useCommercialCreationSuccess from '../../shared/useCommercialCreationSuccess'
 
 const getProjectCode = (project = {}) =>
   project.id
@@ -29,11 +28,21 @@ const getProjectCode = (project = {}) =>
     : ''
 
 const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
-  const navigate = useNavigate()
   const commercialDocs = useProjectCommercialDocs(project?.id, true)
+  const presentCreationSuccess = useCommercialCreationSuccess({
+    documentType: 'delivery-order',
+    documentLabel: 'Delivery Order',
+    projectId: project?.id,
+    projectLabel: project?.project_name || `Project #${project?.id}`,
+    origin,
+    listOrigin: 'delivery-order-list',
+    listPath: '/commercial/delivery-order',
+    detailPath: '/commercial/delivery-order',
+    viewLabel: 'View Delivery Order',
+    listLabel: 'View Delivery Order List',
+  })
   const [step, setStep] = useState('edit')
   const [submitting, setSubmitting] = useState(false)
-  const [createdResult, setCreatedResult] = useState(null)
   const [clientDetails, setClientDetails] = useState({
     name: '',
     address: '',
@@ -210,13 +219,9 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
         return
       }
       if (result.status === 'success') {
-        if (origin === 'delivery-order-list') {
-          setCreatedResult(result)
-          setStep('success')
-          return
-        }
-        navigate(`/commercial/delivery-order/${result.do_id}`, {
-          state: { fromProjectId: project?.id },
+        await presentCreationSuccess({
+          detailId: result.do_id,
+          reference: result.do_number || result.do_id,
         })
         return
       }
@@ -231,8 +236,13 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
 
   return (
     <CCard className="mb-4">
-      <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-        <strong>Create Delivery Order</strong>
+      <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div style={{ minWidth: 0 }}>
+          <strong>Create Delivery Order</strong>
+          <div className="small text-body-secondary text-truncate">
+            For project: {project?.project_name || `Project #${project?.id}`}
+          </div>
+        </div>
         <CButton
           color="secondary"
           size="sm"
@@ -240,7 +250,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
           onClick={onBack}
           disabled={submitting}
         >
-          Back
+          {origin === 'delivery-order-list' ? 'Back to Delivery Order List' : 'Back to Project'}
         </CButton>
       </CCardHeader>
       {step === 'edit' && (
@@ -285,14 +295,6 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
           submitting={submitting}
           onBack={() => setStep('edit')}
           onCreate={() => handleCreate(false)}
-        />
-      )}
-      {step === 'success' && (
-        <DeliveryOrderSuccessStep
-          result={createdResult}
-          onReturnToList={() => navigate('/commercial/delivery-order')}
-          onManageProject={() => navigate(`/project/manage/${project?.id}`)}
-          onViewDeliveryOrder={() => navigate(`/commercial/delivery-order/${createdResult?.do_id}`)}
         />
       )}
     </CCard>

@@ -8,6 +8,7 @@ import { createDeliveryOrder } from './deliveryOrderCreatePayload'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const createDeliveryOrderMock = vi.hoisted(() => vi.fn())
+const choiceMock = vi.hoisted(() => vi.fn())
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -20,6 +21,7 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../../../../components/dialog/dialogService', () => ({
   default: {
     alert: vi.fn(),
+    choice: choiceMock,
     confirm: vi.fn(),
   },
 }))
@@ -120,6 +122,8 @@ const clickReviewDeliveryOrder = async () => {
 describe('DeliveryOrderCreateFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
+    choiceMock.mockResolvedValue('project')
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -148,10 +152,14 @@ describe('DeliveryOrderCreateFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: /^create delivery order$/i }))
 
     await waitFor(() => expect(createDeliveryOrder).toHaveBeenCalledTimes(1))
-    expect(await screen.findByText('Delivery Order Created')).toBeInTheDocument()
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    expect(choiceMock.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ title: 'Delivery Order Created' }),
+    )
   })
 
-  it('preserves project-origin navigation to delivery order detail after creation', async () => {
+  it('shows project-origin success and preserves context when viewing the delivery order', async () => {
+    choiceMock.mockResolvedValue('view')
     renderFlow()
 
     await clickReviewDeliveryOrder()
@@ -159,9 +167,10 @@ describe('DeliveryOrderCreateFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: /^create delivery order$/i }))
 
     await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith('/commercial/delivery-order/77', {
-        state: { fromProjectId: 12 },
-      }),
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/commercial/delivery-order/77?from=project&projectId=12',
+        { state: { from: 'project-manage', fromProjectId: '12' } },
+      ),
     )
   })
 })

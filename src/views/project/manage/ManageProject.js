@@ -12,6 +12,7 @@ import { getPeriodRangePreset } from '../../../components/filters'
 import { PROJECT_CLOSE_TYPES } from './projectStatus'
 import { getCommercialCreatePath, getProjectManagePath } from './projectRoutes'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
+import { getProjectReturnState } from '../../commercial/shared/commercialReturnNavigation'
 
 export default function ManageProject() {
   const navigate = useNavigate()
@@ -92,7 +93,9 @@ export default function ManageProject() {
   }
 
   const openCommercialCreatePage = (type, project) => {
-    navigate(getCommercialCreatePath(type, project.id), { state: { project } })
+    navigate(getCommercialCreatePath(type, project.id), {
+      state: getProjectReturnState(project.id, { project }),
+    })
   }
 
   return (

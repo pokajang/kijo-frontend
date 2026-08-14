@@ -21,6 +21,7 @@ const AppDialogProvider = ({ children }) => {
   const navigate = useNavigate()
   const queueRef = useRef([])
   const currentRef = useRef(null)
+  const choiceFocusTimerRef = useRef(null)
 
   const [current, setCurrent] = useState(null)
   const [promptValue, setPromptValue] = useState('')
@@ -113,6 +114,12 @@ const AppDialogProvider = ({ children }) => {
       closeWithResult(false)
       return
     }
+    if (currentRef.current.type === 'choice') {
+      const options = currentRef.current.options || {}
+      const dismissAction = options.dismissAction || options.actions?.[0]?.key
+      if (dismissAction) closeWithResult(dismissAction)
+      return
+    }
     if (currentRef.current.type === 'prompt') {
       closeWithResult(null)
       return
@@ -133,6 +140,7 @@ const AppDialogProvider = ({ children }) => {
   const dialogApi = useMemo(
     () => ({
       alert: (message, options) => enqueue('alert', message, options),
+      choice: (message, options) => enqueue('choice', message, options),
       confirm: (message, options) => enqueue('confirm', message, options),
       prompt: (message, options) => enqueue('prompt', message, options),
     }),
@@ -150,9 +158,17 @@ const AppDialogProvider = ({ children }) => {
     currentOptions.title ||
     (currentType === 'confirm'
       ? 'Confirmation'
-      : currentType === 'prompt'
-        ? 'Input Required'
-        : 'Notification')
+      : currentType === 'choice'
+        ? 'Choose an Action'
+        : currentType === 'prompt'
+          ? 'Input Required'
+          : 'Notification')
+  const choiceActions = Array.isArray(currentOptions.actions)
+    ? currentOptions.actions.filter((action) => action?.key && action?.label)
+    : []
+  const choiceDismissAction = currentOptions.dismissAction || choiceActions[0]?.key || ''
+  const choiceFocusKey =
+    choiceActions.find((action) => action.autoFocus)?.key || choiceActions[0]?.key || ''
   const cancelText = currentOptions.cancelText || 'Cancel'
   const confirmText =
     currentOptions.confirmText || (currentType === 'prompt' ? 'Submit' : 'Confirm')
@@ -191,6 +207,38 @@ const AppDialogProvider = ({ children }) => {
   const hasAsyncConfirm =
     currentType === 'confirm' && typeof currentOptions.onConfirm === 'function'
   const asyncActionActive = asyncAction.status === 'loading' || asyncAction.status === 'success'
+
+  const focusChoiceAction = useCallback(() => {
+    window.clearTimeout(choiceFocusTimerRef.current)
+    if (currentType !== 'choice' || !choiceFocusKey) return
+
+    const focusDeadline = Date.now() + 15_000
+    const focusWhenEnabled = () => {
+      const target = Array.from(document.querySelectorAll('[data-dialog-choice-key]')).find(
+        (element) => element.dataset.dialogChoiceKey === choiceFocusKey,
+      )
+      if (target && !target.disabled) {
+        target.focus()
+        return
+      }
+      if (Date.now() < focusDeadline) {
+        choiceFocusTimerRef.current = window.setTimeout(focusWhenEnabled, 100)
+      }
+    }
+
+    choiceFocusTimerRef.current = window.setTimeout(focusWhenEnabled, 0)
+  }, [choiceFocusKey, currentType])
+
+  useEffect(() => {
+    focusChoiceAction()
+  }, [current, focusChoiceAction])
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(choiceFocusTimerRef.current)
+    },
+    [],
+  )
 
   const serializeConfirmPayload = useCallback(
     (confirmed, actionResult) => {
@@ -277,12 +325,18 @@ const AppDialogProvider = ({ children }) => {
       <CModal
         visible={Boolean(current)}
         onClose={handleClose}
+        onShow={focusChoiceAction}
         alignment="center"
         backdrop={currentOptions.backdrop || 'static'}
+        focus={currentType !== 'choice'}
         keyboard={false}
         size={resolvedSize}
       >
-        <CModalHeader closeButton={!asyncActionActive}>
+        <CModalHeader
+          closeButton={
+            !asyncActionActive && (currentType !== 'choice' || Boolean(choiceDismissAction))
+          }
+        >
           <CModalTitle>{title}</CModalTitle>
         </CModalHeader>
         <CModalBody>
@@ -502,7 +556,7 @@ const AppDialogProvider = ({ children }) => {
             </div>
           ) : null}
         </CModalBody>
-        <CModalFooter>
+        <CModalFooter className="flex-wrap">
           {currentType === 'alert' ? (
             <CButton color={confirmColor} size="sm" onClick={() => closeWithResult(undefined)}>
               {okText}
@@ -543,6 +597,24 @@ const AppDialogProvider = ({ children }) => {
               </CButton>
             </>
           ) : null}
+
+          {currentType === 'choice'
+            ? choiceActions.map((action) => (
+                <CButton
+                  key={action.key}
+                  color={action.color || 'secondary'}
+                  variant={action.variant}
+                  size="sm"
+                  disabled={Boolean(action.disabled)}
+                  autoFocus={Boolean(action.autoFocus)}
+                  data-dialog-choice-key={action.key}
+                  data-api-busy-allow="true"
+                  onClick={() => closeWithResult(action.key)}
+                >
+                  {action.label}
+                </CButton>
+              ))
+            : null}
 
           {currentType === 'prompt' ? (
             <>

@@ -84,7 +84,7 @@ const JD14CreatePage = () => {
         <CCol xs={12}>
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-              <strong>Generate JD14</strong>
+              <strong>Create JD14</strong>
               <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
                 {origin === 'jd14-list' ? 'Back to JD14 List' : 'Back to Project'}
               </CButton>
@@ -106,7 +106,7 @@ const JD14CreatePage = () => {
         <CCol xs={12}>
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-              <strong>Generate JD14</strong>
+              <strong>Create JD14</strong>
               <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
                 {origin === 'jd14-list' ? 'Back to JD14 List' : 'Back to Project'}
               </CButton>
