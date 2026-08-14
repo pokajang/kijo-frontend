@@ -22,9 +22,15 @@ const RecordDetailsActions = ({
   const { user } = useAuth()
   const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
   const issuanceState = getQuoteIssuanceState(record)
+  const estimatedCostEditRequired = Boolean(
+    (record?.issuanceContext || record?.issuance_context)?.estimated_cost_required,
+  )
   const issuanceNoticeId = `quotation-issuance-status-${record?.id || 'unknown'}`
   const issuanceProps = issuanceState.blocked
     ? { disabled: true, 'aria-describedby': issuanceNoticeId }
+    : {}
+  const pdfIssuanceProps = issuanceState.blocked && !estimatedCostEditRequired
+    ? issuanceProps
     : {}
   const deleteButton = (
     <CButton
@@ -78,7 +84,7 @@ const RecordDetailsActions = ({
             color="secondary"
             variant="outline"
             onClick={() => handlers?.handleGeneratePdf?.(record)}
-            {...issuanceProps}
+            {...pdfIssuanceProps}
           >
             Generate Quote
           </CButton>

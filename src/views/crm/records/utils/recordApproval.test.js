@@ -48,20 +48,23 @@ describe('getQuoteIssuanceState', () => {
     })
   })
 
-  it('allows a grandfathered Training quote to reach the legacy PDF confirmation', () => {
-    expect(
-      getQuoteIssuanceState({
-        serviceTab: 'training-tab',
-        issuanceContext: {
-          is_grandfathered: true,
-          requires_approval: false,
-          estimated_cost_required: false,
-        },
-      }),
-    ).toEqual({ blocked: false, message: '' })
-  })
+  it.each(['training-tab', 'equipment-tab', 'manpower-tab'])(
+    'allows a grandfathered %s quote to reach the legacy PDF confirmation',
+    (serviceTab) => {
+      expect(
+        getQuoteIssuanceState({
+          serviceTab,
+          issuanceContext: {
+            is_grandfathered: true,
+            requires_approval: false,
+            estimated_cost_required: false,
+          },
+        }),
+      ).toEqual({ blocked: false, message: '' })
+    },
+  )
 
-  it('ignores an approval row produced by the superseded Training policy', () => {
+  it('ignores an approval row produced by a superseded policy', () => {
     expect(
       getQuoteIssuanceState({
         serviceTab: 'training-tab',
@@ -80,28 +83,28 @@ describe('getQuoteIssuanceState', () => {
     ).toEqual({ blocked: false, message: '' })
   })
 
-  it('blocks a grandfathered Training quote that still has a special-pricing trigger', () => {
+  it('blocks a grandfathered quote that still has a genuine approval trigger', () => {
     expect(
       getQuoteIssuanceState({
-        serviceTab: 'training-tab',
+        serviceTab: 'manpower-tab',
         issuanceContext: {
           is_grandfathered: true,
           requires_approval: true,
           required_step: 'bd',
-          reasons: ['Special training or special-client pricing requires BD final approval.'],
+          reasons: ['The selected manpower rate requires management approval.'],
         },
       }),
     ).toEqual({
       blocked: true,
       message:
-        'BD approval is required. Special training or special-client pricing requires BD final approval.',
+        'BD approval is required. The selected manpower rate requires management approval.',
     })
   })
 
-  it('requires editing when a current Training quote has no estimated cost', () => {
+  it('requires editing when a current quote has no estimated cost', () => {
     expect(
       getQuoteIssuanceState({
-        serviceTab: 'training-tab',
+        serviceTab: 'equipment-tab',
         issuanceContext: { estimated_cost_required: true },
       }),
     ).toEqual({

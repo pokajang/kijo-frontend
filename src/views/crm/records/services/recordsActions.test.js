@@ -153,15 +153,27 @@ describe('recordsActions PDF opening', () => {
     expect(dialog.alert).not.toHaveBeenCalled()
   })
 
-  it('prompts before generating a grandfathered Training PDF and remembers a successful choice', async () => {
+  it.each([
+    ['training-tab', 'traffic-light-training-202608-v2'],
+    ['equipment-tab', 'traffic-light-equipment-202608-v2'],
+    ['manpower-tab', 'traffic-light-manpower-202608-v2'],
+  ])('prompts before generating a grandfathered %s PDF and remembers a successful choice', async (serviceTab, ruleVersion) => {
     const onLegacyPdfPrompt = vi.fn()
     const onOpenPdfPreview = vi.fn()
-    const { handlers } = createDeleteHarness({ onLegacyPdfPrompt, onOpenPdfPreview })
+    const { handlers } = createDeleteHarness({
+      serviceKey: serviceTab,
+      onLegacyPdfPrompt,
+      onOpenPdfPreview,
+    })
     const record = {
       id: 154,
       revisionNo: 0,
-      serviceTab: 'training-tab',
-      issuanceContext: { is_grandfathered: true, requires_approval: false },
+      serviceTab,
+      issuanceContext: {
+        is_grandfathered: true,
+        requires_approval: false,
+        rule_version: ruleVersion,
+      },
     }
 
     await handlers.handleGeneratePdf(record)
@@ -170,10 +182,11 @@ describe('recordsActions PDF opening', () => {
 
     onLegacyPdfPrompt.mock.calls[0][0].onGenerate()
     expect(onOpenPdfPreview).toHaveBeenCalledTimes(1)
-    expect(window.sessionStorage.getItem('legacy-training-pdf:154:0')).toBeNull()
+    const acknowledgementKey = `legacy-cost-pdf:${serviceTab}:154:0:${ruleVersion}`
+    expect(window.sessionStorage.getItem(acknowledgementKey)).toBeNull()
 
     onOpenPdfPreview.mock.calls[0][0].onLoadSuccess()
-    expect(window.sessionStorage.getItem('legacy-training-pdf:154:0')).toBe('1')
+    expect(window.sessionStorage.getItem(acknowledgementKey)).toBe('1')
 
     await handlers.handleGeneratePdf(record)
     expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
@@ -201,27 +214,34 @@ describe('recordsActions PDF opening', () => {
     expect(dialog.alert).toHaveBeenCalledWith(expect.stringContaining('Special training'))
   })
 
-  it('guides an invalid current-policy Training quote to Edit without offering generation', async () => {
-    const onLegacyPdfPrompt = vi.fn()
-    const onOpenPdfPreview = vi.fn()
-    const { handlers } = createDeleteHarness({ onLegacyPdfPrompt, onOpenPdfPreview })
+  it.each(['equipment-tab', 'ih-tab'])(
+    'guides an invalid current-policy %s quote to Edit without offering generation',
+    async (serviceKey) => {
+      const onLegacyPdfPrompt = vi.fn()
+      const onOpenPdfPreview = vi.fn()
+      const { handlers } = createDeleteHarness({
+        serviceKey,
+        onLegacyPdfPrompt,
+        onOpenPdfPreview,
+      })
 
-    await handlers.handleGeneratePdf({
-      id: 201,
-      serviceTab: 'training-tab',
-      issuanceContext: { estimated_cost_required: true },
-    })
+      await handlers.handleGeneratePdf({
+        id: 201,
+        serviceTab: serviceKey,
+        issuanceContext: { estimated_cost_required: true },
+      })
 
-    expect(onLegacyPdfPrompt).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'cost-required',
-        record: expect.objectContaining({ id: 201 }),
-        onEdit: expect.any(Function),
-      }),
-    )
-    expect(onLegacyPdfPrompt.mock.calls[0][0].onGenerate).toBeUndefined()
-    expect(onOpenPdfPreview).not.toHaveBeenCalled()
-  })
+      expect(onLegacyPdfPrompt).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'cost-required',
+          record: expect.objectContaining({ id: 201 }),
+          onEdit: expect.any(Function),
+        }),
+      )
+      expect(onLegacyPdfPrompt.mock.calls[0][0].onGenerate).toBeUndefined()
+      expect(onOpenPdfPreview).not.toHaveBeenCalled()
+    },
+  )
 })
 
 describe('recordsActions un-award safeguards', () => {

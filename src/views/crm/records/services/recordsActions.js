@@ -31,21 +31,28 @@ export const endpointsByService = {
 }
 
 const safeArray = (value) => (Array.isArray(value) ? value : [])
+const legacyCostServiceKeys = new Set(['training-tab', 'equipment-tab', 'manpower-tab'])
+const costRecoveryServiceKeys = new Set([...legacyCostServiceKeys, 'ih-tab'])
 
-export const legacyTrainingPdfAcknowledgementKey = (record) =>
-  `legacy-training-pdf:${record?.id || 'unknown'}:${record?.revisionNo ?? record?.revision_no ?? 0}`
+export const legacyQuotationPdfAcknowledgementKey = (record, serviceKey) => {
+  const context = record?.issuanceContext || record?.issuance_context
+  const revision = record?.revisionNo ?? record?.revision_no ?? 0
+  const ruleVersion = context?.rule_version || 'legacy'
 
-const hasLegacyTrainingPdfAcknowledgement = (record) => {
+  return `legacy-cost-pdf:${serviceKey}:${record?.id || 'unknown'}:${revision}:${ruleVersion}`
+}
+
+const hasLegacyPdfAcknowledgement = (record, serviceKey) => {
   try {
-    return window.sessionStorage.getItem(legacyTrainingPdfAcknowledgementKey(record)) === '1'
+    return window.sessionStorage.getItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey)) === '1'
   } catch {
     return false
   }
 }
 
-const rememberLegacyTrainingPdfAcknowledgement = (record) => {
+const rememberLegacyPdfAcknowledgement = (record, serviceKey) => {
   try {
-    window.sessionStorage.setItem(legacyTrainingPdfAcknowledgementKey(record), '1')
+    window.sessionStorage.setItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey), '1')
   } catch {
     // PDF generation remains available when browser storage is unavailable.
   }
@@ -270,7 +277,7 @@ export const createHandlers = ({
   const generateQuotationPdf = async (record) => {
     const context = record?.issuanceContext || record?.issuance_context
     if (
-      serviceKey === 'training-tab' &&
+      costRecoveryServiceKeys.has(serviceKey) &&
       context?.estimated_cost_required === true &&
       typeof onLegacyPdfPrompt === 'function'
     ) {
@@ -289,9 +296,9 @@ export const createHandlers = ({
     }
 
     const needsLegacyPrompt =
-      serviceKey === 'training-tab' &&
+      legacyCostServiceKeys.has(serviceKey) &&
       context?.is_grandfathered === true &&
-      !hasLegacyTrainingPdfAcknowledgement(record)
+      !hasLegacyPdfAcknowledgement(record, serviceKey)
 
     if (needsLegacyPrompt && typeof onLegacyPdfPrompt === 'function') {
       onLegacyPdfPrompt({
@@ -299,7 +306,7 @@ export const createHandlers = ({
         record,
         onGenerate: () =>
           openQuotationPdf(record, {
-            onLoadSuccess: () => rememberLegacyTrainingPdfAcknowledgement(record),
+            onLoadSuccess: () => rememberLegacyPdfAcknowledgement(record, serviceKey),
           }),
         onEdit: () => openEditQuotation(record),
       })

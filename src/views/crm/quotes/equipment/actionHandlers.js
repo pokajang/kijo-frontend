@@ -15,7 +15,6 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import dialog from '../../../../components/dialog/dialogService'
-import { TRAFFIC_LIGHT_RULE_VERSION } from '../shared/trafficLightConfig'
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -67,7 +66,6 @@ export function useEquipmentForm(
     priceExceptionRequestId: '',
     sstPercent: 0,
     estimatedTotalCost: '',
-    trafficLightRuleVersion: TRAFFIC_LIGHT_RULE_VERSION,
     attachProposal: true,
     proposalLanguage,
   }
@@ -186,9 +184,6 @@ export function useEquipmentForm(
         priceExceptionRequestId: '',
         sstPercent: getNumber('sstPercent', 'sst_percent'),
         estimatedTotalCost: getNullableNumber('estimatedTotalCost', 'estimated_total_cost'),
-        trafficLightRuleVersion:
-          pick(initialFormData, 'trafficLightRuleVersion', 'traffic_light_rule_version') ||
-          TRAFFIC_LIGHT_RULE_VERSION,
         attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
         proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
       })
@@ -338,7 +333,6 @@ export function useEquipmentForm(
         formData.estimatedTotalCost === '' || formData.estimatedTotalCost == null
           ? null
           : Number(formData.estimatedTotalCost),
-      traffic_light_rule_version: formData.trafficLightRuleVersion || TRAFFIC_LIGHT_RULE_VERSION,
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -390,7 +384,6 @@ export function useEquipmentForm(
     setAttachProposal: (v) => setFormData((f) => ({ ...f, attachProposal: v })),
     estimatedTotalCost: formData.estimatedTotalCost,
     setEstimatedTotalCost: (value) => setFormData((f) => ({ ...f, estimatedTotalCost: value })),
-    trafficLightRuleVersion: formData.trafficLightRuleVersion,
 
     // totals
     itemsTotal,

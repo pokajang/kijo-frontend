@@ -6,8 +6,8 @@ import ChangeToFailModal from '../modals/shared/ChangeToFailModal.jsx'
 import ChangeToSuccessModal from '../modals/shared/ChangeToSuccessModal.jsx'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import FollowUpModal from '../modals/shared/FollowUpModal.jsx'
+import LegacyQuotationCostModal from '../modals/shared/LegacyQuotationCostModal.jsx'
 import QuotationPdfPreviewModal from '../modals/shared/QuotationPdfPreviewModal.jsx'
-import LegacyTrainingCostModal from '../modals/training/LegacyTrainingCostModal.jsx'
 import RecordDetailsActions from '../details/RecordDetailsActions'
 import RecordActivityDetails from '../details/RecordActivityDetails'
 import RecordDetailsCard from '../details/RecordDetailsCard'
@@ -220,7 +220,7 @@ const RecordDetailsPage = () => {
         isSubmitting={isEmailSending}
       />
 
-      <LegacyTrainingCostModal
+      <LegacyQuotationCostModal
         visible={Boolean(legacyPdfPrompt)}
         mode={legacyPdfPrompt?.mode}
         record={legacyPdfPrompt?.record}

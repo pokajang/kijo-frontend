@@ -9,7 +9,7 @@ import {
   CModalTitle,
 } from '@coreui/react'
 
-const LegacyTrainingCostModal = ({
+const LegacyQuotationCostModal = ({
   visible,
   mode = 'legacy',
   record,
@@ -18,6 +18,7 @@ const LegacyTrainingCostModal = ({
   onGenerate,
 }) => {
   const requiresCurrentCost = mode === 'cost-required'
+  const reference = record?.quotationId || record?.quoteRefNo || record?.quote_ref_no
 
   return (
     <CModal
@@ -25,10 +26,10 @@ const LegacyTrainingCostModal = ({
       backdrop="static"
       visible={visible}
       onClose={onCancel}
-      aria-labelledby="legacy-training-cost-title"
+      aria-labelledby="legacy-quotation-cost-title"
     >
       <CModalHeader>
-        <CModalTitle id="legacy-training-cost-title">
+        <CModalTitle id="legacy-quotation-cost-title">
           {requiresCurrentCost
             ? 'Estimated internal cost required'
             : 'Estimated internal cost isn’t recorded'}
@@ -42,11 +43,11 @@ const LegacyTrainingCostModal = ({
         </CAlert>
         <p className="mb-2">
           {requiresCurrentCost
-            ? 'Edit the quotation and add an estimated cost before generating its PDF.'
-            : 'You can generate the PDF using the legacy policy, or edit the quotation to add an estimated cost and move it to the current approval rules.'}
+            ? 'Edit the quotation and enter its estimated cost before generating the PDF.'
+            : 'You can generate the PDF using the legacy policy, or edit the quotation and move it to the current approval rules.'}
         </p>
-        {record?.quoteRefNo ? (
-          <p className="small text-body-secondary mb-0">Quotation: {record.quoteRefNo}</p>
+        {reference ? (
+          <p className="small text-body-secondary mb-0">Quotation: {reference}</p>
         ) : null}
       </CModalBody>
       <CModalFooter className="d-flex flex-wrap gap-2">
@@ -66,4 +67,4 @@ const LegacyTrainingCostModal = ({
   )
 }
 
-export default LegacyTrainingCostModal
+export default LegacyQuotationCostModal

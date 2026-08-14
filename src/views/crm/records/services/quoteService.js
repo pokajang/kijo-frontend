@@ -402,6 +402,7 @@ export async function fetchIHQuotes() {
           ? Number(row.price_exception_request_id)
           : null,
         activeNegotiationRequestCount: Number(row.active_price_exception_request_count || 0),
+        issuanceContext: row.issuance_context || null,
 
         // client details
         clientDetails: {
@@ -434,7 +435,7 @@ export async function fetchIHQuotes() {
           travelCharge: parseFloat(row.travel_charge ?? 0),
           estimated_cost: estimatedCost,
           estimatedTotalCost: estimatedCost,
-          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
+          trafficLightRuleVersion: row.traffic_light_rule_version ?? null,
           pricingRuleVersion: row.pricing_rule_version || '',
           complexityRating: parseInt(row.complexity_rating ?? 1, 10),
           hygieneItems: lineItems.map((item) => ({
@@ -554,6 +555,7 @@ export async function fetchManpowerQuotes() {
           ? Number(row.price_exception_request_id)
           : null,
         activeNegotiationRequestCount: Number(row.active_price_exception_request_count || 0),
+        issuanceContext: row.issuance_context || null,
 
         // client details
         clientDetails: {
@@ -586,7 +588,7 @@ export async function fetchManpowerQuotes() {
           requiresManagementApproval: toBool(row.requires_management_approval),
           estimated_cost: estimatedCost,
           estimatedTotalCost: estimatedCost,
-          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
+          trafficLightRuleVersion: row.traffic_light_rule_version ?? null,
 
           unitCost: parseFloat(row.unit_cost ?? 0),
           discount: parseFloat(row.discount ?? 0),
@@ -834,6 +836,7 @@ export async function fetchEquipmentQuotes() {
           ? Number(row.price_exception_request_id)
           : null,
         activeNegotiationRequestCount: Number(row.active_price_exception_request_count || 0),
+        issuanceContext: row.issuance_context || null,
 
         // --- Client details ---
         clientDetails: {
@@ -855,7 +858,7 @@ export async function fetchEquipmentQuotes() {
           quotationRemarks: row.quotation_remarks || '',
           estimated_cost: estimatedCost,
           estimatedTotalCost: estimatedCost,
-          trafficLightRuleVersion: row.traffic_light_rule_version || 'v1',
+          trafficLightRuleVersion: row.traffic_light_rule_version ?? null,
         },
 
         // --- Charges & totals ---

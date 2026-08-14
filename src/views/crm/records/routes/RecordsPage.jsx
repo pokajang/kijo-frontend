@@ -9,10 +9,10 @@ import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { getQuoteServiceFromRecordTab } from '../config/recordTabs.js'
 import { useRecordsController } from '../hooks/useRecordsController'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
+import LegacyQuotationCostModal from '../modals/shared/LegacyQuotationCostModal.jsx'
 import NegotiationRequestModal from '../modals/shared/NegotiationRequestModal.jsx'
 import QuoteApprovalReviewModal from '../modals/shared/QuoteApprovalReviewModal.jsx'
 import QuotationPdfPreviewModal from '../modals/shared/QuotationPdfPreviewModal.jsx'
-import LegacyTrainingCostModal from '../modals/training/LegacyTrainingCostModal.jsx'
 
 const RecordsPage = () => {
   const location = useLocation()
@@ -274,7 +274,7 @@ const RecordsPage = () => {
           isSubmitting={isApprovalSubmitting}
         />
 
-        <LegacyTrainingCostModal
+        <LegacyQuotationCostModal
           visible={Boolean(legacyPdfPrompt)}
           mode={legacyPdfPrompt?.mode}
           record={legacyPdfPrompt?.record}

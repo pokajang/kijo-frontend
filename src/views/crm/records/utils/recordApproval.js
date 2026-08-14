@@ -38,20 +38,24 @@ export const getQuoteIssuanceState = (record) => {
 
   const serviceKey = getQuoteServiceFromRecordTab(record?.serviceTab)
 
-  if (serviceKey === 'training' && issuanceContext?.estimated_cost_required) {
+  if (issuanceContext?.estimated_cost_required) {
     return {
       blocked: true,
       message: 'Add an estimated total cost before issuing this current-policy quotation.',
     }
   }
 
-  if (serviceKey === 'training' && issuanceContext?.requires_approval) {
+  if (issuanceContext?.requires_approval) {
     const step = approvalStepLabel(issuanceContext.required_step)
     const reason = Array.isArray(issuanceContext.reasons) ? issuanceContext.reasons.at(-1) : ''
     return {
       blocked: true,
       message: reason ? `${step} approval is required. ${reason}` : `${step} approval is required.`,
     }
+  }
+
+  if (issuanceContext) {
+    return { blocked: false, message: '' }
   }
 
   if (serviceKey !== 'equipment') {
