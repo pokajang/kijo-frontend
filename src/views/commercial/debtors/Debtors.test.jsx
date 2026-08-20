@@ -84,8 +84,15 @@ describe('Debtors payment table wiring', () => {
       </MemoryRouter>,
     )
 
-    await waitFor(() => expect(recordListMock).toHaveBeenCalled())
-    const props = recordListMock.mock.calls.at(-1)[0]
+    const props = await waitFor(() => {
+      const renderedProps = [...recordListMock.mock.calls]
+        .map(([value]) => value)
+        .reverse()
+        .find((value) => value.rows.length > 0)
+
+      expect(renderedProps).toBeDefined()
+      return renderedProps
+    })
     const row = props.rows[0]
 
     expect(props.storageKey).toBe('commercial.debtors.visible-columns.v4')

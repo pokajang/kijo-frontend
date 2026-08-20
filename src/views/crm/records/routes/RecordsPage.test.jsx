@@ -145,6 +145,23 @@ describe('RecordsPage', () => {
     expect(openApprovalReview).toHaveBeenCalledWith(approval)
   })
 
+  it('opens a queued approval review when multiple approvals are pending', () => {
+    const openApprovalReview = vi.fn()
+    const approvals = [
+      { id: 9, quote_ref_no: 'QTR-009' },
+      { id: 10, quote_ref_no: 'QTR-010' },
+    ]
+    useRecordsController.mockReturnValue(
+      mockController({ pendingApprovals: approvals, openApprovalReview }),
+    )
+
+    renderPage()
+
+    expect(screen.getByText(/2 quotations require your approval/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review Now' }))
+    expect(openApprovalReview).toHaveBeenCalledWith(approvals[0], { queue: approvals })
+  })
+
   it('renders the active all-table scope label in the card header', async () => {
     useRecordsController.mockReturnValue(mockController())
 

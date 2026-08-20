@@ -96,8 +96,7 @@ describe('getQuoteIssuanceState', () => {
       }),
     ).toEqual({
       blocked: true,
-      message:
-        'BD approval is required. The selected manpower rate requires management approval.',
+      message: 'BD approval is required. The selected manpower rate requires management approval.',
     })
   })
 

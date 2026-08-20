@@ -157,41 +157,44 @@ describe('recordsActions PDF opening', () => {
     ['training-tab', 'traffic-light-training-202608-v2'],
     ['equipment-tab', 'traffic-light-equipment-202608-v2'],
     ['manpower-tab', 'traffic-light-manpower-202608-v2'],
-  ])('prompts before generating a grandfathered %s PDF and remembers a successful choice', async (serviceTab, ruleVersion) => {
-    const onLegacyPdfPrompt = vi.fn()
-    const onOpenPdfPreview = vi.fn()
-    const { handlers } = createDeleteHarness({
-      serviceKey: serviceTab,
-      onLegacyPdfPrompt,
-      onOpenPdfPreview,
-    })
-    const record = {
-      id: 154,
-      revisionNo: 0,
-      serviceTab,
-      issuanceContext: {
-        is_grandfathered: true,
-        requires_approval: false,
-        rule_version: ruleVersion,
-      },
-    }
+  ])(
+    'prompts before generating a grandfathered %s PDF and remembers a successful choice',
+    async (serviceTab, ruleVersion) => {
+      const onLegacyPdfPrompt = vi.fn()
+      const onOpenPdfPreview = vi.fn()
+      const { handlers } = createDeleteHarness({
+        serviceKey: serviceTab,
+        onLegacyPdfPrompt,
+        onOpenPdfPreview,
+      })
+      const record = {
+        id: 154,
+        revisionNo: 0,
+        serviceTab,
+        issuanceContext: {
+          is_grandfathered: true,
+          requires_approval: false,
+          rule_version: ruleVersion,
+        },
+      }
 
-    await handlers.handleGeneratePdf(record)
+      await handlers.handleGeneratePdf(record)
 
-    expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
+      expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
 
-    onLegacyPdfPrompt.mock.calls[0][0].onGenerate()
-    expect(onOpenPdfPreview).toHaveBeenCalledTimes(1)
-    const acknowledgementKey = `legacy-cost-pdf:${serviceTab}:154:0:${ruleVersion}`
-    expect(window.sessionStorage.getItem(acknowledgementKey)).toBeNull()
+      onLegacyPdfPrompt.mock.calls[0][0].onGenerate()
+      expect(onOpenPdfPreview).toHaveBeenCalledTimes(1)
+      const acknowledgementKey = `legacy-cost-pdf:${serviceTab}:154:0:${ruleVersion}`
+      expect(window.sessionStorage.getItem(acknowledgementKey)).toBeNull()
 
-    onOpenPdfPreview.mock.calls[0][0].onLoadSuccess()
-    expect(window.sessionStorage.getItem(acknowledgementKey)).toBe('1')
+      onOpenPdfPreview.mock.calls[0][0].onLoadSuccess()
+      expect(window.sessionStorage.getItem(acknowledgementKey)).toBe('1')
 
-    await handlers.handleGeneratePdf(record)
-    expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
-    expect(onOpenPdfPreview).toHaveBeenCalledTimes(2)
-  })
+      await handlers.handleGeneratePdf(record)
+      expect(onLegacyPdfPrompt).toHaveBeenCalledTimes(1)
+      expect(onOpenPdfPreview).toHaveBeenCalledTimes(2)
+    },
+  )
 
   it('never offers legacy generation while a Training approval trigger is unresolved', async () => {
     const onLegacyPdfPrompt = vi.fn()

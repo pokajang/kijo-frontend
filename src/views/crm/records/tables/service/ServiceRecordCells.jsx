@@ -1,5 +1,5 @@
 ﻿import React from 'react'
-import { CTableDataCell, CBadge, CTooltip } from '@coreui/react'
+import { CBadge, CButton, CTableDataCell, CTooltip } from '@coreui/react'
 import RemarksCell from '../shared/RemarksCell'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 import RecordActionMenu from '../shared/RecordActionMenu'
@@ -146,21 +146,48 @@ export const ServiceRecordPicCell = ({ record, columnWidths, truncateStyle }) =>
   </CTableDataCell>
 )
 
-export const ServiceRecordStatusCell = ({ record, columnWidths }) => (
-  <CTableDataCell style={{ minWidth: columnWidths.status }} className="text-center text-nowrap">
-    <div className="d-inline-flex flex-column align-items-center gap-1">
-      <CBadge
-        className={`records-status-badge records-status-badge--${getStatusTone(record.status)}`}
-      >
-        {getStatusLabel(record)}
-      </CBadge>
-      <QuoteApprovalBadge approval={record?.approval} />
-      {getProjectOutcomeLabel(record) && (
-        <span className="small text-muted">{getProjectOutcomeLabel(record)}</span>
+export const ServiceRecordStatusCell = ({ record, columnWidths }) => {
+  const canReviewApproval = Boolean(
+    record?.approval?.can_decide &&
+      String(record.approval?.status || '').toLowerCase() === 'pending',
+  )
+  return (
+    <CTableDataCell style={{ minWidth: columnWidths.status }} className="text-center text-nowrap">
+      {canReviewApproval ? (
+        <div className="d-inline-flex flex-column align-items-center gap-1">
+          <CButton
+            color="info"
+            size="sm"
+            variant="outline"
+            className="py-0 px-2"
+            data-no-row-open="true"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation()
+              window.dispatchEvent(
+                new CustomEvent('quote-approval:review', { detail: record?.approval }),
+              )
+            }}
+          >
+            Review
+          </CButton>
+        </div>
+      ) : (
+        <div className="d-inline-flex flex-column align-items-center gap-1">
+          <CBadge
+            className={`records-status-badge records-status-badge--${getStatusTone(record.status)}`}
+          >
+            {getStatusLabel(record)}
+          </CBadge>
+          <QuoteApprovalBadge approval={record?.approval} />
+          {getProjectOutcomeLabel(record) && (
+            <span className="small text-muted">{getProjectOutcomeLabel(record)}</span>
+          )}
+        </div>
       )}
-    </div>
-  </CTableDataCell>
-)
+    </CTableDataCell>
+  )
+}
 
 export const ServiceRecordRemarksCell = ({ record, columnWidths, fmtDate }) => (
   <CTableDataCell style={{ minWidth: columnWidths.remarks }}>

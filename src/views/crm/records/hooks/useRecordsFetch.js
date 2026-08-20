@@ -30,7 +30,7 @@ export const useRecordsFetch = (activeTab) => {
           setQuotes([])
           setQuotesLoading(false)
         }
-        return
+        return []
       }
 
       try {
@@ -39,9 +39,10 @@ export const useRecordsFetch = (activeTab) => {
           setQuotes(nextQuotes)
           setQuotesLoading(false)
         }
+        return nextQuotes
       } catch (err) {
         if (err.name === 'AbortError') {
-          return
+          return []
         }
         console.error('Error fetching quotes:', err)
         if (requestId === fetchSeqRef.current) {
@@ -51,6 +52,7 @@ export const useRecordsFetch = (activeTab) => {
           setQuotesLoading(false)
           dialog.alert('Failed to load quotations. Please refresh the page.')
         }
+        return []
       }
     },
     [activeTab],

@@ -44,7 +44,10 @@ export const legacyQuotationPdfAcknowledgementKey = (record, serviceKey) => {
 
 const hasLegacyPdfAcknowledgement = (record, serviceKey) => {
   try {
-    return window.sessionStorage.getItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey)) === '1'
+    return (
+      window.sessionStorage.getItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey)) ===
+      '1'
+    )
   } catch {
     return false
   }

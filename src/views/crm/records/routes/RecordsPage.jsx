@@ -59,11 +59,21 @@ const RecordsPage = () => {
     approvalRecord,
     approvalDecisionNotice,
     approvalRemarks,
+    isApprovalReviewLoading,
+    approvalQueueIndex = 0,
+    approvalQueueSize = 1,
+    approvalQueueList = [],
     setApprovalRemarks,
     openApprovalReview,
     closeApprovalReview,
     handleApprovalDecision,
     isApprovalSubmitting,
+    canNavigateNextQueuedApproval,
+    canNavigatePreviousQueuedApproval,
+    handleQueueNext,
+    handleQueuePrevious,
+    handleQueueSkip,
+    handleQueueJump,
     legacyPdfPrompt,
     closeLegacyPdfPrompt,
     handleLegacyPdfGenerate,
@@ -128,7 +138,13 @@ const RecordsPage = () => {
                 <CButton
                   color="warning"
                   size="sm"
-                  onClick={() => openApprovalReview(pendingApprovals[0])}
+                  onClick={() => {
+                    if (pendingApprovals.length > 1) {
+                      openApprovalReview(pendingApprovals[0], { queue: pendingApprovals })
+                      return
+                    }
+                    openApprovalReview(pendingApprovals[0])
+                  }}
                 >
                   Review Now
                 </CButton>
@@ -268,6 +284,16 @@ const RecordsPage = () => {
           approval={approvalRecord}
           decisionNotice={approvalDecisionNotice}
           remarks={approvalRemarks}
+          isLoading={isApprovalReviewLoading}
+          queuePosition={approvalQueueIndex + 1}
+          queueSize={approvalQueueSize}
+          queueItems={approvalQueueList}
+          canNavigateNext={canNavigateNextQueuedApproval}
+          canNavigatePrevious={canNavigatePreviousQueuedApproval}
+          onQueueNext={handleQueueNext}
+          onQueuePrevious={handleQueuePrevious}
+          onQueueSkip={handleQueueSkip}
+          onQueueJump={handleQueueJump}
           onRemarksChange={setApprovalRemarks}
           onCancel={closeApprovalReview}
           onDecision={handleApprovalDecision}
