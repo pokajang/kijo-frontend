@@ -111,6 +111,41 @@ describe('QuoteApprovalReviewModal', () => {
     expect(screen.getByRole('button', { name: 'Skip' })).toBeEnabled()
   })
 
+  it('keeps queue labels compact while retaining the full client name as a tooltip', () => {
+    const clientName = 'NZ URUSBINA SDN. BHD. WITH A VERY LONG COMPANY NAME FOR TESTING'
+
+    render(
+      <QuoteApprovalReviewModal
+        visible
+        approval={{ ...baseApproval, status: 'pending', can_decide: true }}
+        remarks=""
+        queuePosition={1}
+        queueSize={2}
+        queueItems={[
+          {
+            id: 1,
+            index: 0,
+            quoteRefNo: 'QSS25-0001AZA',
+            quoteTitle: 'This title must not be included in the queue selector',
+            quoteDate: '2025-08-01',
+            clientName,
+          },
+          { id: 2, index: 1, quoteRefNo: 'QSS25-0002AZA', clientName: 'Acme Sdn. Bhd.' },
+        ]}
+        canNavigateNext
+        onRemarksChange={vi.fn()}
+        onCancel={vi.fn()}
+        onDecision={vi.fn()}
+      />,
+    )
+
+    const selector = screen.getByRole('combobox', { name: /jump to quotation/i })
+    expect(selector).toHaveAttribute('title', `QSS25-0001AZA — ${clientName}`)
+    expect(screen.getByRole('option', { name: /QSS25-0001AZA — NZ URUSBINA/i })).toBeInTheDocument()
+    expect(screen.queryByText(/This title must not be included/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Date: 01 Aug 2025/i)).not.toBeInTheDocument()
+  })
+
   it('warns approvers when decision-critical quotation metadata is unavailable', () => {
     render(
       <QuoteApprovalReviewModal

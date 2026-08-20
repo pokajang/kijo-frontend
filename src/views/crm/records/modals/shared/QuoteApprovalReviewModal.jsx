@@ -54,6 +54,12 @@ const formatDate = (value) => {
   return parsed.toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+const truncate = (value, maxLength) => {
+  const text = cleanValue(value)
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, Math.max(maxLength - 1, 0)).trimEnd()}…`
+}
+
 const QuoteApprovalReviewModal = ({
   visible,
   approval,
@@ -144,18 +150,6 @@ const QuoteApprovalReviewModal = ({
     ]) ||
     approval?.clientDetails?.companyName ||
     approval?.clientDetails?.name
-  const queueItemDate = (item) =>
-    cleanValue(
-      item?.quoteDate ||
-        item?.quote_date ||
-        item?.created_at ||
-        item?.createdAt ||
-        item?.dateCreated ||
-        item?.updated_at ||
-        item?.date ||
-        item?.date_created ||
-        '',
-    )
   const normalizedQueueItems = Array.isArray(queueItems) ? queueItems : []
   const fallbackQueueItems =
     normalizedQueueItems.length > 0
@@ -181,11 +175,8 @@ const QuoteApprovalReviewModal = ({
   const showQueueActions = isQueueMode && canDecide
   const isNextQueueAvailable = Boolean(canNavigateNext) && !isBusy
   const isPrevQueueAvailable = Boolean(canNavigatePrevious) && !isBusy
-  const queueItemLabel = (item) => {
-    const label = cleanValue(item?.quoteRefNo)
-    const title = cleanValue(item?.quoteTitle || item?.title)
-    const rawDate = queueItemDate(item)
-    const date = rawDate ? formatDate(rawDate) : ''
+  const queueItemFullLabel = (item) => {
+    const quoteReference = cleanValue(item?.quoteRefNo)
     const client = cleanValue(
       item?.clientName ||
         item?.client_name ||
@@ -195,12 +186,22 @@ const QuoteApprovalReviewModal = ({
         item?.customerName ||
         item?.fullName,
     )
-    const extras = [
-      title && `Title: ${title}`,
-      date && `Date: ${date}`,
-      client && `Client: ${client}`,
-    ].filter(Boolean)
-    return [label, ...extras].filter(Boolean).join(' - ')
+    return [quoteReference, client].filter(Boolean).join(' — ')
+  }
+
+  const queueItemLabel = (item) => {
+    const quoteReference = cleanValue(item?.quoteRefNo)
+    const client = truncate(
+      item?.clientName ||
+        item?.client_name ||
+        item?.company_name ||
+        item?.companyName ||
+        item?.customer_name ||
+        item?.customerName ||
+        item?.fullName,
+      48,
+    )
+    return [quoteReference, client].filter(Boolean).join(' — ')
   }
 
   const handleQueueJump = (event) => {
@@ -216,12 +217,12 @@ const QuoteApprovalReviewModal = ({
       <CModalBody>
         {isQueueMode && (
           <div className="border rounded p-2 mb-3">
-            <div className="d-flex flex-wrap flex-md-nowrap align-items-center gap-2">
+            <div className="d-flex flex-wrap align-items-center gap-2">
               <div className="small text-muted text-nowrap">
                 Reviewing {normalizedQueuePosition} of {normalizedQueueSize}
               </div>
               {showQueueActions && (
-                <div className="d-flex flex-wrap flex-md-nowrap align-items-center gap-1">
+                <div className="d-flex flex-wrap align-items-center gap-1 flex-shrink-0">
                   <CButton
                     color="info"
                     variant="outline"
@@ -252,24 +253,27 @@ const QuoteApprovalReviewModal = ({
                   >
                     Next
                   </CButton>
-                  <CFormSelect
-                    id="quoteApprovalQueueJump"
-                    aria-label="Jump to quotation"
-                    size="sm"
-                    className="w-auto"
-                    value={String(activeQueueIndex)}
-                    onChange={handleQueueJump}
-                    disabled={isBusy || queueSelectItems.length <= 1}
-                    style={{ minWidth: '220px' }}
-                  >
-                    {queueSelectItems.map((item) => (
-                      <option key={`${item.id}-${item.index ?? ''}`} value={String(item.index)}>
-                        {queueItemLabel(item)}
-                      </option>
-                    ))}
-                  </CFormSelect>
                 </div>
               )}
+              <div className="flex-grow-1" style={{ flexBasis: '220px', minWidth: 0 }}>
+                <CFormSelect
+                  id="quoteApprovalQueueJump"
+                  aria-label="Jump to quotation"
+                  size="sm"
+                  className="w-100"
+                  value={String(activeQueueIndex)}
+                  onChange={handleQueueJump}
+                  disabled={isBusy || queueSelectItems.length <= 1}
+                  title={queueItemFullLabel(queueSelectItems[activeQueueIndex])}
+                  style={{ maxWidth: '100%', minWidth: 0 }}
+                >
+                  {queueSelectItems.map((item) => (
+                    <option key={`${item.id}-${item.index ?? ''}`} value={String(item.index)}>
+                      {queueItemLabel(item)}
+                    </option>
+                  ))}
+                </CFormSelect>
+              </div>
             </div>
           </div>
         )}
