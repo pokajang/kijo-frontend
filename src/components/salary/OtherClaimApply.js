@@ -63,6 +63,35 @@ const normalizeProjectOption = (project = {}) => {
   }
 }
 
+// Attachment urls carry the row id and the binary never round-trips, so neither can
+// take part in the comparison that decides whether local state actually changed.
+const canonicalVolatileKeys = new Set(['url', 'downloadUrl', 'file', 'dataUrl'])
+
+const canonicalComparable = (value) =>
+  JSON.stringify(value, (key, nested) => (canonicalVolatileKeys.has(key) ? undefined : nested))
+
+const claimAttachmentList = (claim = {}) =>
+  Array.isArray(claim.attachments) ? claim.attachments : claim.attachment ? [claim.attachment] : []
+
+export const mergeCanonicalAttachments = (localAttachments = [], canonicalAttachments = []) => {
+  const localList = Array.isArray(localAttachments) ? localAttachments : []
+
+  return canonicalAttachments.map((attachment, index) => {
+    const local =
+      localList.find(
+        (candidate) => candidate?.id && String(candidate.id) === String(attachment.id),
+      ) ||
+      localList.find((candidate) => candidate?.name && candidate.name === attachment.name) ||
+      localList[index]
+
+    // The server never echoes local binary data. Keep it while this form remains open so a
+    // just-added attachment can still be previewed and re-uploaded after draft autosave.
+    return local?.file
+      ? { ...attachment, file: local.file, dataUrl: local.dataUrl || attachment.dataUrl }
+      : attachment
+  })
+}
+
 const mergeCanonicalClaimItems = (items, type, canonicalClaims = []) => {
   const canonicalById = new Map(
     canonicalClaims
@@ -74,18 +103,17 @@ const mergeCanonicalClaimItems = (items, type, canonicalClaims = []) => {
     const canonical = canonicalById.get(String(item.id))
     if (!canonical) return item
 
-    const attachments = Array.isArray(canonical.attachments)
-      ? canonical.attachments
-      : canonical.attachment
-        ? [canonical.attachment]
-        : []
+    const attachments = mergeCanonicalAttachments(
+      claimAttachmentList(item),
+      claimAttachmentList(canonical),
+    )
     const nextItem = {
       ...item,
       ...canonical,
       attachments,
       attachment: attachments[0] || null,
     }
-    if (JSON.stringify(item) === JSON.stringify(nextItem)) return item
+    if (canonicalComparable(item) === canonicalComparable(nextItem)) return item
 
     changed = true
     return nextItem
@@ -93,6 +121,19 @@ const mergeCanonicalClaimItems = (items, type, canonicalClaims = []) => {
 
   return changed ? nextItems : items
 }
+
+// Ids and urls belong to the server: adopting them must never look like a user edit,
+// otherwise the response to one save becomes the trigger for the next one.
+const serverOwnedDraftKeys = new Set(['url', 'downloadUrl', 'recordItemId', 'meta'])
+
+const draftContentFingerprint = (payload) =>
+  JSON.stringify(payload, (key, value) => {
+    if (serverOwnedDraftKeys.has(key)) return undefined
+    // Claim ids are client-generated strings; a numeric id is an attachment row id.
+    if (key === 'id' && typeof value === 'number') return undefined
+    if (key === 'dataUrl' && typeof value === 'string') return `bytes:${value.length}`
+    return value
+  })
 
 const mergeProjectOptionsWithMineFirst = (myProjects = [], allProjects = []) => {
   const mineMap = new Map()
@@ -197,6 +238,10 @@ const buildClaimMonthOptions = (baseDate = new Date()) =>
       label: formatClaimMonth(value),
     }
   })
+
+// The draft is already safe in localStorage on every keystroke, so the server sync can
+// wait for a real pause in typing.
+const DRAFT_AUTOSAVE_DELAY_MS = 2500
 
 const colorByType = {
   success: 'success',
@@ -973,6 +1018,15 @@ const OtherClaimApply = ({
     [allowanceItems, expenseItems, formData, medicalItems, mileageItems],
   )
   const hasDraftContent = useMemo(() => draftHasContent(draftPayload), [draftPayload])
+  const draftFingerprint = useMemo(() => draftContentFingerprint(draftPayload), [draftPayload])
+  const draftPayloadRef = useRef(draftPayload)
+  const allClaimsRef = useRef(allClaims)
+  const lastSyncedFingerprintRef = useRef(null)
+  const draftRequestRef = useRef(null)
+  // The debounced save always reads the freshest snapshot, not the one from the render
+  // that scheduled it.
+  draftPayloadRef.current = draftPayload
+  allClaimsRef.current = allClaims
 
   const handleConfigureMedicalEntitlement = () => {
     if (attachmentProcessingRef.current.medical) return
@@ -1002,9 +1056,15 @@ const OtherClaimApply = ({
     ) {
       return undefined
     }
-    const claimMonth = draftPayload.formData.claimMonth || getCurrentClaimMonth()
+    // Adopting server-assigned ids changes state without changing anything the user typed.
+    // Re-saving that echo is what turned this autosave into an endless request loop.
+    if (draftFingerprint === lastSyncedFingerprintRef.current) return undefined
+
+    const claimMonth = draftPayloadRef.current.formData.claimMonth || getCurrentClaimMonth()
     const saveRevision = ++draftSaveRevisionRef.current
     if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
+    draftRequestRef.current?.abort()
+    draftRequestRef.current = null
 
     if (!hasDraftContent) {
       clearOtherClaimDraft({ claimMonth })
@@ -1015,6 +1075,7 @@ const OtherClaimApply = ({
               if (saveRevision !== draftSaveRevisionRef.current) return
               hasPersistedDraftRef.current = false
               draftRecordRef.current = null
+              lastSyncedFingerprintRef.current = draftFingerprint
               setDraftSaveError('')
               setDraftSaveState('idle')
             })
@@ -1033,19 +1094,25 @@ const OtherClaimApply = ({
       }
     }
 
-    writeOtherClaimDraft({ claimMonth, draft: draftPayload })
+    writeOtherClaimDraft({ claimMonth, draft: draftPayloadRef.current })
     setDraftSaveError('')
     setDraftSaveState('dirty')
     draftSaveTimerRef.current = window.setTimeout(() => {
+      const controller = typeof AbortController === 'undefined' ? null : new AbortController()
+      draftRequestRef.current = controller
       setDraftSaveState('saving')
-      saveOtherClaimDraft({
-        claimMonthValue: claimMonth,
-        claims: allClaims.filter((claim) => isCompleteClaim(claim, allClaims)),
-        draftPayload,
-      })
+      saveOtherClaimDraft(
+        {
+          claimMonthValue: claimMonth,
+          claims: allClaimsRef.current.filter((claim) => isCompleteClaim(claim)),
+          draftPayload: draftPayloadRef.current,
+        },
+        { signal: controller?.signal },
+      )
         .then((savedDraft) => {
           if (saveRevision !== draftSaveRevisionRef.current || hasSubmittedRef.current) return
           hasPersistedDraftRef.current = true
+          if (savedDraft) lastSyncedFingerprintRef.current = draftFingerprint
           if (savedDraft?.id) {
             draftRecordRef.current = { id: savedDraft.id, claimMonth }
           }
@@ -1067,17 +1134,18 @@ const OtherClaimApply = ({
           setDraftSaveState('saved')
         })
         .catch((error) => {
+          if (controller?.signal.aborted || error?.name === 'AbortError') return
           if (saveRevision === draftSaveRevisionRef.current) {
             setDraftSaveError(error?.message || 'Could not sync the draft to the server.')
             setDraftSaveState('error')
           }
         })
-    }, 1200)
+    }, DRAFT_AUTOSAVE_DELAY_MS)
 
     return () => {
       if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
     }
-  }, [allClaims, draftPayload, hasDraftContent, isLoading, isSubmitting])
+  }, [draftFingerprint, hasDraftContent, isLoading, isSubmitting])
 
   const handleSaveClaimDraft = (saveClaim) => {
     if (!saveClaim()) return
@@ -1136,12 +1204,15 @@ const OtherClaimApply = ({
 
       let submissionRecordId = activeRecordId
       let submissionRecordVersion = initialRecordRef.current?.recordVersion || null
+      let submissionClaims = allClaims
       const shouldSyncDraft =
         !initialRecordRef.current || initialRecordRef.current.status === 'Draft'
       if (shouldSyncDraft) {
         try {
           setDraftSaveError('')
           setDraftSaveState('saving')
+          draftRequestRef.current?.abort()
+          draftRequestRef.current = null
           const syncedDraft = await saveOtherClaimDraft({
             claimMonthValue: claimMonth,
             claims: allClaims.filter((claim) => isCompleteClaim(claim, allClaims)),
@@ -1154,6 +1225,31 @@ const OtherClaimApply = ({
           submissionRecordVersion = syncedDraft.recordVersion || submissionRecordVersion
           hasPersistedDraftRef.current = true
           draftRecordRef.current = { id: syncedDraft.id, claimMonth }
+          lastSyncedFingerprintRef.current = draftFingerprint
+          // The sync is the authority on attachment identity from here on; submitting the
+          // pre-sync snapshot is what made the server reject evidence it had just stored.
+          const canonicalClaims = Array.isArray(syncedDraft.claims) ? syncedDraft.claims : []
+          if (canonicalClaims.length) {
+            const canonicalById = new Map(
+              canonicalClaims.filter((claim) => claim.id).map((claim) => [String(claim.id), claim]),
+            )
+            submissionClaims = allClaims.map((claim) => {
+              const canonical = canonicalById.get(String(claim.id))
+              if (!canonical) return claim
+
+              const attachments = mergeCanonicalAttachments(
+                claimAttachmentList(claim),
+                claimAttachmentList(canonical),
+              )
+              return { ...claim, attachments, attachment: attachments[0] || null }
+            })
+            setAllowanceItems((items) =>
+              mergeCanonicalClaimItems(items, 'Allowance', canonicalClaims),
+            )
+            setExpenseItems((items) => mergeCanonicalClaimItems(items, 'Expense', canonicalClaims))
+            setMileageItems((items) => mergeCanonicalClaimItems(items, 'Mileage', canonicalClaims))
+            setMedicalItems((items) => mergeCanonicalClaimItems(items, 'Medical', canonicalClaims))
+          }
           setDraftSaveState('saved')
         } catch (error) {
           const message = error?.message || 'Could not sync the draft to the server.'
@@ -1172,7 +1268,7 @@ const OtherClaimApply = ({
         claimMonthValue: claimMonth,
         claimsTotal,
         status: 'Submitted',
-        claims: allClaims,
+        claims: submissionClaims,
         submittedAt: new Date().toISOString(),
         amendmentReason: amendmentReasonRef.current,
         recordVersion: submissionRecordVersion,

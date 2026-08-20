@@ -291,7 +291,7 @@ const OtherClaimRecords = ({
   }
 
   const editRecord = async (record) => {
-    if (!['Draft', 'Rejected'].includes(record?.status)) return
+    if (!['Draft', 'Submitted', 'Prepared', 'Rejected'].includes(record?.status)) return
     const detailRecord = await loadRecordDetail(record)
     if (!detailRecord) return
     let amendmentReason = ''
@@ -310,6 +310,15 @@ const OtherClaimRecords = ({
       if (reason === null) return
       amendmentReason = String(reason || '').trim()
       if (!amendmentReason) return
+    } else if (['Submitted', 'Prepared'].includes(detailRecord.status)) {
+      const confirmed = await dialog.confirm(
+        'Editing this claim will restart its review. The claim will need to be submitted again after your changes.',
+        {
+          title: 'Edit and resubmit other claim',
+          confirmText: 'Edit Claim',
+        },
+      )
+      if (!confirmed) return
     }
     navigate('/my/salary/other-claims/apply', {
       state: { editRecord: detailRecord, amendmentReason },
@@ -379,7 +388,7 @@ const OtherClaimRecords = ({
   const getActions = (record) => {
     const isPaid = paidStatuses.has(record.status)
     const isExporting = exportingRecordId === record.id
-    const canEdit = ['Draft', 'Rejected'].includes(record.status)
+    const canEdit = ['Draft', 'Submitted', 'Prepared', 'Rejected'].includes(record.status)
     const canDeleteDraft = record.status === 'Draft'
     const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
       record.status,
@@ -395,7 +404,12 @@ const OtherClaimRecords = ({
       canEdit
         ? {
             key: 'edit',
-            label: record.status === 'Rejected' ? 'Create Revision' : 'Edit Draft',
+            label:
+              record.status === 'Rejected'
+                ? 'Create Revision'
+                : record.status === 'Draft'
+                  ? 'Edit Draft'
+                  : 'Edit Claim',
             onClick: editRecord,
           }
         : null,

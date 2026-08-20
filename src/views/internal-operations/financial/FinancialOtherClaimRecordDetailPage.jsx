@@ -24,6 +24,7 @@ import {
   DataTableStatusBadge,
 } from '../../../components/datatable'
 import { AttachmentPreviewModal } from '../../../components/salary/claim-ui/ClaimFormPrimitives'
+import OtherClaimAuditTrail from '../../../components/salary/OtherClaimAuditTrail'
 import { formatMoney } from '../../../components/salary/salaryCalculations'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import {
@@ -310,6 +311,12 @@ const FinancialOtherClaimRecordDetailPage = () => {
             </CTableBody>
           </CTable>
         </section>
+        <OtherClaimAuditTrail
+          events={record?.auditEvents || []}
+          formatDateTime={formatDateTime}
+          headingClassName="h6 mb-2"
+          id="financialOtherClaimAudit"
+        />
         <section className="mt-4" aria-labelledby="financialOtherClaimPayments">
           <h3 className="h6 mb-2" id="financialOtherClaimPayments">
             Payment history

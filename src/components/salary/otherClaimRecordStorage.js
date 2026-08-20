@@ -140,6 +140,24 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
         amount: Number(payment.amount || 0),
       }))
     : [],
+  auditEvents: Array.isArray(record.auditEvents)
+    ? record.auditEvents.map((event) => ({
+        id: event.id,
+        action: event.action || '',
+        statusFrom: event.statusFrom || '',
+        statusTo: event.statusTo || '',
+        reason: event.reason || '',
+        previousSnapshot:
+          event.previousSnapshot &&
+          typeof event.previousSnapshot === 'object' &&
+          !Array.isArray(event.previousSnapshot)
+            ? event.previousSnapshot
+            : null,
+        actedAt: event.actedAt || '',
+        actorName: event.actorName || '',
+        actorCode: event.actorCode || '',
+      }))
+    : [],
   workflow: record.workflow || null,
 })
 
@@ -150,6 +168,8 @@ const normalizeOtherClaimRecordResponse = (payload = {}) => {
   record.mailMessage = payload.mail_message || ''
   return record
 }
+
+let lastKnownDraftRecordId = null
 
 const dispatchRecordsChanged = () => {
   if (typeof window !== 'undefined') {
@@ -356,7 +376,7 @@ export const fetchOtherClaimDraft = async (claimMonth) => {
   return payload.record ? normalizeOtherClaimRecord(payload.record) : null
 }
 
-export const saveOtherClaimDraft = async (draft) => {
+export const saveOtherClaimDraft = async (draft, { signal } = {}) => {
   const formData = new FormData()
   const draftClaims = Array.isArray(draft.claims) ? draft.claims : []
   const claims = draftClaims.filter((claim) => isServerSafeDraftClaim(claim, draftClaims))
@@ -375,9 +395,16 @@ export const saveOtherClaimDraft = async (draft) => {
     method: 'POST',
     body: formData,
     silentError: true,
+    signal,
   })
-  dispatchRecordsChanged()
-  return payload.record ? normalizeOtherClaimRecord(payload.record) : null
+  const record = payload.record ? normalizeOtherClaimRecord(payload.record) : null
+  // Autosave runs constantly; only the appearance of a new draft row changes the record list.
+  if (record?.id !== lastKnownDraftRecordId) {
+    lastKnownDraftRecordId = record?.id ?? null
+    dispatchRecordsChanged()
+  }
+
+  return record
 }
 
 export const clearOtherClaimServerDraft = async (claimMonth) => {
@@ -390,6 +417,7 @@ export const clearOtherClaimServerDraft = async (claimMonth) => {
       silentError: true,
     },
   )
+  lastKnownDraftRecordId = null
   dispatchRecordsChanged()
 }
 

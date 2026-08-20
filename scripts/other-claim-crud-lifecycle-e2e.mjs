@@ -23,6 +23,7 @@ const runLabel = `E2E ${stamp}`
 const draftDescription = `${runLabel} draft`
 const updatedDraftDescription = `${runLabel} draft updated`
 const submittedDescription = `${runLabel} submitted`
+const editedSubmittedDescription = `${runLabel} submitted edited`
 const revisedDescription = `${runLabel} revision`
 const draftAmount = (41 + Math.random()).toFixed(2)
 const submittedAmount = (61 + Math.random()).toFixed(2)
@@ -482,20 +483,34 @@ const run = async () => {
       return `${submitted.claimReference} rev ${submitted.revisionNo}`
     })
 
-    await recordStep('READ submitted record and enforce immutable submitted UI', async () => {
+    await recordStep('UPDATE submitted record before review', async () => {
       await page.goto(`${baseUrl}/my/salary/other-claims/records/${originalRecordId}`, {
         waitUntil: 'domcontentloaded',
       })
       await page.getByText(submittedDescription, { exact: false }).first().waitFor()
       await page.getByText('Submitted', { exact: true }).first().waitFor()
       assert(
-        !(await page
-          .getByRole('button', { name: 'Edit Draft', exact: true })
-          .isVisible()
-          .catch(() => false)),
-        'Submitted record incorrectly exposes direct draft editing.',
+        await page.getByRole('button', { name: 'Edit Claim', exact: true }).isVisible(),
+        'Submitted record does not expose Edit Claim before review.',
       )
-      return `record=${originalRecordId}`
+      await page.getByRole('button', { name: 'Edit Claim', exact: true }).click()
+      const editDialog = page.getByRole('dialog')
+      await editDialog.getByRole('button', { name: 'Edit Claim', exact: true }).click()
+      await page.waitForURL(/\/my\/salary\/other-claims\/apply/)
+      await page.getByRole('button', { name: `Edit ${submittedDescription}`, exact: true }).click()
+      await page.locator('#otherAllowanceDescription').fill(editedSubmittedDescription)
+      await page.getByRole('button', { name: 'Save', exact: true }).click()
+      await page.getByRole('button', { name: 'Submit', exact: true }).click()
+      await page.getByRole('button', { name: 'Apply Another', exact: true }).waitFor()
+
+      const edited = await poll('submitted claim update', async () => {
+        const record = await ownRecord(originalRecordId)
+        return record.status === 'Submitted' &&
+          record.claims?.some((claim) => claim.description === editedSubmittedDescription)
+          ? record
+          : null
+      })
+      return `record=${edited.id}`
     })
 
     await recordStep('REJECT submitted claim through finance detail UI', async () => {
@@ -525,7 +540,9 @@ const run = async () => {
       await dialog.getByRole('button', { name: 'Create Revision', exact: true }).click()
       await page.waitForURL(/\/my\/salary\/other-claims\/apply/)
 
-      await page.getByRole('button', { name: `Edit ${submittedDescription}`, exact: true }).click()
+      await page
+        .getByRole('button', { name: `Edit ${editedSubmittedDescription}`, exact: true })
+        .click()
       await page.locator('#otherAllowanceDescription').fill(revisedDescription)
       await page.locator('#otherAllowanceAmount').fill(updatedAmount)
       await page.getByRole('button', { name: 'Save', exact: true }).click()

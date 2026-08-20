@@ -13,7 +13,7 @@ vi.mock('../../notifications/appNotificationEvents', () => ({
   dispatchAppNotificationsChanged: vi.fn(),
 }))
 
-import { saveOtherClaimDraft } from './otherClaimRecordStorage'
+import { normalizeOtherClaimRecord, saveOtherClaimDraft } from './otherClaimRecordStorage'
 
 describe('saveOtherClaimDraft', () => {
   beforeEach(() => {
@@ -82,5 +82,37 @@ describe('saveOtherClaimDraft', () => {
     })
     expect(storedDraft.allowanceItems[0].attachments[0].dataUrl).toBeUndefined()
     expect(options.body.get('attachments[expense-1][receipt-1]')).toBeInstanceOf(File)
+  })
+})
+
+describe('normalizeOtherClaimRecord', () => {
+  it('keeps audit events and their previous claim snapshot for the detail timeline', () => {
+    expect(
+      normalizeOtherClaimRecord({
+        id: 42,
+        auditEvents: [
+          {
+            id: 8,
+            action: 'edit',
+            reason: 'Claim edited and resubmitted before review.',
+            previousSnapshot: {
+              claimsTotal: 120,
+              claims: [{ id: 'mileage-1' }],
+            },
+            actedAt: '2026-08-20T11:20:00Z',
+            actorName: 'Aina',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      auditEvents: [
+        {
+          id: 8,
+          action: 'edit',
+          previousSnapshot: { claimsTotal: 120, claims: [{ id: 'mileage-1' }] },
+          actorName: 'Aina',
+        },
+      ],
+    })
   })
 })

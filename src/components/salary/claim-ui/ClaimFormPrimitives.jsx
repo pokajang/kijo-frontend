@@ -5,6 +5,8 @@ import { formatAttachmentSize, salaryAttachmentAccept } from '../attachmentUtils
 const attachmentUrl = (attachment) =>
   attachment?.dataUrl || attachment?.url || attachment?.downloadUrl || ''
 
+const isInlinePreviewUrl = (url = '') => /^(data|blob):/i.test(String(url))
+
 const attachmentKind = (attachment) => {
   const type = String(attachment?.type || '').toLowerCase()
   const name = String(attachment?.name || attachment?.originalName || '').toLowerCase()
@@ -35,9 +37,18 @@ export const AttachmentPreviewModal = ({ attachment, onClose }) => {
         {kind === 'image' && url && (
           <img className="salary-attachment-preview-image" src={url} alt={name} />
         )}
-        {kind === 'pdf' && url && (
-          <iframe className="salary-attachment-preview-frame" src={url} title={name} />
-        )}
+        {kind === 'pdf' &&
+          url &&
+          (isInlinePreviewUrl(url) ? (
+            <iframe className="salary-attachment-preview-frame" src={url} title={name} />
+          ) : (
+            <div className="salary-attachment-preview-fallback">
+              <p>This PDF opens in a new tab.</p>
+              <CButton color="primary" href={url} target="_blank" rel="noopener noreferrer">
+                Open PDF in new tab
+              </CButton>
+            </div>
+          ))}
         {kind === 'file' && url && (
           <div className="salary-attachment-preview-fallback">
             This attachment type cannot be previewed inline.

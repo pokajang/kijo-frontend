@@ -18,6 +18,7 @@ import dialog from '../dialog/dialogService'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { formatMoney } from './salaryCalculations'
 import { AttachmentPreviewModal } from './claim-ui/ClaimFormPrimitives'
+import OtherClaimAuditTrail from './OtherClaimAuditTrail'
 import { downloadOtherClaim } from './OtherClaimRecords'
 import { findOtherClaimRecordByUrlKey, removeOtherClaimRecord } from './otherClaimRecordStorage'
 import { SalaryPayablePreviewTable } from './SalaryTables'
@@ -205,6 +206,7 @@ const OtherClaimRecordDetailPage = () => {
   const actions = useMemo(() => {
     const canRevise = record?.status === 'Rejected'
     const canEditDraft = record?.status === 'Draft'
+    const canEditSubmitted = ['Submitted', 'Prepared'].includes(record?.status)
     const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved'].includes(record?.status)
     return [
       {
@@ -236,10 +238,10 @@ const OtherClaimRecordDetailPage = () => {
           }
         },
       },
-      canEditDraft || canRevise
+      canEditDraft || canEditSubmitted || canRevise
         ? {
             key: 'edit',
-            label: canRevise ? 'Create Revision' : 'Edit Draft',
+            label: canRevise ? 'Create Revision' : canEditDraft ? 'Edit Draft' : 'Edit Claim',
             onClick: async (otherClaimRecord) => {
               let amendmentReason = ''
               if (otherClaimRecord.status === 'Rejected') {
@@ -257,6 +259,15 @@ const OtherClaimRecordDetailPage = () => {
                 if (reason === null) return
                 amendmentReason = String(reason || '').trim()
                 if (!amendmentReason) return
+              } else if (['Submitted', 'Prepared'].includes(otherClaimRecord.status)) {
+                const confirmed = await dialog.confirm(
+                  'Editing this claim will restart its review. The claim will need to be submitted again after your changes.',
+                  {
+                    title: 'Edit and resubmit other claim',
+                    confirmText: 'Edit Claim',
+                  },
+                )
+                if (!confirmed) return
               }
               navigate('/my/salary/other-claims/apply', {
                 state: { editRecord: otherClaimRecord, amendmentReason },
@@ -396,6 +407,11 @@ const OtherClaimRecordDetailPage = () => {
           </CTableBody>
         </CTable>
       </section>
+      <OtherClaimAuditTrail
+        events={record?.auditEvents || []}
+        formatDateTime={formatDateTime}
+        id="otherClaimAuditHeading"
+      />
       <section className="mt-4" aria-labelledby="otherClaimPaymentHeading">
         <h3 className="salary-form-panel-heading mb-3" id="otherClaimPaymentHeading">
           Payment history
