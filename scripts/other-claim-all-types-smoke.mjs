@@ -14,11 +14,11 @@ const password = process.env.SMOKE_PASSWORD
 const allowMutation = process.env.SMOKE_OTHER_CLAIM_ALLOW_MUTATION === '1'
 const headless = process.env.SMOKE_HEADLESS !== '0'
 const runLabel = `SMOKE Other Claim ${stamp}`
-const receipt = {
-  name: `receipt-${stamp}.pdf`,
+const receiptFor = (claimType) => ({
+  name: `receipt-${claimType}-${stamp}.pdf`,
   mimeType: 'application/pdf',
   buffer: Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<<>>\n%%EOF\n'),
-}
+})
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message)
@@ -160,7 +160,7 @@ const selectType = async (name, inputId) => {
   await page.locator(inputId).waitFor({ state: 'visible' })
 }
 
-const attachReceipt = async (inputId) => {
+const attachReceipt = async (inputId, receipt) => {
   await page.locator(inputId).setInputFiles(receipt)
   await page.getByText(receipt.name, { exact: false }).last().waitFor({ state: 'visible' })
   await poll(
@@ -172,6 +172,12 @@ const attachReceipt = async (inputId) => {
 const saveDraft = async (description) => {
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await page.getByText(description, { exact: false }).first().waitFor({ state: 'visible' })
+}
+
+const assertSummaryAttachment = async (receipt) => {
+  await page
+    .getByRole('button', { name: `Open ${receipt.name}`, exact: true })
+    .waitFor({ state: 'visible' })
 }
 
 const screenshot = (name) =>
@@ -231,22 +237,27 @@ try {
 
   await step('create allowance claim', async () => {
     const description = `${runLabel} allowance`
+    const receipt = receiptFor('allowance')
     await selectType('Non-Recurring Allowance', '#otherAllowanceDate')
     await page.locator('#otherAllowanceDate').fill(claimDate())
     await page.locator('#otherAllowanceDescription').fill(description)
     await page.locator('#otherAllowanceAmount').fill('11.10')
+    await attachReceipt('#otherAllowanceAttachment', receipt)
     await saveDraft(description)
-    return description
+    await assertSummaryAttachment(receipt)
+    return { description, receipt }
   })
 
   await step('create expense claim with receipt and preview it', async () => {
     const description = `${runLabel} expense`
+    const receipt = receiptFor('expense')
     await selectType('Expense', '#otherExpenseDate')
     await page.locator('#otherExpenseDate').fill(claimDate())
     await page.locator('#otherExpenseDescription').fill(description)
     await page.locator('#otherExpenseAmount').fill('22.20')
-    await attachReceipt('#otherExpenseAttachment')
+    await attachReceipt('#otherExpenseAttachment', receipt)
     await saveDraft(description)
+    await assertSummaryAttachment(receipt)
     await page.getByRole('button', { name: `Open ${receipt.name}`, exact: true }).click()
     const preview = page.locator('iframe.salary-attachment-preview-frame')
     await preview.waitFor({ state: 'visible' })
@@ -255,23 +266,27 @@ try {
       'New receipt did not retain an inline preview URL.',
     )
     await page.getByRole('button', { name: /close/i }).first().click()
-    return description
+    return { description, receipt }
   })
 
-  await step('create travel mileage claim', async () => {
+  await step('create travel mileage claim with receipt', async () => {
     const description = `${runLabel} mileage`
+    const receipt = receiptFor('mileage')
     await selectType('Travel & Mileage', '#otherMileageDate')
     await page.locator('#otherMileageDate').fill(claimDate())
     await page.locator('#otherMileagePurpose').fill(description)
     await page.locator('#otherStartLocation').fill('Smoke origin')
     await page.locator('#otherEndLocation').fill('Smoke destination')
     await page.locator('#otherMileageKm').fill('5')
+    await attachReceipt('#otherTravelEvidence', receipt)
     await saveDraft(description)
-    return description
+    await assertSummaryAttachment(receipt)
+    return { description, receipt }
   })
 
   await step('create medical claim or verify its entitlement guard', async () => {
     const description = `${runLabel} medical`
+    const receipt = receiptFor('medical')
     await selectType('Medical', '#otherMedicalDate')
     if (
       await page
@@ -289,22 +304,26 @@ try {
     await page.locator('#otherMedicalDate').fill(claimDate())
     await page.locator('#otherMedicalDescription').fill(description)
     await page.locator('#otherMedicalAmount').fill('33.30')
-    await attachReceipt('#otherMedicalAttachment')
+    await attachReceipt('#otherMedicalAttachment', receipt)
     await saveDraft(description)
-    return description
+    await assertSummaryAttachment(receipt)
+    return { description, receipt }
   })
 
   await step('verify the persisted draft and all covered items', async () => {
-    const expectedDescriptions = [
-      `${runLabel} allowance`,
-      `${runLabel} expense`,
-      `${runLabel} mileage`,
+    const expectedClaims = [
+      { description: `${runLabel} allowance`, receipt: receiptFor('allowance') },
+      { description: `${runLabel} expense`, receipt: receiptFor('expense') },
+      { description: `${runLabel} mileage`, receipt: receiptFor('mileage') },
     ]
     const medicalDescription = `${runLabel} medical`
     const medicalGuarded = await page
       .getByText('Set your annual medical entitlement before submitting.', { exact: true })
       .count()
-    if (!medicalGuarded) expectedDescriptions.push(medicalDescription)
+    if (!medicalGuarded) {
+      expectedClaims.push({ description: medicalDescription, receipt: receiptFor('medical') })
+    }
+    const expectedDescriptions = expectedClaims.map((claim) => claim.description)
     const records = await ownRecords()
     const record = records.find(
       (item) => item.status === 'Draft' && item.claimMonthValue === claimMonth,
@@ -320,10 +339,13 @@ try {
         ? current
         : null
     })
-    for (const description of expectedDescriptions) {
+    for (const { description, receipt } of expectedClaims) {
+      const claim = detail.claims.find((item) => item.description === description)
+      assert(claim, `Missing persisted claim: ${description}`)
       assert(
-        detail.claims.some((claim) => claim.description === description),
-        `Missing persisted claim: ${description}`,
+        Array.isArray(claim.attachments) &&
+          claim.attachments.some((attachment) => attachment.name === receipt.name),
+        `Missing persisted attachment for: ${description}`,
       )
     }
     if (!medicalGuarded)

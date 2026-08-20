@@ -101,6 +101,16 @@ describe('OtherClaimApply', () => {
     ])
   })
 
+  it('does not erase local attachments when a draft response omits them', () => {
+    const attachment = {
+      clientId: 'receipt-1',
+      name: 'receipt.pdf',
+      dataUrl: 'data:application/pdf;base64,AA==',
+    }
+
+    expect(mergeCanonicalAttachments([attachment], [])).toEqual([attachment])
+  })
+
   it('opens the default claim entry fields from Add Claim and keeps all claim types selectable', async () => {
     render(<OtherClaimApply />)
 

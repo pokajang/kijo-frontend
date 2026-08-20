@@ -138,6 +138,27 @@ describe('apiClient', () => {
     expect(writeInit.headers.get('X-CSRF-TOKEN')).toBe('fresh-csrf')
   })
 
+  it('does not send an unsafe request when session verification cannot refresh csrf', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Not logged in.' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const apiBase = import.meta.env.VITE_API_BASE || '/'
+    await expect(
+      apiFetch(`${apiBase}hr/salary/other-claims/draft`, {
+        method: 'POST',
+        body: new FormData(),
+      }),
+    ).rejects.toThrow('Your session could not be verified. Sign in again and retry.')
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toBe(`${apiBase}auth/session`)
+  })
+
   it('does not refresh csrf before public password reset requests', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ status: 'success' }), {

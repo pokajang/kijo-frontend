@@ -8,12 +8,14 @@ import { useAppNotifications } from '../../notifications/AppNotificationProvider
 import { formatMoney, roundMoney } from './salaryCalculations'
 import { clearOtherClaimDraft } from './otherClaimDraftStorage'
 import {
+  archiveOtherClaimRecord,
+  deleteOtherClaimRecord,
   exportOtherClaimPdf,
   findOtherClaimRecord,
   getOtherClaimRecordUrlKey,
   getOtherClaimRecords,
   otherClaimRecordsChangedEvent,
-  removeOtherClaimRecord,
+  withdrawOtherClaimRecord,
 } from './otherClaimRecordStorage'
 import { SalaryRecordTable } from './SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from './salaryFileUtils'
@@ -161,6 +163,7 @@ const OtherClaimRecords = ({
   const [error, setError] = useState('')
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [recordsScope, setRecordsScope] = useState('current')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [exportingRecordId, setExportingRecordId] = useState(null)
   const { consumeRouteGroup } = useAppNotifications()
@@ -172,13 +175,13 @@ const OtherClaimRecords = ({
     setLoading(true)
     setError('')
     try {
-      setStoredRecords(await getOtherClaimRecords())
+      setStoredRecords(await getOtherClaimRecords(recordsScope))
     } catch (err) {
       setError(err?.message || 'Unable to load other claim records.')
     } finally {
       setLoading(false)
     }
-  }, [recordsProp])
+  }, [recordsProp, recordsScope])
 
   useEffect(() => {
     if (recordsProp) return undefined
@@ -325,7 +328,7 @@ const OtherClaimRecords = ({
     })
   }
 
-  const deleteRecord = async (record) => {
+  const deleteOrWithdrawRecord = async (record) => {
     if (!record?.id) return
     if (paidStatuses.has(record.status)) return
     const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
@@ -348,24 +351,64 @@ const OtherClaimRecords = ({
       if (reason === null) return
       cancellationReason = String(reason || '').trim()
       if (!cancellationReason) return
-    } else if (
-      !(await dialog.confirm(`Delete this other claim draft from ${formatClaimDate(record)}?`, {
-        title: 'Delete Other Claim Draft',
-        confirmText: 'Delete',
-        confirmColor: 'danger',
-      }))
-    ) {
-      return
+    } else {
+      const confirmation = await dialog.prompt(
+        `You are about to permanently delete this ${record.status === 'Draft' ? 'draft' : 'withdrawn'} claim from ${formatClaimDate(record)}. This cannot be undone: its claim items, uploads, workflow, notifications, and audit history will be removed. Type DELETE to continue.`,
+        {
+          title: 'Delete Other Claim Permanently',
+          confirmText: 'Delete Permanently',
+          confirmColor: 'danger',
+          required: true,
+          placeholder: 'Type DELETE',
+        },
+      )
+      if (confirmation === null) return
+      if (String(confirmation).trim() !== 'DELETE') {
+        setError('Type DELETE exactly to permanently delete this other claim.')
+        return
+      }
     }
 
     try {
-      await removeOtherClaimRecord(record.id, cancellationReason, record.recordVersion)
+      if (canWithdraw) {
+        await withdrawOtherClaimRecord(record.id, cancellationReason, record.recordVersion)
+      } else {
+        await deleteOtherClaimRecord(record.id, record.recordVersion)
+      }
       if (record.status === 'Draft') {
         clearOtherClaimDraft({ claimMonth: record.claimMonthValue })
       }
       await refreshRecords()
     } catch (err) {
-      setError(err?.message || 'Unable to delete other claim record.')
+      setError(
+        err?.message ||
+          (canWithdraw
+            ? 'Unable to withdraw other claim record.'
+            : 'Unable to permanently delete other claim.'),
+      )
+    }
+  }
+
+  const archiveRecord = async (record) => {
+    if (!record?.id || record.status !== 'Cancelled' || record.archivedAt) return
+    const reason = await dialog.prompt(
+      'This hides the withdrawn claim from your current records. Its claim items and audit history remain available to authorized administrators.',
+      {
+        title: 'Archive Withdrawn Claim',
+        confirmText: 'Archive Claim',
+        confirmColor: 'danger',
+        multiline: true,
+        rows: 3,
+        placeholder: 'Optional archive note',
+      },
+    )
+    if (reason === null) return
+
+    try {
+      await archiveOtherClaimRecord(record.id, String(reason).trim(), record.recordVersion)
+      await refreshRecords()
+    } catch (err) {
+      setError(err?.message || 'Unable to archive withdrawn other claim.')
     }
   }
 
@@ -389,10 +432,11 @@ const OtherClaimRecords = ({
     const isPaid = paidStatuses.has(record.status)
     const isExporting = exportingRecordId === record.id
     const canEdit = ['Draft', 'Submitted', 'Prepared', 'Rejected'].includes(record.status)
-    const canDeleteDraft = record.status === 'Draft'
     const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
       record.status,
     )
+    const canArchive = record.status === 'Cancelled' && !record.archivedAt
+    const canHardDelete = ['Draft', 'Cancelled'].includes(record.status)
     return [
       {
         key: 'export-claims',
@@ -413,12 +457,20 @@ const OtherClaimRecords = ({
             onClick: editRecord,
           }
         : null,
-      !isPaid && (canWithdraw || canDeleteDraft)
+      !isPaid && (canWithdraw || canHardDelete)
         ? {
-            key: canWithdraw ? 'withdraw' : 'delete',
-            label: canWithdraw ? 'Withdraw Claim' : 'Delete Draft',
+            key: canWithdraw ? 'withdraw' : 'delete-permanently',
+            label: canWithdraw ? 'Withdraw Claim' : 'Delete Permanently',
             danger: true,
-            onClick: deleteRecord,
+            onClick: deleteOrWithdrawRecord,
+          }
+        : null,
+      canArchive
+        ? {
+            key: 'archive',
+            label: 'Archive Withdrawn Claim',
+            danger: true,
+            onClick: archiveRecord,
           }
         : null,
     ].filter(Boolean)
@@ -481,16 +533,19 @@ const OtherClaimRecords = ({
     statusFilter !== 'all'
       ? { key: 'status', label: `Status: ${displayStatus(statusFilter)}` }
       : null,
+    recordsScope === 'archived' ? { key: 'scope', label: 'Archived withdrawals' } : null,
   ].filter(Boolean)
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
     if (key === 'status') setStatusFilter('all')
+    if (key === 'scope') setRecordsScope('current')
   }
 
   const resetFilters = () => {
     setSearchText('')
     setStatusFilter('all')
+    setRecordsScope('current')
   }
 
   return (
@@ -522,7 +577,7 @@ const OtherClaimRecords = ({
         searchAriaLabel="Search other claim records"
         showAdvancedFilters={showAdvancedFilters}
         setShowAdvancedFilters={setShowAdvancedFilters}
-        activeFilterCount={statusFilter !== 'all' ? 1 : 0}
+        activeFilterCount={(statusFilter !== 'all' ? 1 : 0) + (recordsScope === 'archived' ? 1 : 0)}
         activeChips={activeChips}
         clearChip={clearChip}
         resetFilters={resetFilters}
@@ -533,6 +588,17 @@ const OtherClaimRecords = ({
         advancedClassName="mt-2"
         loading={loading}
       >
+        <CCol xs={12} md={4}>
+          <CFormLabel htmlFor="otherClaimScopeFilter">Records</CFormLabel>
+          <CFormSelect
+            id="otherClaimScopeFilter"
+            value={recordsScope}
+            onChange={(event) => setRecordsScope(event.target.value)}
+          >
+            <option value="current">Current records</option>
+            <option value="archived">Archived withdrawals</option>
+          </CFormSelect>
+        </CCol>
         <CCol xs={12} md={4}>
           <CFormLabel htmlFor="otherClaimStatusFilter">Status</CFormLabel>
           <CFormSelect
@@ -605,7 +671,7 @@ const OtherClaimRecords = ({
           claimsTotal: 'desc',
           status: 'asc',
         }}
-        resetDeps={[searchText, statusFilter]}
+        resetDeps={[searchText, statusFilter, recordsScope]}
       />
     </>
   )

@@ -1,1 +1,0 @@
-import{j as o}from"./vendor-react-B4h96LKZ.js";import{M as r}from"./ModuleNavStrip-D-prJDIw.js";import{a4 as a}from"./DefaultLayout-BCimmLxa.js";const l=t=>o.jsx(r,{ariaLabel:"Client sections",...t,tabs:a});export{l as C};

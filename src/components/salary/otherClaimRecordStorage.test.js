@@ -13,7 +13,14 @@ vi.mock('../../notifications/appNotificationEvents', () => ({
   dispatchAppNotificationsChanged: vi.fn(),
 }))
 
-import { normalizeOtherClaimRecord, saveOtherClaimDraft } from './otherClaimRecordStorage'
+import {
+  archiveOtherClaimRecord,
+  deleteOtherClaimRecord,
+  getOtherClaimRecords,
+  normalizeOtherClaimRecord,
+  saveOtherClaimDraft,
+  withdrawOtherClaimRecord,
+} from './otherClaimRecordStorage'
 
 describe('saveOtherClaimDraft', () => {
   beforeEach(() => {
@@ -86,6 +93,41 @@ describe('saveOtherClaimDraft', () => {
 })
 
 describe('normalizeOtherClaimRecord', () => {
+  it('preserves a redacted financial worklist row without converting values to zero', () => {
+    expect(
+      normalizeOtherClaimRecord({
+        id: 42,
+        status: 'Submitted',
+        canViewFinancialDetails: false,
+        financialDetailsRestricted: true,
+        claimsTotal: null,
+      }),
+    ).toMatchObject({
+      canViewFinancialDetails: false,
+      financialDetailsRestricted: true,
+      claimsTotal: null,
+    })
+  })
+
+  it('keeps archive state needed for the withdrawn-claim lifecycle', () => {
+    expect(
+      normalizeOtherClaimRecord({
+        id: 42,
+        status: 'Cancelled',
+        archivedAt: '2026-08-20T11:20:00Z',
+        archivedBy: 10,
+        archiveReason: 'No longer needed.',
+        canRestoreArchived: true,
+      }),
+    ).toMatchObject({
+      status: 'Cancelled',
+      archivedAt: '2026-08-20T11:20:00Z',
+      archivedBy: 10,
+      archiveReason: 'No longer needed.',
+      canRestoreArchived: true,
+    })
+  })
+
   it('keeps audit events and their previous claim snapshot for the detail timeline', () => {
     expect(
       normalizeOtherClaimRecord({
@@ -113,6 +155,68 @@ describe('normalizeOtherClaimRecord', () => {
           actorName: 'Aina',
         },
       ],
+    })
+  })
+})
+
+describe('archived other-claim records', () => {
+  beforeEach(() => {
+    apiMock.apiJson.mockReset()
+  })
+
+  it('requests the archived scope and posts archive actions with optimistic versioning', async () => {
+    apiMock.apiJson
+      .mockResolvedValueOnce({ records: [] })
+      .mockResolvedValueOnce({ status: 'success' })
+
+    await getOtherClaimRecords('archived')
+    await archiveOtherClaimRecord(42, 'No longer needed.', 3)
+
+    expect(apiMock.apiJson).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('hr/salary/other-claims?scope=archived'),
+    )
+    expect(apiMock.apiJson).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('hr/salary/other-claims/42/archive'),
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(JSON.parse(apiMock.apiJson.mock.calls[1][1].body)).toEqual({
+      reason: 'No longer needed.',
+      record_version: 3,
+    })
+  })
+})
+
+describe('withdraw and hard-delete other claims', () => {
+  beforeEach(() => {
+    apiMock.apiJson.mockReset()
+    apiMock.apiJson.mockResolvedValue({ status: 'success' })
+  })
+
+  it('uses an explicit withdrawal endpoint instead of DELETE', async () => {
+    await withdrawOtherClaimRecord(42, 'Submitted by mistake.', 3)
+
+    expect(apiMock.apiJson).toHaveBeenCalledWith(
+      expect.stringContaining('hr/salary/other-claims/42/withdraw'),
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(JSON.parse(apiMock.apiJson.mock.calls[0][1].body)).toEqual({
+      reason: 'Submitted by mistake.',
+      record_version: 3,
+    })
+  })
+
+  it('uses DELETE only for permanent removal and sends the required confirmation', async () => {
+    await deleteOtherClaimRecord(42, 3)
+
+    expect(apiMock.apiJson).toHaveBeenCalledWith(
+      expect.stringContaining('hr/salary/other-claims/42'),
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+    expect(JSON.parse(apiMock.apiJson.mock.calls[0][1].body)).toEqual({
+      confirmation: 'DELETE',
+      record_version: 3,
     })
   })
 })

@@ -24,7 +24,8 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { financialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
-import { formatMoney, roundMoney } from '../../../components/salary/salaryCalculations'
+import { useAuth } from '../../../auth/AuthProvider'
+import { formatMoney } from '../../../components/salary/salaryCalculations'
 import { SalaryRecordTable } from '../../../components/salary/SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from '../../../components/salary/salaryFileUtils'
 import {
@@ -38,6 +39,9 @@ const displayStatus = (status) => {
   if (status === 'Cancelled') return 'Withdrawn'
   return status
 }
+export const canExportFinancialOtherClaim = (record = {}) =>
+  record.canViewFinancialDetails !== false && record.status !== 'Cancelled'
+
 const getStatusTone = (status) => {
   if (displayStatus(status) === 'Approved') return 'success'
   if (status === 'Paid') return 'success'
@@ -52,7 +56,8 @@ const formatSubmittedAt = (value) => {
   if (Number.isNaN(date.getTime())) return String(value).slice(0, 16)
   return date.toLocaleDateString('en-MY', { day: '2-digit', month: 'short', year: 'numeric' })
 }
-const workflowText = (record = {}) => {
+export const workflowText = (record = {}) => {
+  if (record.workflow?.summary) return record.workflow.summary
   const history = Array.isArray(record.workflow?.history) ? record.workflow.history : []
   const steps = history
     .filter((entry) => entry.action !== 'submit')
@@ -63,6 +68,49 @@ const workflowText = (record = {}) => {
   if (submittedStatuses.has(record.status)) steps.push('Pending check')
   if (record.status === 'Checked') steps.push('Pending approval')
   return steps.join('\n')
+}
+
+export const claimsTotalText = (record = {}) =>
+  record.canViewFinancialDetails === false || record.claimsTotal === null
+    ? 'Restricted'
+    : formatMoney(record.claimsTotal)
+
+export const buildFinancialOtherClaimStats = (records = []) => {
+  const submitted = records.filter((record) => submittedStatuses.has(record.status)).length
+  const checked = records.filter((record) => record.status === 'Checked').length
+  const approved = records.filter((record) => displayStatus(record.status) === 'Approved').length
+  const rejected = records.filter((record) => record.status === 'Rejected').length
+
+  return [
+    {
+      key: 'submitted',
+      label: 'Submitted',
+      value: submitted,
+      sublabel: 'pending check',
+      tone: 'info',
+    },
+    {
+      key: 'checked',
+      label: 'Checked',
+      value: checked,
+      sublabel: 'pending approval',
+      tone: 'primary',
+    },
+    {
+      key: 'approved',
+      label: 'Approved',
+      value: approved,
+      sublabel: 'decision completed',
+      tone: 'success',
+    },
+    {
+      key: 'rejected',
+      label: 'Rejected',
+      value: rejected,
+      sublabel: 'needs claimant revision',
+      tone: 'danger',
+    },
+  ]
 }
 
 const dataColumns = [
@@ -123,7 +171,7 @@ const dataColumns = [
     sortable: true,
     sortType: 'number',
     align: 'right',
-    getExportValue: (record) => formatMoney(record.claimsTotal),
+    getExportValue: (record) => claimsTotalText(record),
   },
 ]
 const defaultVisibleColumns = {
@@ -156,12 +204,14 @@ const FinancialOtherClaimRecordsPage = () => {
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('financial.other-claim-records')
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { consumeRouteGroup } = useAppNotifications()
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [recordsScope, setRecordsScope] = useState('current')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [exportingRecordId, setExportingRecordId] = useState(null)
 
@@ -169,13 +219,13 @@ const FinancialOtherClaimRecordsPage = () => {
     setLoading(true)
     setError('')
     try {
-      setRecords(await fetchFinancialOtherClaimRecords())
+      setRecords(await fetchFinancialOtherClaimRecords(recordsScope))
     } catch (err) {
       setError(err?.message || 'Unable to load other claim records.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [recordsScope])
 
   useEffect(() => {
     loadRecords()
@@ -187,6 +237,10 @@ const FinancialOtherClaimRecordsPage = () => {
       moduleKeys: ['financial.other-claims'],
     }).catch(() => {})
   }, [consumeRouteGroup])
+
+  const canManageArchivedClaims = Array.isArray(user?.roles)
+    ? user.roles.some((role) => ['HR', 'System Admin', 'System Administrator'].includes(role))
+    : false
 
   const normalizedRecords = useMemo(
     () =>
@@ -232,77 +286,25 @@ const FinancialOtherClaimRecordsPage = () => {
     statusFilter !== 'all'
       ? { key: 'status', label: `Status: ${displayStatus(statusFilter)}` }
       : null,
+    recordsScope === 'archived' ? { key: 'scope', label: 'Archived withdrawals' } : null,
   ].filter(Boolean)
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
     if (key === 'status') setStatusFilter('all')
+    if (key === 'scope') setRecordsScope('current')
   }
 
   const resetFilters = () => {
     setSearchText('')
     setStatusFilter('all')
+    setRecordsScope('current')
   }
 
-  const statsItems = useMemo(() => {
-    const submitted = filteredRecords.filter((record) =>
-      submittedStatuses.has(record.status),
-    ).length
-    const checked = filteredRecords.filter((record) => record.status === 'Checked').length
-    const approved = filteredRecords.filter(
-      (record) => displayStatus(record.status) === 'Approved',
-    ).length
-    const paid = filteredRecords.filter((record) => record.status === 'Paid').length
-    const rejected = filteredRecords.filter((record) => record.status === 'Rejected').length
-    const claimsTotal = filteredRecords.reduce(
-      (sum, record) => sum + Number(record.claimsTotal || 0),
-      0,
-    )
-    return [
-      {
-        key: 'submitted',
-        label: 'Submitted',
-        value: submitted,
-        sublabel: 'pending check',
-        tone: 'info',
-      },
-      {
-        key: 'checked',
-        label: 'Checked',
-        value: checked,
-        sublabel: 'pending approval',
-        tone: 'primary',
-      },
-      {
-        key: 'approved',
-        label: 'Approved',
-        value: approved,
-        sublabel: 'finalized',
-        tone: 'success',
-      },
-      {
-        key: 'paid',
-        label: 'Paid',
-        value: paid,
-        sublabel: 'payment completed',
-        tone: 'success',
-      },
-      {
-        key: 'rejected',
-        label: 'Rejected',
-        value: rejected,
-        sublabel: 'needs revision',
-        tone: 'danger',
-      },
-      {
-        key: 'claims',
-        label: 'Claims Total',
-        value: formatMoney(roundMoney(claimsTotal)),
-        sublabel: 'shown records',
-        tone: 'warning',
-      },
-    ]
-  }, [filteredRecords])
+  const statsItems = useMemo(
+    () => buildFinancialOtherClaimStats(filteredRecords),
+    [filteredRecords],
+  )
 
   const exportClaim = async (record) => {
     if (!record?.id || exportingRecordId) return
@@ -322,21 +324,27 @@ const FinancialOtherClaimRecordsPage = () => {
   }
 
   const openDetail = (record) => {
-    if (!record?.id) return
+    if (!record?.id || record.canViewFinancialDetails === false) return
     navigate(`/financial/other-claim-records/${encodeURIComponent(record.id)}`, {
       state: { record },
     })
   }
 
-  const getActions = (record) => [
-    { key: 'review-details', label: 'Review Details', onClick: openDetail },
-    {
-      key: 'export-claims',
-      label: exportingRecordId === record.id ? 'Preparing PDF...' : 'Export Claims',
-      disabled: Boolean(exportingRecordId),
-      onClick: exportClaim,
-    },
-  ]
+  const getActions = (record) => {
+    if (record.canViewFinancialDetails === false) return []
+
+    return [
+      { key: 'review-details', label: 'Review Details', onClick: openDetail },
+      canExportFinancialOtherClaim(record)
+        ? {
+            key: 'export-claims',
+            label: exportingRecordId === record.id ? 'Preparing PDF...' : 'Export Claims',
+            disabled: Boolean(exportingRecordId),
+            onClick: exportClaim,
+          }
+        : null,
+    ].filter(Boolean)
+  }
 
   const renderWorkflow = (record) => {
     const actions = Array.isArray(record.workflow?.availableActions)
@@ -375,6 +383,11 @@ const FinancialOtherClaimRecordsPage = () => {
             </CButton>
           </div>
         )}
+        {record.canViewFinancialDetails === false && (
+          <div className="small text-muted mt-1">
+            Details restricted - not assigned to this workflow.
+          </div>
+        )}
       </div>
     )
   }
@@ -389,15 +402,11 @@ const FinancialOtherClaimRecordsPage = () => {
     }
     if (column.key === 'workflow') return renderWorkflow(record)
     if (column.key === 'claimReference')
-      return (
-        <strong>
-          {record.claimReference || '-'} rev {record.revisionNo || 1}
-        </strong>
-      )
+      return `${record.claimReference || '-'} rev ${record.revisionNo || 1}`
     if (column.key === 'staff') return record.staffLabel
-    if (column.key === 'claimMonth') return <strong>{record.claimMonth}</strong>
+    if (column.key === 'claimMonth') return record.claimMonth
     if (column.key === 'submittedAt') return record.submittedDisplay
-    if (column.key === 'claimsTotal') return <strong>{formatMoney(record.claimsTotal)}</strong>
+    if (column.key === 'claimsTotal') return claimsTotalText(record)
     return record[column.key] || '-'
   }
 
@@ -440,7 +449,9 @@ const FinancialOtherClaimRecordsPage = () => {
                 searchAriaLabel="Search other claim records"
                 showAdvancedFilters={showAdvancedFilters}
                 setShowAdvancedFilters={setShowAdvancedFilters}
-                activeFilterCount={statusFilter !== 'all' ? 1 : 0}
+                activeFilterCount={
+                  (statusFilter !== 'all' ? 1 : 0) + (recordsScope === 'archived' ? 1 : 0)
+                }
                 activeChips={activeChips}
                 clearChip={clearChip}
                 resetFilters={resetFilters}
@@ -451,6 +462,22 @@ const FinancialOtherClaimRecordsPage = () => {
                 advancedClassName="mt-2"
                 loading={loading}
               >
+                {canManageArchivedClaims && (
+                  <CCol xs={12} md={4}>
+                    <CFormLabel htmlFor="financialOtherClaimScopeFilter">Records</CFormLabel>
+                    <CFormSelect
+                      id="financialOtherClaimScopeFilter"
+                      value={recordsScope}
+                      onChange={(event) => {
+                        setStatusFilter('all')
+                        setRecordsScope(event.target.value)
+                      }}
+                    >
+                      <option value="current">Current records</option>
+                      <option value="archived">Archived withdrawals</option>
+                    </CFormSelect>
+                  </CCol>
+                )}
                 <CCol xs={12} md={4}>
                   <CFormLabel htmlFor="financialOtherClaimStatusFilter">Status</CFormLabel>
                   <CFormSelect
@@ -503,19 +530,21 @@ const FinancialOtherClaimRecordsPage = () => {
                         </div>
                         <div className="records-mobile-client mt-1">
                           {record.staffLabel} · {record.claimMonth} · Claims{' '}
-                          {formatMoney(record.claimsTotal)}
+                          {claimsTotalText(record)}
                         </div>
                       </div>
                       <div className="salary-record-mobile-card-actions">
                         <DataTableStatusBadge tone={getStatusTone(record.status)}>
                           {displayStatus(record.status)}
                         </DataTableStatusBadge>
-                        <DataTableActionMenu
-                          record={record}
-                          actions={getActions(record)}
-                          actionKey={`financial-other-claim-${record.id || index}`}
-                          ariaLabel="Other claim actions"
-                        />
+                        {getActions(record).length > 0 && (
+                          <DataTableActionMenu
+                            record={record}
+                            actions={getActions(record)}
+                            actionKey={`financial-other-claim-${record.id || index}`}
+                            ariaLabel="Other claim actions"
+                          />
+                        )}
                       </div>
                     </div>
                     {renderWorkflow(record)}
@@ -529,7 +558,7 @@ const FinancialOtherClaimRecordsPage = () => {
                   submittedAt: 'desc',
                   claimsTotal: 'desc',
                 }}
-                resetDeps={[searchText, statusFilter]}
+                resetDeps={[searchText, statusFilter, recordsScope]}
               />
             </CCardBody>
           </CCard>

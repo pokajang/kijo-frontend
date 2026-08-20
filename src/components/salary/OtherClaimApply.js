@@ -26,6 +26,7 @@ import {
   createEmptyClaimFields,
   draftHasContent,
   firstClaimType,
+  getClaimAttachments,
   getCurrentClaimMonth,
   isCompleteClaim,
   mapClaimItems,
@@ -70,13 +71,17 @@ const canonicalVolatileKeys = new Set(['url', 'downloadUrl', 'file', 'dataUrl'])
 const canonicalComparable = (value) =>
   JSON.stringify(value, (key, nested) => (canonicalVolatileKeys.has(key) ? undefined : nested))
 
-const claimAttachmentList = (claim = {}) =>
-  Array.isArray(claim.attachments) ? claim.attachments : claim.attachment ? [claim.attachment] : []
-
 export const mergeCanonicalAttachments = (localAttachments = [], canonicalAttachments = []) => {
-  const localList = Array.isArray(localAttachments) ? localAttachments : []
+  const localList = Array.isArray(localAttachments) ? localAttachments.filter(Boolean) : []
+  const canonicalList = Array.isArray(canonicalAttachments)
+    ? canonicalAttachments.filter(Boolean)
+    : []
 
-  return canonicalAttachments.map((attachment, index) => {
+  // A partial or stale draft response must never erase locally retained evidence. The next
+  // successful sync will replace these local entries with canonical server attachments.
+  if (canonicalList.length === 0) return localList
+
+  return canonicalList.map((attachment, index) => {
     const local =
       localList.find(
         (candidate) => candidate?.id && String(candidate.id) === String(attachment.id),
@@ -104,8 +109,8 @@ const mergeCanonicalClaimItems = (items, type, canonicalClaims = []) => {
     if (!canonical) return item
 
     const attachments = mergeCanonicalAttachments(
-      claimAttachmentList(item),
-      claimAttachmentList(canonical),
+      getClaimAttachments(item),
+      getClaimAttachments(canonical),
     )
     const nextItem = {
       ...item,
@@ -918,7 +923,7 @@ const OtherClaimApply = ({
           const linkedMileage = mileageItems.find(
             (mileageItem) => item.travelGroupId && mileageItem.travelGroupId === item.travelGroupId,
           )
-          const attachments = item.attachments || (item.attachment ? [item.attachment] : [])
+          const attachments = getClaimAttachments(item)
           setFormData((prev) => ({
             ...prev,
             mileageDate: item.date || linkedMileage?.date || '',
@@ -959,7 +964,7 @@ const OtherClaimApply = ({
           medicalAttachment: item.attachment || null,
         }))
       } else if (type === 'mileage') {
-        const attachments = item.attachments || (item.attachment ? [item.attachment] : [])
+        const attachments = getClaimAttachments(item)
         setFormData((prev) => ({
           ...prev,
           mileageDate: item.date || '',
@@ -1238,8 +1243,8 @@ const OtherClaimApply = ({
               if (!canonical) return claim
 
               const attachments = mergeCanonicalAttachments(
-                claimAttachmentList(claim),
-                claimAttachmentList(canonical),
+                getClaimAttachments(claim),
+                getClaimAttachments(canonical),
               )
               return { ...claim, attachments, attachment: attachments[0] || null }
             })

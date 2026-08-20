@@ -186,7 +186,13 @@ export async function apiFetch(input, init = {}) {
       apiPath &&
       !PUBLIC_UNSAFE_PATHS.some((publicPath) => apiPath.startsWith(publicPath))
     ) {
-      await refreshCsrfToken(originalFetch)
+      const csrfRefreshed = await refreshCsrfToken(originalFetch)
+      if (!csrfRefreshed) {
+        const error = new Error('Your session could not be verified. Sign in again and retry.')
+        error.status = 401
+        if (typeof unauthorizedHandler === 'function') unauthorizedHandler()
+        throw error
+      }
     }
 
     requestInit = withCsrfHeader(requestInit)

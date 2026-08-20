@@ -13,6 +13,8 @@ const actionLabels = {
   amend: 'Revision created',
   edit: 'Claim edited and resubmitted',
   withdraw: 'Claim withdrawn',
+  archive: 'Withdrawn claim archived',
+  restore_archive: 'Archived claim restored',
 }
 
 const eventDetails = (event = {}) => {
