@@ -118,7 +118,7 @@ const InvoiceDetailPage = () => {
           buttonColor: 'secondary',
           onClick: () => runAction('generate'),
         },
-        invoice.isEquipment
+        invoice.isWordInvoiceSupported
           ? {
               key: 'generate-word',
               label: 'Word Invoice',

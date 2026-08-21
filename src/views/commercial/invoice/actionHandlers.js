@@ -35,6 +35,22 @@ const addDaysToDate = (dateValue, days) => {
   return date.toISOString().slice(0, 10)
 }
 
+export const isWordInvoiceService = (serviceType) =>
+  [
+    'equipment',
+    'equipment supply',
+    'training',
+    'industrial hygiene',
+    'ih',
+    'manpower supply',
+    'special service',
+    'special',
+  ].includes(
+    String(serviceType || '')
+      .trim()
+      .toLowerCase(),
+  )
+
 /**
  * Lookup endpoint by action
  */
@@ -169,6 +185,7 @@ export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = t
           hrdClaimRef: hrd_claim_ref || '',
           isHrdTraining,
           isEquipment,
+          isWordInvoiceSupported: isWordInvoiceService(service_type),
 
           // Use the aliased field here
           loaNo: loa_number || '',

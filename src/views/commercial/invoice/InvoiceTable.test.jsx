@@ -29,10 +29,15 @@ describe('InvoiceTable Word action scope', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => cleanup())
 
-  it('keeps PDF receipts case-insensitive and limits Word actions to equipment invoices', () => {
+  it('keeps PDF receipts case-insensitive while offering Word invoices for every service', () => {
     render(
       <InvoiceTable
-        invoices={[invoice('Equipment Supply', 'paid'), invoice('Training', 'Paid')]}
+        invoices={[
+          invoice('Equipment Supply', 'paid'),
+          invoice('Training', 'Paid'),
+          invoice('Special', 'Open'),
+          invoice('Legacy Service', 'Open'),
+        ]}
         onAction={vi.fn()}
         onDelete={vi.fn()}
       />,
@@ -41,12 +46,16 @@ describe('InvoiceTable Word action scope', () => {
     const props = recordListMock.mock.calls.at(-1)[0]
     const equipmentActions = props.getActions(props.rows[0]).map((action) => action.label)
     const trainingActions = props.getActions(props.rows[1]).map((action) => action.label)
+    const specialActions = props.getActions(props.rows[2]).map((action) => action.label)
+    const unsupportedActions = props.getActions(props.rows[3]).map((action) => action.label)
 
     expect(equipmentActions).toEqual(
       expect.arrayContaining(['PDF Invoice', 'Word Invoice', 'PDF Receipt', 'Word Receipt']),
     )
     expect(trainingActions).toContain('PDF Receipt')
-    expect(trainingActions).not.toContain('Word Invoice')
+    expect(trainingActions).toContain('Word Invoice')
     expect(trainingActions).not.toContain('Word Receipt')
+    expect(specialActions).toContain('Word Invoice')
+    expect(unsupportedActions).not.toContain('Word Invoice')
   })
 })

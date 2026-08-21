@@ -4,6 +4,7 @@ import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { getAgeTone } from '../debtors/debtorUtils'
 import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
+import { isWordInvoiceService } from './actionHandlers'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.invoices.visible-columns.v4'
@@ -216,6 +217,8 @@ const InvoiceTable = ({
             .toLowerCase()
             .includes('hrd')
         const isEquipment = inv.isEquipment ?? isEquipmentService(serviceType)
+        const isWordInvoiceSupported =
+          inv.isWordInvoiceSupported ?? isWordInvoiceService(serviceType)
 
         return {
           ...inv,
@@ -244,6 +247,7 @@ const InvoiceTable = ({
           status: inv.status || emptyValue,
           isHrdTraining,
           isEquipment,
+          isWordInvoiceSupported,
           internalPicDisplay:
             inv.internalPic?.code || inv.internalPic?.name || inv.internalPic?.id || emptyValue,
         }
@@ -320,7 +324,7 @@ const InvoiceTable = ({
         label: 'PDF Invoice',
         onClick: () => onAction('generate', inv),
       },
-      inv.isEquipment
+      inv.isWordInvoiceSupported
         ? {
             key: 'generate-word',
             label: 'Word Invoice',
