@@ -5,6 +5,7 @@ const VendorLoaSuccessStep = ({
   origin = 'project',
   selectedVendor,
   onGenerateLoa,
+  onGenerateWord,
   onReturnToList,
   onManageProject,
 }) => (
@@ -27,6 +28,9 @@ const VendorLoaSuccessStep = ({
       </CButton>
       <CButton color="primary" size="sm" onClick={onGenerateLoa}>
         Generate LOA
+      </CButton>
+      <CButton color="primary" size="sm" variant="outline" onClick={onGenerateWord}>
+        Generate Word
       </CButton>
     </CCardFooter>
   </>

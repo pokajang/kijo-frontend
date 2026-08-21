@@ -8,6 +8,8 @@ import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
+import { getVendorLoaWordUrl } from './create/vendorLoaCreatePayload'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.vendor-loa.visible-columns.v3'
@@ -174,6 +176,18 @@ const VendorLoaTable = ({
     window.open(
       `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(record.project_id)}/loa?${params.toString()}`,
       '_blank',
+    )
+  }
+
+  const handleGenerateLoaWord = (record) => {
+    if (!record?.project_id || !record?.vendor_id) return
+    return downloadCommercialWord(
+      getVendorLoaWordUrl({
+        projectId: record.project_id,
+        vendorId: record.vendor_id,
+        assignmentId: record.id,
+      }),
+      `${record.loa_ref_no || 'vendor-loa'}.docx`,
     )
   }
 
@@ -427,11 +441,16 @@ const VendorLoaTable = ({
       label: 'Edit',
       onClick: handleEdit,
     },
-    {
-      key: 'generate-loa',
-      label: 'Generate LOA',
-      onClick: handleGenerateLoa,
-    },
+      {
+        key: 'generate-loa',
+        label: 'Generate LOA',
+        onClick: handleGenerateLoa,
+      },
+      {
+        key: 'generate-loa-word',
+        label: 'Generate Word',
+        onClick: handleGenerateLoaWord,
+      },
     {
       key: 'mark-paid',
       label: 'Mark Paid',

@@ -29,7 +29,9 @@ import {
   buildVendorLoaCreatePayload,
   getCreatedAssignmentId,
   getVendorLoaUrl,
+  getVendorLoaWordUrl,
 } from './vendorLoaCreatePayload'
+import { downloadCommercialWord } from '../../shared/commercialWordDownload'
 import VendorLoaReviewStep from './VendorLoaReviewStep'
 import VendorLoaSuccessStep from './VendorLoaSuccessStep'
 
@@ -171,6 +173,18 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
         assignmentId: createdAssignmentId,
       }),
       '_blank',
+    )
+  }
+
+  const handleGenerateLoaWord = () => {
+    if (!project?.id || !selectedVendor?.vendor_id) return
+    return downloadCommercialWord(
+      getVendorLoaWordUrl({
+        projectId: project.id,
+        vendorId: selectedVendor.vendor_id,
+        assignmentId: createdAssignmentId,
+      }),
+      'vendor-loa.docx',
     )
   }
 
@@ -343,6 +357,7 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
           origin={origin}
           selectedVendor={selectedVendor}
           onGenerateLoa={handleGenerateLoa}
+          onGenerateWord={handleGenerateLoaWord}
           onReturnToList={() => navigate('/commercial/vendor-loa')}
           onManageProject={() => navigate(`/project/manage/${project?.id}`)}
         />

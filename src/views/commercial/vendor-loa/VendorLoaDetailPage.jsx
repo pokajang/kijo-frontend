@@ -8,6 +8,8 @@ import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
+import { getVendorLoaWordUrl } from './create/vendorLoaCreatePayload'
 
 const canManagePaidStatus = (roles = []) => {
   const safeRoles = Array.isArray(roles) ? roles : []
@@ -140,6 +142,18 @@ const VendorLoaDetailPage = () => {
     window.open(
       `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(record.project_id)}/loa?${params.toString()}`,
       '_blank',
+    )
+  }
+
+  const handleGenerateLoaWord = () => {
+    if (!record?.project_id || !record?.vendor_id) return
+    return downloadCommercialWord(
+      getVendorLoaWordUrl({
+        projectId: record.project_id,
+        vendorId: record.vendor_id,
+        assignmentId: record.id,
+      }),
+      `${record.loa_ref_no || 'vendor-loa'}.docx`,
     )
   }
 
@@ -293,6 +307,7 @@ const VendorLoaDetailPage = () => {
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
           { key: 'generate-loa', label: 'Generate LOA', onClick: handleGenerateLoa },
+          { key: 'generate-loa-word', label: 'Generate Word', onClick: handleGenerateLoaWord },
           {
             key: 'mark-paid',
             label: 'Mark Paid',

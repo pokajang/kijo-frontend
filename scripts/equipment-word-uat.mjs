@@ -216,8 +216,21 @@ const run = async (browserType, browserName) => {
     wordShouldFail = true
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.getByRole('button', { name: 'Generate Word' }).click()
-    await page.getByText('Word generation is temporarily unavailable.', { exact: true }).waitFor()
-    check('word-error-is-actionable', true)
+    const wordErrorDialog = page.getByRole('dialog').filter({
+      hasText: 'Word generation is temporarily unavailable.',
+    })
+    await wordErrorDialog.waitFor()
+    check(
+      'word-error-is-actionable',
+      (await wordErrorDialog.getByText(/Word generation is temporarily unavailable/).count()) === 1,
+    )
+    check(
+      'word-error-is-not-duplicated-as-toast',
+      (await page.locator('.toast').filter({
+        hasText: 'Word generation is temporarily unavailable.',
+      }).count()) === 0,
+    )
+    await wordErrorDialog.getByRole('button', { name: 'OK' }).click()
 
     wordShouldFail = false
     await page.setViewportSize({ width: 390, height: 844 })

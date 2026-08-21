@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const output = path.join(root, 'test-results', 'commercial-word-uat')
+const output = path.join(root, 'test-results', 'commercial-word-uat', new Date().toISOString().replace(/[:.]/g, '-'))
 const baseUrl = (process.env.FRONTEND_URL || 'http://127.0.0.1:3001').replace(/\/+$/, '')
 const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const user = {
@@ -51,6 +51,16 @@ const invoice = {
   invoice_client_name: 'Client Sdn Bhd',
   breakdown: [],
 }
+const vendorLoa = {
+  id: 801,
+  project_id: 7,
+  vendor_id: 41,
+  loa_ref_no: 'LOA26-0801TST',
+  vendor_name: 'Safe Vendor',
+  project_name: 'Safety Project',
+  award_value: 2000,
+  status: 'Open',
+}
 
 const cases = [
   {
@@ -80,6 +90,13 @@ const cases = [
     action: 'Word Receipt',
     endpoint: '/invoices/701/receipt-word',
     filename: 'RCPT2026-0001.docx',
+  },
+  {
+    name: 'vendor-loa',
+    page: '/commercial/vendor-loa/801',
+    action: 'Generate Word',
+    endpoint: '/projects/7/loa/word',
+    filename: 'LOA26-0801TST_Safe_Vendor.docx',
   },
 ]
 
@@ -112,6 +129,7 @@ await page.route('**/*', async (route) => {
       pagination: { current_page: 1, last_page: 1 },
     })
   if (pathname.endsWith('/invoices')) return json({ status: 'success', invoices: [invoice] })
+  if (pathname.endsWith('/vendor-loas')) return json({ status: 'success', data: [vendorLoa] })
   const match = cases.find((item) => pathname.endsWith(item.endpoint))
   if (match)
     return route.fulfill({
