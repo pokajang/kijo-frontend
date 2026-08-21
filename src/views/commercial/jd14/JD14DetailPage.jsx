@@ -59,6 +59,13 @@ const JD14DetailPage = () => {
     )
   }
 
+  const handleGenerateWord = () => {
+    window.open(
+      `${import.meta.env.VITE_API_BASE}jd14-forms/${encodeURIComponent(record.id)}/word`,
+      '_blank',
+    )
+  }
+
   const handleDelete = async () => {
     const confirmed = await dialog.confirm(
       `Are you sure you want to delete JD14 record: ${record.approval_no}?`,
@@ -120,6 +127,7 @@ const JD14DetailPage = () => {
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
           { key: 'pdf', label: 'Generate PDF', onClick: handleGeneratePdf },
+          { key: 'word', label: 'Generate Word', onClick: handleGenerateWord },
           {
             key: 'delete',
             label: 'Delete',

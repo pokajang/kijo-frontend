@@ -73,6 +73,17 @@ afterEach(() => {
 })
 
 describe('JD14Table actions', () => {
+  it('exposes a Word export for each JD14 record', () => {
+    const open = vi.fn()
+    vi.stubGlobal('open', open)
+
+    renderTable()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Word' }))
+
+    expect(open).toHaveBeenCalledWith(expect.stringContaining('jd14-forms/7/word'), '_blank')
+  })
+
   it('deletes without reloading the page and refreshes the parent table quietly', async () => {
     const onRefresh = vi.fn()
 

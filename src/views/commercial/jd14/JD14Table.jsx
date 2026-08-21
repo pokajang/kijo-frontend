@@ -165,6 +165,13 @@ const JD14Table = ({
     )
   }
 
+  const handleGenerateWordJd14 = (form) => {
+    window.open(
+      `${import.meta.env.VITE_API_BASE}jd14-forms/${encodeURIComponent(form.id)}/word`,
+      '_blank',
+    )
+  }
+
   const handleDeleteJd14 = async (form) => {
     const confirmDelete = await dialog.confirm(
       `Are you sure you want to delete JD14 record: ${form.approval_no}?`,
@@ -267,6 +274,11 @@ const JD14Table = ({
       key: 'generate',
       label: 'Generate PDF',
       onClick: handleGeneratePdfJd14,
+    },
+    {
+      key: 'generate-word',
+      label: 'Generate Word',
+      onClick: handleGenerateWordJd14,
     },
     {
       key: 'delete',
