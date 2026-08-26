@@ -227,7 +227,7 @@ export const exportAssessmentRecordsCsv = ({ rows, visibleColumns }) => {
 
 export const getRecordActions = (
   record,
-  { navigate, onDelete, onExportPdf, onCreateRevision, returnTo },
+  { navigate, onDelete, onExportPdf, onExportWord, onCreateRevision, returnTo },
 ) => {
   const reviewPath = `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(record.id)}&mode=review`
   const editPath = `/internal-tools/legal-compliance?assessmentId=${encodeURIComponent(record.id)}`
@@ -259,6 +259,12 @@ export const getRecordActions = (
       label: 'Export Report PDF',
       hidden: record.stage !== 'submitted',
       onClick: () => onExportPdf(record),
+    },
+    {
+      key: 'word',
+      label: 'Export Report Word',
+      hidden: record.stage !== 'submitted',
+      onClick: () => onExportWord(record),
     },
     {
       key: 'delete',

@@ -38,6 +38,8 @@ export const getTemplateResourceUrl = (type, id) =>
 
 export const getTemplatePdfUrl = (type, id) => `${getTemplateResourceUrl(type, id)}/pdf`
 
+export const getTemplateWordUrl = (type, id) => `${getTemplateResourceUrl(type, id)}/word`
+
 export const getTemplateBmCopyUrl = (type, id) => `${getTemplateResourceUrl(type, id)}/bm-copy`
 
 const parseResponsePayload = async (response) => {

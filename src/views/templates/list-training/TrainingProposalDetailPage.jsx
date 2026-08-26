@@ -19,6 +19,7 @@ import {
   getTemplateId,
   getTrainingEditUrl,
   getTrainingPdfUrl,
+  getTrainingWordUrl,
   isSuccess,
   normalizeTrainingTemplateRow,
   sanitizeDisplayHtml,
@@ -26,6 +27,7 @@ import {
 } from './trainingTemplateUtils'
 import { getProposalListPath } from '../proposals/proposalTabs'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 
 const DetailField = ({ label, value, children }) => (
   <CCol xs={12} md={6} lg={4}>
@@ -235,6 +237,15 @@ const TrainingProposalDetailPage = () => {
           key: 'export',
           label: 'Export Brochure',
           onClick: () => window.open(getTrainingPdfUrl(record.templateId), '_blank'),
+        },
+        {
+          key: 'word',
+          label: 'Generate Word Brochure',
+          onClick: () =>
+            downloadWordDocument(
+              getTrainingWordUrl(record.templateId),
+              `training-proposal-${record.templateId}.docx`,
+            ),
         },
         ...(record.proposalLanguage !== 'ms-MY'
           ? [

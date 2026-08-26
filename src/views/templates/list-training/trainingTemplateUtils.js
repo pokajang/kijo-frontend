@@ -17,6 +17,7 @@ import {
   API_BASE,
   getTemplateBaseUrl,
   getTemplatePdfUrl as buildTemplatePdfUrl,
+  getTemplateWordUrl as buildTemplateWordUrl,
 } from '../shared/templateApi'
 import { getProposalListPath } from '../proposals/proposalTabs'
 
@@ -113,6 +114,8 @@ export const normalizeTrainingTemplateRow = (row) => {
 }
 
 export const getTrainingPdfUrl = (templateId) => buildTemplatePdfUrl('training', templateId)
+
+export const getTrainingWordUrl = (templateId) => buildTemplateWordUrl('training', templateId)
 
 export const getTrainingEditUrl = (templateId) =>
   `/templates/create?type=training&edit=true&id=${templateId}`

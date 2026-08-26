@@ -15,8 +15,10 @@ import {
   createLegalComplianceAssessmentRevision,
   deleteLegalComplianceAssessment,
   getLegalComplianceAssessmentPdfUrl,
+  getLegalComplianceAssessmentWordUrl,
   listLegalComplianceAssessments,
 } from './api/legalComplianceApi'
+import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 import {
   COLUMN_STORAGE_KEY,
   DEFAULT_VISIBLE_COLUMNS,
@@ -145,6 +147,12 @@ const LegalComplianceRecords = () => {
     window.open(getLegalComplianceAssessmentPdfUrl(record.id), '_blank', 'noopener,noreferrer')
   }
 
+  const handleExportWord = (record) =>
+    downloadWordDocument(
+      getLegalComplianceAssessmentWordUrl(record.id),
+      `legal-compliance-assessment-${record.id}.docx`,
+    )
+
   const handleCreateRevision = async (record) => {
     if (revisionRecordId) return
 
@@ -167,6 +175,14 @@ const LegalComplianceRecords = () => {
       getLegalComplianceAssessmentPdfUrl(submittedAssessmentId),
       '_blank',
       'noopener,noreferrer',
+    )
+  }
+
+  const handleExportSubmittedWord = () => {
+    if (!submittedAssessmentId) return
+    return downloadWordDocument(
+      getLegalComplianceAssessmentWordUrl(submittedAssessmentId),
+      `legal-compliance-assessment-${submittedAssessmentId}.docx`,
     )
   }
 
@@ -231,6 +247,14 @@ const LegalComplianceRecords = () => {
                   <CButton
                     color="success"
                     size="sm"
+                    variant="outline"
+                    onClick={handleExportSubmittedWord}
+                  >
+                    Export Report Word
+                  </CButton>
+                  <CButton
+                    color="success"
+                    size="sm"
                     onClick={() => navigate('/internal-tools/legal-compliance/select-template')}
                   >
                     Start New
@@ -277,6 +301,7 @@ const LegalComplianceRecords = () => {
                   navigate,
                   onDelete: handleDeleteRecord,
                   onExportPdf: handleExportPdf,
+                  onExportWord: handleExportWord,
                   onCreateRevision: handleCreateRevision,
                   returnTo: currentReturnTo,
                 })
