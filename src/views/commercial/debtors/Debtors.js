@@ -29,6 +29,7 @@ import { fetchJson } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
 import { downloadCommercialWord } from '../shared/commercialWordDownload'
+import { isWordInvoiceService } from '../invoice/actionHandlers'
 import DebtorUpdatePaymentModal from './DebtorUpdatePaymentModal'
 import DebtorLifecycleTabs from './DebtorLifecycleTabs'
 import { buildDebtorStats } from './debtorStats'
@@ -417,6 +418,11 @@ const Debtors = () => {
   }
 
   const getActions = (debtor) => {
+    const hasInvoiceDocument =
+      debtor.sourceType === 'invoice' &&
+      debtor.sourceId !== null &&
+      debtor.sourceId !== undefined &&
+      debtor.sourceId !== ''
     const paymentAction = isCancelledStatus(debtor.status)
       ? debtor.hasPaymentHistory
         ? {
@@ -449,7 +455,7 @@ const Debtors = () => {
                 state: { record, returnTo: getCurrentReturnTo(location) },
               }),
           },
-      debtor.sourceType === 'invoice'
+      hasInvoiceDocument
         ? {
             key: 'pdf',
             label: 'PDF Invoice',
@@ -460,12 +466,7 @@ const Debtors = () => {
               ),
           }
         : null,
-      debtor.sourceType === 'invoice' &&
-      ['equipment', 'equipment supply'].includes(
-        String(debtor.serviceType || '')
-          .trim()
-          .toLowerCase(),
-      )
+      hasInvoiceDocument && isWordInvoiceService(debtor.serviceType)
         ? {
             key: 'word',
             label: 'Word Invoice',

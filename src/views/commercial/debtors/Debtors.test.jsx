@@ -9,6 +9,7 @@ import Debtors from './Debtors'
 const recordListMock = vi.hoisted(() => vi.fn())
 const paymentModalMock = vi.hoisted(() => vi.fn())
 const showToastMock = vi.hoisted(() => vi.fn())
+const downloadCommercialWordMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../../../components/navigation/ModuleNavStrip', () => ({ default: () => null }))
 vi.mock('../../../components/stats', () => ({ StatsStrip: () => null }))
@@ -46,6 +47,9 @@ vi.mock('../../../hooks/datatable', () => ({
 }))
 vi.mock('../../../utils/detailPages', () => ({ fetchJson: vi.fn() }))
 vi.mock('../../../components/toast/toastService', () => ({ showToast: showToastMock }))
+vi.mock('../shared/commercialWordDownload', () => ({
+  downloadCommercialWord: downloadCommercialWordMock,
+}))
 vi.mock('./DebtorUpdatePaymentModal', () => ({
   default: (props) => {
     paymentModalMock(props)
@@ -243,7 +247,7 @@ describe('Debtors payment table wiring', () => {
     })
   })
 
-  it('offers Word invoices only for the equipment commercial cycle', async () => {
+  it('offers Word invoices for every backend-supported commercial service', async () => {
     fetchJson.mockResolvedValue({
       status: 'success',
       debtors: [
@@ -263,6 +267,22 @@ describe('Debtors payment table wiring', () => {
           client: 'Training Client',
           status: 'Open',
         },
+        {
+          sourceType: 'invoice',
+          sourceId: 23,
+          invoiceRef: 'INV-LEGACY',
+          serviceType: 'Legacy Service',
+          client: 'Legacy Client',
+          status: 'Open',
+        },
+        {
+          sourceType: 'invoice',
+          sourceId: null,
+          invoiceRef: 'INV-NO-SOURCE',
+          serviceType: 'Training',
+          client: 'Missing Source Client',
+          status: 'Open',
+        },
       ],
     })
 
@@ -272,11 +292,23 @@ describe('Debtors payment table wiring', () => {
       </MemoryRouter>,
     )
 
-    await waitFor(() => expect(recordListMock.mock.calls.at(-1)[0].rows).toHaveLength(2))
+    await waitFor(() => expect(recordListMock.mock.calls.at(-1)[0].rows).toHaveLength(4))
     const props = recordListMock.mock.calls.at(-1)[0]
     expect(props.getActions(props.rows[0]).map((action) => action.label)).toContain('Word Invoice')
-    expect(props.getActions(props.rows[1]).map((action) => action.label)).not.toContain(
+    const trainingWordAction = props
+      .getActions(props.rows[1])
+      .find((action) => action.key === 'word')
+    expect(trainingWordAction).toBeDefined()
+    expect(props.getActions(props.rows[2]).map((action) => action.label)).not.toContain(
       'Word Invoice',
+    )
+    expect(props.getActions(props.rows[3]).map((action) => action.key)).not.toContain('pdf')
+    expect(props.getActions(props.rows[3]).map((action) => action.key)).not.toContain('word')
+
+    trainingWordAction.onClick(props.rows[1])
+    expect(downloadCommercialWordMock).toHaveBeenCalledWith(
+      expect.stringContaining('invoices/22/word'),
+      'invoice-22.docx',
     )
   })
 

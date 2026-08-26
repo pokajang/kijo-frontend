@@ -29,14 +29,14 @@ describe('InvoiceTable Word action scope', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => cleanup())
 
-  it('keeps PDF receipts case-insensitive while offering Word invoices for every service', () => {
+  it('offers Word receipts for paid invoices with supported Word services', () => {
     render(
       <InvoiceTable
         invoices={[
           invoice('Equipment Supply', 'paid'),
           invoice('Training', 'Paid'),
           invoice('Special', 'Open'),
-          invoice('Legacy Service', 'Open'),
+          invoice('Legacy Service', 'Paid'),
         ]}
         onAction={vi.fn()}
         onDelete={vi.fn()}
@@ -54,8 +54,11 @@ describe('InvoiceTable Word action scope', () => {
     )
     expect(trainingActions).toContain('PDF Receipt')
     expect(trainingActions).toContain('Word Invoice')
-    expect(trainingActions).not.toContain('Word Receipt')
+    expect(trainingActions).toContain('Word Receipt')
     expect(specialActions).toContain('Word Invoice')
+    expect(specialActions).not.toContain('Word Receipt')
+    expect(unsupportedActions).toContain('PDF Receipt')
     expect(unsupportedActions).not.toContain('Word Invoice')
+    expect(unsupportedActions).not.toContain('Word Receipt')
   })
 })

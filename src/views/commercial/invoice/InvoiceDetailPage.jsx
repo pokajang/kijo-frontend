@@ -134,7 +134,7 @@ const InvoiceDetailPage = () => {
               onClick: () => runAction('receipt'),
             }
           : null,
-        invoice.isEquipment && isPaidInvoice(invoice.status)
+        invoice.isWordReceiptSupported && isPaidInvoice(invoice.status)
           ? {
               key: 'receipt-word',
               label: 'Word Receipt',

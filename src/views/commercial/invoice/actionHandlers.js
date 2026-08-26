@@ -51,6 +51,8 @@ export const isWordInvoiceService = (serviceType) =>
       .toLowerCase(),
   )
 
+export const isWordReceiptService = isWordInvoiceService
+
 /**
  * Lookup endpoint by action
  */
@@ -186,6 +188,7 @@ export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = t
           isHrdTraining,
           isEquipment,
           isWordInvoiceSupported: isWordInvoiceService(service_type),
+          isWordReceiptSupported: isWordReceiptService(service_type),
 
           // Use the aliased field here
           loaNo: loa_number || '',

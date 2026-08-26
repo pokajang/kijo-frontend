@@ -4,7 +4,7 @@ import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { getAgeTone } from '../debtors/debtorUtils'
 import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
-import { isWordInvoiceService } from './actionHandlers'
+import { isWordInvoiceService, isWordReceiptService } from './actionHandlers'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.invoices.visible-columns.v4'
@@ -219,6 +219,8 @@ const InvoiceTable = ({
         const isEquipment = inv.isEquipment ?? isEquipmentService(serviceType)
         const isWordInvoiceSupported =
           inv.isWordInvoiceSupported ?? isWordInvoiceService(serviceType)
+        const isWordReceiptSupported =
+          inv.isWordReceiptSupported ?? isWordReceiptService(serviceType)
 
         return {
           ...inv,
@@ -248,6 +250,7 @@ const InvoiceTable = ({
           isHrdTraining,
           isEquipment,
           isWordInvoiceSupported,
+          isWordReceiptSupported,
           internalPicDisplay:
             inv.internalPic?.code || inv.internalPic?.name || inv.internalPic?.id || emptyValue,
         }
@@ -338,7 +341,7 @@ const InvoiceTable = ({
             onClick: () => onAction('receipt', inv),
           }
         : null,
-      inv.isEquipment && isPaidInvoice(inv.status)
+      inv.isWordReceiptSupported && isPaidInvoice(inv.status)
         ? {
             key: 'receipt-word',
             label: 'Word Receipt',
