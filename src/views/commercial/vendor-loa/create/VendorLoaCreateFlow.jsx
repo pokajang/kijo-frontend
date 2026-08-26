@@ -109,10 +109,7 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
         return downloadCommercialWord(getVendorLoaWordUrl(urlParams), 'vendor-loa.docx')
       }
       if (action !== 'generate') return
-      window.open(
-        getVendorLoaUrl(urlParams),
-        '_blank',
-      )
+      window.open(getVendorLoaUrl(urlParams), '_blank')
     },
     [project?.id],
   )

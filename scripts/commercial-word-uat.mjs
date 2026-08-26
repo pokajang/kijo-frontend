@@ -4,7 +4,12 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const output = path.join(root, 'test-results', 'commercial-word-uat', new Date().toISOString().replace(/[:.]/g, '-'))
+const output = path.join(
+  root,
+  'test-results',
+  'commercial-word-uat',
+  new Date().toISOString().replace(/[:.]/g, '-'),
+)
 const baseUrl = (process.env.FRONTEND_URL || 'http://127.0.0.1:3001').replace(/\/+$/, '')
 const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const user = {

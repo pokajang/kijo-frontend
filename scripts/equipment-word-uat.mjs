@@ -226,9 +226,12 @@ const run = async (browserType, browserName) => {
     )
     check(
       'word-error-is-not-duplicated-as-toast',
-      (await page.locator('.toast').filter({
-        hasText: 'Word generation is temporarily unavailable.',
-      }).count()) === 0,
+      (await page
+        .locator('.toast')
+        .filter({
+          hasText: 'Word generation is temporarily unavailable.',
+        })
+        .count()) === 0,
     )
     await wordErrorDialog.getByRole('button', { name: 'OK' }).click()
 

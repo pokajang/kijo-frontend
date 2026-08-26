@@ -441,16 +441,16 @@ const VendorLoaTable = ({
       label: 'Edit',
       onClick: handleEdit,
     },
-      {
-        key: 'generate-loa',
-        label: 'Generate LOA',
-        onClick: handleGenerateLoa,
-      },
-      {
-        key: 'generate-loa-word',
-        label: 'Generate Word',
-        onClick: handleGenerateLoaWord,
-      },
+    {
+      key: 'generate-loa',
+      label: 'Generate LOA',
+      onClick: handleGenerateLoa,
+    },
+    {
+      key: 'generate-loa-word',
+      label: 'Generate Word',
+      onClick: handleGenerateLoaWord,
+    },
     {
       key: 'mark-paid',
       label: 'Mark Paid',
