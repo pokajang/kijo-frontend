@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   getCommercialReturnContext,
   getProjectReturnState,
+  navigateToProjectDocument,
   withProjectReturnParams,
 } from './commercialReturnNavigation'
 
@@ -72,6 +73,16 @@ describe('commercial return navigation', () => {
     expect(getProjectReturnState(12)).toEqual({
       from: 'project-manage',
       fromProjectId: '12',
+    })
+  })
+
+  it('navigates to a detail page with durable project return context', () => {
+    const navigate = vi.fn()
+
+    navigateToProjectDocument(navigate, '/commercial/invoice/1', 12)
+
+    expect(navigate).toHaveBeenCalledWith('/commercial/invoice/1?from=project&projectId=12', {
+      state: { from: 'project-manage', fromProjectId: '12' },
     })
   })
 })

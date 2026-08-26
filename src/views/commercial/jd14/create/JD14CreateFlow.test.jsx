@@ -8,6 +8,7 @@ import { createJD14Form } from './jd14CreatePayload'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 const createJD14FormMock = vi.hoisted(() => vi.fn())
+const choiceMock = vi.hoisted(() => vi.fn())
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -20,6 +21,7 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../../../../components/dialog/dialogService', () => ({
   default: {
     alert: vi.fn(),
+    choice: choiceMock,
   },
 }))
 
@@ -93,6 +95,8 @@ const clickReviewJD14 = async () => {
 describe('JD14CreateFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
+    choiceMock.mockResolvedValue('project')
     createJD14Form.mockResolvedValue({ status: 'success', form_number: 'JD14-123' })
   })
 
@@ -112,10 +116,12 @@ describe('JD14CreateFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: /^create jd14$/i }))
 
     await waitFor(() => expect(createJD14Form).toHaveBeenCalledTimes(1))
-    expect(await screen.findByText('JD14 Created')).toBeInTheDocument()
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    expect(choiceMock.mock.calls[0][1]).toEqual(expect.objectContaining({ title: 'JD14 Created' }))
   })
 
-  it('preserves project-origin navigation to JD14 detail after creation', async () => {
+  it('shows project-origin success and preserves context when viewing JD14', async () => {
+    choiceMock.mockResolvedValue('view')
     renderFlow()
 
     await clickReviewJD14()
@@ -123,9 +129,10 @@ describe('JD14CreateFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: /^create jd14$/i }))
 
     await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith('/commercial/jd14/JD14-123', {
-        state: { fromProjectId: 12 },
-      }),
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/commercial/jd14/JD14-123?from=project&projectId=12',
+        { state: { from: 'project-manage', fromProjectId: '12' } },
+      ),
     )
   })
 })

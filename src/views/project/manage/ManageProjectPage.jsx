@@ -26,6 +26,7 @@ import {
   isProjectManagePathCanonical,
 } from './projectRoutes'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { getProjectReturnState } from '../../commercial/shared/commercialReturnNavigation'
 
 const projectActionGroups = [
   ['jd14', 'invoice', 'delivery-order', 'vendor-loa', 'supplier-po'],
@@ -164,7 +165,9 @@ const ManageProjectPage = () => {
   const openCommercialCreatePage = useCallback(
     (documentType) => {
       if (!project?.id) return
-      navigate(getCommercialCreatePath(documentType, project.id), { state: { project } })
+      navigate(getCommercialCreatePath(documentType, project.id), {
+        state: getProjectReturnState(project.id, { project }),
+      })
     },
     [navigate, project],
   )

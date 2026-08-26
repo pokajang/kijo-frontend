@@ -31,6 +31,20 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message)
 }
 
+const filenameFromDisposition = (contentDisposition = '') => {
+  const extended = String(contentDisposition).match(/filename\*\s*=\s*(?:UTF-8'')?([^;]+)/i)
+  if (extended?.[1]) {
+    try {
+      return decodeURIComponent(extended[1].trim().replace(/^"|"$/g, ''))
+    } catch {
+      return extended[1].trim().replace(/^"|"$/g, '')
+    }
+  }
+
+  const standard = String(contentDisposition).match(/filename\s*=\s*(?:"([^"]+)"|([^;]+))/i)
+  return String(standard?.[1] || standard?.[2] || '').trim()
+}
+
 const run = async () => {
   if (!email || !password) {
     throw new Error('SMOKE_EMAIL and SMOKE_PASSWORD are required.')
@@ -39,7 +53,10 @@ const run = async () => {
   await fs.mkdir(pdfDir, { recursive: true })
   await fs.mkdir(screenshotDir, { recursive: true })
 
-  const browser = await chromium.launch({ headless: process.env.SMOKE_HEADLESS !== '0' })
+  const browser = await chromium.launch({
+    headless: process.env.SMOKE_HEADLESS !== '0',
+    args: ['--disable-pdf-extension'],
+  })
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const page = await context.newPage()
   page.setDefaultTimeout(90_000)
@@ -119,19 +136,40 @@ const run = async () => {
   }
 
   const downloadPdf = async (name, route) => {
-    const response = await page.request.get(`${apiBase}/${route.replace(/^\/+/, '')}`, {
+    const pdfUrl = `${apiBase}/${route.replace(/^\/+/, '')}`
+    const response = await page.request.get(pdfUrl, {
       headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {},
     })
     const contentType = response.headers()['content-type'] || ''
-    const body = await response.body()
+    const contentDisposition = response.headers()['content-disposition'] || ''
+    const expectedFilename = filenameFromDisposition(contentDisposition)
     assert(response.status() === 200, `${name} PDF returned HTTP ${response.status()}.`)
     assert(
       contentType.includes('application/pdf'),
       `${name} returned ${contentType || 'no content type'}.`,
     )
+    assert(expectedFilename, `${name} PDF omitted its Content-Disposition filename.`)
+
+    const downloadPage = await context.newPage()
+    const downloadPromise = downloadPage.waitForEvent('download')
+    await downloadPage.goto(pdfUrl, { waitUntil: 'commit' }).catch((error) => {
+      if (!String(error?.message || '').includes('Download is starting')) throw error
+    })
+    const download = await downloadPromise
+    const suggestedFilename = download.suggestedFilename()
+    assert(
+      suggestedFilename === expectedFilename,
+      `${name} browser filename was "${suggestedFilename}"; expected "${expectedFilename}".`,
+    )
+    assert(/\.pdf$/i.test(suggestedFilename), `${name} browser filename is not a PDF.`)
+
+    const savedPath = path.join(pdfDir, suggestedFilename)
+    await download.saveAs(savedPath)
+    await downloadPage.close().catch(() => {})
+    const body = await fs.readFile(savedPath)
     assert(body.byteLength > 1000, `${name} PDF is unexpectedly small.`)
-    await fs.writeFile(path.join(pdfDir, `${name}.pdf`), body)
-    return `${body.byteLength} bytes`
+    assert(body.subarray(0, 1024).includes(Buffer.from('%PDF-')), `${name} file is not a PDF.`)
+    return `${suggestedFilename} (${body.byteLength} bytes)`
   }
 
   const selectFirstOption = async (placeholder) => {

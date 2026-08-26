@@ -137,7 +137,7 @@ describe('PaymentTable', () => {
     expect(reviewButton).toHaveClass('btn-outline-info')
     expect(returnButton).toHaveClass('btn-outline-secondary')
     expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Delete Payment' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Delete Payment' })).not.toBeInTheDocument()
   })
 
   it('uses backend permission metadata for approval actions', () => {

@@ -1,5 +1,7 @@
 import {
+  buildStoredHygieneTotals,
   getHygieneComplexityMultiplier,
+  isHistoricalHygienePricingRule,
   LEGACY_HYGIENE_PRICING_RULE,
 } from '../../../../../../shared/invoice/hygienePricing'
 import {
@@ -29,15 +31,32 @@ export const buildHygieneCalculationRows = (record = {}) => {
   const discount = toFiniteNumber(record.discountAmount ?? formData.discount)
   const storedSubtotal = toFiniteNumber(record.subtotal ?? formData.subTotal)
   const isCurrentPricing = formData.pricingRuleVersion === 'ih_standard_v2'
+  const isHistoricalPricing = isHistoricalHygienePricingRule(formData.pricingRuleVersion)
   const calculatedServiceTotal = samples * workUnits * unitPrice * complexityMultiplier
   const items = Array.isArray(record.lineItems) ? record.lineItems : []
   const itemTotal = items.reduce(
     (sum, item) => sum + toFiniteNumber(item.lineTotal ?? item.line_total),
     0,
   )
+  const storedHistoricalTotals = isHistoricalPricing
+    ? buildStoredHygieneTotals({
+        sampleCounts: samples,
+        numWorkUnits: workUnits,
+        travelCharge,
+        discount,
+        sstPercent: formData.sstPercent,
+        sstAmount: record.sstAmount ?? record.sst_amount ?? formData.sstAmount,
+        subTotal: storedSubtotal,
+        grandTotal: record.grandTotal ?? record.amount ?? formData.grandTotal,
+        pricingRuleVersion: formData.pricingRuleVersion,
+        complexityRating: formData.complexityRating,
+      })
+    : null
   const serviceTotal = isCurrentPricing
     ? calculatedServiceTotal
-    : Math.max(0, storedSubtotal + discount - travelCharge - itemTotal)
+    : storedHistoricalTotals
+      ? Math.max(0, storedHistoricalTotals.serviceTotal - itemTotal)
+      : Math.max(0, storedSubtotal + discount - travelCharge - itemTotal)
   const itemRows = items.map((item, index) => ({
     key: `additional-fee-${item.id ?? index}`,
     label: item.item_description || item.itemName || `Additional Fee ${index + 1}`,
@@ -47,8 +66,16 @@ export const buildHygieneCalculationRows = (record = {}) => {
     )}`,
     amount: toFiniteNumber(item.lineTotal ?? item.line_total),
   }))
-  const grossSubtotal = isCurrentPricing ? storedSubtotal : storedSubtotal + discount
-  const taxableSubtotal = isCurrentPricing ? Math.max(0, storedSubtotal - discount) : storedSubtotal
+  const grossSubtotal = storedHistoricalTotals
+    ? storedHistoricalTotals.subtotalBeforeDiscount
+    : isCurrentPricing
+      ? storedSubtotal
+      : storedSubtotal + discount
+  const taxableSubtotal = storedHistoricalTotals
+    ? storedHistoricalTotals.taxableTotal
+    : isCurrentPricing
+      ? Math.max(0, storedSubtotal - discount)
+      : storedSubtotal
 
   return [
     {

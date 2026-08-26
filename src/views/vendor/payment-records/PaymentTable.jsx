@@ -115,6 +115,8 @@ const getStatusTone = (status) => {
     case 'Approved':
     case 'Paid':
       return 'success'
+    case 'Partially Paid':
+      return 'info'
     case 'Pending':
       return 'warning'
     case 'Rejected':
@@ -132,14 +134,15 @@ const PaymentTable = ({
   loading = false,
   periodRange,
   onPeriodRangeChange,
-  staffRoles = [],
   onView,
   onCheck,
   onApprove,
   onReject,
   onReturn,
   onMarkPaid,
-  onDelete,
+  onEdit,
+  onCancel,
+  onResubmit,
   searchPlaceholder = 'Search payments',
   statsVisible = true,
   controlsVisible = true,
@@ -148,22 +151,9 @@ const PaymentTable = ({
   const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const selectedPeriodRange = periodRange || localPeriodRange
   const handlePeriodRangeChange = onPeriodRangeChange || setLocalPeriodRange
-  const [statusFilter, setStatusFilter] = useState('actionable')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [methodFilter, setMethodFilter] = useState('all')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const normalizedRoles = useMemo(
-    () => staffRoles.map((role) => String(role || '').toLowerCase()),
-    [staffRoles],
-  )
-  const canCheckApprove = normalizedRoles.some((role) =>
-    ['manager', 'system admin'].some((allowedRole) => role.includes(allowedRole)),
-  )
-  const canMarkPaid = normalizedRoles.some((role) =>
-    ['manager', 'system admin', 'finance', 'account', 'bank'].some((allowedRole) =>
-      role.includes(allowedRole),
-    ),
-  )
-
   const normalizedPayments = useMemo(
     () =>
       payments.map((payment) => {
@@ -234,7 +224,9 @@ const PaymentTable = ({
       const matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'actionable' &&
-          ['Pending', 'Checked', 'Approved'].includes(payment.status)) ||
+          ['Pending', 'Checked', 'Approved', 'Partially Paid', 'Returned'].includes(
+            payment.status,
+          )) ||
         payment.status === statusFilter
       const matchesPeriod = isDateInPeriodRange(payment.requested, selectedPeriodRange)
       return matchesSearch && matchesPeriod && matchesMethod && matchesStatus
@@ -288,14 +280,14 @@ const PaymentTable = ({
   const resetFilters = () => {
     setSearchText('')
     handlePeriodRangeChange(getPeriodRangePreset('ytd'))
-    setStatusFilter('actionable')
+    setStatusFilter('all')
     setMethodFilter('all')
   }
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
     if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
-    if (key === 'status') setStatusFilter('actionable')
+    if (key === 'status') setStatusFilter('all')
     if (key === 'method') setMethodFilter('all')
   }
 
@@ -304,20 +296,28 @@ const PaymentTable = ({
     selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
       ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
       : null,
-    statusFilter !== 'actionable' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
+    statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
     methodFilter !== 'all' ? { key: 'method', label: `Method: ${methodFilter}` } : null,
   ].filter(Boolean)
 
   const getPaymentPermissions = (payment) => {
-    const canCheck = typeof payment.can_check === 'boolean' ? payment.can_check : canCheckApprove
-    const canApprove =
-      typeof payment.can_approve === 'boolean' ? payment.can_approve : canCheckApprove
-    const canReturn = typeof payment.can_return === 'boolean' ? payment.can_return : canCheckApprove
-    const canReject = typeof payment.can_reject === 'boolean' ? payment.can_reject : canCheckApprove
-    const canDelete = typeof payment.can_delete === 'boolean' ? payment.can_delete : canCheckApprove
-    const canPay = typeof payment.can_mark_paid === 'boolean' ? payment.can_mark_paid : canMarkPaid
+    const permissions = payment.permissions || {}
+    const getCapability = (key, legacyKey) =>
+      typeof permissions[key] === 'boolean'
+        ? permissions[key]
+        : typeof payment[legacyKey] === 'boolean'
+          ? payment[legacyKey]
+          : false
+    const canCheck = getCapability('can_check', 'can_check')
+    const canApprove = getCapability('can_approve', 'can_approve')
+    const canReturn = getCapability('can_return', 'can_return')
+    const canReject = getCapability('can_reject', 'can_reject')
+    const canPay = getCapability('can_record_payment', 'can_mark_paid')
+    const canEdit = getCapability('can_edit', 'can_edit')
+    const canCancel = getCapability('can_cancel', 'can_cancel')
+    const canResubmit = getCapability('can_resubmit', 'can_resubmit')
 
-    return { canCheck, canApprove, canReturn, canReject, canDelete, canPay }
+    return { canCheck, canApprove, canReturn, canReject, canPay, canEdit, canCancel, canResubmit }
   }
 
   const getWorkflowActions = (payment) => {
@@ -358,7 +358,7 @@ const PaymentTable = ({
             onClick: () => onApprove(paymentId),
           }
         : null,
-      status === 'Approved' && canPay && typeof onMarkPaid === 'function'
+      ['Approved', 'Partially Paid'].includes(status) && canPay && typeof onMarkPaid === 'function'
         ? {
             key: 'mark-paid',
             label: 'Mark Paid',
@@ -370,23 +370,33 @@ const PaymentTable = ({
   }
 
   const getActions = (payment) => {
-    const paymentId = payment.id || payment.payment_id
-    const status = payment.status
-    const { canDelete } = getPaymentPermissions(payment)
-    const canRunDelete = canDelete && typeof onDelete === 'function'
+    const { canEdit, canCancel, canResubmit } = getPaymentPermissions(payment)
 
     return [
       typeof onView === 'function'
         ? { key: 'view', label: 'View Payment', onClick: () => onView(payment) }
         : null,
-      ['Pending', 'Checked'].includes(status)
+      canEdit && typeof onEdit === 'function'
         ? {
-            key: 'delete',
-            label: 'Delete Payment',
-            danger: canRunDelete,
-            disabled: !canRunDelete,
+            key: 'edit',
+            label: 'Edit Payment',
+            onClick: () => onEdit(payment),
+          }
+        : null,
+      canResubmit && typeof onResubmit === 'function'
+        ? {
+            key: 'resubmit',
+            label: 'Amend & Resubmit',
+            onClick: () => onResubmit(payment),
+          }
+        : null,
+      canCancel && typeof onCancel === 'function'
+        ? {
+            key: 'cancel',
+            label: 'Cancel Request',
+            danger: true,
             dividerBefore: true,
-            onClick: canRunDelete ? () => onDelete(paymentId) : undefined,
+            onClick: () => onCancel(payment),
           }
         : null,
     ].filter(Boolean)
@@ -473,8 +483,8 @@ const PaymentTable = ({
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="actionable">Actionable</option>
             <option value="all">All</option>
+            <option value="actionable">Actionable</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>
                 {status}

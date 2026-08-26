@@ -38,9 +38,9 @@ describe('RecordDetailsActions issuance safeguards', () => {
     render(
       <RecordDetailsActions
         {...actions}
-        serviceTab="equipment-tab"
         record={{
           id: 30,
+          serviceTab: 'equipment-tab',
           clientDetails: { email: 'client@example.test' },
           approval: { can_issue: false, status: 'pending', required_step: 'bd' },
         }}
@@ -59,9 +59,9 @@ describe('RecordDetailsActions issuance safeguards', () => {
     render(
       <RecordDetailsActions
         {...actions}
-        serviceTab="equipment-tab"
         record={{
           id: 31,
+          serviceTab: 'equipment-tab',
           estimatedCost: 100,
           grandTotal: 150,
           clientDetails: { email: 'client@example.test' },
@@ -80,9 +80,8 @@ describe('RecordDetailsActions issuance safeguards', () => {
     render(
       <RecordDetailsActions
         {...actions}
-        serviceTab="equipment-tab"
         record={{
-          id: 33,
+          id: 32,
           serviceTab: 'equipment-tab',
           issuanceContext: { estimated_cost_required: true },
           clientDetails: { email: 'client@example.test' },
@@ -97,19 +96,4 @@ describe('RecordDetailsActions issuance safeguards', () => {
     expect(screen.getByRole('button', { name: 'Awarded' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled()
   })
-
-  it.each(['training-tab', 'ih-tab', 'manpower-tab', 'special-tab'])(
-    'shows Generate Word for %s',
-    (serviceTab) => {
-      render(
-        <RecordDetailsActions
-          {...actions}
-          serviceTab={serviceTab}
-          record={{ id: 32, serviceTab, estimatedCost: 100, grandTotal: 150 }}
-        />,
-      )
-
-      expect(screen.getByRole('button', { name: 'Generate Word' })).toBeEnabled()
-    },
-  )
 })

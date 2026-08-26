@@ -9,6 +9,7 @@ yarn.lock
 /test-results
 /smoke-artifacts
 /tmp
+/.tmp
 
 # misc
 .eslintcache

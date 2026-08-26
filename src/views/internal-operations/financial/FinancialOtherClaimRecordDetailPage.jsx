@@ -24,10 +24,14 @@ import {
   DataTableStatusBadge,
 } from '../../../components/datatable'
 import { AttachmentPreviewModal } from '../../../components/salary/claim-ui/ClaimFormPrimitives'
+import OtherClaimAuditTrail from '../../../components/salary/OtherClaimAuditTrail'
+import { getClaimAttachments } from '../../../components/salary/other-claim/model/otherClaimModel'
+import dialog from '../../../components/dialog/dialogService'
 import { formatMoney } from '../../../components/salary/salaryCalculations'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import {
   fetchFinancialOtherClaimRecord,
+  restoreArchivedFinancialOtherClaim,
   submitFinancialOtherClaimAction,
 } from './financialOtherClaimApi'
 
@@ -149,9 +153,44 @@ const FinancialOtherClaimRecordDetailPage = () => {
     [record],
   )
 
-  const actions = Array.isArray(record?.workflow?.availableActions)
+  const workflowActions = Array.isArray(record?.workflow?.availableActions)
     ? record.workflow.availableActions
     : []
+  const actions = [
+    ...workflowActions.map((action) => ({
+      key: action.action,
+      label: action.label,
+      buttonColor: actionColor(action.action),
+      onClick: () => openAction(action),
+    })),
+    record?.canRestoreArchived
+      ? {
+          key: 'restore-archive',
+          label: 'Restore to Withdrawn Records',
+          buttonColor: 'secondary',
+          onClick: async () => {
+            const confirmed = await dialog.confirm(
+              'Restore this archived claim to the claimant’s withdrawn records? It will remain cancelled and cannot re-enter approval.',
+              {
+                title: 'Restore Archived Claim',
+                confirmText: 'Restore Claim',
+              },
+            )
+            if (!confirmed) return
+            setActionError('')
+            setSubmitting(true)
+            try {
+              await restoreArchivedFinancialOtherClaim(record.id, record.recordVersion)
+              navigate(returnTo)
+            } catch (err) {
+              setActionError(err?.message || 'Unable to restore archived other claim.')
+            } finally {
+              setSubmitting(false)
+            }
+          },
+        }
+      : null,
+  ].filter(Boolean)
 
   const openAction = (action) => {
     setActionError('')
@@ -195,18 +234,19 @@ const FinancialOtherClaimRecordDetailPage = () => {
         loading={loading}
         error={error}
         record={record}
-        actions={actions.map((action) => ({
-          key: action.action,
-          label: action.label,
-          buttonColor: actionColor(action.action),
-          onClick: () => openAction(action),
-        }))}
+        actions={actions}
         emptyMessage="Other claim record not found."
       >
         <DataTableDetailFields fields={fields} />
         {record?.status === 'Rejected' && (record.checkedRemarks || record.approvedRemarks) && (
           <CAlert color="danger" className="mt-3 py-2">
             <strong>Rejection reason:</strong> {record.approvedRemarks || record.checkedRemarks}
+          </CAlert>
+        )}
+        {record?.archivedAt && (
+          <CAlert color="secondary" className="mt-3 py-2">
+            <strong>Archived withdrawal:</strong> {formatDateTime(record.archivedAt)}
+            {record.archiveReason ? ` — ${record.archiveReason}` : ''}
           </CAlert>
         )}
         <section className="mt-4" aria-labelledby="financialOtherClaimItems">
@@ -227,7 +267,7 @@ const FinancialOtherClaimRecordDetailPage = () => {
             <CTableBody>
               {(record?.claims || []).length ? (
                 record.claims.map((claim) => {
-                  const attachments = claim.attachments || []
+                  const attachments = getClaimAttachments(claim)
                   return (
                     <CTableRow key={claim.recordItemId || claim.id}>
                       <CTableDataCell>
@@ -310,6 +350,12 @@ const FinancialOtherClaimRecordDetailPage = () => {
             </CTableBody>
           </CTable>
         </section>
+        <OtherClaimAuditTrail
+          events={record?.auditEvents || []}
+          formatDateTime={formatDateTime}
+          headingClassName="h6 mb-2"
+          id="financialOtherClaimAudit"
+        />
         <section className="mt-4" aria-labelledby="financialOtherClaimPayments">
           <h3 className="h6 mb-2" id="financialOtherClaimPayments">
             Payment history

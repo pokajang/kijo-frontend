@@ -108,18 +108,23 @@ describe('PaymentRecords', () => {
     dialog.prompt
       .mockResolvedValueOnce('2026-05-29')
       .mockResolvedValueOnce('121.50')
+      .mockResolvedValueOnce('Online Transfer')
+      .mockResolvedValueOnce('TXN-123')
       .mockResolvedValueOnce('Bank keyed')
 
     renderPaymentRecords()
 
     fireEvent.click(screen.getByRole('button', { name: 'mark paid' }))
 
-    await waitFor(() => expect(findFetchCall('vendor-payments/456/mark-paid')).toBeTruthy())
-    const markPaidCall = findFetchCall('vendor-payments/456/mark-paid')
+    await waitFor(() => expect(findFetchCall('vendor-payments/456/transactions')).toBeTruthy())
+    const markPaidCall = findFetchCall('vendor-payments/456/transactions')
     expect(JSON.parse(markPaidCall[1].body)).toMatchObject({
       paid_date: '2026-05-29',
-      paid_amount: 121.5,
+      amount: 121.5,
+      method: 'Online Transfer',
+      reference_number: 'TXN-123',
       remarks: 'Bank keyed',
+      version: 1,
     })
   })
 })

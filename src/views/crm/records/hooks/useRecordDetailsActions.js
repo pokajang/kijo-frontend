@@ -47,7 +47,10 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
   const [isEmailSending, setIsEmailSending] = useState(false)
   const [emailSendError, setEmailSendError] = useState('')
   const [legacyPdfPrompt, setLegacyPdfPrompt] = useState(null)
+  const [pdfPreviewRequest, setPdfPreviewRequest] = useState(null)
   const openLegacyPdfPrompt = useCallback((prompt) => setLegacyPdfPrompt(prompt), [])
+  const openPdfPreview = useCallback((request) => setPdfPreviewRequest(request), [])
+  const closePdfPreview = useCallback(() => setPdfPreviewRequest(null), [])
   const refreshApprovalState = useCallback(
     async () => loadRecord({ preferState: false, withSpinner: false }),
     [loadRecord],
@@ -101,6 +104,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     modalBindings: detailModalBindings,
     onLegacyPdfPrompt: openLegacyPdfPrompt,
     onApprovalStateChanged: refreshApprovalState,
+    onOpenPdfPreview: openPdfPreview,
   })
 
   const handlers = useMemo(() => {
@@ -131,6 +135,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     setEmailDraftBody('')
     setEmailSendError('')
     setLegacyPdfPrompt(null)
+    setPdfPreviewRequest(null)
   }, [record?.id, returnTo, serviceTab])
 
   const openFailModal = () => {
@@ -382,5 +387,7 @@ export const useRecordDetailsActions = ({ serviceTab, record, returnTo, loadReco
     closeLegacyPdfPrompt,
     handleLegacyPdfGenerate,
     handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   }
 }

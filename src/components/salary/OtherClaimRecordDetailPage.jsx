@@ -18,8 +18,15 @@ import dialog from '../dialog/dialogService'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { formatMoney } from './salaryCalculations'
 import { AttachmentPreviewModal } from './claim-ui/ClaimFormPrimitives'
+import OtherClaimAuditTrail from './OtherClaimAuditTrail'
 import { downloadOtherClaim } from './OtherClaimRecords'
-import { findOtherClaimRecordByUrlKey, removeOtherClaimRecord } from './otherClaimRecordStorage'
+import { getClaimAttachments } from './other-claim/model/otherClaimModel'
+import {
+  archiveOtherClaimRecord,
+  deleteOtherClaimRecord,
+  findOtherClaimRecordByUrlKey,
+  withdrawOtherClaimRecord,
+} from './otherClaimRecordStorage'
 import { SalaryPayablePreviewTable } from './SalaryTables'
 import { openPreparingPdfTab } from './salaryFileUtils'
 import { getDetailReturnTo } from '../../utils/navigation/returnTo'
@@ -103,7 +110,7 @@ const buildClaimGroupRows = ({ key, label, total, items, onPreviewAttachment }) 
           {claimReference(item) && (
             <span className="salary-preview-inline-note">{claimReference(item)}</span>
           )}
-          {(item.attachments || (item.attachment ? [item.attachment] : [])).map((attachment) => (
+          {getClaimAttachments(item).map((attachment) => (
             <AttachmentActions
               key={attachment.id || attachment.clientId || attachment.name}
               attachment={attachment}
@@ -205,7 +212,12 @@ const OtherClaimRecordDetailPage = () => {
   const actions = useMemo(() => {
     const canRevise = record?.status === 'Rejected'
     const canEditDraft = record?.status === 'Draft'
-    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved'].includes(record?.status)
+    const canEditSubmitted = ['Submitted', 'Prepared'].includes(record?.status)
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
+      record?.status,
+    )
+    const canArchive = record?.status === 'Cancelled' && !record?.archivedAt
+    const canHardDelete = ['Draft', 'Cancelled'].includes(record?.status)
     return [
       {
         key: 'export-claims',
@@ -236,10 +248,10 @@ const OtherClaimRecordDetailPage = () => {
           }
         },
       },
-      canEditDraft || canRevise
+      canEditDraft || canEditSubmitted || canRevise
         ? {
             key: 'edit',
-            label: canRevise ? 'Create Revision' : 'Edit Draft',
+            label: canRevise ? 'Create Revision' : canEditDraft ? 'Edit Draft' : 'Edit Claim',
             onClick: async (otherClaimRecord) => {
               let amendmentReason = ''
               if (otherClaimRecord.status === 'Rejected') {
@@ -257,6 +269,15 @@ const OtherClaimRecordDetailPage = () => {
                 if (reason === null) return
                 amendmentReason = String(reason || '').trim()
                 if (!amendmentReason) return
+              } else if (['Submitted', 'Prepared'].includes(otherClaimRecord.status)) {
+                const confirmed = await dialog.confirm(
+                  'Editing this claim will restart its review. The claim will need to be submitted again after your changes.',
+                  {
+                    title: 'Edit and resubmit other claim',
+                    confirmText: 'Edit Claim',
+                  },
+                )
+                if (!confirmed) return
               }
               navigate('/my/salary/other-claims/apply', {
                 state: { editRecord: otherClaimRecord, amendmentReason },
@@ -284,20 +305,81 @@ const OtherClaimRecordDetailPage = () => {
               )
               if (reason === null || !String(reason).trim()) return
               try {
-                await removeOtherClaimRecord(
+                await withdrawOtherClaimRecord(
                   otherClaimRecord.id,
                   String(reason).trim(),
                   otherClaimRecord.recordVersion,
                 )
                 navigate(returnTo)
               } catch (err) {
-                setError(err?.message || 'Unable to delete other claim record.')
+                setError(err?.message || 'Unable to withdraw other claim record.')
+              }
+            },
+          }
+        : null,
+      canArchive
+        ? {
+            key: 'archive',
+            label: 'Archive Withdrawn Claim',
+            danger: true,
+            onClick: async (otherClaimRecord) => {
+              const reason = await dialog.prompt(
+                'This hides the withdrawn claim from your current records. Its claim items and audit history remain available to authorized administrators.',
+                {
+                  title: 'Archive Withdrawn Claim',
+                  confirmText: 'Archive Claim',
+                  confirmColor: 'danger',
+                  multiline: true,
+                  rows: 3,
+                  placeholder: 'Optional archive note',
+                },
+              )
+              if (reason === null) return
+              try {
+                await archiveOtherClaimRecord(
+                  otherClaimRecord.id,
+                  String(reason).trim(),
+                  otherClaimRecord.recordVersion,
+                )
+                navigate(returnTo)
+              } catch (err) {
+                setError(err?.message || 'Unable to archive withdrawn other claim.')
+              }
+            },
+          }
+        : null,
+      canHardDelete
+        ? {
+            key: 'delete-permanently',
+            label: 'Delete Permanently',
+            danger: true,
+            onClick: async (otherClaimRecord) => {
+              const confirmation = await dialog.prompt(
+                `You are about to permanently delete this ${otherClaimRecord.status === 'Draft' ? 'draft' : 'withdrawn'} claim. This cannot be undone: its claim items, uploads, workflow, notifications, and audit history will be removed. Type DELETE to continue.`,
+                {
+                  title: 'Delete Other Claim Permanently',
+                  confirmText: 'Delete Permanently',
+                  confirmColor: 'danger',
+                  required: true,
+                  placeholder: 'Type DELETE',
+                },
+              )
+              if (confirmation === null) return
+              if (String(confirmation).trim() !== 'DELETE') {
+                setError('Type DELETE exactly to permanently delete this other claim.')
+                return
+              }
+              try {
+                await deleteOtherClaimRecord(otherClaimRecord.id, otherClaimRecord.recordVersion)
+                navigate(returnTo)
+              } catch (err) {
+                setError(err?.message || 'Unable to permanently delete other claim.')
               }
             },
           }
         : null,
     ].filter(Boolean)
-  }, [exportingPdf, navigate, record?.status, returnTo])
+  }, [exportingPdf, navigate, record?.archivedAt, record?.status, returnTo])
 
   return (
     <DataTableDetailShell
@@ -327,6 +409,12 @@ const OtherClaimRecordDetailPage = () => {
       {record?.status === 'Cancelled' && record?.cancelReason && (
         <CAlert color="warning" className="py-2">
           <strong>Withdrawal reason:</strong> {record.cancelReason}
+        </CAlert>
+      )}
+      {record?.archivedAt && (
+        <CAlert color="secondary" className="py-2">
+          <strong>Archived:</strong> {formatDateTime(record.archivedAt)}
+          {record.archiveReason ? ` — ${record.archiveReason}` : ''}
         </CAlert>
       )}
       {exportingPdf && (
@@ -396,6 +484,11 @@ const OtherClaimRecordDetailPage = () => {
           </CTableBody>
         </CTable>
       </section>
+      <OtherClaimAuditTrail
+        events={record?.auditEvents || []}
+        formatDateTime={formatDateTime}
+        id="otherClaimAuditHeading"
+      />
       <section className="mt-4" aria-labelledby="otherClaimPaymentHeading">
         <h3 className="salary-form-panel-heading mb-3" id="otherClaimPaymentHeading">
           Payment history

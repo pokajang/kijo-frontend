@@ -9,9 +9,10 @@ import { useDataTableStatsVisibility } from '../../../../hooks/datatable'
 import { getQuoteServiceFromRecordTab } from '../config/recordTabs.js'
 import { useRecordsController } from '../hooks/useRecordsController'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
+import LegacyQuotationCostModal from '../modals/shared/LegacyQuotationCostModal.jsx'
 import NegotiationRequestModal from '../modals/shared/NegotiationRequestModal.jsx'
 import QuoteApprovalReviewModal from '../modals/shared/QuoteApprovalReviewModal.jsx'
-import LegacyQuotationCostModal from '../modals/shared/LegacyQuotationCostModal.jsx'
+import QuotationPdfPreviewModal from '../modals/shared/QuotationPdfPreviewModal.jsx'
 
 const RecordsPage = () => {
   const location = useLocation()
@@ -58,15 +59,27 @@ const RecordsPage = () => {
     approvalRecord,
     approvalDecisionNotice,
     approvalRemarks,
+    isApprovalReviewLoading,
+    approvalQueueIndex = 0,
+    approvalQueueSize = 1,
+    approvalQueueList = [],
     setApprovalRemarks,
     openApprovalReview,
     closeApprovalReview,
     handleApprovalDecision,
     isApprovalSubmitting,
+    canNavigateNextQueuedApproval,
+    canNavigatePreviousQueuedApproval,
+    handleQueueNext,
+    handleQueuePrevious,
+    handleQueueSkip,
+    handleQueueJump,
     legacyPdfPrompt,
     closeLegacyPdfPrompt,
     handleLegacyPdfGenerate,
     handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   } = useRecordsController()
   const [headerScopeLabel, setHeaderScopeLabel] = useState('')
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
@@ -125,7 +138,13 @@ const RecordsPage = () => {
                 <CButton
                   color="warning"
                   size="sm"
-                  onClick={() => openApprovalReview(pendingApprovals[0])}
+                  onClick={() => {
+                    if (pendingApprovals.length > 1) {
+                      openApprovalReview(pendingApprovals[0], { queue: pendingApprovals })
+                      return
+                    }
+                    openApprovalReview(pendingApprovals[0])
+                  }}
                 >
                   Review Now
                 </CButton>
@@ -265,6 +284,16 @@ const RecordsPage = () => {
           approval={approvalRecord}
           decisionNotice={approvalDecisionNotice}
           remarks={approvalRemarks}
+          isLoading={isApprovalReviewLoading}
+          queuePosition={approvalQueueIndex + 1}
+          queueSize={approvalQueueSize}
+          queueItems={approvalQueueList}
+          canNavigateNext={canNavigateNextQueuedApproval}
+          canNavigatePrevious={canNavigatePreviousQueuedApproval}
+          onQueueNext={handleQueueNext}
+          onQueuePrevious={handleQueuePrevious}
+          onQueueSkip={handleQueueSkip}
+          onQueueJump={handleQueueJump}
           onRemarksChange={setApprovalRemarks}
           onCancel={closeApprovalReview}
           onDecision={handleApprovalDecision}
@@ -278,6 +307,12 @@ const RecordsPage = () => {
           onCancel={closeLegacyPdfPrompt}
           onEdit={handleLegacyPdfEdit}
           onGenerate={handleLegacyPdfGenerate}
+        />
+
+        <QuotationPdfPreviewModal
+          visible={Boolean(pdfPreviewRequest)}
+          request={pdfPreviewRequest}
+          onClose={closePdfPreview}
         />
       </CRow>
     </>

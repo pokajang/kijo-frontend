@@ -32,6 +32,14 @@ export const withProjectReturnParams = (href, projectId) => {
   }
 }
 
+export const navigateToProjectDocument = (navigate, href, projectId) => {
+  if (typeof navigate !== 'function' || !href) return
+
+  navigate(withProjectReturnParams(href, projectId), {
+    state: getProjectReturnState(projectId),
+  })
+}
+
 export const getCommercialReturnContext = (location = {}, listPath = '/commercial') => {
   const searchParams = new URLSearchParams(location.search || '')
   const state = location.state || {}

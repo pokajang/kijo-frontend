@@ -1,17 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { CModal, CModalBody, CModalHeader, CModalTitle } from '@coreui/react'
 import {
   DataTableDetailFields,
   DataTableDetailShell,
   DataTableStatusBadge,
 } from '../../../components/datatable'
-import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
+import { apiFetch } from '../../../api/apiClient'
 import VendorPaymentWorkflowTimeline from '../payment-records/VendorPaymentWorkflowTimeline'
 import { getVendorPaymentCurrentStageLabel } from '../payment-records/vendorPaymentWorkflow'
+import VendorPaymentInvoicePreview from './VendorPaymentInvoicePreview'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -30,6 +30,16 @@ const getStatusTone = (status) => {
   }
 }
 
+const actorDisplay = (actor, legacyCode, legacyId) => {
+  if (actor?.display) return actor.display
+  const fullName = String(actor?.full_name || actor?.fullName || '').trim()
+  const nameCode = String(actor?.name_code || actor?.nameCode || legacyCode || '').trim()
+  if (fullName && nameCode) return `${fullName} (${nameCode})`
+  if (fullName || nameCode) return fullName || nameCode
+  const staffId = Number(actor?.staff_id || actor?.staffId || legacyId || 0)
+  return staffId > 0 ? `Historical actor unavailable (Staff #${staffId})` : '-'
+}
+
 const normalizePayment = (payment) => {
   if (!payment) return null
   const amount = Number(payment.amount || 0)
@@ -39,16 +49,28 @@ const normalizePayment = (payment) => {
     requestedDisplay: payment.created_at
       ? payment.created_at.split(' ')[0]
       : payment.requestedDisplay || '-',
-    requestedBy: payment.created_by_name_code || payment.requestedBy || '-',
+    requestedBy: actorDisplay(
+      payment.requested_by_actor,
+      payment.created_by_name_code || payment.requestedBy,
+      payment.created_by,
+    ),
     approved: payment.date_approved || payment.approved || '',
     approvedDisplay: payment.date_approved
       ? payment.date_approved.split(' ')[0]
       : payment.approvedDisplay || 'In progress',
     checkedDisplay: payment.checked_at ? payment.checked_at.split(' ')[0] : '-',
     paidDisplay: payment.paid_date || '-',
-    checkedBy: payment.checked_by || payment.checked_by_name_code || '-',
-    approvedBy: payment.approved_by_name_code || payment.approved_by || '-',
-    paidBy: payment.paid_by_name_code || payment.paid_by || '-',
+    checkedBy: actorDisplay(
+      payment.reviewed_by_actor,
+      payment.checked_by_name_code,
+      payment.checked_by,
+    ),
+    approvedBy: actorDisplay(
+      payment.approved_by_actor,
+      payment.approved_by_name_code,
+      payment.approved_by,
+    ),
+    paidBy: actorDisplay(payment.paid_by_actor, payment.paid_by_name_code, payment.paid_by),
     paymentFor: payment.project_id
       ? payment.project_name || payment.paymentFor || 'Unnamed Project'
       : payment.payment_context || payment.paymentFor || '-',
@@ -58,12 +80,17 @@ const normalizePayment = (payment) => {
     returnedRemarks: payment.returned_remarks || '-',
     rejectedRemarks: payment.rejected_remarks || '-',
     paidRemarks: payment.paid_remarks || '-',
+    clientName: payment.client_name_snapshot || payment.client_name || '-',
+    paymentTerms: payment.payment_terms_snapshot || payment.payment_terms || '-',
     type: payment.payment_type || payment.type || 'Not specified',
     method: payment.method || '-',
     status: payment.status || '-',
     invoice: payment.receipt_url || payment.receipt_path || payment.invoice || '',
+    invoiceOriginalName: payment.receipt_original_name || 'invoice',
+    invoiceState: payment.receipt_state || 'unavailable',
     amount,
     amountDisplay: `RM ${amount.toFixed(2)}`,
+    paidAmountDisplay: `RM ${Number(payment.paid_amount || 0).toFixed(2)}`,
     currentWorkflowStage: getVendorPaymentCurrentStageLabel(payment),
   }
 }
@@ -79,30 +106,24 @@ const PaymentHistoryDetailPage = () => {
       : '/vendor/pay',
   )
   const [payment, setPayment] = useState(() => normalizePayment(location.state?.record))
-  const paymentRef = useRef(payment)
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
   const [invoiceVisible, setInvoiceVisible] = useState(false)
   const { consumeEntity } = useAppNotifications()
 
-  useEffect(() => {
-    paymentRef.current = payment
-  }, [payment])
-
   const loadPayment = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const found = await findRecordByPagedEndpoint({
-        url: `${API_BASE}vendor-payments`,
-        id: paymentId,
-        dataKeys: ['history', 'data'],
+      const response = await apiFetch(`${API_BASE}vendor-payments/${paymentId}`, {
+        credentials: 'include',
       })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.message || 'Unable to load payment details.')
+      const found = payload?.data
       if (found) {
         setPayment(normalizePayment(found))
       } else {
-        const current = paymentRef.current
-        if (current && sameId(current.id, paymentId)) return
         setPayment(null)
         setError('Payment record not found.')
       }
@@ -161,7 +182,9 @@ const PaymentHistoryDetailPage = () => {
             { key: 'paid', label: 'Paid Date', value: payment?.paidDisplay },
             { key: 'paidBy', label: 'Paid By', value: payment?.paidBy },
             { key: 'vendor', label: 'Vendor', value: payment?.vendor_name || '-' },
+            { key: 'client', label: 'Client', value: payment?.clientName },
             { key: 'paymentFor', label: 'For', value: payment?.paymentFor },
+            { key: 'terms', label: 'Payment Terms', value: payment?.paymentTerms },
             { key: 'type', label: 'Type', value: payment?.type },
             { key: 'method', label: 'Method', value: payment?.method },
             {
@@ -179,6 +202,26 @@ const PaymentHistoryDetailPage = () => {
               value: payment?.currentWorkflowStage,
             },
             { key: 'amount', label: 'Amount', value: payment?.amountDisplay },
+            { key: 'paidAmount', label: 'Paid to Date', value: payment?.paidAmountDisplay },
+            {
+              key: 'invoiceState',
+              label: 'Invoice Attachment',
+              value: payment?.invoiceState === 'available' ? 'Available' : 'Unavailable',
+            },
+            {
+              key: 'transactions',
+              label: 'Payment Transactions',
+              value:
+                payment?.transactions?.length > 0
+                  ? payment.transactions
+                      .map(
+                        (transaction) =>
+                          `${transaction.paid_date}: RM ${Number(transaction.amount || 0).toFixed(2)} · ${transaction.reference_number}${transaction.reversed_at ? ' (reversed)' : ''}`,
+                      )
+                      .join('\n')
+                  : 'No transactions recorded',
+              xs: 12,
+            },
             {
               key: 'workflow',
               label: 'Workflow',
@@ -215,22 +258,12 @@ const PaymentHistoryDetailPage = () => {
         />
       </DataTableDetailShell>
 
-      <CModal size="lg" visible={invoiceVisible} onClose={() => setInvoiceVisible(false)}>
-        <CModalHeader>
-          <CModalTitle>Invoice Preview</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {receiptUrl ? (
-            <iframe
-              src={receiptUrl}
-              style={{ width: '100%', height: '600px', border: 'none' }}
-              title="Invoice Preview"
-            />
-          ) : (
-            <div className="text-center text-muted">No invoice selected.</div>
-          )}
-        </CModalBody>
-      </CModal>
+      <VendorPaymentInvoicePreview
+        visible={invoiceVisible}
+        onClose={() => setInvoiceVisible(false)}
+        url={receiptUrl}
+        originalName={payment?.invoiceOriginalName}
+      />
     </>
   )
 }

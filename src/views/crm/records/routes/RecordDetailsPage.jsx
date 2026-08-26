@@ -7,6 +7,7 @@ import ChangeToSuccessModal from '../modals/shared/ChangeToSuccessModal.jsx'
 import EmailSendConfirmModal from '../modals/shared/EmailSendConfirmModal.jsx'
 import FollowUpModal from '../modals/shared/FollowUpModal.jsx'
 import LegacyQuotationCostModal from '../modals/shared/LegacyQuotationCostModal.jsx'
+import QuotationPdfPreviewModal from '../modals/shared/QuotationPdfPreviewModal.jsx'
 import RecordDetailsActions from '../details/RecordDetailsActions'
 import RecordActivityDetails from '../details/RecordActivityDetails'
 import RecordDetailsCard from '../details/RecordDetailsCard'
@@ -88,6 +89,8 @@ const RecordDetailsPage = () => {
     closeLegacyPdfPrompt,
     handleLegacyPdfGenerate,
     handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   } = useRecordDetailsActions({
     serviceTab,
     record,
@@ -133,7 +136,6 @@ const RecordDetailsPage = () => {
               <RecordDetailsActions
                 handlers={handlers}
                 record={record}
-                serviceTab={serviceTab}
                 isAwarded={isAwarded}
                 isSyncingClient={isSyncingClient}
                 onFollowUp={handleFollowUp}
@@ -225,6 +227,12 @@ const RecordDetailsPage = () => {
         onCancel={closeLegacyPdfPrompt}
         onEdit={handleLegacyPdfEdit}
         onGenerate={handleLegacyPdfGenerate}
+      />
+
+      <QuotationPdfPreviewModal
+        visible={Boolean(pdfPreviewRequest)}
+        request={pdfPreviewRequest}
+        onClose={closePdfPreview}
       />
     </CRow>
   )

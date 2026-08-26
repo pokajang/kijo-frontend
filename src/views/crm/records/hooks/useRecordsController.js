@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../auth/AuthProvider'
 import dialog from '../../../../components/dialog/dialogService'
@@ -14,6 +14,10 @@ import {
 } from '../config/recordTabs'
 import { recordTablesByTab } from '../config/recordTables'
 import { getMessage, isSuccess, postJsonCompat } from '../services/compatApi'
+import {
+  enrichApprovalReviewMetadata,
+  needsApprovalReviewMetadataHydration,
+} from '../utils/approvalReviewMetadata'
 import {
   buildRecordEmailDraft,
   openRecordEmail,
@@ -68,6 +72,180 @@ const toNavigationStateValue = (value, seen = new WeakSet()) => {
   return undefined
 }
 
+const pickFirst = (source = {}, keys = []) => {
+  for (const key of keys) {
+    const value = String(source?.[key] ?? '').trim()
+    if (value.length) return value
+  }
+  return ''
+}
+
+const normalizeLookupValue = (value = '') =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+const uniqueLookupValues = (values = []) => {
+  const seen = new Set()
+  return values
+    .map((value) => normalizeLookupValue(value))
+    .filter((value) => {
+      if (!value || seen.has(value)) return false
+      seen.add(value)
+      return true
+    })
+}
+
+const buildQuoteLookupKey = (service = '', quoteId = '') =>
+  `${normalizeServiceKey(service)}:${String(quoteId || '').trim()}`
+
+const quoteServiceToRecordTab = {
+  training: 'training-tab',
+  ih: 'ih-tab',
+  manpower: 'manpower-tab',
+  equipment: 'equipment-tab',
+  special: 'special-tab',
+}
+
+const normalizeServiceKey = (service = '') => {
+  const normalized = String(service || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '-')
+
+  const aliases = {
+    'industrial-hygiene': 'ih',
+    industrialhygiene: 'ih',
+    'manpower-supply': 'manpower',
+    manpowersupply: 'manpower',
+    'equipment-supply': 'equipment',
+    equipmentsupply: 'equipment',
+  }
+
+  return aliases[normalized] || normalized
+}
+
+const getRecordTabFromQuoteService = (service = '') =>
+  quoteServiceToRecordTab[normalizeServiceKey(service)] || null
+
+const buildQuoteLookupByServiceAndIdFromRows = (
+  rows = [],
+  activeTab = '',
+  isAggregateTab = false,
+) => {
+  const map = new Map()
+  rows.forEach((quote) => {
+    const serviceTab = quote?.serviceTab || (!isAggregateTab ? activeTab : '')
+    const service = getQuoteServiceFromRecordTab(serviceTab)
+    const serviceCandidates = service ? [service, ''] : ['']
+    const quoteIdCandidates = uniqueLookupValues([quote?.id, quote?.quote_id, quote?.quoteId])
+    const quoteRefCandidates = getQuoteReferenceValuesFromRecord(quote)
+
+    serviceCandidates.forEach((serviceValue) => {
+      quoteIdCandidates.forEach((quoteId) => {
+        if (quoteId) {
+          map.set(buildQuoteLookupKey(serviceValue, quoteId), quote)
+        }
+      })
+      quoteRefCandidates.forEach((quoteRef) => {
+        if (quoteRef) {
+          map.set(buildQuoteLookupKey(serviceValue, quoteRef), quote)
+        }
+      })
+    })
+  })
+  return map
+}
+
+const mergeQuoteRows = (rows = []) => {
+  const uniqueByKey = new Map()
+  rows.forEach((quote) => {
+    const serviceTab = quote?.serviceTab || ''
+    const quoteId = quote?.id
+    if (serviceTab && quoteId != null) {
+      uniqueByKey.set(`${serviceTab}:${String(quoteId)}`, quote)
+      return
+    }
+    if (quoteId != null) uniqueByKey.set(`:${String(quoteId)}`, quote)
+    else if (quote?.quotation_id != null) uniqueByKey.set(`:${String(quote.quotation_id)}`, quote)
+    else if (quote?.quote_ref_no != null) uniqueByKey.set(`:${String(quote.quote_ref_no)}`, quote)
+  })
+  return [...uniqueByKey.values()]
+}
+
+const getQuoteReferenceValuesFromRecord = (quote = {}) =>
+  uniqueLookupValues([
+    pickFirst(quote, [
+      'quote_ref_no',
+      'quotationId',
+      'quoteNo',
+      'quote_no',
+      'quotation_no',
+      'quotationNo',
+    ]),
+    pickFirst(quote, [
+      'quote_ref',
+      'quoteRefNo',
+      'quoteRef',
+      'quoteNumber',
+      'quote_number',
+      'quotationNumber',
+    ]),
+    pickFirst(quote, ['reference', 'refNo', 'ref_no', 'quotation_ref_no']),
+  ]).filter(Boolean)
+
+const getQuoteReferenceFromRecord = (quote = {}) =>
+  getQuoteReferenceValuesFromRecord(quote)[0] || ''
+
+const isLooseMatch = (haystackCandidates = [], needleCandidates = []) => {
+  if (!haystackCandidates.length || !needleCandidates.length) return false
+
+  const haystack = haystackCandidates.map((value) => normalizeLookupValue(value))
+  const needle = new Set(needleCandidates.map((value) => normalizeLookupValue(value)))
+
+  return haystack.some((value) => needle.has(value))
+}
+
+const matchQuoteRecordToApproval = (record = {}, approval = {}) => {
+  const quoteIdCandidates = getApprovalQuoteIdCandidates(approval)
+  const quoteRefCandidates = getApprovalQuoteRefCandidates(approval)
+  if (!quoteIdCandidates.length && !quoteRefCandidates.length) return false
+
+  const recordIds = uniqueLookupValues([
+    record?.id,
+    record?.quote_id,
+    record?.quoteId,
+    record?.quotation_id,
+  ])
+  const recordRefs = getQuoteReferenceValuesFromRecord(record)
+  if (isLooseMatch(recordIds, quoteIdCandidates) || isLooseMatch(recordRefs, quoteRefCandidates)) {
+    return true
+  }
+  return false
+}
+
+const getApprovalQuoteIdCandidates = (approval = {}) =>
+  uniqueLookupValues([approval?.quote_id, approval?.quoteId, approval?.quotation_id])
+
+const getApprovalQuoteRefCandidates = (approval = {}) =>
+  uniqueLookupValues([
+    approval?.quote_ref_no,
+    approval?.quote_ref,
+    approval?.quoteRefNo,
+    approval?.quoteRef,
+    approval?.quoteNumber,
+    approval?.quote_number,
+    approval?.quotationId,
+    approval?.quotation_number,
+    approval?.quotationNumber,
+    approval?.ref_no,
+    approval?.refNo,
+    approval?.quotation_id,
+    approval?.quoteNo,
+    approval?.quote_no,
+    approval?.quotation_no,
+    approval?.quotationNo,
+  ])
+
 export const useRecordsController = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -94,25 +272,88 @@ export const useRecordsController = () => {
   const [approvalItems, setApprovalItems] = useState([])
   const [approvalStatusUnavailable, setApprovalStatusUnavailable] = useState(true)
   const [approvalRecord, setApprovalRecord] = useState(null)
+  const [approvalQueue, setApprovalQueue] = useState([])
+  const [approvalQueueIndex, setApprovalQueueIndex] = useState(0)
   const [approvalDecisionNotice, setApprovalDecisionNotice] = useState(null)
   const [approvalRemarks, setApprovalRemarks] = useState('')
   const [isApprovalSubmitting, setIsApprovalSubmitting] = useState(false)
+  const [isApprovalReviewLoading, setIsApprovalReviewLoading] = useState(false)
   const [legacyPdfPrompt, setLegacyPdfPrompt] = useState(null)
+  const [pdfPreviewRequest, setPdfPreviewRequest] = useState(null)
+  const approvalReviewSessionRef = useRef(0)
   const { quotes, setQuotes, quotesLoading, fetchQuotes } = useRecordsFetch(activeTab)
+  const quoteLookupByServiceAndIdRef = useRef(new Map())
   const refreshQuotesInPlace = useCallback(
     (tabKey = activeTab) => fetchQuotes(tabKey, { showLoader: false }),
     [activeTab, fetchQuotes],
   )
+  const quoteLookupByServiceAndId = useMemo(() => {
+    return buildQuoteLookupByServiceAndIdFromRows(quotes, activeTab, isAggregateTab)
+  }, [activeTab, isAggregateTab, quotes])
+
+  useEffect(() => {
+    quoteLookupByServiceAndIdRef.current = quoteLookupByServiceAndId
+  }, [quoteLookupByServiceAndId])
+
+  const findQuoteForApproval = useCallback(
+    (approval = {}, fallbackRows = null) => {
+      const lookupSource = quoteLookupByServiceAndIdRef.current
+      const fallbackQuoteRows =
+        Array.isArray(fallbackRows) && fallbackRows.length ? fallbackRows : quotes
+
+      const serviceCandidates = (approval?.service ? [approval.service, ''] : ['']).map(
+        normalizeServiceKey,
+      )
+      const quoteIdCandidates = getApprovalQuoteIdCandidates(approval)
+      const quoteRefCandidates = getApprovalQuoteRefCandidates(approval)
+
+      for (const candidateService of serviceCandidates) {
+        for (const quoteId of quoteIdCandidates) {
+          const quote = lookupSource.get(buildQuoteLookupKey(candidateService, quoteId))
+          if (quote) return quote
+        }
+
+        for (const quoteRef of quoteRefCandidates) {
+          const quote = lookupSource.get(buildQuoteLookupKey(candidateService, quoteRef))
+          if (quote) return quote
+        }
+      }
+
+      const matchingQuotes = fallbackQuoteRows.filter((quote) =>
+        matchQuoteRecordToApproval(quote, approval),
+      )
+      if (matchingQuotes.length <= 1) return matchingQuotes[0] || null
+
+      const approvalService = normalizeServiceKey(approval?.service)
+      const serviceMatches = matchingQuotes.filter(
+        (quote) =>
+          normalizeServiceKey(getQuoteServiceFromRecordTab(quote?.serviceTab || '')) ===
+          approvalService,
+      )
+      return serviceMatches.length === 1 ? serviceMatches[0] : null
+    },
+    [quotes],
+  )
+  const enrichApprovalRecord = useCallback(
+    (approval, fallbackRows = null) =>
+      enrichApprovalReviewMetadata(approval, findQuoteForApproval(approval, fallbackRows)),
+    [findQuoteForApproval],
+  )
   const refreshApprovals = useCallback(async () => {
     setApprovalStatusUnavailable(true)
     try {
-      setApprovalItems(await fetchQuoteApprovals())
+      const approvals = await fetchQuoteApprovals()
+      setApprovalItems(approvals)
       setApprovalStatusUnavailable(false)
+      return approvals
     } catch (error) {
       console.error('Failed to load quotation approvals:', error)
+      return []
     }
   }, [])
   const openLegacyPdfPrompt = useCallback((prompt) => setLegacyPdfPrompt(prompt), [])
+  const openPdfPreview = useCallback((request) => setPdfPreviewRequest(request), [])
+  const closePdfPreview = useCallback(() => setPdfPreviewRequest(null), [])
   const refreshApprovalState = useCallback(
     async () => Promise.all([refreshApprovals(), refreshQuotesInPlace()]),
     [refreshApprovals, refreshQuotesInPlace],
@@ -135,15 +376,35 @@ export const useRecordsController = () => {
 
   const scopedQuotes = useMemo(() => {
     const approvalByQuote = new Map(
-      approvalItems.map((approval) => [`${approval.service}:${approval.quote_id}`, approval]),
+      approvalItems.flatMap((approval) => {
+        const serviceCandidates = approval?.service ? [approval.service, ''] : ['']
+        const quoteIdCandidates = getApprovalQuoteIdCandidates(approval)
+        const quoteRefCandidates = getApprovalQuoteRefCandidates(approval)
+        const keys = []
+
+        serviceCandidates.forEach((service) => {
+          quoteIdCandidates.forEach((quoteId) =>
+            keys.push([buildQuoteLookupKey(service, quoteId), approval]),
+          )
+          quoteRefCandidates.forEach((quoteRef) =>
+            keys.push([buildQuoteLookupKey(service, quoteRef), approval]),
+          )
+        })
+
+        return keys
+      }),
     )
     const enriched = quotes.map((quote) => {
       const serviceTab = quote?.serviceTab || (!isAggregateTab ? activeTab : '')
       const service = getQuoteServiceFromRecordTab(serviceTab)
+      const approval =
+        approvalByQuote.get(buildQuoteLookupKey(service, quote?.id)) ||
+        approvalByQuote.get(buildQuoteLookupKey(service, getQuoteReferenceFromRecord(quote))) ||
+        approvalByQuote.get(buildQuoteLookupKey('', quote?.id)) ||
+        approvalByQuote.get(buildQuoteLookupKey('', getQuoteReferenceFromRecord(quote)))
       return {
         ...quote,
-        serviceTab,
-        approval: approvalByQuote.get(`${service}:${quote.id}`) || null,
+        approval: approval ? enrichApprovalRecord(approval) : null,
         approvalStatusUnavailable,
       }
     })
@@ -159,6 +420,7 @@ export const useRecordsController = () => {
     activeTab,
     approvalItems,
     approvalStatusUnavailable,
+    enrichApprovalRecord,
     isAggregateTab,
     location.search,
     quotes,
@@ -166,17 +428,356 @@ export const useRecordsController = () => {
   ])
 
   const pendingApprovals = useMemo(
-    () => approvalItems.filter((item) => item.status === 'pending' && item.can_decide),
-    [approvalItems],
+    () =>
+      approvalItems
+        .filter((item) => item.status === 'pending' && item.can_decide)
+        .map((approval) => enrichApprovalRecord(approval)),
+    [approvalItems, enrichApprovalRecord],
   )
 
-  const openApprovalReview = useCallback((value) => {
-    const approval = value?.approval || value
-    if (!approval?.id) return
-    setApprovalRemarks('')
-    setApprovalDecisionNotice(null)
-    setApprovalRecord(approval)
+  const normalizeApprovalQueue = useCallback(
+    (items, fallbackApproval) => {
+      const queueItems = Array.isArray(items) && items.length ? items : [fallbackApproval]
+      const deduped = new Map()
+
+      queueItems.forEach((item) => {
+        const approval = item?.approval || item
+        if (!approval?.id) return
+        deduped.set(String(approval.id), enrichApprovalRecord(approval))
+      })
+
+      return [...deduped.values()]
+    },
+    [enrichApprovalRecord],
+  )
+
+  const hydrateApprovalMetadataForQueue = useCallback(
+    async (items = []) => {
+      const queue = Array.isArray(items) ? items : []
+      if (queue.length === 0 || !queue.some((item) => needsApprovalReviewMetadataHydration(item))) {
+        return queue
+      }
+
+      const tabs = [
+        ...new Set(
+          queue.map((item) => getRecordTabFromQuoteService(item?.service)).filter(Boolean),
+        ),
+      ]
+
+      const loadTabs = tabs.length ? tabs : ['all-tab']
+      const loadedRows = []
+      for (const tabKey of loadTabs) {
+        const rows = await refreshQuotesInPlace(tabKey).catch((error) => {
+          console.error('Failed to refresh quote data for approval review.', error)
+          return []
+        })
+        if (Array.isArray(rows)) {
+          loadedRows.push(...rows)
+        }
+      }
+      const hydratedRows = mergeQuoteRows(loadedRows.length ? loadedRows : quotes)
+
+      return queue.map((item) => enrichApprovalRecord(item, hydratedRows))
+    },
+    [enrichApprovalRecord, refreshQuotesInPlace, quotes],
+  )
+
+  const buildPendingApprovalLookup = useCallback((approvals = []) => {
+    return new Map(
+      approvals
+        .filter(
+          (item) =>
+            String(item?.status || '').toLowerCase() === 'pending' &&
+            Boolean(item?.can_decide) &&
+            item?.id != null,
+        )
+        .map((item) => [String(item.id), item]),
+    )
   }, [])
+
+  const findQueuedApproval = useCallback(
+    (queue, currentIndex, latestApprovals = approvalItems, direction = 1) => {
+      if (!Array.isArray(queue) || queue.length === 0) return null
+      const normalizedCurrentIndex = Number(currentIndex)
+      if (!Number.isFinite(normalizedCurrentIndex)) return null
+
+      const directionStep = direction >= 0 ? 1 : -1
+      const pendingLookup = buildPendingApprovalLookup(latestApprovals)
+      for (
+        let index = normalizedCurrentIndex + directionStep;
+        index >= 0 && index < queue.length;
+        index += directionStep
+      ) {
+        const queuedApproval = queue[index]
+        if (!queuedApproval?.id) continue
+        const nextApproval = pendingLookup.get(String(queuedApproval.id))
+        if (nextApproval) {
+          return { index, approval: nextApproval }
+        }
+      }
+
+      return null
+    },
+    [approvalItems, buildPendingApprovalLookup],
+  )
+
+  const resolveQueueTarget = useCallback(
+    (queue, targetIndex, latestApprovals = approvalItems) => {
+      if (!Array.isArray(queue) || queue.length === 0) return null
+
+      const normalizedTargetIndex = Number(targetIndex)
+      if (!Number.isInteger(normalizedTargetIndex) || normalizedTargetIndex < 0) return null
+      if (normalizedTargetIndex >= queue.length) return null
+
+      const queuedApproval = queue[normalizedTargetIndex]
+      if (!queuedApproval?.id) return null
+      const approvalLookup = buildPendingApprovalLookup(latestApprovals)
+      const latestApproval = approvalLookup.get(String(queuedApproval.id))
+      if (latestApproval) return latestApproval
+
+      return queuedApproval
+    },
+    [approvalItems, buildPendingApprovalLookup],
+  )
+
+  const closeApprovalSession = useCallback(() => {
+    setApprovalQueue([])
+    setApprovalQueueIndex(0)
+    setApprovalRecord(null)
+    setApprovalDecisionNotice(null)
+    setIsApprovalReviewLoading(false)
+    approvalReviewSessionRef.current += 1
+    const searchParams = new URLSearchParams(location.search)
+    if (searchParams.has('approvalId')) {
+      searchParams.delete('approvalId')
+      const search = searchParams.toString()
+      navigate(
+        {
+          pathname: location.pathname,
+          search: search ? `?${search}` : '',
+        },
+        { replace: true },
+      )
+    }
+  }, [location.pathname, location.search, navigate])
+
+  const openQueueItem = useCallback(
+    (index, latestApprovals = approvalItems) => {
+      const targetIndex = Number(index)
+      if (!Number.isInteger(targetIndex)) return false
+
+      const targetApproval = resolveQueueTarget(approvalQueue, targetIndex, latestApprovals)
+      if (!targetApproval) return false
+
+      const queuedApproval = approvalQueue[targetIndex]
+      const approvalRecordSource = queuedApproval?.id
+        ? queuedApproval
+        : targetApproval.approval || targetApproval
+
+      setApprovalDecisionNotice(null)
+      setApprovalQueueIndex(targetIndex)
+      setApprovalRecord(enrichApprovalRecord(approvalRecordSource))
+      return true
+    },
+    [approvalItems, approvalQueue, enrichApprovalRecord, resolveQueueTarget],
+  )
+
+  const canNavigateNextQueuedApproval = useMemo(
+    () => Boolean(findQueuedApproval(approvalQueue, approvalQueueIndex, approvalItems, 1)),
+    [approvalQueue, approvalItems, approvalQueueIndex, findQueuedApproval],
+  )
+  const canNavigatePreviousQueuedApproval = useMemo(
+    () => Boolean(findQueuedApproval(approvalQueue, approvalQueueIndex, approvalItems, -1)),
+    [approvalQueue, approvalItems, approvalQueueIndex, findQueuedApproval],
+  )
+
+  const approvalQueueList = useMemo(
+    () =>
+      approvalQueue.map((item, index) => ({
+        id: item?.id,
+        index,
+        quoteRefNo:
+          pickFirst(item, [
+            'quote_ref_no',
+            'quoteRefNo',
+            'quoteRef',
+            'quoteNumber',
+            'quote_number',
+            'quotationNumber',
+            'quotation_number',
+            'quotationId',
+            'quoteNo',
+            'quote_no',
+            'quotation_no',
+            'quotationNo',
+            'reference',
+            'refNo',
+            'ref_no',
+          ]) || (item?.quote_id != null ? `Quote #${item.quote_id}` : `#${index + 1}`),
+        quoteTitle: pickFirst(item, [
+          'quote_title',
+          'quotation_title',
+          'quoteTitle',
+          'title',
+          'quote_name',
+          'name',
+        ]),
+        quoteDate: pickFirst(item, [
+          'quote_date',
+          'quotation_date',
+          'quoteDate',
+          'date',
+          'dateCreated',
+          'createdAt',
+          'created_at',
+          'date_created',
+          'updated_at',
+        ]),
+        clientName: pickFirst(item, [
+          'client_name',
+          'clientName',
+          'fullName',
+          'customerName',
+          'customer_name',
+          'company_name',
+          'companyName',
+        ]),
+      })),
+    [approvalQueue],
+  )
+
+  const handleQueueNext = useCallback(() => {
+    if (!canNavigateNextQueuedApproval || isApprovalSubmitting) return
+
+    const nextQueuedApproval = findQueuedApproval(
+      approvalQueue,
+      approvalQueueIndex,
+      approvalItems,
+      1,
+    )
+
+    if (nextQueuedApproval) {
+      setApprovalDecisionNotice(null)
+      setApprovalQueueIndex(nextQueuedApproval.index)
+      const approvalRecordSource =
+        approvalQueue[nextQueuedApproval.index] || nextQueuedApproval.approval
+      setApprovalRecord(enrichApprovalRecord(approvalRecordSource || nextQueuedApproval))
+      return
+    }
+
+    closeApprovalSession()
+  }, [
+    approvalItems,
+    approvalQueue,
+    approvalQueueIndex,
+    canNavigateNextQueuedApproval,
+    closeApprovalSession,
+    findQueuedApproval,
+    enrichApprovalRecord,
+    isApprovalSubmitting,
+  ])
+
+  const handleQueuePrevious = useCallback(() => {
+    if (!canNavigatePreviousQueuedApproval || isApprovalSubmitting) return
+
+    const previousQueuedApproval = findQueuedApproval(
+      approvalQueue,
+      approvalQueueIndex,
+      approvalItems,
+      -1,
+    )
+
+    if (previousQueuedApproval) {
+      setApprovalDecisionNotice(null)
+      setApprovalQueueIndex(previousQueuedApproval.index)
+      const approvalRecordSource =
+        approvalQueue[previousQueuedApproval.index] || previousQueuedApproval.approval
+      setApprovalRecord(enrichApprovalRecord(approvalRecordSource || previousQueuedApproval))
+      return
+    }
+
+    closeApprovalSession()
+  }, [
+    approvalItems,
+    approvalQueue,
+    approvalQueueIndex,
+    canNavigatePreviousQueuedApproval,
+    closeApprovalSession,
+    findQueuedApproval,
+    enrichApprovalRecord,
+    isApprovalSubmitting,
+  ])
+
+  const handleQueueSkip = useCallback(async () => {
+    if (!canNavigateNextQueuedApproval || isApprovalSubmitting) return
+    handleQueueNext()
+  }, [canNavigateNextQueuedApproval, handleQueueNext, isApprovalSubmitting])
+
+  const handleQueueJump = useCallback(
+    (selectedValue) => {
+      if (isApprovalSubmitting) return
+
+      const value = Number(selectedValue)
+      if (!Number.isInteger(value)) return
+      openQueueItem(value, approvalItems)
+    },
+    [approvalItems, isApprovalSubmitting, openQueueItem],
+  )
+
+  const openApprovalReview = useCallback(
+    async (value, options = {}) => {
+      const reviewSession = approvalReviewSessionRef.current + 1
+      approvalReviewSessionRef.current = reviewSession
+
+      const sourceApproval = value?.approval || value
+      if (!sourceApproval || typeof sourceApproval !== 'object') return
+
+      const approval = enrichApprovalRecord(sourceApproval, quotes)
+      if (!approval?.id) {
+        setIsApprovalReviewLoading(false)
+        return
+      }
+
+      const queue = normalizeApprovalQueue(
+        options.queue || options.approvalQueue || [approval],
+        approval,
+      )
+      const selectedIndex = queue.findIndex((item) => String(item.id) === String(approval.id))
+      const normalizedIndex = selectedIndex >= 0 ? selectedIndex : 0
+      const needsHydration = queue.some((item) => needsApprovalReviewMetadataHydration(item))
+      setIsApprovalReviewLoading(needsHydration)
+
+      if (approvalReviewSessionRef.current !== reviewSession) {
+        setIsApprovalReviewLoading(false)
+        return
+      }
+      setApprovalRemarks('')
+      setApprovalDecisionNotice(null)
+      setApprovalQueue(queue)
+      setApprovalQueueIndex(normalizedIndex)
+      setApprovalRecord(enrichApprovalRecord(queue[normalizedIndex] || approval))
+
+      if (!needsHydration) {
+        setIsApprovalReviewLoading(false)
+        return
+      }
+
+      try {
+        const hydratedQueue = await hydrateApprovalMetadataForQueue(queue)
+        if (approvalReviewSessionRef.current !== reviewSession) return
+        setApprovalQueue(hydratedQueue)
+        setApprovalRecord(
+          enrichApprovalRecord(
+            hydratedQueue[typeof normalizedIndex === 'number' ? normalizedIndex : 0] || approval,
+          ),
+        )
+      } finally {
+        if (approvalReviewSessionRef.current !== reviewSession) return
+        setIsApprovalReviewLoading(false)
+      }
+    },
+    [enrichApprovalRecord, normalizeApprovalQueue, hydrateApprovalMetadataForQueue, quotes],
+  )
 
   useEffect(() => {
     const handleReview = (event) => openApprovalReview(event.detail)
@@ -188,11 +789,16 @@ export const useRecordsController = () => {
     const approvalId = Number(new URLSearchParams(location.search).get('approvalId') || 0)
     if (approvalId <= 0 || approvalRecord?.id === approvalId) return
     const approval = approvalItems.find((item) => Number(item.id) === approvalId)
-    if (approval) openApprovalReview(approval)
+    if (approval?.status === 'pending' && approval.can_decide) openApprovalReview(approval)
   }, [approvalItems, approvalRecord?.id, location.search, openApprovalReview])
 
+  const currentApprovalSource = approvalQueue[approvalQueueIndex] || approvalRecord
+  const currentApprovalRecord = currentApprovalSource
+    ? enrichApprovalRecord(currentApprovalSource)
+    : null
+
   const handleApprovalDecision = async (decision) => {
-    if (!approvalRecord?.id || isApprovalSubmitting) return
+    if (!currentApprovalRecord?.id || isApprovalSubmitting) return
     if (decision === 'reject' && !approvalRemarks.trim()) {
       dialog.alert('Please provide remarks when rejecting a quotation.')
       return
@@ -200,7 +806,7 @@ export const useRecordsController = () => {
     setIsApprovalSubmitting(true)
     try {
       const response = await fetch(
-        quoteApiUrl(`quote-approvals/${encodeURIComponent(approvalRecord.id)}/${decision}`),
+        quoteApiUrl(`quote-approvals/${encodeURIComponent(currentApprovalRecord.id)}/${decision}`),
         {
           method: 'PATCH',
           credentials: 'include',
@@ -216,7 +822,7 @@ export const useRecordsController = () => {
             title: 'Approval request is outdated',
             message: getMessage(
               result,
-              `Approval request #${approvalRecord.id} is no longer current.`,
+              `Approval request #${currentApprovalRecord.id} is no longer current.`,
             ),
           })
           return
@@ -225,9 +831,21 @@ export const useRecordsController = () => {
       }
       setApprovalDecisionNotice(null)
       showToast(result.message || `Quotation ${decision === 'approve' ? 'approved' : 'rejected'}.`)
-      setApprovalRecord(null)
       setApprovalRemarks('')
-      await Promise.all([refreshApprovals(), refreshQuotesInPlace()])
+      const [updatedApprovals] = await Promise.all([refreshApprovals(), refreshQuotesInPlace()])
+      const nextQueuedApproval = findQueuedApproval(
+        approvalQueue,
+        approvalQueueIndex,
+        updatedApprovals,
+        1,
+      )
+
+      if (nextQueuedApproval) {
+        setApprovalQueue(approvalQueue)
+        openQueueItem(nextQueuedApproval.index, updatedApprovals)
+      } else {
+        closeApprovalSession()
+      }
       dispatchAppNotificationsChanged()
     } catch (error) {
       dialog.alert(error?.message || `Failed to ${decision} quotation.`)
@@ -433,6 +1051,7 @@ export const useRecordsController = () => {
     getReturnTo: () => getCurrentReturnTo(location),
     onLegacyPdfPrompt: openLegacyPdfPrompt,
     onApprovalStateChanged: refreshApprovalState,
+    onOpenPdfPreview: openPdfPreview,
   })
 
   const buildStateAwareHandlers = useRecordsActionBuilder({
@@ -445,6 +1064,7 @@ export const useRecordsController = () => {
     getReturnTo: () => getCurrentReturnTo(location),
     onLegacyPdfPrompt: openLegacyPdfPrompt,
     onApprovalStateChanged: refreshApprovalState,
+    onOpenPdfPreview: openPdfPreview,
   })
 
   const handlers = useMemo(() => {
@@ -742,17 +1362,27 @@ export const useRecordsController = () => {
     handleNegotiationSubmit,
     isNegotiationSubmitting,
     pendingApprovals,
-    approvalRecord,
+    approvalRecord: currentApprovalRecord,
+    approvalQueueIndex,
+    approvalQueueSize: approvalQueue.length,
+    isApprovalReviewLoading,
     approvalRemarks,
     setApprovalRemarks,
     openApprovalReview,
     closeApprovalReview: () => {
       if (!isApprovalSubmitting) {
-        setApprovalRecord(null)
-        setApprovalDecisionNotice(null)
+        closeApprovalSession()
       }
     },
     handleApprovalDecision,
+    openQueueItem,
+    handleQueueNext,
+    handleQueuePrevious,
+    handleQueueSkip,
+    handleQueueJump,
+    canNavigateNextQueuedApproval,
+    canNavigatePreviousQueuedApproval,
+    approvalQueueList,
     approvalDecisionNotice,
     isApprovalSubmitting,
     modalState,
@@ -816,5 +1446,7 @@ export const useRecordsController = () => {
     closeLegacyPdfPrompt,
     handleLegacyPdfGenerate,
     handleLegacyPdfEdit,
+    pdfPreviewRequest,
+    closePdfPreview,
   }
 }

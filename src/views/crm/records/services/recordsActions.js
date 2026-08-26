@@ -29,9 +29,9 @@ const docxFilename = (disposition, fallback) => {
 
   if (encodedMatch?.[1]) {
     try {
-      candidate = decodeURIComponent(encodedMatch[1].trim().replace(/^"|"$/g, ''))
+      candidate = decodeURIComponent(encodedMatch[1])
     } catch {
-      // Use the safe ASCII filename or local fallback when percent-decoding fails.
+      candidate = fallback
     }
   }
 
@@ -40,6 +40,7 @@ const docxFilename = (disposition, fallback) => {
     .pop()
     ?.replace(/[\r\n"]/g, '')
     .trim()
+
   return basename?.toLowerCase().endsWith('.docx') ? basename : fallback
 }
 
@@ -66,7 +67,10 @@ export const legacyQuotationPdfAcknowledgementKey = (record, serviceKey) => {
 
 const hasLegacyPdfAcknowledgement = (record, serviceKey) => {
   try {
-    return window.sessionStorage.getItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey)) === '1'
+    return (
+      window.sessionStorage.getItem(legacyQuotationPdfAcknowledgementKey(record, serviceKey)) ===
+      '1'
+    )
   } catch {
     return false
   }
@@ -213,6 +217,7 @@ export const createHandlers = ({
   getReturnTo,
   onLegacyPdfPrompt,
   onApprovalStateChanged,
+  onOpenPdfPreview,
 }) => {
   const urls = endpointsByService[serviceKey] || {}
   const getActionReturnTo = () =>
@@ -268,60 +273,24 @@ export const createHandlers = ({
     return isSuccess(relatedPayload) ? relatedPayload.data || {} : null
   }
 
-  const openQuotationPdf = async (record) => {
-    const pdfWindow = window.open('about:blank', '_blank')
-    if (!pdfWindow) {
-      await dialog.alert(
-        'The PDF window was blocked by the browser. Allow pop-ups for this site, then retry.',
-      )
+  const openQuotationPdf = (record, { onLoadSuccess } = {}) => {
+    if (!record?.id || !urls.generate) {
+      dialog.alert('The quotation PDF is not available for this record.')
       return false
     }
-    pdfWindow.opener = null
-
-    try {
-      const response = await fetch(urls.generate(record.id), {
-        credentials: 'include',
-        silentError: true,
-        headers: { Accept: 'application/pdf' },
-      })
-      const contentType = response.headers.get('content-type') || ''
-
-      if (!response.ok) {
-        let payload = null
-        try {
-          payload = await response.json()
-        } catch {
-          // The fallback below covers non-JSON server errors.
-        }
-        if (response.status === 409 && (payload?.approval || payload?.issuance_context)) {
-          await onApprovalStateChanged?.(payload)
-        }
-        throw new Error(
-          getMessage(payload, `The quotation PDF could not be opened (HTTP ${response.status}).`),
-        )
-      }
-
-      if (!contentType.toLowerCase().includes('application/pdf')) {
-        throw new Error('The quotation PDF response was invalid.')
-      }
-
-      const blob = await response.blob()
-      const disposition = response.headers.get('content-disposition') || ''
-      const filenameMatch = disposition.match(/filename="?([^";]+)"?/i)
-      const filename = filenameMatch?.[1] || `quotation-${record.id}.pdf`
-      const pdfFile =
-        typeof File === 'function' ? new File([blob], filename, { type: 'application/pdf' }) : blob
-      const objectUrl = URL.createObjectURL(pdfFile)
-      pdfWindow.location.replace(objectUrl)
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
-      return true
-    } catch (error) {
-      pdfWindow.close()
-      await dialog.alert(
-        `${error?.message || 'The quotation PDF could not be opened.'}\n\nThe quotation itself remains saved and unchanged.`,
-      )
+    if (typeof onOpenPdfPreview !== 'function') {
+      dialog.alert('The quotation PDF preview is unavailable. Refresh the page and try again.')
       return false
     }
+
+    onOpenPdfPreview({
+      record,
+      serviceKey,
+      url: urls.generate(record.id),
+      onLoadSuccess,
+      onApprovalStateChanged,
+    })
+    return true
   }
 
   const openEditQuotation = (record) => {
@@ -361,11 +330,10 @@ export const createHandlers = ({
       onLegacyPdfPrompt({
         mode: 'legacy',
         record,
-        onGenerate: async () => {
-          const generated = await openQuotationPdf(record)
-          if (generated) rememberLegacyPdfAcknowledgement(record, serviceKey)
-          return generated
-        },
+        onGenerate: () =>
+          openQuotationPdf(record, {
+            onLoadSuccess: () => rememberLegacyPdfAcknowledgement(record, serviceKey),
+          }),
         onEdit: () => openEditQuotation(record),
       })
       return false
@@ -375,7 +343,7 @@ export const createHandlers = ({
   }
 
   const downloadQuotationWord = async (record) => {
-    if (!urls.word) return
+    if (!record?.id || !urls.word) return
 
     try {
       const response = await fetch(urls.word(record.id), {

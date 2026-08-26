@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react'
-import { CBadge, CTooltip } from '@coreui/react'
+import { CBadge, CButton, CTooltip } from '@coreui/react'
 import {
   getDateOnly,
   getInquirySourceOptions,
@@ -64,6 +64,12 @@ const getEstimatedCostValue = (record) =>
 
 const getAllRecordRowKey = (record, index) =>
   `${record?.serviceTab || 'unknown'}-${record?.id || index}`
+
+const canReviewApproval = (record) =>
+  Boolean(
+    record?.approval?.can_decide &&
+      String(record.approval?.status || '').toLowerCase() === 'pending',
+  )
 
 const AllRecordsTable = ({
   records = [],
@@ -556,6 +562,30 @@ const AllRecordsTable = ({
     }
 
     if (column.key === 'status') {
+      const reviewAllowed = canReviewApproval(record)
+      if (reviewAllowed) {
+        return (
+          <div className="d-inline-flex flex-column align-items-center gap-1">
+            <CButton
+              color="info"
+              size="sm"
+              variant="outline"
+              className="py-0 px-2"
+              data-no-row-open="true"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                window.dispatchEvent(
+                  new CustomEvent('quote-approval:review', { detail: record?.approval }),
+                )
+              }}
+            >
+              Review
+            </CButton>
+          </div>
+        )
+      }
+
       const statusTone = record?.__tableMeta?.statusTone
       const outcomeLabel = getProjectOutcomeLabel(record)
       return (

@@ -24,7 +24,18 @@ export const buildPricingFromInvoice = (invoice) => {
   const baseAmount = toNumber(invoice?.amount)
   const sstAmount = toNumber(invoice?.sst_amount)
   const grandTotal = toNumber(invoice?.grand_total)
-  const sstRate = baseAmount > 0 ? (sstAmount / baseAmount) * 100 : 0
+  const taxableSubtotal = Math.max(0, grandTotal - sstAmount)
+  const hasStoredSstRate =
+    invoice?.sst_percent !== null &&
+    invoice?.sst_percent !== undefined &&
+    invoice?.sst_percent !== ''
+  const storedSstRate = Number(invoice?.sst_percent)
+  const sstRate =
+    hasStoredSstRate && Number.isFinite(storedSstRate)
+      ? storedSstRate
+      : taxableSubtotal > 0
+        ? (sstAmount / taxableSubtotal) * 100
+        : 0
   const remarks = invoice?.remarks || ''
 
   const pricing = {
@@ -54,7 +65,8 @@ export const buildPricingFromInvoice = (invoice) => {
       let hrdQty = 1
       let hrdUnit = 'Lot'
 
-      const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
+      const isDiscountLine = (line) =>
+        line?.line_type === 'discount' || isExactLabel(line, ['discount', 'less'])
       const isTrainingLine = (line) => isExactLabel(line, ['training fee', 'training total'])
       const isMealLine = (line) => isExactLabel(line, ['meal total'])
       const isMobilizationLine = (line) =>
@@ -144,7 +156,8 @@ export const buildPricingFromInvoice = (invoice) => {
       let miscUnit = 'Lot'
       let miscUnitPrice = 0
 
-      const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
+      const isDiscountLine = (line) =>
+        line?.line_type === 'discount' || isExactLabel(line, ['discount', 'less'])
       const isDeliveryLine = (line) => isExactLabel(line, ['delivery charge'])
       const isMiscLine = (line) => isExactLabel(line, ['misc charge'])
 
@@ -205,7 +218,8 @@ export const buildPricingFromInvoice = (invoice) => {
     }
 
     case 'Manpower Supply': {
-      const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
+      const isDiscountLine = (line) =>
+        line?.line_type === 'discount' || isExactLabel(line, ['discount', 'less'])
       const discountLine = lines.find((line) => isDiscountLine(line))
       const nonDiscountLines = lines.filter((line) => !isDiscountLine(line))
       const purposeKey = normalizeDesc(invoice?.invoice_purpose)
@@ -296,8 +310,10 @@ export const buildPricingFromInvoice = (invoice) => {
     }
 
     case 'Industrial Hygiene': {
-      const isDiscountLine = (line) => isExactLabel(line, ['discount', 'less'])
+      const isDiscountLine = (line) =>
+        line?.line_type === 'discount' || isExactLabel(line, ['discount', 'less'])
       const isTravelLine = (line) =>
+        line?.line_type === 'travel' ||
         isExactLabel(line, ['travel charge', 'mobilization charge', 'mobilization cost'])
       const isGeneratedBaseLine = (line) => {
         const detail = String(line?.description || '')
@@ -312,6 +328,7 @@ export const buildPricingFromInvoice = (invoice) => {
       const nonMetaLines = lines.filter((line) => !isDiscountLine(line) && !isTravelLine(line))
       const purposeKey = normalizeDesc(invoice?.invoice_purpose)
       const mainLine =
+        nonMetaLines.find((line) => line?.line_type === 'service') ||
         nonMetaLines.find((line) => normalizeDesc(line?.item_description) === purposeKey) ||
         nonMetaLines.find((line) => isGeneratedBaseLine(line)) ||
         nonMetaLines[0]
@@ -373,12 +390,16 @@ export const buildPricingFromInvoice = (invoice) => {
           discount_unit_price: discountUnitPrice,
           hygiene_items: customLines.map((line) => ({
             id: line.id,
+            is_custom: true,
+            line_type: line.line_type || 'custom',
+            source_line_key: line.source_line_key || null,
             item_description: line.item_description || '',
             description: line.description || '',
             unit: line.unit || 'Lot',
             quantity: toNumber(line.quantity, 1),
             unit_price: toNumber(line.unit_price),
           })),
+          hygiene_items_initialized: true,
           sst_percent: sstRate,
           sub_total: baseAmount,
           sst_amount: sstAmount,

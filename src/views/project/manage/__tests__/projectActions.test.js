@@ -24,7 +24,7 @@ describe('projectActions', () => {
     const supplyActions = buildProjectActions({ project: activeSupplyProject })
 
     expect(getAction(trainingActions, 'jd14')).toEqual(
-      expect.objectContaining({ label: 'Generate JD14' }),
+      expect.objectContaining({ label: 'Create JD14' }),
     )
     expect(getAction(supplyActions, 'jd14')).toBeUndefined()
   })

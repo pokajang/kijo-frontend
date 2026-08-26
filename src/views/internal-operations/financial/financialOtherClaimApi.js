@@ -4,8 +4,9 @@ import { dispatchAppNotificationsChanged } from '../../../notifications/appNotif
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 
-export const fetchFinancialOtherClaimRecords = async () => {
-  const payload = await apiJson(`${API_BASE}hr/salary/other-claims/financial-records`)
+export const fetchFinancialOtherClaimRecords = async (scope = 'current') => {
+  const query = scope === 'archived' ? '?scope=archived' : ''
+  const payload = await apiJson(`${API_BASE}hr/salary/other-claims/financial-records${query}`)
   return Array.isArray(payload.records) ? payload.records.map(normalizeOtherClaimRecord) : []
 }
 
@@ -48,6 +49,19 @@ export const submitFinancialOtherClaimAction = async (
 
   dispatchAppNotificationsChanged()
   return payload.record ? normalizeOtherClaimRecord(payload.record) : null
+}
+
+export const restoreArchivedFinancialOtherClaim = async (id, recordVersion = null) => {
+  const payload = await apiJson(
+    `${API_BASE}hr/salary/other-claims/financial-records/${encodeURIComponent(id)}/restore-archive`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ record_version: Number(recordVersion || 0) || undefined }),
+    },
+  )
+  dispatchAppNotificationsChanged()
+  return payload
 }
 
 export const exportFinancialOtherClaimPdf = async (id) => {

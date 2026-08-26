@@ -9,6 +9,8 @@ export default [
       'build/**',
       'coverage/**',
       'dist/**',
+      'test-results/**',
+      '.tmp/**',
       'node_modules/**',
       'public/**',
       'eslint.config.mjs',

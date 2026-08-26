@@ -22,6 +22,11 @@ const InvoiceFormShell = ({
   setPricing,
   grantApprovalNo,
   onGrantApprovalChange,
+  fieldErrors,
+  onClearFieldError,
+  financialLocked,
+  financialLockMessage,
+  onDirty,
 }) => (
   <>
     <ClientDetails
@@ -38,7 +43,12 @@ const InvoiceFormShell = ({
       onProjectChange={onProjectChange}
     />
 
-    <InvoiceDetails form={invoiceDetails} handleChange={onInvoiceDetailsChange} mode={mode} />
+    <InvoiceDetails
+      form={invoiceDetails}
+      handleChange={onInvoiceDetailsChange}
+      mode={mode}
+      financialLocked={financialLocked}
+    />
 
     <InvoiceFormLoader
       project={project}
@@ -47,6 +57,11 @@ const InvoiceFormShell = ({
       pricing={pricing}
       setPricing={setPricing}
       mode={mode}
+      fieldErrors={fieldErrors}
+      onClearFieldError={onClearFieldError}
+      financialLocked={financialLocked}
+      financialLockMessage={financialLockMessage}
+      onDirty={onDirty}
     />
 
     <HRDGrantMode

@@ -64,7 +64,7 @@ describe('getQuoteIssuanceState', () => {
     },
   )
 
-  it('ignores an approval row produced by the superseded Training policy', () => {
+  it('ignores an approval row produced by a superseded policy', () => {
     expect(
       getQuoteIssuanceState({
         serviceTab: 'training-tab',
@@ -96,8 +96,7 @@ describe('getQuoteIssuanceState', () => {
       }),
     ).toEqual({
       blocked: true,
-      message:
-        'BD approval is required. The selected manpower rate requires management approval.',
+      message: 'BD approval is required. The selected manpower rate requires management approval.',
     })
   })
 

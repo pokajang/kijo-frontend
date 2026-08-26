@@ -203,7 +203,7 @@ describe('ManageProjectPage canonical routes', () => {
     )
     expect(actionGroups[1]).toHaveAttribute('data-action-keys', 'complete,terminate')
     expect(actionGroups[2]).toHaveAttribute('data-action-keys', 'delete')
-    expect(screen.getByRole('button', { name: /generate invoice/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /create invoice/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /complete project/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /delete project/i })).toBeInTheDocument()
 
@@ -211,6 +211,23 @@ describe('ManageProjectPage canonical routes', () => {
     expect(
       collaborators.compareDocumentPosition(actionGroups[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+
+  it('opens commercial creation with durable project-origin context', async () => {
+    routeState.location = { state: { project: currentProject } }
+    routeState.params = { id: '12', type: 'equipment-supply', name: 'project-alpha' }
+
+    render(<ManageProjectPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /create invoice/i }))
+
+    expect(routeState.navigate).toHaveBeenCalledWith('/commercial/invoice/create/12', {
+      state: {
+        from: 'project-manage',
+        fromProjectId: '12',
+        project: currentProject,
+      },
+    })
   })
 
   it('wires commercial record refresh callbacks into nearby project sections', async () => {

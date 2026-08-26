@@ -9,6 +9,7 @@ import EditInvoiceModal from './InvoiceModal/edit/EditInvoiceModal'
 import MarkPaidModal from './InvoiceModal/MarkPaidModal'
 import UpdateHrdClaimRefModal from './InvoiceModal/UpdateHrdClaimRefModal'
 import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
+import { buildStoredInvoiceSummaryRows } from '../../../shared/invoice/invoiceStoredTotals'
 import {
   fetchAllInvoices,
   handleAction,
@@ -219,6 +220,7 @@ const InvoiceDetailPage = () => {
                 { key: 'unit_price', label: 'Unit Price', className: 'text-end' },
                 { key: 'subtotal', label: 'Subtotal', className: 'text-end' },
               ]}
+              summaryRows={buildStoredInvoiceSummaryRows(invoice)}
             />
           </CCol>
         </DetailSection>

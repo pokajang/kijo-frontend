@@ -109,6 +109,7 @@ export function useSupplierPoServices({
   const [quotationRemarks, setQuotationRemarks] = useState(
     initialProjectOption?.value?.quotation_remarks || '',
   )
+  const [submitting, setSubmitting] = useState(false)
 
   const [projectList, setProjectList] = useState(() =>
     initialProjectOption ? [initialProjectOption] : [],
@@ -288,6 +289,7 @@ export function useSupplierPoServices({
   }
 
   const handleSave = async () => {
+    if (submitting) return
     if (lockProject && !selectedProject?.value?.project_id) {
       dialog.alert('A project is required to create this Supplier PO.')
       return
@@ -316,31 +318,42 @@ export function useSupplierPoServices({
     const confirmed = await dialog.confirm('Are you sure you want to submit this Purchase Order?')
     if (!confirmed) return
 
-    fetch(`${import.meta.env.VITE_API_BASE}catalog/purchase-orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        if (result.status === 'success') {
-          const poId = result.po_id || result?.data?.po_id || result?.data?.id || result?.id || ''
-          dialog.alert(`Purchase Order created successfully. PO ID: ${poId}`)
-          handleReset()
-          if (typeof onCreated === 'function') {
-            onCreated({ poId, result, payload })
-          } else {
-            navigate('/commercial/supplier-po')
-          }
-        } else {
-          dialog.alert('Failed to create PO: ' + (result.message || 'Unknown error.'))
+    setSubmitting(true)
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE}catalog/purchase-orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+
+      if (!response.ok || result.status !== 'success') {
+        await dialog.alert('Failed to create PO: ' + (result.message || 'Unknown error.'))
+        return
+      }
+
+      const poId = result.po_id || result?.data?.po_id || result?.data?.id || result?.id || ''
+      handleReset()
+      if (typeof onCreated === 'function') {
+        try {
+          await onCreated({ poId, result, payload })
+        } catch (error) {
+          console.error('Supplier PO post-create action error:', error)
+          await dialog.alert(
+            'The Purchase Order was created, but the next actions could not be shown. Open it from the Supplier PO list.',
+          )
         }
-      })
-      .catch((err) => {
-        console.error('PO submission error:', err)
-        dialog.alert('Network or server error while saving PO.')
-      })
+      } else {
+        await dialog.alert(`Purchase Order created successfully. PO ID: ${poId}`)
+        navigate('/commercial/supplier-po')
+      }
+    } catch (err) {
+      console.error('PO submission error:', err)
+      await dialog.alert('Network or server error while saving PO.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return {
@@ -372,5 +385,6 @@ export function useSupplierPoServices({
     grandTotal,
     handleReset,
     handleSave,
+    submitting,
   }
 }

@@ -47,7 +47,6 @@ const RecordActionMenu = ({
   const hasEmail = Boolean(getRecordEmailAddress(record))
   const negotiationAllowed = canRequestNegotiation(record, user)
   const deleteRestriction = onDelete ? getQuoteDeleteRestriction(record, user) : ''
-  const approval = record?.approval
   const issuanceState = getQuoteIssuanceState(record)
   const issuanceBlocked = issuanceState.blocked
   const estimatedCostEditRequired = Boolean(
@@ -58,13 +57,6 @@ const RecordActionMenu = ({
   const actions = [
     { key: 'view', label: 'View', onClick: onView, hidden: !onView },
     { key: 'open-tab', label: 'Open Tab', onClick: onOpenTab, hidden: !onOpenTab },
-    {
-      key: 'review-approval',
-      label: 'Review Approval',
-      onClick: () =>
-        window.dispatchEvent(new CustomEvent('quote-approval:review', { detail: approval })),
-      hidden: !approval?.can_decide || approval?.status !== 'pending',
-    },
     {
       key: 'email',
       label: 'Email',
@@ -102,7 +94,7 @@ const RecordActionMenu = ({
       label: 'Generate Word',
       onClick: (item) => onGenerate?.(item, 'word'),
       hidden: !onGenerate,
-      disabled: issuanceBlocked,
+      disabled: issuanceBlocked && !estimatedCostEditRequired,
       tooltip: approvalMessage,
     },
     { key: 'follow-up', label: 'Follow Up', onClick: onFollowUp, hidden: !onFollowUp },

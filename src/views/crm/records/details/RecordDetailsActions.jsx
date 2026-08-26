@@ -7,7 +7,6 @@ import { getQuoteDeleteRestriction } from '../utils/recordOwnership'
 const RecordDetailsActions = ({
   handlers,
   record,
-  serviceTab,
   isAwarded,
   isSyncingClient,
   onEmail,
@@ -30,9 +29,7 @@ const RecordDetailsActions = ({
   const issuanceProps = issuanceState.blocked
     ? { disabled: true, 'aria-describedby': issuanceNoticeId }
     : {}
-  const pdfIssuanceProps = issuanceState.blocked && !estimatedCostEditRequired
-    ? issuanceProps
-    : {}
+  const pdfIssuanceProps = issuanceState.blocked && !estimatedCostEditRequired ? issuanceProps : {}
   const deleteButton = (
     <CButton
       size="sm"

@@ -32,7 +32,7 @@ const LegacyQuotationCostModal = ({
         <CModalTitle id="legacy-quotation-cost-title">
           {requiresCurrentCost
             ? 'Estimated internal cost required'
-            : 'Estimated internal cost is not recorded'}
+            : 'Estimated internal cost isn’t recorded'}
         </CModalTitle>
       </CModalHeader>
       <CModalBody>

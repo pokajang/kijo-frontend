@@ -11,7 +11,7 @@ import {
 } from '@coreui/react'
 import { getInvoicePaymentTermsSourceLabel, normalizePaymentTermsDays } from '../paymentTerms'
 
-const InvoiceDetails = ({ form, handleChange, mode = 'create' }) => {
+const InvoiceDetails = ({ form, handleChange, mode = 'create', financialLocked = false }) => {
   const isCreate = mode === 'create'
   const overridePaymentTerms = Boolean(form.overridePaymentTerms)
   const source = overridePaymentTerms
@@ -37,7 +37,7 @@ const InvoiceDetails = ({ form, handleChange, mode = 'create' }) => {
               name="purpose"
               value={form.purpose || ''}
               onChange={handleChange}
-              disabled={isCreate}
+              disabled={isCreate || financialLocked}
             />
           </CCol>
         </CRow>
@@ -51,7 +51,7 @@ const InvoiceDetails = ({ form, handleChange, mode = 'create' }) => {
               name="dateIssued"
               value={form.dateIssued || ''}
               onChange={handleChange}
-              disabled={isCreate}
+              disabled={isCreate || financialLocked}
             />
           </CCol>
           <CCol md={4}>

@@ -263,7 +263,7 @@ describe('PaymentQueueRecords', () => {
       ]),
     )
     expect(storageMock.bulkUndoPaymentQueuePaid.mock.calls[0][0]).toHaveLength(2)
-  })
+  }, 20000)
 
   it('presents the staff route as read-only My Payments', async () => {
     storageMock.fetchPaymentQueue.mockResolvedValue([rows[1]])

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
+import { CAlert, CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
 
 import dialog from '../../../../components/dialog/dialogService'
 import {
@@ -25,7 +25,8 @@ import {
   useTrainingQuoteData as fetchTrainingQuoteData,
 } from './invoiceCreateApi'
 import InvoiceReviewStep from './InvoiceReviewStep'
-import InvoiceSuccessStep from './InvoiceSuccessStep'
+import { navigateToProjectDocument } from '../../shared/commercialReturnNavigation'
+import useCommercialCreationSuccess from '../../shared/useCommercialCreationSuccess'
 
 const getLocalISODate = () => {
   const now = new Date()
@@ -50,6 +51,16 @@ const getProjectPaymentTerms = (project = {}) => {
 }
 
 const MONEY_TOLERANCE = 0.01
+
+const focusFirstFieldError = (fieldErrors = {}) => {
+  const firstPath = Object.keys(fieldErrors)[0]
+  if (!firstPath) return
+  requestAnimationFrame(() => {
+    const input = document.querySelector(`[data-field-path="${firstPath}"]`)
+    input?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+    input?.focus?.({ preventScroll: true })
+  })
+}
 
 const toMoneyNumber = (value) => {
   const number = Number(value)
@@ -106,7 +117,12 @@ const fetchersByType = {
     fetchManpowerQuoteData(project.quote_id, setters.setQuoteDetails, setters.setPricing),
   ],
   'Industrial Hygiene': (project, setters) => [
-    fetchHygieneQuoteData(project.quote_id, setters.setQuoteDetails, setters.setPricing),
+    fetchHygieneQuoteData(
+      project.quote_id,
+      setters.setQuoteDetails,
+      setters.setPricing,
+      setters.setQuoteError,
+    ),
   ],
   'Special Service': (project, setters) => [
     fetchSpecialQuoteData(project.quote_id, setters.setQuoteDetails, setters.setPricing),
@@ -177,6 +193,18 @@ const getInitialPricing = () => ({
 const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const navigate = useNavigate()
   const isInvoiceListOrigin = origin === 'invoice-list'
+  const presentCreationSuccess = useCommercialCreationSuccess({
+    documentType: 'invoice',
+    documentLabel: 'Invoice',
+    projectId: project.id,
+    projectLabel: project.project_name || `Project #${project.id}`,
+    origin,
+    listOrigin: 'invoice-list',
+    listPath: '/commercial/invoice',
+    detailPath: '/commercial/invoice',
+    viewLabel: 'View Invoice',
+    listLabel: 'View Invoice List',
+  })
   const commercialDocs = useProjectCommercialDocs(project?.id, true)
   const showCommercialDocsNotice =
     commercialDocs.loading ||
@@ -220,9 +248,14 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const [draftReady, setDraftReady] = useState(false)
   const [loadedDraftKey, setLoadedDraftKey] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [createdInvoice, setCreatedInvoice] = useState(null)
   const [reviewPayload, setReviewPayload] = useState(null)
   const [closeProject, setCloseProject] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [deviationReason, setDeviationReason] = useState('')
+  const [deviationAcknowledged, setDeviationAcknowledged] = useState(false)
+  const [deviationError, setDeviationError] = useState('')
+  const [quoteLoadError, setQuoteLoadError] = useState('')
+  const [quoteFetchAttempt, setQuoteFetchAttempt] = useState(0)
   const effectivePaymentMethod =
     paymentMethodOverride || (quoteDetails?.payment_method || '').trim().toLowerCase()
   const missingTrainingDates =
@@ -244,9 +277,14 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     setQuoteDetails(null)
     setPricing(getInitialPricing())
     setGrantApprovalNo('')
-    setCreatedInvoice(null)
     setReviewPayload(null)
     setCloseProject(false)
+    setFieldErrors({})
+    setDeviationReason('')
+    setDeviationAcknowledged(false)
+    setDeviationError('')
+    setQuoteLoadError('')
+    setQuoteFetchAttempt(0)
     setLoaNo(project?.po_loa_number || project?.client_award_ref_no || '')
     setClientOverrides({
       clientName: project?.client_name || '',
@@ -328,15 +366,20 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     if (!project?.quote_id || fetchedRef.current) return
     fetchedRef.current = true
     const factory = fetchersByType[project.project_type]
+    const setPricingFromQuote = (updater) => {
+      if (draftAppliedRef.current) return
+      setPricing(updater)
+    }
     const aborts = factory
       ? factory(project, {
           setQuoteDetails,
-          setPricing,
+          setPricing: setPricingFromQuote,
           setGrantApprovalNo,
+          setQuoteError: setQuoteLoadError,
         })
       : []
     return () => aborts.forEach((abort) => abort && abort())
-  }, [project])
+  }, [project, quoteFetchAttempt])
 
   useEffect(() => {
     if (!quoteDetails) return
@@ -445,11 +488,17 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
 
     const built = buildInvoiceCreatePayload(project.project_type, getCreateInvoiceArgs())
     if (!built.success) {
+      if (built.fieldErrors) {
+        setFieldErrors(built.fieldErrors)
+        focusFirstFieldError(built.fieldErrors)
+        return
+      }
       dialog.alert(built.message || 'Invoice cannot be created.')
       return
     }
 
     setReviewPayload(built.payload)
+    setFieldErrors({})
     setCloseProject(false)
     setStep('review')
   }
@@ -466,29 +515,53 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
 
   const handleConfirmCreateInvoice = async () => {
     if (submitting) return
+    if (
+      projectInvoiceSummary.remainingAfter !== null &&
+      projectInvoiceSummary.remainingAfter < -MONEY_TOLERANCE
+    ) {
+      if (!deviationReason.trim() || !deviationAcknowledged) {
+        setDeviationError(
+          !deviationReason.trim()
+            ? 'Briefly explain why this invoice exceeds the project value.'
+            : 'Confirm the project-value difference to continue.',
+        )
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const result = await submitInvoicePayload({
         ...reviewPayload,
+        deviation_reason: deviationReason.trim() || null,
+        deviation_acknowledged: deviationAcknowledged,
         close_project: Boolean(closeProject && projectInvoiceSummary.canCloseProject),
       })
+      if (result?.fieldErrors) {
+        const pricingErrors = Object.fromEntries(
+          Object.entries(result.fieldErrors).filter(([path]) => path.startsWith('pricing.')),
+        )
+        if (Object.keys(pricingErrors).length > 0) {
+          setFieldErrors(pricingErrors)
+          setStep('edit')
+          focusFirstFieldError(pricingErrors)
+        } else {
+          setDeviationError(result.message || 'Review the project-value difference to continue.')
+        }
+        return
+      }
       if (result?.openExisting && result.invoiceId) {
-        navigate(`/commercial/invoice/${result.invoiceId}`)
+        const detailPath = `/commercial/invoice/${result.invoiceId}`
+        if (isInvoiceListOrigin) navigate(detailPath)
+        else navigateToProjectDocument(navigate, detailPath, project.id)
         return
       }
       if (result?.success) {
         if (draftKey) localStorage.removeItem(draftKey)
-        if (isInvoiceListOrigin) {
-          setCreatedInvoice({
-            invoiceId: result.invoiceId,
-            invoiceRefNo: result.invoiceRefNo,
-            projectClosed: result.projectClosed,
-            projectId: project.id,
-          })
-          setStep('success')
-          return
-        }
-        if (result.invoiceId) navigate(`/commercial/invoice/${result.invoiceId}`)
+        await presentCreationSuccess({
+          detailId: result.invoiceId,
+          reference: result.invoiceRefNo || result.invoiceId,
+          detailLines: result.projectClosed ? ['Project status was marked Completed.'] : [],
+        })
       }
     } finally {
       setSubmitting(false)
@@ -526,6 +599,28 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
   const renderEditStep = () => (
     <>
       {showCommercialDocsNotice && <CCardBody>{commercialDocsNotice}</CCardBody>}
+      {quoteLoadError ? (
+        <CCardBody className="pb-0">
+          <CAlert
+            color="warning"
+            className="d-flex align-items-center justify-content-between gap-2"
+          >
+            <span>{quoteLoadError}</span>
+            <CButton
+              color="warning"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                fetchedRef.current = false
+                setQuoteLoadError('')
+                setQuoteFetchAttempt((value) => value + 1)
+              }}
+            >
+              Retry
+            </CButton>
+          </CAlert>
+        </CCardBody>
+      ) : null}
       {draftReady ? (
         <InvoiceFormShell
           mode="create"
@@ -564,6 +659,15 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
           }}
           pricing={pricing}
           setPricing={setPricing}
+          fieldErrors={fieldErrors}
+          onClearFieldError={(path) =>
+            setFieldErrors((prev) => {
+              if (!prev[path]) return prev
+              const next = { ...prev }
+              delete next[path]
+              return next
+            })
+          }
           grantApprovalNo={grantApprovalNo}
           onGrantApprovalChange={(event) => setGrantApprovalNo(event.target.value)}
         />
@@ -596,19 +700,16 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
 
   return (
     <CCard className="mb-4">
-      <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-        <strong>
-          {step === 'review'
-            ? 'Review Invoice'
-            : step === 'success'
-              ? 'Invoice Created'
-              : 'Generate Invoice'}
-        </strong>
-        {step !== 'success' && (
-          <CButton color="secondary" size="sm" variant="outline" onClick={onBack}>
-            Back
-          </CButton>
-        )}
+      <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+        <div style={{ minWidth: 0 }}>
+          <strong>{step === 'review' ? 'Review Invoice' : 'Create Invoice'}</strong>
+          <div className="small text-body-secondary text-truncate">
+            For project: {project?.project_name || `Project #${project?.id}`}
+          </div>
+        </div>
+        <CButton color="secondary" size="sm" variant="outline" onClick={onBack}>
+          {isInvoiceListOrigin ? 'Back to Invoice List' : 'Back to Project'}
+        </CButton>
       </CCardHeader>
 
       {step === 'edit' && renderEditStep()}
@@ -622,15 +723,17 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
           submitting={submitting}
           onBack={() => setStep('edit')}
           onConfirm={handleConfirmCreateInvoice}
-        />
-      )}
-      {step === 'success' && (
-        <InvoiceSuccessStep
-          invoice={createdInvoice}
-          onReturnToList={() => navigate('/commercial/invoice')}
-          onManageProject={() =>
-            navigate(`/project/manage/${createdInvoice?.projectId || project.id}`)
-          }
+          deviationReason={deviationReason}
+          deviationAcknowledged={deviationAcknowledged}
+          deviationError={deviationError}
+          onDeviationReasonChange={(value) => {
+            setDeviationReason(value)
+            setDeviationError('')
+          }}
+          onDeviationAcknowledgedChange={(value) => {
+            setDeviationAcknowledged(value)
+            setDeviationError('')
+          }}
         />
       )}
     </CCard>

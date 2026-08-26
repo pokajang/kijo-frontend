@@ -84,7 +84,7 @@ const DeliveryOrderCreatePage = () => {
         <CCol xs={12}>
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
-              <strong>Generate Delivery Order</strong>
+              <strong>Create Delivery Order</strong>
               <CButton color="secondary" size="sm" variant="outline" onClick={handleBack}>
                 {origin === 'delivery-order-list'
                   ? 'Back to Delivery Order List'

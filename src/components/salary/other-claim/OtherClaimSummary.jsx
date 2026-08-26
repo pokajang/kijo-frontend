@@ -10,7 +10,11 @@ import {
   SalaryPayablePreviewTable,
 } from '../SalaryTables'
 import { AttachmentPreviewModal } from '../claim-ui/ClaimFormPrimitives'
-import { claimTravelCategory, formatMileageMeta } from './model/otherClaimModel'
+import {
+  claimTravelCategory,
+  formatMileageMeta,
+  getClaimAttachments,
+} from './model/otherClaimModel'
 
 const travelCategoryLabels = {
   mileage: 'Mileage',
@@ -22,7 +26,7 @@ const travelCategoryLabels = {
 }
 
 const ClaimLabel = ({ item, index, showMileageMeta = false, showTravelCategory = false }) => {
-  const attachments = item.attachments || (item.attachment ? [item.attachment] : [])
+  const attachments = getClaimAttachments(item)
   const meta = [
     item.date,
     item.sourceLabel,
@@ -128,7 +132,7 @@ const OtherClaimSummary = ({
             canEditClaim: true,
             claimType: item.claimType || key,
             claimId: item.id,
-            attachments: item.attachments || (item.attachment ? [item.attachment] : []),
+            attachments: getClaimAttachments(item),
           })),
         ]
       }),

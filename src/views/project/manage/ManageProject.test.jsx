@@ -262,6 +262,8 @@ describe('ManageProject commercial create routes', () => {
 
       expect(navigateMock).toHaveBeenCalledWith(path, {
         state: {
+          from: 'project-manage',
+          fromProjectId: '12',
           project: expect.objectContaining({
             id: 12,
             project_name: 'Project Alpha',

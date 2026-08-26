@@ -69,6 +69,7 @@ export const useRecordsActionBuilder = ({
   getReturnTo,
   onLegacyPdfPrompt,
   onApprovalStateChanged,
+  onOpenPdfPreview,
 }) =>
   useMemo(
     () => (serviceKey) =>
@@ -82,6 +83,7 @@ export const useRecordsActionBuilder = ({
         getReturnTo,
         onLegacyPdfPrompt,
         onApprovalStateChanged,
+        onOpenPdfPreview,
         ...modalBindings,
       }),
     [
@@ -92,6 +94,7 @@ export const useRecordsActionBuilder = ({
       onActionSuccess,
       onLegacyPdfPrompt,
       onApprovalStateChanged,
+      onOpenPdfPreview,
       refreshAfterLocalDelete,
       setQuotes,
     ],

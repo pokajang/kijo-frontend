@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import OtherClaimApply from './OtherClaimApply'
+import OtherClaimApply, { mergeCanonicalAttachments } from './OtherClaimApply'
 import { readOtherClaimDraft } from './otherClaimDraftStorage'
 import { getCurrentClaimMonth } from './other-claim/model/otherClaimModel'
 
@@ -80,6 +80,35 @@ describe('OtherClaimApply', () => {
     cleanup()
     window.localStorage.clear()
     vi.restoreAllMocks()
+  })
+
+  it('retains a local attachment preview after the draft save returns its server copy', () => {
+    const dataUrl = 'data:application/pdf;base64,cHJldmlldw=='
+    const file = new File(['preview'], 'receipt.pdf', { type: 'application/pdf' })
+
+    expect(
+      mergeCanonicalAttachments(
+        [{ clientId: 'receipt-1', name: 'receipt.pdf', file, dataUrl }],
+        [{ id: 9, clientId: 'receipt-1', name: 'receipt.pdf', url: 'https://api.example/receipt' }],
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        id: 9,
+        file,
+        dataUrl,
+        url: 'https://api.example/receipt',
+      }),
+    ])
+  })
+
+  it('does not erase local attachments when a draft response omits them', () => {
+    const attachment = {
+      clientId: 'receipt-1',
+      name: 'receipt.pdf',
+      dataUrl: 'data:application/pdf;base64,AA==',
+    }
+
+    expect(mergeCanonicalAttachments([attachment], [])).toEqual([attachment])
   })
 
   it('opens the default claim entry fields from Add Claim and keeps all claim types selectable', async () => {
@@ -459,5 +488,48 @@ describe('OtherClaimApply', () => {
         String(url).includes('hr/salary/other-claims/draft'),
       ),
     ).toHaveLength(0)
+  })
+
+  it('resubmits an unreviewed submitted claim without creating a draft', async () => {
+    apiMock.apiJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).includes('hr/salary/profile')) {
+        return {
+          profile: {
+            defaultMileageRate: '0.60',
+            yearlyMedicalClaim: '1200',
+            recurringAllowances: [],
+          },
+        }
+      }
+      if (String(url).endsWith('hr/salary/other-claims') && options.method === 'POST') {
+        return {
+          record: { ...draftAllowanceRecord, status: 'Submitted', recordVersion: 4 },
+          mail_sent: true,
+        }
+      }
+      return { record: null }
+    })
+
+    render(
+      <OtherClaimApply
+        editRecord={{ ...draftAllowanceRecord, status: 'Submitted', recordVersion: 3 }}
+      />,
+    )
+    await screen.findByText('Other Claim Summary')
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+    expect(await screen.findByText('Other claim was submitted for review.')).toBeInTheDocument()
+    expect(
+      apiMock.apiJson.mock.calls.filter(([url]) =>
+        String(url).includes('hr/salary/other-claims/draft'),
+      ),
+    ).toHaveLength(0)
+
+    const [, submitOptions] = apiMock.apiJson.mock.calls.find(
+      ([url, options]) =>
+        String(url).endsWith('hr/salary/other-claims') && options?.method === 'POST',
+    )
+    expect(submitOptions.body.get('application_id')).toBe('42')
+    expect(submitOptions.body.get('record_version')).toBe('3')
   })
 })

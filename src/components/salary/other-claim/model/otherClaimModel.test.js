@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createDraftPayload,
   formatMileageMeta,
+  getClaimAttachments,
   isCompleteClaim,
   mapClaimItems,
   stateFromDraft,
@@ -9,6 +10,19 @@ import {
 } from './otherClaimModel'
 
 describe('otherClaimModel', () => {
+  it('retains a legacy attachment when an empty attachment array is also present', () => {
+    const attachment = { name: 'receipt.pdf', dataUrl: 'data:application/pdf;base64,AA==' }
+    const attachments = getClaimAttachments({ attachments: [], attachment })
+
+    expect(attachments).toEqual([attachment])
+    expect(
+      mapClaimItems(
+        [{ id: 'travel-1', description: 'Client visit', amount: 12, attachments: [], attachment }],
+        'Expense',
+      )[0].attachments,
+    ).toEqual([attachment])
+  })
+
   it('keeps legacy mileage records backward compatible as return trips', () => {
     const state = stateFromRecord({
       claimMonthValue: '2026-07',

@@ -118,14 +118,14 @@ export const normalizeAttachment = (attachment = {}, index = 0) => {
   }
 }
 
-export const normalizeAttachments = (claim = {}) => {
-  const attachments = Array.isArray(claim.attachments)
-    ? claim.attachments
-    : claim.attachment
-      ? [claim.attachment]
-      : []
+export const getClaimAttachments = (claim = {}) => {
+  const attachments = Array.isArray(claim.attachments) ? claim.attachments.filter(Boolean) : []
 
-  return attachments.map(normalizeAttachment).filter(Boolean)
+  return attachments.length > 0 ? attachments : claim.attachment ? [claim.attachment] : []
+}
+
+export const normalizeAttachments = (claim = {}) => {
+  return getClaimAttachments(claim).map(normalizeAttachment).filter(Boolean)
 }
 
 export const normalizeEditableClaim = (claim = {}) => {
@@ -204,9 +204,7 @@ export const serializeDraftItem = (item) => ({
   chargeToProjectId: item.chargeToProjectId || '',
   locationDetail: item.locationDetail || '',
   expenseType: item.expenseType || '',
-  attachments: serializeDraftAttachments(
-    item.attachments || (item.attachment ? [item.attachment] : []),
-  ),
+  attachments: serializeDraftAttachments(getClaimAttachments(item)),
   attachment: serializeDraftAttachment(item.attachment),
 })
 
@@ -232,9 +230,7 @@ export const mapClaimItems = (items = [], type) =>
     expenseType: item.expenseType || '',
     source: item.source,
     sourceLabel: item.sourceLabel,
-    attachments: serializeAttachments(
-      item.attachments || (item.attachment ? [item.attachment] : []),
-    ),
+    attachments: serializeAttachments(getClaimAttachments(item)),
     attachment: serializeAttachment(item.attachment),
   }))
 

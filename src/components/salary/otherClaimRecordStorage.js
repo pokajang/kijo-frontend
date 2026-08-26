@@ -1,5 +1,6 @@
 import { apiFetch, apiJson } from '../../api/apiClient'
 import { dispatchAppNotificationsChanged } from '../../notifications/appNotificationEvents'
+import { getClaimAttachments } from './other-claim/model/otherClaimModel'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 export const otherClaimRecordsChangedEvent = 'kijo:other-claim-records-changed'
@@ -46,12 +47,7 @@ const normalizeAttachment = (attachment) => {
 }
 
 const normalizeAttachments = (claim = {}) => {
-  const attachments = Array.isArray(claim.attachments)
-    ? claim.attachments
-    : claim.attachment
-      ? [claim.attachment]
-      : []
-  return attachments.map(normalizeAttachment).filter(Boolean)
+  return getClaimAttachments(claim).map(normalizeAttachment).filter(Boolean)
 }
 
 export const normalizeOtherClaim = (claim = {}) => {
@@ -100,8 +96,14 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
   staffDepartment: record.staffDepartment || '',
   claimMonth: record.claimMonth || formatClaimMonth(record.claimMonthValue),
   claimMonthValue: record.claimMonthValue || '',
-  claimsTotal: Number(record.claimsTotal || 0),
-  medicalClaimsTotal: Number(record.medicalClaimsTotal || 0),
+  claimsTotal:
+    record.claimsTotal === null || record.claimsTotal === undefined
+      ? null
+      : Number(record.claimsTotal),
+  medicalClaimsTotal:
+    record.medicalClaimsTotal === null || record.medicalClaimsTotal === undefined
+      ? null
+      : Number(record.medicalClaimsTotal),
   status: normalizeOtherClaimStatus(record.status || 'Submitted'),
   claims: Array.isArray(record.claims) ? record.claims.map(normalizeOtherClaim) : [],
   draftPayload:
@@ -127,6 +129,12 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
   cancelledAt: record.cancelledAt || '',
   cancelledBy: record.cancelledBy || null,
   cancelReason: record.cancelReason || '',
+  archivedAt: record.archivedAt || '',
+  archivedBy: record.archivedBy || null,
+  archiveReason: record.archiveReason || '',
+  canRestoreArchived: Boolean(record.canRestoreArchived),
+  canViewFinancialDetails: record.canViewFinancialDetails !== false,
+  financialDetailsRestricted: Boolean(record.financialDetailsRestricted),
   claimReference:
     record.claimReference || (record.id ? `OC-${String(record.id).padStart(6, '0')}` : ''),
   revisionNo: Number(record.revisionNo || 1),
@@ -140,6 +148,24 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
         amount: Number(payment.amount || 0),
       }))
     : [],
+  auditEvents: Array.isArray(record.auditEvents)
+    ? record.auditEvents.map((event) => ({
+        id: event.id,
+        action: event.action || '',
+        statusFrom: event.statusFrom || '',
+        statusTo: event.statusTo || '',
+        reason: event.reason || '',
+        previousSnapshot:
+          event.previousSnapshot &&
+          typeof event.previousSnapshot === 'object' &&
+          !Array.isArray(event.previousSnapshot)
+            ? event.previousSnapshot
+            : null,
+        actedAt: event.actedAt || '',
+        actorName: event.actorName || '',
+        actorCode: event.actorCode || '',
+      }))
+    : [],
   workflow: record.workflow || null,
 })
 
@@ -150,6 +176,8 @@ const normalizeOtherClaimRecordResponse = (payload = {}) => {
   record.mailMessage = payload.mail_message || ''
   return record
 }
+
+let lastKnownDraftRecordId = null
 
 const dispatchRecordsChanged = () => {
   if (typeof window !== 'undefined') {
@@ -224,7 +252,7 @@ const claimForPayload = (claim) => ({
   chargeToProjectId: claim.chargeToProjectId || '',
   locationDetail: claim.locationDetail || '',
   expenseType: claim.expenseType || '',
-  attachments: (claim.attachments || (claim.attachment ? [claim.attachment] : []))
+  attachments: getClaimAttachments(claim)
     .filter(Boolean)
     .map((attachment) => ({
       id: attachment.id ?? null,
@@ -259,7 +287,7 @@ const attachmentFileFromDataUrl = (attachment) => {
 
 const appendClaimAttachments = (formData, claims) => {
   claims.forEach((claim) => {
-    const attachments = claim.attachments || (claim.attachment ? [claim.attachment] : [])
+    const attachments = getClaimAttachments(claim)
     attachments.forEach((attachment, index) => {
       if (attachment?.id) return
 
@@ -291,8 +319,9 @@ const serverDraftPayload = (value) => {
   )
 }
 
-export const getOtherClaimRecords = async () => {
-  const payload = await apiJson(`${API_BASE}hr/salary/other-claims`)
+export const getOtherClaimRecords = async (scope = 'current') => {
+  const query = scope === 'archived' ? '?scope=archived' : ''
+  const payload = await apiJson(`${API_BASE}hr/salary/other-claims${query}`)
   return Array.isArray(payload.records) ? payload.records.map(normalizeOtherClaimRecord) : []
 }
 
@@ -356,7 +385,7 @@ export const fetchOtherClaimDraft = async (claimMonth) => {
   return payload.record ? normalizeOtherClaimRecord(payload.record) : null
 }
 
-export const saveOtherClaimDraft = async (draft) => {
+export const saveOtherClaimDraft = async (draft, { signal } = {}) => {
   const formData = new FormData()
   const draftClaims = Array.isArray(draft.claims) ? draft.claims : []
   const claims = draftClaims.filter((claim) => isServerSafeDraftClaim(claim, draftClaims))
@@ -375,9 +404,16 @@ export const saveOtherClaimDraft = async (draft) => {
     method: 'POST',
     body: formData,
     silentError: true,
+    signal,
   })
-  dispatchRecordsChanged()
-  return payload.record ? normalizeOtherClaimRecord(payload.record) : null
+  const record = payload.record ? normalizeOtherClaimRecord(payload.record) : null
+  // Autosave runs constantly; only the appearance of a new draft row changes the record list.
+  if (record?.id !== lastKnownDraftRecordId) {
+    lastKnownDraftRecordId = record?.id ?? null
+    dispatchRecordsChanged()
+  }
+
+  return record
 }
 
 export const clearOtherClaimServerDraft = async (claimMonth) => {
@@ -390,21 +426,57 @@ export const clearOtherClaimServerDraft = async (claimMonth) => {
       silentError: true,
     },
   )
+  lastKnownDraftRecordId = null
   dispatchRecordsChanged()
 }
 
-export const removeOtherClaimRecord = async (id, reason = '', recordVersion = null) => {
+export const withdrawOtherClaimRecord = async (id, reason = '', recordVersion = null) => {
   const trimmedReason = String(reason || '').trim()
-  await apiJson(`${API_BASE}hr/salary/other-claims/${encodeURIComponent(id)}`, {
+  const payload = await apiJson(
+    `${API_BASE}hr/salary/other-claims/${encodeURIComponent(id)}/withdraw`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: trimmedReason || undefined,
+        record_version: Number(recordVersion || 0) || undefined,
+      }),
+    },
+  )
+  dispatchRecordsChanged()
+  dispatchAppNotificationsChanged()
+  return payload
+}
+
+export const deleteOtherClaimRecord = async (id, recordVersion = null) => {
+  const payload = await apiJson(`${API_BASE}hr/salary/other-claims/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      reason: trimmedReason || undefined,
+      confirmation: 'DELETE',
       record_version: Number(recordVersion || 0) || undefined,
     }),
   })
   dispatchRecordsChanged()
   dispatchAppNotificationsChanged()
+  return payload
+}
+
+export const archiveOtherClaimRecord = async (id, reason = '', recordVersion = null) => {
+  const payload = await apiJson(
+    `${API_BASE}hr/salary/other-claims/${encodeURIComponent(id)}/archive`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reason: String(reason || '').trim() || undefined,
+        record_version: Number(recordVersion || 0) || undefined,
+      }),
+    },
+  )
+  dispatchRecordsChanged()
+  dispatchAppNotificationsChanged()
+  return payload
 }
 
 export const exportOtherClaimPdf = async (id) => {

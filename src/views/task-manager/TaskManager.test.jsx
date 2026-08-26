@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import TaskManager, { buildPersonalTasksUrl } from './TaskManager'
 import dialog from '../../components/dialog/dialogService'
 import { toastEvents } from '../../components/toast/toastService'
+import { setCsrfToken } from '../../api/apiClient'
 
 const projectApiMocks = vi.hoisted(() => ({
   listActiveProjectOptions: vi.fn(),
@@ -140,6 +141,7 @@ const renderTaskManager = (initialEntry = '/task-manager') =>
 describe('TaskManager route actions', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    setCsrfToken('test-csrf-token')
     projectApiMocks.listActiveProjectOptions.mockReset()
     projectApiMocks.listActiveProjectOptions.mockResolvedValue([
       { id: 100, projectName: 'Active Project', clientName: 'Alpha Client', status: 'Active' },
@@ -184,6 +186,7 @@ describe('TaskManager route actions', () => {
   afterEach(() => {
     cleanup()
     window.localStorage.clear()
+    setCsrfToken(null)
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })

@@ -33,7 +33,7 @@ export const buildProjectActions = ({
     project.project_type === 'Training'
       ? {
           key: 'jd14',
-          label: 'Generate JD14',
+          label: 'Create JD14',
           ...commercialDocumentActionProps(closedProject),
           onClick: () =>
             onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.JD14, project),
@@ -41,14 +41,14 @@ export const buildProjectActions = ({
       : null,
     {
       key: 'invoice',
-      label: 'Generate Invoice',
+      label: 'Create Invoice',
       ...commercialDocumentActionProps(closedProject),
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.INVOICE, project),
     },
     {
       key: 'delivery-order',
-      label: 'Generate DO',
+      label: 'Create Delivery Order',
       ...commercialDocumentActionProps(closedProject),
       onClick: () =>
         onGenerateCommercialDocument?.(PROJECT_COMMERCIAL_DOCUMENT_TYPES.DELIVERY_ORDER, project),

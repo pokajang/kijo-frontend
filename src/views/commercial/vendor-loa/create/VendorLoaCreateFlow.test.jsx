@@ -8,10 +8,12 @@ import { listAllVendors, saveProjectVendor } from '../../../project/manage/proje
 
 const listAllVendorsMock = vi.hoisted(() => vi.fn())
 const saveProjectVendorMock = vi.hoisted(() => vi.fn())
+const choiceMock = vi.hoisted(() => vi.fn())
 
 vi.mock('../../../../components/dialog/dialogService', () => ({
   default: {
     alert: vi.fn(),
+    choice: choiceMock,
   },
 }))
 
@@ -63,12 +65,14 @@ const createVendorLoaThroughReview = async () => {
   fireEvent.click(screen.getByRole('button', { name: /^review vendor loa$/i }))
   await screen.findByRole('heading', { name: /^review vendor loa$/i })
   fireEvent.click(screen.getByRole('button', { name: /^create vendor loa$/i }))
-  await screen.findByText('Vendor LOA Created')
+  await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
 }
 
 describe('VendorLoaCreateFlow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    sessionStorage.clear()
+    choiceMock.mockResolvedValue('project')
     listAllVendors.mockResolvedValue([{ vendor_id: 5, vendor_name: 'Vendor A' }])
     saveProjectVendor.mockResolvedValue({ status: 'success', assignment_id: 99 })
   })
@@ -101,7 +105,10 @@ describe('VendorLoaCreateFlow', () => {
         ].join('\n'),
       }),
     )
-    expect(await screen.findByText('Vendor LOA Created')).toBeInTheDocument()
+    await waitFor(() => expect(choiceMock).toHaveBeenCalledTimes(1))
+    expect(choiceMock.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ title: 'Vendor LOA Created' }),
+    )
   })
 
   it('omits blank equipment wording so the backend can apply its authoritative snapshot', async () => {
@@ -125,8 +132,13 @@ describe('VendorLoaCreateFlow', () => {
 
     await createVendorLoaThroughReview()
 
-    expect(screen.getByRole('button', { name: /return to vendor loa list/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /manage project/i })).toBeInTheDocument()
+    const [, options] = choiceMock.mock.calls[0]
+    expect(options.actions.map((action) => action.key)).toEqual([
+      'project',
+      'list',
+      'generate',
+      'view',
+    ])
   })
 
   it('keeps project-origin success focused on project and LOA actions', async () => {
@@ -134,10 +146,10 @@ describe('VendorLoaCreateFlow', () => {
 
     await createVendorLoaThroughReview()
 
-    expect(
-      screen.queryByRole('button', { name: /return to vendor loa list/i }),
-    ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /manage project/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /generate loa/i })).toBeInTheDocument()
+    const [, options] = choiceMock.mock.calls[0]
+    expect(options.dismissAction).toBe('project')
+    expect(options.actions.find((action) => action.key === 'view')).toEqual(
+      expect.objectContaining({ label: 'View Vendor LOA', color: 'primary' }),
+    )
   })
 })

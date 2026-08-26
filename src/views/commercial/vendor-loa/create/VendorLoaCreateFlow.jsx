@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CAlert,
   CButton,
@@ -13,7 +13,6 @@ import {
   CFormTextarea,
   CRow,
 } from '@coreui/react'
-import { useNavigate } from 'react-router-dom'
 
 import { DataTableLoadingState } from '../../../../components/datatable'
 import dialog from '../../../../components/dialog/dialogService'
@@ -31,14 +30,27 @@ import {
   getVendorLoaUrl,
   getVendorLoaWordUrl,
 } from './vendorLoaCreatePayload'
-import { downloadCommercialWord } from '../../shared/commercialWordDownload'
 import VendorLoaReviewStep from './VendorLoaReviewStep'
-import VendorLoaSuccessStep from './VendorLoaSuccessStep'
+import { downloadCommercialWord } from '../../shared/commercialWordDownload'
+import useCommercialCreationSuccess from '../../shared/useCommercialCreationSuccess'
 
-const paymentTermOptions = ['14 days', '30 days', '45 days', '60 days']
+const paymentTermOptions = ['Before pickup/delivery', '14 days', '30 days', '45 days', '60 days']
+const vendorLoaSuccessActions = [
+  {
+    key: 'generate',
+    label: 'Generate LOA',
+    color: 'secondary',
+    variant: 'outline',
+  },
+  {
+    key: 'generate-word',
+    label: 'Generate Word',
+    color: 'secondary',
+    variant: 'outline',
+  },
+]
 
 const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
-  const navigate = useNavigate()
   const commercialDocs = useProjectCommercialDocs(project?.id, true)
   const [step, setStep] = useState('edit')
   const [vendors, setVendors] = useState([])
@@ -53,7 +65,6 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
   const [venueDetails, setVenueDetails] = useState('')
   const [feeBreakdown, setFeeBreakdown] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [createdAssignmentId, setCreatedAssignmentId] = useState(null)
 
   useEffect(() => {
     if (project?.project_type !== 'Equipment Supply') return
@@ -86,6 +97,39 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
     () => vendors.find((vendor) => String(vendor.vendor_id) === String(selectedVendorId)) || null,
     [selectedVendorId, vendors],
   )
+  const handleSuccessAction = useCallback(
+    (action, receipt) => {
+      if (!project?.id || !receipt.vendorId) return
+      const urlParams = {
+        projectId: project.id,
+        vendorId: receipt.vendorId,
+        assignmentId: receipt.detailId,
+      }
+      if (action === 'generate-word') {
+        return downloadCommercialWord(getVendorLoaWordUrl(urlParams), 'vendor-loa.docx')
+      }
+      if (action !== 'generate') return
+      window.open(
+        getVendorLoaUrl(urlParams),
+        '_blank',
+      )
+    },
+    [project?.id],
+  )
+  const presentCreationSuccess = useCommercialCreationSuccess({
+    documentType: 'vendor-loa',
+    documentLabel: 'Vendor LOA',
+    projectId: project?.id,
+    projectLabel: project?.project_name || `Project #${project?.id}`,
+    origin,
+    listOrigin: 'vendor-loa-list',
+    listPath: '/commercial/vendor-loa',
+    detailPath: '/commercial/vendor-loa',
+    viewLabel: 'View Vendor LOA',
+    listLabel: 'View Vendor LOA List',
+    additionalActions: vendorLoaSuccessActions,
+    onAdditionalAction: handleSuccessAction,
+  })
 
   const payload = useMemo(
     () =>
@@ -151,8 +195,12 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
     try {
       const result = await saveProjectVendor(null, payload)
       if (result.status === 'success') {
-        setCreatedAssignmentId(getCreatedAssignmentId(result))
-        setStep('success')
+        const assignmentId = getCreatedAssignmentId(result)
+        await presentCreationSuccess({
+          detailId: assignmentId,
+          reference: selectedVendor?.vendor_name ? `for ${selectedVendor.vendor_name}` : '',
+          vendorId: selectedVendor?.vendor_id,
+        })
         return
       }
       dialog.alert(result.message || 'Failed to create Vendor LOA.')
@@ -164,38 +212,14 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
     }
   }
 
-  const handleGenerateLoa = () => {
-    if (!project?.id || !selectedVendor?.vendor_id) return
-    window.open(
-      getVendorLoaUrl({
-        projectId: project.id,
-        vendorId: selectedVendor.vendor_id,
-        assignmentId: createdAssignmentId,
-      }),
-      '_blank',
-    )
-  }
-
-  const handleGenerateLoaWord = () => {
-    if (!project?.id || !selectedVendor?.vendor_id) return
-    return downloadCommercialWord(
-      getVendorLoaWordUrl({
-        projectId: project.id,
-        vendorId: selectedVendor.vendor_id,
-        assignmentId: createdAssignmentId,
-      }),
-      'vendor-loa.docx',
-    )
-  }
-
   return (
     <CCard className="mb-4">
       <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <div className="d-flex align-items-center gap-2 text-truncate" style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
           <strong>Create Vendor LOA</strong>
-          <span className="text-medium-emphasis text-truncate">
-            {project.project_name || `Project #${project.id}`}
-          </span>
+          <div className="small text-body-secondary text-truncate">
+            For project: {project.project_name || `Project #${project.id}`}
+          </div>
         </div>
         <CButton
           color="secondary"
@@ -204,7 +228,7 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
           onClick={onBack}
           disabled={submitting}
         >
-          Back
+          {origin === 'vendor-loa-list' ? 'Back to Vendor LOA List' : 'Back to Project'}
         </CButton>
       </CCardHeader>
 
@@ -349,17 +373,6 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
           submitting={submitting}
           onBack={() => setStep('edit')}
           onCreate={handleCreate}
-        />
-      )}
-
-      {step === 'success' && (
-        <VendorLoaSuccessStep
-          origin={origin}
-          selectedVendor={selectedVendor}
-          onGenerateLoa={handleGenerateLoa}
-          onGenerateWord={handleGenerateLoaWord}
-          onReturnToList={() => navigate('/commercial/vendor-loa')}
-          onManageProject={() => navigate(`/project/manage/${project?.id}`)}
         />
       )}
     </CCard>

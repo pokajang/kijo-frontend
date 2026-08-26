@@ -209,6 +209,10 @@ Backfills are not part of the reusable deployment checklist unless the release
 explicitly requires one. Identify them during local review and link the exact
 release note before pushing.
 
+The coordinated IH invoice calculation and vendor-payment lifecycle release
+must follow
+[its release-specific migration and rollback note](deployment/release-notes/ih-invoice-and-vendor-payment-lifecycle.md).
+
 The archived procedures and their prerequisites live in
 [deployment/release-notes/README.md](deployment/release-notes/README.md). Do not
 run an archived command solely because it is documented there.
@@ -291,31 +295,41 @@ required.
 
 ### Legacy Quotation Estimated-Cost Compatibility (2026-08-14)
 
-This coordinated release prevents the current cost policy from retroactively
-blocking genuine legacy Training, Equipment, and Manpower quotations.
-Eligibility is narrow: the stored traffic-light version and cost must be blank,
-and the quote must predate its configured service cutoff. Independent triggers
-still apply, including Training discount/special pricing and Manpower management
-approval.
+This coordinated backend and frontend release prevents the current cost policy
+from retroactively blocking genuine legacy Training, Equipment, and Manpower
+quotations. Eligibility is deliberately narrow: the service must be one of
+those three, the stored traffic-light version and estimated total cost must both
+be blank, and the quotation must predate the configured service cutoff.
+Independent commercial triggers still apply, including Training discounts or
+special pricing and Manpower management approval.
 
-Quotation users continue to own cost entry. New/current forms require a
-positive cost as normal form input. Yellow/red quotations still save and then
-enter approval; approval blocks issuance, not creation. Generate PDF gives a
-normal legacy quote one choice between **Generate PDF**, **Edit quotation**, and
-**Cancel**. A malformed current-policy quote offers Edit and Cancel directly.
-Generate Word behavior is unchanged.
+Quotation users continue to own the cost field. New/current quotation forms
+require a positive cost as ordinary form input. Saving a valid quotation is not
+blocked by its resulting traffic-light outcome: yellow/red quotations save and
+then enter the existing approval workflow. Approval blocks issuance only.
+
+For a normal grandfathered quotation, Generate PDF presents one decision with
+**Generate PDF**, **Edit quotation**, and **Cancel**. Editing requires a
+positive cost and moves the quote to the current policy. A malformed
+current-policy quote offers **Edit quotation** and **Cancel**, with no staged
+cost-request workflow. This release does not alter Generate Word behavior.
 
 There is no migration, dependency, scheduler entry, or recurring command. The
 release adds a read-only audit command and a guarded reconciliation command.
-Reconciliation preserves approval history and valid unchanged decisions, and
-requires the exact fingerprint from a fresh per-service preview.
+Reconciliation preserves superseded approval history and commercially
+unchanged valid approval decisions, and requires an exact fingerprint from a
+fresh per-service preview before it writes.
 
-Before deployment, back up `quotes_training`, `quotes_equipment`,
-`quotes_manpower`, `quote_approval_requests`, and `in_app_notifications`.
-Confirm backend/frontend commits are paired, record known approval state, and
-deploy backend before the fresh frontend build.
+Before deployment:
 
-Refresh Laravel caches and confirm both commands are registered:
+- Back up `quotes_training`, `quotes_equipment`, `quotes_manpower`,
+  `quote_approval_requests`, and `in_app_notifications`.
+- Confirm the backend and frontend commits belong to the same release.
+- Record current approval state for known affected quotations.
+- Deploy the backend first and the fresh frontend build immediately afterward.
+
+After pulling the backend and installing production dependencies, refresh the
+Laravel caches and confirm both commands are registered:
 
 ```bash
 cd ~/kijo-laravel
@@ -324,6 +338,7 @@ php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -332,8 +347,9 @@ php artisan list --raw | grep -E \
   '^quotes:(audit-legacy-cost-policy|reconcile-legacy-cost-approvals)'
 ```
 
-Retain the full audit, then preview each service. Each preview prints the
-service-specific confirmation fingerprint required by its write:
+Retain the complete read-only audit, then preview each service separately. Each
+preview prints the service-specific confirmation fingerprint needed for its
+write:
 
 ```bash
 php artisan quotes:audit-legacy-cost-policy \
@@ -347,9 +363,12 @@ php artisan quotes:reconcile-legacy-cost-approvals --service=manpower \
   | tee "$HOME/legacy-cost-manpower-preview.txt"
 ```
 
-Stop if a preview has unexpected/omitted quotes, removes a genuine trigger, or
-classifies a normal legacy quote as requiring approval. Never infer historical
-cost. After review, copy each fresh fingerprint exactly:
+Stop if a preview contains unexpected quotations, omits a known affected
+quotation, removes a genuine approval trigger, or classifies a normal legacy
+quotation as requiring approval. Never enter or infer historical costs during
+deployment.
+
+After review, copy each fresh fingerprint exactly into its matching command:
 
 ```bash
 php artisan quotes:reconcile-legacy-cost-approvals \
@@ -361,26 +380,30 @@ php artisan quotes:reconcile-legacy-cost-approvals \
 ```
 
 A changed candidate set makes the fingerprint stale and the write fails closed;
-preview again instead of reusing it. Unchanged policy fingerprints do not create
-duplicates, and superseded rows remain auditable.
+run a new preview instead of reusing it. An unchanged approval fingerprint is
+idempotent and does not create a duplicate. Previous incorrect approval rows
+remain non-current and auditable.
 
-After frontend deployment, smoke-check all three services:
+Deploy the frontend production build, then smoke-check all three services:
 
-- Create green/yellow/red current quotes. Confirm all valid quotes save and only
-  yellow/red issuance waits for approval.
-- For a normal legacy PDF, confirm Cancel is harmless, Edit opens the quote, and
-  Generate PDF succeeds after one acknowledgement.
-- Confirm editing legacy data explains migration and requires positive cost.
-- Confirm genuine independent triggers remain blocked for the correct approval.
-- Confirm malformed current data offers Edit and Cancel without another stage.
-- Confirm failed PDF and Word requests each produce one error surface and refresh
-  authoritative approval state where applicable.
+- Create a green, yellow, and red current quotation. Confirm each valid quote
+  saves, and only yellow/red issuance waits for the correct approval.
+- Generate a normal grandfathered PDF. Confirm Cancel is harmless, Edit opens
+  the quote, and Generate PDF succeeds after the single acknowledgement.
+- Edit a grandfathered quote. Confirm the migration explanation appears and the
+  form requires a positive cost before saving.
+- Confirm a grandfathered quote with a genuine independent trigger stays
+  blocked for the correct HOD/BD approval and does not offer legacy generation.
+- Confirm a malformed current-policy quote offers Edit and Cancel directly,
+  without a Generate PDF action or another recovery stage.
+- Confirm one failed PDF action produces one error surface.
 
-There is no destructive rollback command. Roll back frontend and backend
-together and repeat normal cache/build steps. Do not delete reconciled approval
-rows. The older backend may classify an unedited legacy quote as missing-cost
-red on its next evaluation; coordinate rollback with quotation/approval owners.
-Restore backups only for verified data-integrity problems.
+There is no destructive data rollback command. Roll back frontend and backend
+together and repeat normal cache/build deployment steps if required. Do not
+delete reconciled approval rows because they are audit history. The older
+backend may classify an unedited legacy quote as missing-cost red on its next
+evaluation, so coordinate rollback with quotation and approval owners. Restore
+the backup only for a verified data-integrity problem.
 
 ### Receivable Payment Lifecycle Navigation and Audit History
 
