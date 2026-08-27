@@ -14,6 +14,7 @@ const password = process.env.SMOKE_PASSWORD
 const allowMutation = process.env.SMOKE_OTHER_CLAIM_ALLOW_MUTATION === '1'
 const headless = process.env.SMOKE_HEADLESS !== '0'
 const runLabel = `SMOKE Other Claim ${stamp}`
+const smokeRunPrefix = 'SMOKE Other Claim '
 const receiptFor = (claimType) => ({
   name: `receipt-${claimType}-${stamp}.pdf`,
   mimeType: 'application/pdf',
@@ -185,21 +186,24 @@ const screenshot = (name) =>
 
 const cleanupFixture = async () => {
   const records = await ownRecords()
+  const deletedRecordIds = []
   for (const record of records.filter((item) => item.status === 'Draft')) {
     const detail = await ownRecord(record.id)
-    if (!detail?.claims?.some((claim) => String(claim.description || '').startsWith(runLabel)))
+    if (
+      !detail?.claims?.some((claim) => String(claim.description || '').startsWith(smokeRunPrefix))
+    )
       continue
     await apiRequest({
       route: `hr/salary/other-claims/${record.id}`,
       method: 'DELETE',
       body: {
-        reason: `${runLabel} smoke cleanup`,
+        confirmation: 'DELETE',
         record_version: Number(detail.recordVersion || 0) || undefined,
       },
     })
-    return record.id
+    deletedRecordIds.push(record.id)
   }
-  return null
+  return deletedRecordIds
 }
 
 try {
@@ -216,7 +220,16 @@ try {
       payload.user?.staff_id || payload.data?.user?.staff_id,
       'Authenticated session did not return a staff account.',
     )
-    return email
+    const removedServerDraftIds = await cleanupFixture()
+    const removedLocalDraftCount = await page.evaluate((prefix) => {
+      const matchingKeys = Object.keys(localStorage).filter((key) => {
+        if (!key.startsWith('otherClaimDraft:v1:')) return false
+        return localStorage.getItem(key)?.includes(prefix)
+      })
+      matchingKeys.forEach((key) => localStorage.removeItem(key))
+      return matchingKeys.length
+    }, smokeRunPrefix)
+    return `${email}; cleaned server=${removedServerDraftIds.length}; local=${removedLocalDraftCount}`
   })
 
   await step('open Other Claim Apply and choose a disposable month', async () => {
@@ -230,7 +243,7 @@ try {
       'All selectable claim months already have a draft; no existing data was changed.',
     )
     await page.goto(`${baseUrl}/my/salary/other-claims/apply`, { waitUntil: 'domcontentloaded' })
-    await page.getByText('Other Claim Summary', { exact: true }).waitFor()
+    await page.getByRole('heading', { name: /^(New Other Claim|Other Claim Summary)$/ }).waitFor()
     await selectClaimMonth()
     return claimMonth
   })
@@ -324,18 +337,17 @@ try {
       expectedClaims.push({ description: medicalDescription, receipt: receiptFor('medical') })
     }
     const expectedDescriptions = expectedClaims.map((claim) => claim.description)
-    const records = await ownRecords()
-    const record = records.find(
-      (item) => item.status === 'Draft' && item.claimMonthValue === claimMonth,
-    )
+    const record = await poll('server draft creation', async () => {
+      const records = await ownRecords()
+      return records.find((item) => item.status === 'Draft' && item.claimMonthValue === claimMonth)
+    })
     assert(record?.id, 'The server did not create a draft record.')
     recordId = record.id
     const detail = await poll('draft persistence', async () => {
       const current = await ownRecord(recordId)
-      return current?.claims?.every((claim) => expectedDescriptions.includes(claim.description)) &&
-        expectedDescriptions.every((description) =>
-          current.claims.some((claim) => claim.description === description),
-        )
+      return expectedDescriptions.every((description) =>
+        current?.claims?.some((claim) => claim.description === description),
+      )
         ? current
         : null
     })
@@ -372,9 +384,13 @@ try {
       .first()
     await row.waitFor({ state: 'visible' })
     await row.locator('.data-table-action-toggle').click()
-    await page.locator('.dropdown-menu.show').getByText('Delete Draft', { exact: true }).click()
+    await page
+      .locator('.dropdown-menu.show')
+      .getByText('Delete Permanently', { exact: true })
+      .click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
+    await dialog.getByPlaceholder('Type DELETE').fill('DELETE')
+    await dialog.getByRole('button', { name: 'Delete Permanently', exact: true }).click()
     await poll('draft deletion', async () => (await ownRecord(recordId, [200, 404])) === null)
     const localDraftExists = await page.evaluate(
       (month) => localStorage.getItem(`otherClaimDraft:v1:${month}`) !== null,

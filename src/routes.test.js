@@ -142,7 +142,7 @@ describe('staff leave admin routes', () => {
 })
 
 describe('personal salary routes', () => {
-  it('includes payment queue, salary records, and apply workspace routes', () => {
+  it('keeps record, apply, and legacy payment queue routes', () => {
     expect(routes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -159,7 +159,7 @@ describe('personal salary routes', () => {
         }),
         expect.objectContaining({
           path: '/my/salary',
-          name: 'My Salary Payment Queue',
+          name: 'My Salary Records',
         }),
         expect.objectContaining({
           path: '/my/salary/apply',
@@ -188,10 +188,10 @@ describe('personal salary routes', () => {
     expect(detailIndex).toBeLessThan(recordsIndex)
   })
 
-  it('redirects the old salary root to the payment queue tab URL', () => {
+  it('redirects the salary root to salary records', () => {
     const route = routes.find((item) => item.path === '/my/salary')
 
-    expect(route?.element?.props?.to).toBe('/my/salary/payment-queue')
+    expect(route?.element?.props?.to).toBe('/my/salary/records')
     expect(route?.element?.props?.replace).toBe(true)
   })
 })
@@ -206,14 +206,7 @@ describe('financial routes', () => {
         name: 'Payment Queue',
       }),
     )
-    expect(route?.element?.props?.allowedRoles).toEqual([
-      'System Admin',
-      'Manager',
-      'HR',
-      'Finance',
-      'Account',
-      'Bank',
-    ])
+    expect(route?.element?.props?.allowedRoles).toEqual(['Finance', 'Account', 'Bank'])
   })
 
   it('includes the internal operations financial payment queue detail page', () => {
@@ -225,14 +218,7 @@ describe('financial routes', () => {
         name: 'Payment Queue Details',
       }),
     )
-    expect(route?.element?.props?.allowedRoles).toEqual([
-      'System Admin',
-      'Manager',
-      'HR',
-      'Finance',
-      'Account',
-      'Bank',
-    ])
+    expect(route?.element?.props?.allowedRoles).toEqual(['Finance', 'Account', 'Bank'])
   })
 
   it('includes the internal operations financial salary records page', () => {
@@ -241,7 +227,7 @@ describe('financial routes', () => {
     expect(route).toEqual(
       expect.objectContaining({
         path: '/financial/salary-records',
-        name: 'Salary Records',
+        name: 'Review Salary',
       }),
     )
     expect(route?.element?.props?.allowedRoles).toEqual([

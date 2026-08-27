@@ -147,7 +147,7 @@ describe('SalaryRecord', () => {
     await screen.findAllByText('June 2026')
 
     fireEvent.click(screen.getAllByLabelText('Actions')[0])
-    fireEvent.click(within(await getOpenActionMenu()).getByText('Export Claims'))
+    fireEvent.click(within(await getOpenActionMenu()).getByText('Export Salary'))
 
     await waitFor(() => {
       expect(apiMock.apiFetch).toHaveBeenCalledWith(
@@ -214,7 +214,7 @@ describe('SalaryRecord', () => {
     await screen.findAllByText('January 2000')
 
     fireEvent.click(screen.getAllByLabelText('Actions')[0])
-    fireEvent.click(within(await getOpenActionMenu()).getByText('Export Payslip'))
+    fireEvent.click(within(await getOpenActionMenu()).getByText('Generate Payslip'))
 
     await waitFor(() => {
       expect(apiMock.apiFetch).toHaveBeenCalledWith(
@@ -339,7 +339,7 @@ describe('SalaryRecord', () => {
     await screen.findAllByText('December 2999')
 
     fireEvent.click(screen.getAllByLabelText('Actions')[0])
-    const payslipAction = within(await getOpenActionMenu()).getByText('Export Payslip')
+    const payslipAction = within(await getOpenActionMenu()).getByText('Generate Payslip')
 
     expect(payslipAction).toBeInTheDocument()
     fireEvent.click(payslipAction)

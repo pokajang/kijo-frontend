@@ -20,6 +20,7 @@ const DataTableFooter = ({
   safeCurrentPage,
   totalPages,
   setCurrentPage,
+  showMobileFooter = true,
 }) => {
   const displayPageStart = totalRows === 0 ? 0 : pageStart + 1
 
@@ -112,29 +113,33 @@ const DataTableFooter = ({
         </CCol>
       </CRow>
 
-      <div className={`d-${desktopBreakpoint}-none data-table-mobile-footer records-mobile-footer`}>
-        <div className="data-table-mobile-footer-inline records-mobile-footer-inline">
-          <div className="d-flex align-items-center gap-1">
-            <small className="text-muted">Rows</small>
-            <CFormSelect
-              size="sm"
-              aria-label="Rows per page"
-              className="data-table-rows-select records-mobile-rows-select"
-              value={String(pageSize)}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </CFormSelect>
-          </div>
-          <div className="data-table-mobile-footer-bottom records-mobile-footer-bottom">
-            {pagerControls}
+      {showMobileFooter && (
+        <div
+          className={`d-${desktopBreakpoint}-none data-table-mobile-footer records-mobile-footer`}
+        >
+          <div className="data-table-mobile-footer-inline records-mobile-footer-inline">
+            <div className="d-flex align-items-center gap-1">
+              <small className="text-muted">Rows</small>
+              <CFormSelect
+                size="sm"
+                aria-label="Rows per page"
+                className="data-table-rows-select records-mobile-rows-select"
+                value={String(pageSize)}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                {pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+            <div className="data-table-mobile-footer-bottom records-mobile-footer-bottom">
+              {pagerControls}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

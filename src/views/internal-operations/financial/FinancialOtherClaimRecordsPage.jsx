@@ -7,6 +7,7 @@ import {
   CCardBody,
   CCol,
   CFormLabel,
+  CFormCheck,
   CFormSelect,
   CRow,
   CSpinner,
@@ -32,6 +33,10 @@ import {
   exportFinancialOtherClaimPdf,
   fetchFinancialOtherClaimRecords,
 } from './financialOtherClaimApi'
+import { submitFinancialWorkflowBulkAction } from './financialWorkflowApi'
+import FinancialWorkflowBatchActions, {
+  primaryWorkflowAction,
+} from './FinancialWorkflowBatchActions'
 
 const submittedStatuses = new Set(['Submitted', 'Prepared'])
 const displayStatus = (status) => {
@@ -46,6 +51,7 @@ const getStatusTone = (status) => {
   if (displayStatus(status) === 'Approved') return 'success'
   if (status === 'Paid') return 'success'
   if (status === 'Checked') return 'primary'
+  if (status === 'Returned') return 'warning'
   if (submittedStatuses.has(status)) return 'info'
   if (status === 'Rejected') return 'danger'
   return 'secondary'
@@ -115,6 +121,15 @@ export const buildFinancialOtherClaimStats = (records = []) => {
 
 const dataColumns = [
   {
+    key: 'select',
+    label: '',
+    width: '44px',
+    sortable: false,
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: () => '',
+  },
+  {
     key: 'status',
     label: 'Status',
     width: '105px',
@@ -175,6 +190,7 @@ const dataColumns = [
   },
 ]
 const defaultVisibleColumns = {
+  select: true,
   status: true,
   claimReference: true,
   workflow: true,
@@ -196,6 +212,7 @@ const statusSortPriority = {
   Prepared: 0,
   Checked: 1,
   Approved: 2,
+  Returned: 3,
   Paid: 3,
   Rejected: 4,
 }
@@ -212,6 +229,8 @@ const FinancialOtherClaimRecordsPage = () => {
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [recordsScope, setRecordsScope] = useState('current')
+  const [reviewScope, setReviewScope] = useState('mine')
+  const [selectedIds, setSelectedIds] = useState([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [exportingRecordId, setExportingRecordId] = useState(null)
 
@@ -272,9 +291,21 @@ const FinancialOtherClaimRecordsPage = () => {
               .toLowerCase()
               .includes(query),
           )) &&
-        (statusFilter === 'all' || record.status === statusFilter),
+        (statusFilter === 'all' || record.status === statusFilter) &&
+        (reviewScope !== 'mine' || Boolean(primaryWorkflowAction(record))),
     )
-  }, [normalizedRecords, searchText, statusFilter])
+  }, [normalizedRecords, searchText, statusFilter, reviewScope])
+
+  const selectedRecords = useMemo(
+    () => filteredRecords.filter((record) => selectedIds.includes(record.id)),
+    [filteredRecords, selectedIds],
+  )
+
+  useEffect(() => {
+    setSelectedIds((current) =>
+      current.filter((id) => filteredRecords.some((record) => record.id === id)),
+    )
+  }, [filteredRecords])
 
   const statusOptions = useMemo(
     () => Array.from(new Set(records.map((record) => record.status).filter(Boolean))).sort(),
@@ -287,18 +318,24 @@ const FinancialOtherClaimRecordsPage = () => {
       ? { key: 'status', label: `Status: ${displayStatus(statusFilter)}` }
       : null,
     recordsScope === 'archived' ? { key: 'scope', label: 'Archived withdrawals' } : null,
+    reviewScope === 'all' ? { key: 'review-scope', label: 'All visible records' } : null,
   ].filter(Boolean)
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
     if (key === 'status') setStatusFilter('all')
-    if (key === 'scope') setRecordsScope('current')
+    if (key === 'scope') {
+      setRecordsScope('current')
+      setReviewScope('mine')
+    }
+    if (key === 'review-scope') setReviewScope('mine')
   }
 
   const resetFilters = () => {
     setSearchText('')
     setStatusFilter('all')
     setRecordsScope('current')
+    setReviewScope('mine')
   }
 
   const statsItems = useMemo(
@@ -393,6 +430,25 @@ const FinancialOtherClaimRecordsPage = () => {
   }
 
   const renderCell = (record, column) => {
+    if (column.key === 'select') {
+      const actionable = Boolean(primaryWorkflowAction(record))
+      return (
+        <CFormCheck
+          aria-label={`Select ${record.claimReference || 'claim record'}`}
+          checked={selectedIds.includes(record.id)}
+          disabled={!actionable || (!selectedIds.includes(record.id) && selectedIds.length >= 50)}
+          data-no-row-open="true"
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) =>
+            setSelectedIds((current) =>
+              event.target.checked
+                ? [...new Set([...current, record.id])]
+                : current.filter((id) => id !== record.id),
+            )
+          }
+        />
+      )
+    }
     if (column.key === 'status') {
       return (
         <DataTableStatusBadge tone={getStatusTone(record.status)}>
@@ -420,7 +476,7 @@ const FinancialOtherClaimRecordsPage = () => {
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4 records-page-card">
-            <DataTableCardHeader title="Other Claim Records">
+            <DataTableCardHeader title="Review Claims">
               <DataTableStatsToggle
                 visible={statsVisible}
                 onToggle={toggleStatsVisible}
@@ -441,6 +497,18 @@ const FinancialOtherClaimRecordsPage = () => {
                 </CAlert>
               )}
               {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
+              <FinancialWorkflowBatchActions
+                selectedRecords={selectedRecords}
+                onClear={() => setSelectedIds([])}
+                onSubmit={async (action, batchRecords, remarks) => {
+                  await submitFinancialWorkflowBulkAction(action, batchRecords, remarks)
+                  await loadRecords()
+                }}
+                getRecordLabel={(record) =>
+                  `${record.claimReference || 'Claim'} · ${record.staffLabel} · ${claimsTotalText(record)}`
+                }
+                getRecordAmount={(record) => record.claimsTotal}
+              />
               <DataTableRecordControls
                 visible={controlsVisible}
                 searchValue={searchText}
@@ -450,7 +518,9 @@ const FinancialOtherClaimRecordsPage = () => {
                 showAdvancedFilters={showAdvancedFilters}
                 setShowAdvancedFilters={setShowAdvancedFilters}
                 activeFilterCount={
-                  (statusFilter !== 'all' ? 1 : 0) + (recordsScope === 'archived' ? 1 : 0)
+                  (statusFilter !== 'all' ? 1 : 0) +
+                  (recordsScope === 'archived' ? 1 : 0) +
+                  (reviewScope !== 'mine' ? 1 : 0)
                 }
                 activeChips={activeChips}
                 clearChip={clearChip}
@@ -470,7 +540,9 @@ const FinancialOtherClaimRecordsPage = () => {
                       value={recordsScope}
                       onChange={(event) => {
                         setStatusFilter('all')
-                        setRecordsScope(event.target.value)
+                        const nextScope = event.target.value
+                        setRecordsScope(nextScope)
+                        setReviewScope(nextScope === 'archived' ? 'all' : 'mine')
                       }}
                     >
                       <option value="current">Current records</option>
@@ -478,6 +550,17 @@ const FinancialOtherClaimRecordsPage = () => {
                     </CFormSelect>
                   </CCol>
                 )}
+                <CCol xs={12} md={4}>
+                  <CFormLabel htmlFor="financialOtherClaimReviewScope">Worklist</CFormLabel>
+                  <CFormSelect
+                    id="financialOtherClaimReviewScope"
+                    value={reviewScope}
+                    onChange={(event) => setReviewScope(event.target.value)}
+                  >
+                    <option value="mine">My actionable queue</option>
+                    <option value="all">All visible records</option>
+                  </CFormSelect>
+                </CCol>
                 <CCol xs={12} md={4}>
                   <CFormLabel htmlFor="financialOtherClaimStatusFilter">Status</CFormLabel>
                   <CFormSelect
@@ -558,7 +641,7 @@ const FinancialOtherClaimRecordsPage = () => {
                   submittedAt: 'desc',
                   claimsTotal: 'desc',
                 }}
-                resetDeps={[searchText, statusFilter, recordsScope]}
+                resetDeps={[searchText, statusFilter, recordsScope, reviewScope]}
               />
             </CCardBody>
           </CCard>

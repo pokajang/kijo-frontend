@@ -54,6 +54,8 @@ describe('saveOtherClaimDraft', () => {
     }
 
     await saveOtherClaimDraft({
+      applicationId: 42,
+      recordVersion: 3,
       claimMonthValue: '2026-07',
       claims: [
         {
@@ -77,6 +79,8 @@ describe('saveOtherClaimDraft', () => {
     expect(options.method).toBe('POST')
     expect(options.body).toBeInstanceOf(FormData)
     expect(options.body.get('_method')).toBe('PUT')
+    expect(options.body.get('application_id')).toBe('42')
+    expect(options.body.get('record_version')).toBe('3')
     expect(options.body.get('claim_month')).toBe('2026-07')
 
     const storedDraft = JSON.parse(options.body.get('draft_payload'))
@@ -89,6 +93,38 @@ describe('saveOtherClaimDraft', () => {
     })
     expect(storedDraft.allowanceItems[0].attachments[0].dataUrl).toBeUndefined()
     expect(options.body.get('attachments[expense-1][receipt-1]')).toBeInstanceOf(File)
+  })
+
+  it('uses one stable client id for legacy single-attachment metadata and multipart uploads', async () => {
+    const file = new File(['allowance receipt'], 'allowance.pdf', { type: 'application/pdf' })
+    const attachment = {
+      name: 'allowance.pdf',
+      type: 'application/pdf',
+      size: file.size,
+      file,
+    }
+
+    await saveOtherClaimDraft({
+      claimMonthValue: '2026-07',
+      claims: [
+        {
+          id: 'allowance-1',
+          type: 'Allowance',
+          date: '2026-07-20',
+          description: 'Meal allowance',
+          amount: 12,
+          attachment,
+        },
+      ],
+      draftPayload: {},
+    })
+
+    const [, options] = apiMock.apiJson.mock.calls[0]
+    const claims = JSON.parse(options.body.get('claims'))
+    const clientId = claims[0].attachments[0].clientId
+
+    expect(clientId).toBe('allowance.pdf')
+    expect(options.body.get(`attachments[allowance-1][${clientId}]`)).toBeInstanceOf(File)
   })
 })
 

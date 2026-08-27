@@ -331,24 +331,25 @@ describe('module search index', () => {
     })
   })
 
-  it('finds salary self-service tabs', () => {
+  it('finds salary and other claim self-service destinations', () => {
     const labels = searchModuleItems('my salary', ['Staff'], 20).map((item) => item.label)
 
-    expect(labels).toContain('My Payments')
-    expect(labels).toContain('Apply Salary')
-    expect(labels).toContain('Salary Records')
-    expect(labels).toContain('Apply Other Claim')
-    expect(labels).toContain('Other Claim Records')
-    expect(labels).toContain('Settings')
+    expect(labels).toContain('Salary')
+    expect(labels).toContain('Other Claims')
+    expect(labels).not.toContain('My Payments')
+    expect(labels).not.toContain('Apply Salary')
+    expect(labels).not.toContain('Apply Other Claim')
   })
 
   it('finds financial operation tabs for allowed roles', () => {
-    const labels = searchModuleItems('financial', ['Manager'], 20).map((item) => item.label)
+    const managerLabels = searchModuleItems('financial', ['Manager'], 20).map((item) => item.label)
+    const financeLabels = searchModuleItems('financial', ['Finance'], 20).map((item) => item.label)
 
-    expect(labels).toContain('Payment Queue')
-    expect(labels).toContain('Salary Records')
-    expect(labels).toContain('Other Claim Records')
-    expect(labels).toContain('Balance Sheet')
+    expect(managerLabels).not.toContain('Payment Queue')
+    expect(managerLabels).toContain('Review Salary')
+    expect(managerLabels).toContain('Review Claims')
+    expect(managerLabels).toContain('Balance Sheet')
+    expect(financeLabels).toContain('Payment Queue')
   })
 
   it('finds workflow setup tabs for workflow-capable roles', () => {

@@ -5,7 +5,7 @@ import StatsStrip from '../stats/StatsStrip'
 import { DataTableActionMenu, DataTableRecordControls, DataTableStatusBadge } from '../datatable'
 import dialog from '../dialog/dialogService'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
-import { formatMoney, roundMoney } from './salaryCalculations'
+import { formatMoney } from './salaryCalculations'
 import { clearOtherClaimDraft } from './otherClaimDraftStorage'
 import {
   archiveOtherClaimRecord,
@@ -28,8 +28,10 @@ const statusTone = {
   Prepared: 'info',
   Submitted: 'info',
   Pending: 'warning',
+  Returned: 'warning',
   Rejected: 'danger',
   Cancelled: 'warning',
+  Paid: 'success',
 }
 
 const statusSortPriority = {
@@ -38,6 +40,7 @@ const statusSortPriority = {
   Prepared: 0,
   Checked: 1,
   Approved: 2,
+  Returned: 3,
   Rejected: 4,
   Withdrawn: 5,
 }
@@ -136,10 +139,23 @@ const getOtherClaimRecordsScopeLabel = (records = []) => {
 
   if (!claimMonths.length) return ''
 
-  const first = formatClaimMonthScope(claimMonths[0])
-  const last = formatClaimMonthScope(claimMonths[claimMonths.length - 1])
+  return formatClaimMonthScope(claimMonths[claimMonths.length - 1])
+}
 
-  return first === last ? first : `${first} - ${last}`
+const getRecordContext = (record = {}) => {
+  const storedItemCount =
+    record.claimItemCount !== null &&
+    record.claimItemCount !== undefined &&
+    Number.isFinite(Number(record.claimItemCount))
+      ? Number(record.claimItemCount)
+      : null
+  const itemCount =
+    storedItemCount !== null
+      ? storedItemCount
+      : Array.isArray(record.claims)
+        ? record.claims.length
+        : 0
+  return `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`
 }
 
 export const downloadOtherClaim = async (record, pendingTab = null) => {
@@ -222,24 +238,20 @@ const OtherClaimRecords = ({
   }, [records, searchText, statusFilter])
 
   const stats = useMemo(() => {
-    const approvedCount = filteredRecords.filter(
-      (record) => displayStatus(record.status) === 'Approved',
-    ).length
+    const countForStatus = (status) =>
+      filteredRecords.filter((record) => record.status === status).length
     const submittedCount = filteredRecords.filter((record) =>
       submittedStatuses.has(record.status),
     ).length
-    const claimsTotal = filteredRecords.reduce(
-      (total, record) => total + Number(record.claimsTotal || 0),
-      0,
-    )
-
     return [
       {
-        key: 'approved',
-        label: 'Approved',
-        value: approvedCount,
-        sublabel: 'claim records',
-        tone: 'success',
+        key: 'draft',
+        label: 'Drafts',
+        value: countForStatus('Draft'),
+        sublabel: 'finish or remove',
+        tone: 'secondary',
+        onClick: () => setStatusFilter('Draft'),
+        actionTooltip: 'Show draft claims',
       },
       {
         key: 'submitted',
@@ -247,13 +259,26 @@ const OtherClaimRecords = ({
         value: submittedCount,
         sublabel: 'ready for review',
         tone: 'info',
+        onClick: () => setStatusFilter('Submitted'),
+        actionTooltip: 'Show submitted claims',
       },
       {
-        key: 'claims',
-        label: 'Claims Total',
-        value: formatMoney(roundMoney(claimsTotal)),
-        sublabel: 'shown records',
-        tone: 'warning',
+        key: 'rejected',
+        label: 'Action Needed',
+        value: countForStatus('Rejected'),
+        sublabel: 'revise rejected claims',
+        tone: 'danger',
+        onClick: () => setStatusFilter('Rejected'),
+        actionTooltip: 'Show rejected claims',
+      },
+      {
+        key: 'approved',
+        label: 'Approved',
+        value: countForStatus('Approved'),
+        sublabel: 'claim records',
+        tone: 'success',
+        onClick: () => setStatusFilter('Approved'),
+        actionTooltip: 'Show approved claims',
       },
     ]
   }, [filteredRecords])
@@ -294,26 +319,11 @@ const OtherClaimRecords = ({
   }
 
   const editRecord = async (record) => {
-    if (!['Draft', 'Submitted', 'Prepared', 'Rejected'].includes(record?.status)) return
+    if (!['Draft', 'Submitted', 'Prepared', 'Returned'].includes(record?.status)) return
     const detailRecord = await loadRecordDetail(record)
     if (!detailRecord) return
     let amendmentReason = ''
-    if (detailRecord.status === 'Rejected') {
-      const reason = await dialog.prompt(
-        'Enter a reason for revising this rejected other claim. The original claim will remain in the audit history.',
-        {
-          title: 'Create Other Claim Revision',
-          confirmText: 'Create Revision',
-          required: true,
-          multiline: true,
-          rows: 4,
-          placeholder: 'Reason for amending this other claim',
-        },
-      )
-      if (reason === null) return
-      amendmentReason = String(reason || '').trim()
-      if (!amendmentReason) return
-    } else if (['Submitted', 'Prepared'].includes(detailRecord.status)) {
+    if (['Submitted', 'Prepared'].includes(detailRecord.status)) {
       const confirmed = await dialog.confirm(
         'Editing this claim will restart its review. The claim will need to be submitted again after your changes.',
         {
@@ -331,7 +341,7 @@ const OtherClaimRecords = ({
   const deleteOrWithdrawRecord = async (record) => {
     if (!record?.id) return
     if (paidStatuses.has(record.status)) return
-    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Returned'].includes(
       record.status,
     )
     let cancellationReason = ''
@@ -431,8 +441,8 @@ const OtherClaimRecords = ({
   const getActions = (record) => {
     const isPaid = paidStatuses.has(record.status)
     const isExporting = exportingRecordId === record.id
-    const canEdit = ['Draft', 'Submitted', 'Prepared', 'Rejected'].includes(record.status)
-    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
+    const canEdit = ['Draft', 'Submitted', 'Prepared', 'Returned'].includes(record.status)
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Returned'].includes(
       record.status,
     )
     const canArchive = record.status === 'Cancelled' && !record.archivedAt
@@ -449,8 +459,8 @@ const OtherClaimRecords = ({
         ? {
             key: 'edit',
             label:
-              record.status === 'Rejected'
-                ? 'Create Revision'
+              record.status === 'Returned'
+                ? 'Edit & Resubmit'
                 : record.status === 'Draft'
                   ? 'Edit Draft'
                   : 'Edit Claim',
@@ -477,17 +487,13 @@ const OtherClaimRecords = ({
   }
 
   const renderCell = (record, column) => {
-    if (column.key === 'claimDate') return <strong>{formatClaimDate(record)}</strong>
-    if (column.key === 'claimsTotal') return <strong>{formatMoney(record.claimsTotal)}</strong>
+    if (column.key === 'claimDate') return formatClaimDate(record)
+    if (column.key === 'claimsTotal') return formatMoney(record.claimsTotal)
     if (column.key === 'status') return renderStatus(record)
     return record[column.key] || '-'
   }
 
-  const renderMobileRecordItem = (
-    record,
-    index,
-    { pageStart = 0, rowProps: mobileRowProps = {} } = {},
-  ) => {
+  const renderMobileRecordItem = (record, index, { rowProps: mobileRowProps = {} } = {}) => {
     const { className: mobileRowClassName = '', ...mobileMainProps } = mobileRowProps
     const actionItems = getActions(record)
 
@@ -500,14 +506,9 @@ const OtherClaimRecords = ({
             {...mobileMainProps}
             className={`records-mobile-item-main text-start ${mobileRowClassName}`.trim()}
           >
-            <div className="d-flex align-items-center gap-2 min-w-0">
-              <span className="records-mobile-row-index text-muted">#{pageStart + index + 1}</span>
-              <span className="records-mobile-quote-id text-truncate">
-                {formatClaimDate(record)}
-              </span>
-            </div>
+            <span className="records-mobile-quote-id text-truncate">{formatClaimDate(record)}</span>
             <div className="records-mobile-client mt-1">
-              {record.claimMonth || '-'} · Claims {formatMoney(record.claimsTotal)}
+              Claim total {formatMoney(record.claimsTotal)}
             </div>
           </div>
           <div className="salary-record-mobile-card-actions">
@@ -523,6 +524,9 @@ const OtherClaimRecords = ({
               />
             )}
           </div>
+        </div>
+        <div className="records-mobile-subtitle other-claim-record-mobile-context">
+          {record.claimMonth || '-'} {'\u00b7'} {getRecordContext(record)}
         </div>
       </div>
     )
@@ -634,6 +638,10 @@ const OtherClaimRecords = ({
         onRowOpen={openRecord}
         getActions={getActions}
         renderMobileItem={renderMobileRecordItem}
+        mobilePaginationMode="load-more"
+        mobileLoadMorePageSize={10}
+        mobileLoadMoreLabel="Load more claims"
+        mobileLoadMoreSummaryLabel="claims"
         getSortValue={(record, field) => {
           if (field === 'status') return statusSortPriority[displayStatus(record.status)] ?? 5
           if (field === 'claimDate')
@@ -644,25 +652,6 @@ const OtherClaimRecords = ({
               record.claimMonth
             )
           return record[field]
-        }}
-        mobileRecord={{
-          title: formatClaimDate,
-          meta: (record) =>
-            `${record.claimMonth || '-'} · Claims ${formatMoney(record.claimsTotal)}`,
-          badges: (record) => [
-            {
-              key: 'status',
-              label: displayStatus(record.status),
-              tone: statusTone[record.status] || 'secondary',
-            },
-          ],
-          kv: (record) => [
-            {
-              key: 'claimsTotal',
-              label: 'Claims Total',
-              value: formatMoney(record.claimsTotal),
-            },
-          ],
         }}
         initialSortField="claimDate"
         initialSortDir="desc"

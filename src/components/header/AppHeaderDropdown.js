@@ -22,14 +22,19 @@ import {
   cilCalendarCheck,
   cilCash,
   cilDescription,
+  cilGift,
   cilLockLocked,
   cilPencil,
-  cilSettings,
   cilSpeedometer,
   cilSpreadsheet,
+  cilSun,
+  cilMoon,
+  cilPaperPlane,
   cilUser,
 } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
+
+import PropTypes from 'prop-types'
 
 import { useAuth } from '../../auth/AuthProvider'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
@@ -67,16 +72,16 @@ const menuSections = [
         icon: cilCash,
       },
       {
-        key: 'salaryRecords',
-        label: 'Salary Records',
-        to: '/my/salary',
+        key: 'applyOtherClaim',
+        label: 'Apply Claims',
+        to: '/my/salary/other-claims/apply',
         icon: cilSpreadsheet,
       },
       {
-        key: 'salarySettings',
-        label: 'Salary Settings',
-        to: '/my/salary/settings',
-        icon: cilSettings,
+        key: 'salaryRecords',
+        label: 'Records',
+        to: '/my/salary/records',
+        icon: cilDescription,
       },
     ],
   },
@@ -141,8 +146,17 @@ const modalMapping = menuSections.reduce((mapping, section) => {
 }, {})
 
 const defaultModalKey = Object.keys(modalMapping)[0] || null
+const getThemeIcon = (themeToggleLabel = '') =>
+  themeToggleLabel.toLowerCase().includes('light') ? cilSun : cilMoon
 
-const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange }) => {
+const AppHeaderDropdown = ({
+  sessionUser,
+  onOpenTicket,
+  onToggleTheme,
+  onAccountActiveChange,
+  themeToggleLabel,
+  whatsNewLabel,
+}) => {
   const { logout } = useAuth()
   const navigate = useNavigate()
   const { getRouteGroupCount } = useAppNotifications()
@@ -157,6 +171,34 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const isAccountModalActive = modalVisible || signOutModalVisible
   const isAccountActive = isDropdownOpen || isAccountModalActive
+
+  const utilitySection = {
+    title: 'Utilities',
+    sectionClass: 'd-md-none',
+    headerClass: 'app-header-dropdown-heading',
+    items: [
+      {
+        key: 'theme',
+        label: 'Theme',
+        icon: getThemeIcon(themeToggleLabel),
+        action: 'toggleTheme',
+        tooltip: themeToggleLabel || 'Toggle theme',
+      },
+      {
+        key: 'whatsNew',
+        label: "What's New",
+        to: '/whats-new',
+        icon: cilGift,
+        tooltip: whatsNewLabel || 'See Latest Updates',
+      },
+      {
+        key: 'submitTicket',
+        label: 'Submit Ticket',
+        icon: cilPaperPlane,
+        action: 'openTicket',
+      },
+    ],
+  }
 
   useEffect(() => {
     onAccountActiveChange?.(isAccountActive)
@@ -173,15 +215,28 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
   }
 
   const handleMenuItemClick = (item) => {
+    setIsDropdownOpen(false)
+    const runAfterClose = (callback) => {
+      if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+        setTimeout(callback, 0)
+        return
+      }
+      window.requestAnimationFrame(() => callback())
+    }
+
+    if (item.action === 'toggleTheme') {
+      runAfterClose(() => onToggleTheme?.())
+      return
+    }
     if (item.action === 'openTicket') {
-      onOpenTicket?.()
+      runAfterClose(() => onOpenTicket?.())
       return
     }
     if (item.to) {
-      navigate(item.to)
+      runAfterClose(() => navigate(item.to))
       return
     }
-    openModal(item.key)
+    runAfterClose(() => openModal(item.key))
   }
 
   const activeModalData = activeModal ? modalMapping[activeModal] : null
@@ -214,6 +269,7 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
         alignment="end"
         popper={false}
         className="app-bottom-nav-entry"
+        visible={isDropdownOpen}
         onShow={() => setIsDropdownOpen(true)}
         onHide={() => setIsDropdownOpen(false)}
       >
@@ -264,8 +320,11 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
               )}
             </div>
 
-            {menuSections.map((section) => (
-              <div key={section.title} className="app-header-dropdown-section">
+            {[utilitySection, ...menuSections].map((section) => (
+              <div
+                key={section.title}
+                className={`app-header-dropdown-section${section.sectionClass ? ` ${section.sectionClass}` : ''}`}
+              >
                 <CDropdownHeader className={section.headerClass}>{section.title}</CDropdownHeader>
                 <div className="app-header-dropdown-grid">
                   {section.items.map((item) => {
@@ -277,6 +336,7 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
                       <CDropdownItem
                         key={item.key}
                         className="app-header-dropdown-item"
+                        aria-label={item.tooltip || item.label}
                         onClick={() => handleMenuItemClick(item)}
                       >
                         {item.icon && (
@@ -356,6 +416,18 @@ const AppHeaderDropdown = ({ sessionUser, onOpenTicket, onAccountActiveChange })
       </CModal>
     </>
   )
+}
+
+AppHeaderDropdown.propTypes = {
+  sessionUser: PropTypes.shape({
+    full_name: PropTypes.string,
+    roles: PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.string), PropTypes.string]),
+  }),
+  onOpenTicket: PropTypes.func,
+  onToggleTheme: PropTypes.func,
+  onAccountActiveChange: PropTypes.func,
+  themeToggleLabel: PropTypes.string,
+  whatsNewLabel: PropTypes.string,
 }
 
 export default AppHeaderDropdown

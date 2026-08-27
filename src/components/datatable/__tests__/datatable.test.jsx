@@ -603,6 +603,28 @@ describe('datatable shared components', () => {
     expect(onAction).toHaveBeenCalledWith(rows[0])
   })
 
+  it('adds the mobile-flat modifier only when requested', () => {
+    const { container, rerender } = render(
+      <DataTableDetailShell title="Record" record={rows[0]}>
+        <div>Details</div>
+      </DataTableDetailShell>,
+    )
+
+    expect(container.querySelector('.data-table-detail-shell')).not.toHaveClass(
+      'data-table-detail-shell--mobile-flat',
+    )
+
+    rerender(
+      <DataTableDetailShell title="Record" record={rows[0]} mobileFlat>
+        <div>Details</div>
+      </DataTableDetailShell>,
+    )
+
+    expect(container.querySelector('.data-table-detail-shell')).toHaveClass(
+      'data-table-detail-shell--mobile-flat',
+    )
+  })
+
   it('keeps status badge default classes while accepting size and shape options', () => {
     render(
       <DataTableStatusBadge tone="success" size="md" shape="pill">

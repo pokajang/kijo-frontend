@@ -99,9 +99,9 @@ describe('FinancialSalaryRecordsPage', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('tab', { name: 'Salary Records' })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: 'Review Salary' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Balance Sheet' })).toBeInTheDocument()
-    expect(screen.getAllByText('Salary Records').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Review Salary').length).toBeGreaterThan(0)
     expect(screen.getByText('Pending Check')).toBeInTheDocument()
     expect(screen.getByText('Pending Approval')).toBeInTheDocument()
     expect(screen.queryByText('Records')).not.toBeInTheDocument()
@@ -109,11 +109,9 @@ describe('FinancialSalaryRecordsPage', () => {
     expect((await screen.findAllByText('Staff Example (STA)')).length).toBeGreaterThan(0)
     expect(screen.getAllByText('May 2026').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Submitted')[0]).toBeInTheDocument()
-    const checkButton = screen.getAllByRole('button', { name: /^check$/i })[0]
-    expect(checkButton).toHaveClass('btn-outline-info')
-    expect(screen.getAllByRole('button', { name: /^reject$/i })[0]).toHaveClass(
-      'btn-outline-danger',
-    )
+    expect(
+      screen.getAllByRole('button', { name: /review details to continue/i }).length,
+    ).toBeGreaterThan(0)
     expect(screen.getAllByText('RM 3,029.95').length).toBeGreaterThan(0)
     expect(screen.queryByText('Next: Check or Reject > Approve')).not.toBeInTheDocument()
 
@@ -134,31 +132,16 @@ describe('FinancialSalaryRecordsPage', () => {
     })
   })
 
-  it('submits checker workflow action and updates the row to approval stage', async () => {
+  it('directs an assigned reviewer to inspect record details before deciding', async () => {
     render(
       <MemoryRouter>
         <FinancialSalaryRecordsPage />
       </MemoryRouter>,
     )
 
-    fireEvent.click((await screen.findAllByRole('button', { name: /^check$/i }))[0])
-    expect(await screen.findByText('Check Salary')).toBeInTheDocument()
-
-    const checkButtons = screen.getAllByRole('button', { name: /^check$/i })
-    fireEvent.click(checkButtons[checkButtons.length - 1])
-
-    await waitFor(() => {
-      expect(apiJson).toHaveBeenCalledWith(
-        expect.stringContaining('workflows/instances/100/actions'),
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ action: 'check', remarks: '' }),
-        }),
-      )
-    })
-    await waitFor(() => {
-      expect(screen.getAllByRole('button', { name: /^approve$/i }).length).toBeGreaterThan(0)
-    })
+    expect(
+      (await screen.findAllByRole('button', { name: /review details to continue/i })).length,
+    ).toBeGreaterThan(0)
   })
 
   it('keeps workflow actions out of the kebab menu', async () => {
@@ -208,15 +191,17 @@ describe('FinancialSalaryRecordsPage', () => {
       </MemoryRouter>,
     )
 
+    fireEvent.change(screen.getByLabelText('Worklist'), { target: { value: 'all' } })
     expect((await screen.findAllByText('Restricted')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Staff Example (STA)')).not.toBeInTheDocument()
-    expect(screen.getByText('Visible Payable')).toBeInTheDocument()
+    expect(screen.getByText('Financial totals')).toBeInTheDocument()
     expect(screen.queryByLabelText('Actions')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^check$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /review details to continue/i }),
+    ).not.toBeInTheDocument()
   })
 
-  it('sums only visible payable salary in stats', async () => {
+  it('sums only visible net pay in stats', async () => {
     records = [
       buildRecord(),
       buildRecord({
@@ -268,12 +253,13 @@ describe('FinancialSalaryRecordsPage', () => {
       </MemoryRouter>,
     )
 
+    fireEvent.change(screen.getByLabelText('Worklist'), { target: { value: 'all' } })
     expect((await screen.findAllByText('Pending check')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: /^check$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument()
   })
 
-  it('shows approve and reject actions for an actionable checked row', async () => {
+  it('shows a detail-review action for an actionable checked row', async () => {
     records = [
       buildRecord({
         status: 'Checked',
@@ -304,11 +290,9 @@ describe('FinancialSalaryRecordsPage', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByRole('button', { name: /^approve$/i })).toHaveClass(
-      'btn-outline-success',
-    )
-    expect(screen.getAllByRole('button', { name: /^reject$/i }).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: /^check$/i })).not.toBeInTheDocument()
+    expect(
+      (await screen.findAllByRole('button', { name: /review details to continue/i })).length,
+    ).toBeGreaterThan(0)
   })
 
   it('shows pending approval when the checked row is not actionable for the current staff', async () => {
@@ -330,6 +314,7 @@ describe('FinancialSalaryRecordsPage', () => {
       </MemoryRouter>,
     )
 
+    fireEvent.change(screen.getByLabelText('Worklist'), { target: { value: 'all' } })
     expect((await screen.findAllByText('Pending approval')).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: /^approve$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^reject$/i })).not.toBeInTheDocument()

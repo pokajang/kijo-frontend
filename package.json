@@ -20,6 +20,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "e2e:other-claim-crud": "node scripts/other-claim-crud-lifecycle-e2e.mjs",
+    "uat:salary-claims-lifecycle": "node scripts/salary-claims-multirole-uat.mjs",
     "e2e:debtor-payments": "node scripts/debtor-payment-lifecycle-e2e.mjs",
     "e2e:feedback-workflow": "node scripts/feedback-workflow-e2e.mjs",
     "e2e:pipeline-service-category": "node scripts/pipeline-service-category-lifecycle-e2e.mjs",

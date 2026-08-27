@@ -32,7 +32,9 @@ const statusTone = {
   Prepared: 'info',
   Submitted: 'info',
   Pending: 'warning',
+  Returned: 'warning',
   Rejected: 'danger',
+  Paid: 'success',
 }
 
 const statusSortPriority = {
@@ -41,7 +43,9 @@ const statusSortPriority = {
   Prepared: 0,
   Checked: 1,
   Approved: 2,
+  Returned: 3,
   Rejected: 4,
+  Paid: 3,
 }
 
 const displayStatus = (status) => {
@@ -90,7 +94,7 @@ const dataColumns = [
   },
   {
     key: 'payableSalary',
-    label: 'Payable Salary',
+    label: 'Net Pay',
     width: '130px',
     sortable: true,
     sortType: 'number',
@@ -140,10 +144,7 @@ const getSalaryRecordsScopeLabel = (records = []) => {
 
   if (!salaryMonths.length) return ''
 
-  const first = formatSalaryMonthScope(salaryMonths[0])
-  const last = formatSalaryMonthScope(salaryMonths[salaryMonths.length - 1])
-
-  return first === last ? first : `${first} - ${last}`
+  return formatSalaryMonthScope(salaryMonths[salaryMonths.length - 1])
 }
 
 export const downloadSalaryClaims = async (record, pendingTab = null) => {
@@ -239,51 +240,43 @@ const SalaryRecord = ({
       (total, record) => total + Number(record.payableSalary || 0),
       0,
     )
-    const adjustmentTotal = filteredRecords.reduce(
-      (total, record) => total + Number(record.claimsTotal || 0),
-      0,
-    )
-    const employeeDeductions = filteredRecords.reduce(
-      (total, record) => total + Number(record.employeeDeductions || 0),
-      0,
-    )
-    const companyCost = filteredRecords.reduce(
-      (total, record) =>
-        total +
-        Number(record.basicSalary || 0) +
-        Number(record.claimsTotal || 0) +
-        Number(record.employerContributions || 0),
-      0,
-    )
+    const countForStatus = (status) =>
+      filteredRecords.filter((record) => record.status === status).length
 
     return [
       {
-        key: 'net-take-home',
-        label: 'Take-Home',
-        value: formatMoney(roundMoney(netTakeHome)),
-        sublabel: 'net pay',
-        tone: 'success',
+        key: 'draft',
+        label: 'Drafts',
+        value: countForStatus('Draft'),
+        sublabel: 'finish or remove',
+        tone: 'secondary',
+        onClick: () => setStatusFilter('Draft'),
+        actionTooltip: 'Show draft salary records',
       },
       {
-        key: 'claims',
-        label: 'Adjustments',
-        value: formatMoney(roundMoney(adjustmentTotal)),
-        sublabel: 'recurring and non-recurring allowance',
-        tone: 'warning',
-      },
-      {
-        key: 'employee-deductions',
-        label: 'Deductions',
-        value: formatMoney(roundMoney(employeeDeductions)),
-        sublabel: 'EPF, SOCSO, EIS',
-        tone: 'primary',
-      },
-      {
-        key: 'company-cost',
-        label: 'Total Cost',
-        value: formatMoney(roundMoney(companyCost)),
-        sublabel: 'salary + adjustments + employer',
+        key: 'submitted',
+        label: 'Submitted',
+        value: countForStatus('Submitted'),
+        sublabel: 'awaiting review',
         tone: 'info',
+        onClick: () => setStatusFilter('Submitted'),
+        actionTooltip: 'Show submitted salary records',
+      },
+      {
+        key: 'rejected',
+        label: 'Action Needed',
+        value: countForStatus('Rejected'),
+        sublabel: 'revise rejected records',
+        tone: 'danger',
+        onClick: () => setStatusFilter('Rejected'),
+        actionTooltip: 'Show rejected salary records',
+      },
+      {
+        key: 'net-pay',
+        label: 'Net Pay',
+        value: formatMoney(roundMoney(netTakeHome)),
+        sublabel: 'shown records',
+        tone: 'success',
       },
     ]
   }, [filteredRecords])
@@ -442,11 +435,11 @@ const SalaryRecord = ({
   }
 
   const renderCell = (record, column) => {
-    if (column.key === 'salaryMonth') return <strong>{record.salaryMonth}</strong>
+    if (column.key === 'salaryMonth') return record.salaryMonth
     if (column.key === 'basicSalary') return formatMoney(record.basicSalary)
     if (column.key === 'claimsTotal') return formatMoney(record.claimsTotal)
     if (column.key === 'employeeDeductions') return `-${formatMoney(record.employeeDeductions)}`
-    if (column.key === 'payableSalary') return <strong>{formatMoney(record.payableSalary)}</strong>
+    if (column.key === 'payableSalary') return formatMoney(record.payableSalary)
     if (column.key === 'status') return renderStatus(record)
 
     return record[column.key] || '-'
@@ -454,6 +447,7 @@ const SalaryRecord = ({
 
   const getActions = (record) => {
     const isPaid = paidStatuses.has(record.status)
+    const isFinal = isPaid || record.status === 'Rejected'
     const isExportingClaims = exportingRecordId === `claims-${record.id}`
     const isExportingPayslip = exportingRecordId === `payslip-${record.id}`
     const payslipAvailability = getSalaryPayslipAvailability(record)
@@ -461,41 +455,45 @@ const SalaryRecord = ({
     return [
       {
         key: 'export-claims',
-        label: isExportingClaims ? 'Preparing PDF...' : 'Export Claims',
+        label: isExportingClaims ? 'Preparing PDF...' : 'Export Salary',
         hidden: record.status === 'Draft',
         disabled: Boolean(exportingRecordId),
         onClick: exportSalaryClaims,
       },
       {
         key: 'export-payslip',
-        label: isExportingPayslip ? 'Preparing PDF...' : 'Export Payslip',
+        label: isExportingPayslip ? 'Preparing PDF...' : 'Generate Payslip',
         disabled: Boolean(exportingRecordId) || !payslipAvailability.available,
         tooltip: payslipAvailability.available ? '' : payslipAvailability.tooltip,
         onClick: exportSalaryPayslip,
       },
       {
         key: 'edit',
-        label: 'Edit',
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        label: record.status === 'Returned' ? 'Edit & Resubmit' : 'Edit',
+        disabled: isFinal,
+        tooltip: isPaid
+          ? 'Paid records cannot be changed.'
+          : record.status === 'Rejected'
+            ? 'Rejected records have a final decision.'
+            : '',
         onClick: editSalaryRecord,
       },
       {
         key: 'delete',
         label: 'Delete',
         danger: true,
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        disabled: isFinal,
+        tooltip: isPaid
+          ? 'Paid records cannot be changed.'
+          : record.status === 'Rejected'
+            ? 'Rejected records have a final decision.'
+            : '',
         onClick: deleteSalaryRecord,
       },
     ]
   }
 
-  const renderMobileRecordItem = (
-    record,
-    index,
-    { pageStart = 0, rowProps: mobileRowProps = {} } = {},
-  ) => {
+  const renderMobileRecordItem = (record, index, { rowProps: mobileRowProps = {} } = {}) => {
     const { className: mobileRowClassName = '', ...mobileMainProps } = mobileRowProps
     const actionItems = getActions(record)
 
@@ -508,20 +506,15 @@ const SalaryRecord = ({
             {...mobileMainProps}
             className={`records-mobile-item-main text-start ${mobileRowClassName}`.trim()}
           >
-            <div className="d-flex align-items-center gap-2 min-w-0">
-              <span className="records-mobile-row-index text-muted">#{pageStart + index + 1}</span>
-              <span className="records-mobile-quote-id text-truncate">
-                {record.salaryMonth || '-'}
-              </span>
-            </div>
+            <span className="records-mobile-quote-id text-truncate">
+              {record.salaryMonth || '-'}
+            </span>
             <div className="records-mobile-client mt-1">
-              Payable {formatMoney(record.payableSalary)}
+              Net Pay {formatMoney(record.payableSalary)}
             </div>
           </div>
           <div className="salary-record-mobile-card-actions">
-            <DataTableStatusBadge tone={statusTone[record.status] || 'secondary'}>
-              {displayStatus(record.status)}
-            </DataTableStatusBadge>
+            {renderStatus(record)}
             {actionItems.some((action) => !action.hidden) && (
               <DataTableActionMenu
                 record={record}
@@ -530,20 +523,6 @@ const SalaryRecord = ({
                 ariaLabel={`${record.salaryMonth || 'Salary record'} actions`}
               />
             )}
-          </div>
-        </div>
-        <div className="records-mobile-kv-grid mt-2">
-          <div className="records-mobile-kv">
-            <span className="records-mobile-k">Adjustments</span>
-            <span className="records-mobile-v">{formatMoney(record.claimsTotal)}</span>
-          </div>
-          <div className="records-mobile-kv">
-            <span className="records-mobile-k">Deductions</span>
-            <span className="records-mobile-v">-{formatMoney(record.employeeDeductions)}</span>
-          </div>
-          <div className="records-mobile-kv">
-            <span className="records-mobile-k">Basic Salary</span>
-            <span className="records-mobile-v">{formatMoney(record.basicSalary)}</span>
           </div>
         </div>
       </div>
@@ -627,6 +606,10 @@ const SalaryRecord = ({
         onRowOpen={openSalaryRecord}
         getActions={getActions}
         renderMobileItem={renderMobileRecordItem}
+        mobilePaginationMode="load-more"
+        mobileLoadMorePageSize={10}
+        mobileLoadMoreLabel="Load more salary records"
+        mobileLoadMoreSummaryLabel="salary records"
         getSortValue={(record, field) => {
           if (field === 'status') return statusSortPriority[displayStatus(record.status)] ?? 5
           if (field === 'salaryMonth') return record.salaryMonthValue || record.salaryMonth

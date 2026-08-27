@@ -6,7 +6,11 @@ import { useAppNotifications } from '../../notifications/AppNotificationProvider
 import { getTabNotificationBadge } from '../../notifications/notificationRegistry'
 import { useWorkflowSetupStatus } from '../../workflows/WorkflowSetupStatusProvider'
 import { AuthContext } from '../../auth/AuthProvider'
-import { extractRolesFromSession, hasAnyAllowedRole } from '../../utils/roles'
+import {
+  extractRolesFromSession,
+  hasAnyAllowedRole,
+  hasExplicitAllowedRole,
+} from '../../utils/roles'
 
 const normalizePath = (path) => {
   if (!path) return ''
@@ -45,6 +49,8 @@ const ModuleNavStripShell = ({
   ariaLabel,
   hideOnNestedRoute = true,
   rightControls = null,
+  asNavigation = false,
+  flat = false,
   className = '',
   pathname = '',
   navigate = null,
@@ -61,7 +67,11 @@ const ModuleNavStripShell = ({
   const visibleTabs = useMemo(
     () =>
       tabs.filter(
-        (tab) => !Array.isArray(tab.allowedRoles) || hasAnyAllowedRole(roles, tab.allowedRoles),
+        (tab) =>
+          !Array.isArray(tab.allowedRoles) ||
+          (tab.requireExplicitRole
+            ? hasExplicitAllowedRole(roles, tab.allowedRoles)
+            : hasAnyAllowedRole(roles, tab.allowedRoles)),
       ),
     [roles, tabs],
   )
@@ -83,6 +93,8 @@ const ModuleNavStripShell = ({
   )
 
   useEffect(() => {
+    if (flat) return undefined
+
     const setTopOffset = () => {
       const isMobileViewport =
         typeof window.matchMedia === 'function'
@@ -118,7 +130,7 @@ const ModuleNavStripShell = ({
       window.removeEventListener('resize', setTopOffset)
       window.removeEventListener('scroll', setScrollState)
     }
-  }, [])
+  }, [flat])
 
   useEffect(() => {
     const tabsNode = tabsRef.current
@@ -169,7 +181,10 @@ const ModuleNavStripShell = ({
   if (shouldHideForNestedRoute) return null
   if (visibleTabs.length === 0) return null
 
-  const handleTabClick = (tab) => {
+  const Container = asNavigation ? 'nav' : 'div'
+
+  const handleTabClick = (event, tab) => {
+    if (asNavigation) event.preventDefault()
     if (onTabChange) {
       onTabChange(tab.key)
       return
@@ -181,11 +196,12 @@ const ModuleNavStripShell = ({
   }
 
   return (
-    <div
-      className={`module-nav-strip records-service-strip border rounded-3 py-0 px-2 ps-md-0 pe-md-0 mb-3 position-sticky bg-body ${
-        hasScrolled ? 'shadow-sm' : 'shadow-none'
-      } ${className}`.trim()}
-      style={{ top: `${stickyTop + stickyGap}px`, zIndex: 10 }}
+    <Container
+      className={`module-nav-strip records-service-strip ${
+        flat ? 'module-nav-strip--flat' : 'border rounded-3 py-0 px-2 ps-md-0 pe-md-0 mb-3 bg-body'
+      } ${flat ? '' : 'position-sticky'} ${hasScrolled && !flat ? 'shadow-sm' : 'shadow-none'} ${className}`.trim()}
+      style={flat ? { top: 0, zIndex: 1020 } : { top: `${stickyTop + stickyGap}px`, zIndex: 10 }}
+      aria-label={asNavigation ? ariaLabel : undefined}
     >
       <div className="module-nav-strip__inner records-service-strip__inner">
         <div
@@ -196,7 +212,7 @@ const ModuleNavStripShell = ({
           <div
             ref={tabsRef}
             className="module-nav-strip__tabs records-service-strip__tabs"
-            role="tablist"
+            role={asNavigation ? undefined : 'tablist'}
             aria-label={ariaLabel}
           >
             {visibleTabs.map((tab) => {
@@ -229,7 +245,9 @@ const ModuleNavStripShell = ({
               return (
                 <CButton
                   key={tab.key}
-                  type="button"
+                  component={asNavigation ? 'a' : undefined}
+                  href={asNavigation ? tab.to : undefined}
+                  type={asNavigation ? undefined : 'button'}
                   color="light"
                   variant="ghost"
                   data-api-busy-allow="true"
@@ -237,9 +255,9 @@ const ModuleNavStripShell = ({
                     isActive ? 'is-active fw-semibold' : 'text-muted fw-normal'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
-                  aria-selected={isActive}
-                  role="tab"
-                  onClick={() => handleTabClick(tab)}
+                  aria-selected={asNavigation ? undefined : isActive}
+                  role={asNavigation ? undefined : 'tab'}
+                  onClick={(event) => handleTabClick(event, tab)}
                 >
                   <span className="d-inline-flex align-items-center gap-2">
                     <span>{tab.label}</span>
@@ -264,12 +282,14 @@ const ModuleNavStripShell = ({
           </div>
         )}
       </div>
-    </div>
+    </Container>
   )
 }
 
 ModuleNavStripShell.propTypes = {
   activeTab: PropTypes.string,
+  asNavigation: PropTypes.bool,
+  flat: PropTypes.bool,
   ariaLabel: PropTypes.string.isRequired,
   className: PropTypes.string,
   hideOnNestedRoute: PropTypes.bool,
@@ -290,6 +310,7 @@ ModuleNavStripShell.propTypes = {
       notificationTabKey: PropTypes.string,
       to: PropTypes.string,
       allowedRoles: PropTypes.arrayOf(PropTypes.string),
+      requireExplicitRole: PropTypes.bool,
       workflowSetupKey: PropTypes.string,
     }),
   ).isRequired,

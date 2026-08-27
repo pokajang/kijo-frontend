@@ -173,23 +173,25 @@ describe('vendorModuleTabs', () => {
 })
 
 describe('financialModuleTabs', () => {
-  it('shows Payment Queue, Salary Records, Other Claim Records, and Balance Sheet tabs', () => {
+  it('shows Payment Queue, Review Salary, Review Claims, and Balance Sheet tabs', () => {
     expect(financialModuleTabs).toEqual([
       {
         key: 'payment-queue',
         label: 'Payment Queue',
         to: '/financial/payment-queue',
         notificationTabKey: 'financial.payment-queue',
+        allowedRoles: ['Finance', 'Account', 'Bank'],
+        requireExplicitRole: true,
       },
       {
         key: 'salary-records',
-        label: 'Salary Records',
+        label: 'Review Salary',
         to: '/financial/salary-records',
         notificationTabKey: 'financial.salary-records',
       },
       {
         key: 'other-claim-records',
-        label: 'Other Claim Records',
+        label: 'Review Claims',
         to: '/financial/other-claim-records',
         notificationTabKey: 'financial.other-claim-records',
       },
@@ -203,40 +205,19 @@ describe('financialModuleTabs', () => {
 })
 
 describe('salarySelfModuleTabs', () => {
-  it('shows my payments, salary application, records, other claim, and settings tabs', () => {
+  it('shows salary and other claims as the employee workspace destinations', () => {
     expect(salarySelfModuleTabs).toEqual([
       {
-        key: 'payment-queue',
-        label: 'My Payments',
-        to: '/my/salary/payment-queue',
-        notificationTabKey: 'my.salary.payment-queue',
-      },
-      {
-        key: 'apply',
-        label: 'Apply Salary',
-        to: '/my/salary/apply',
-      },
-      {
         key: 'records',
-        label: 'Salary Records',
+        label: 'Salary',
         to: '/my/salary/records',
         notificationTabKey: 'my.salary.records',
       },
       {
-        key: 'other-claim-apply',
-        label: 'Apply Other Claim',
-        to: '/my/salary/other-claims/apply',
-      },
-      {
         key: 'other-claim-records',
-        label: 'Other Claim Records',
+        label: 'Other Claims',
         to: '/my/salary/other-claims/records',
         notificationTabKey: 'my.salary.other-claim-records',
-      },
-      {
-        key: 'settings',
-        label: 'Settings',
-        to: '/my/salary/settings',
       },
     ])
   })

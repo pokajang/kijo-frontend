@@ -269,9 +269,7 @@ const OtherClaimApply = ({
     ? String(resumeClaimMonth)
     : ''
   const initialType = resumeClaimType || firstClaimType(editRecord)
-  const [isAdjusting, setIsAdjusting] = useState(
-    Boolean(editRecord) || showAdjustments || Boolean(resumeClaimType),
-  )
+  const [isAdjusting, setIsAdjusting] = useState(true)
   const [activeAdjustmentType, setActiveAdjustmentType] = useState(initialType)
   const [showClaimDraft, setShowClaimDraft] = useState(
     Boolean(editRecord) || Boolean(resumeClaimType),
@@ -288,13 +286,18 @@ const OtherClaimApply = ({
   const initialDraftSaveStateRef = useRef('idle')
   const [draftSaveState, setDraftSaveState] = useState(() => initialDraftSaveStateRef.current)
   const [draftSaveError, setDraftSaveError] = useState('')
+  const [draftRetryNonce, setDraftRetryNonce] = useState(0)
   const [attachmentInputVersion, setAttachmentInputVersion] = useState(0)
   const [attachmentProcessing, setAttachmentProcessing] = useState(createAttachmentProcessingState)
   const attachmentProcessingRef = useRef(attachmentProcessing)
   const draftSaveTimerRef = useRef(null)
   const draftRecordRef = useRef(
     editRecord?.status === 'Draft' && editRecord?.id
-      ? { id: editRecord.id, claimMonth: editRecord.claimMonthValue }
+      ? {
+          id: editRecord.id,
+          claimMonth: editRecord.claimMonthValue,
+          recordVersion: editRecord.recordVersion,
+        }
       : null,
   )
   const draftSaveRevisionRef = useRef(0)
@@ -403,6 +406,7 @@ const OtherClaimApply = ({
           draftRecordRef.current = {
             id: serverDraft.id,
             claimMonth: serverDraft.claimMonthValue,
+            recordVersion: serverDraft.recordVersion,
           }
         }
         const serverDraftPayload = serverDraft?.draftPayload
@@ -516,7 +520,7 @@ const OtherClaimApply = ({
 
     setAttachmentProcessingForType(type, true)
     try {
-      const attachment = await prepareSalaryAttachment(file)
+      const attachment = { ...(await prepareSalaryAttachment(file)), clientId: buildClaimId() }
       setFormData((prev) => ({ ...prev, [field]: attachment }))
     } catch (err) {
       resetAttachmentInputs()
@@ -603,6 +607,7 @@ const OtherClaimApply = ({
       amount: roundMoney(amount),
       source: 'manual',
       sourceLabel: 'Manual adjustment',
+      attachments: formData.allowanceAttachment ? [formData.allowanceAttachment] : [],
       attachment: formData.allowanceAttachment,
     }
     setAllowanceItems((prev) =>
@@ -638,6 +643,7 @@ const OtherClaimApply = ({
       date: formData.expenseDate,
       description: formData.expenseDescription.trim(),
       amount: roundMoney(amount),
+      attachments: [formData.expenseAttachment],
       attachment: formData.expenseAttachment,
     }
     setExpenseItems((prev) =>
@@ -680,6 +686,7 @@ const OtherClaimApply = ({
       date: formData.medicalDate,
       description: formData.medicalDescription.trim(),
       amount: roundMoney(amount),
+      attachments: [formData.medicalAttachment],
       attachment: formData.medicalAttachment,
     }
     setMedicalItems((prev) =>
@@ -1109,6 +1116,8 @@ const OtherClaimApply = ({
       saveOtherClaimDraft(
         {
           claimMonthValue: claimMonth,
+          applicationId: draftRecordRef.current?.id,
+          recordVersion: draftRecordRef.current?.recordVersion,
           claims: allClaimsRef.current.filter((claim) => isCompleteClaim(claim)),
           draftPayload: draftPayloadRef.current,
         },
@@ -1119,7 +1128,11 @@ const OtherClaimApply = ({
           hasPersistedDraftRef.current = true
           if (savedDraft) lastSyncedFingerprintRef.current = draftFingerprint
           if (savedDraft?.id) {
-            draftRecordRef.current = { id: savedDraft.id, claimMonth }
+            draftRecordRef.current = {
+              id: savedDraft.id,
+              claimMonth,
+              recordVersion: savedDraft.recordVersion,
+            }
           }
           if (Array.isArray(savedDraft?.claims)) {
             setAllowanceItems((items) =>
@@ -1150,7 +1163,14 @@ const OtherClaimApply = ({
     return () => {
       if (draftSaveTimerRef.current) window.clearTimeout(draftSaveTimerRef.current)
     }
-  }, [draftFingerprint, hasDraftContent, isLoading, isSubmitting])
+  }, [draftFingerprint, draftRetryNonce, hasDraftContent, isLoading, isSubmitting])
+
+  const retryDraftSync = () => {
+    if (draftSaveState !== 'error') return
+    lastSyncedFingerprintRef.current = null
+    setDraftSaveError('')
+    setDraftRetryNonce((value) => value + 1)
+  }
 
   const handleSaveClaimDraft = (saveClaim) => {
     if (!saveClaim()) return
@@ -1220,6 +1240,8 @@ const OtherClaimApply = ({
           draftRequestRef.current = null
           const syncedDraft = await saveOtherClaimDraft({
             claimMonthValue: claimMonth,
+            applicationId: draftRecordRef.current?.id,
+            recordVersion: draftRecordRef.current?.recordVersion,
             claims: allClaims.filter((claim) => isCompleteClaim(claim, allClaims)),
             draftPayload,
           })
@@ -1229,7 +1251,11 @@ const OtherClaimApply = ({
           submissionRecordId = syncedDraft.id
           submissionRecordVersion = syncedDraft.recordVersion || submissionRecordVersion
           hasPersistedDraftRef.current = true
-          draftRecordRef.current = { id: syncedDraft.id, claimMonth }
+          draftRecordRef.current = {
+            id: syncedDraft.id,
+            claimMonth,
+            recordVersion: syncedDraft.recordVersion,
+          }
           lastSyncedFingerprintRef.current = draftFingerprint
           // The sync is the authority on attachment identity from here on; submitting the
           // pre-sync snapshot is what made the server reject evidence it had just stored.
@@ -1329,9 +1355,16 @@ const OtherClaimApply = ({
   }, [selectedClaimMonth])
   const handleClaimMonthSelect = useCallback(
     (claimMonth) => {
+      if (claimMonth !== selectedClaimMonth && hasDraftContent) {
+        showNotice(
+          'warning',
+          'Finish, submit, or clear the current draft before changing the claim month.',
+        )
+        return
+      }
       handleChange({ target: { name: 'claimMonth', value: claimMonth } })
     },
-    [handleChange],
+    [handleChange, hasDraftContent, selectedClaimMonth, showNotice],
   )
 
   const renderPanelAddAction = () =>
@@ -1535,30 +1568,40 @@ const OtherClaimApply = ({
       restored: 'Draft restored',
       error: 'Saved on this device, but not synced to server',
     }[draftSaveState] || ''
+  const hasClaimItems =
+    allowanceItems.length + expenseItems.length + mileageItems.length + medicalItems.length > 0
 
   return (
     <CForm onSubmit={handleSubmit}>
       <CCardHeader className="salary-section-header">
         <div className="salary-section-heading-group">
           <h3 className="salary-form-panel-heading" id="otherClaimSummaryHeading">
-            Other Claim Summary
+            {hasClaimItems ? 'Other Claim Summary' : 'New Other Claim'}
           </h3>
         </div>
-        {!isAdjusting && (
-          <CButton
-            color="primary"
-            variant="outline"
-            size="sm"
-            type="button"
-            onClick={() => {
-              setIsAdjusting(true)
-              setShowClaimDraft(true)
-            }}
-          >
-            Add Claim
-          </CButton>
-        )}
       </CCardHeader>
+      {editRecord?.status === 'Returned' && (
+        <CCardBody className="salary-section-body pb-0">
+          <CAlert color="warning" className="mb-0" role="status">
+            <strong>Changes requested</strong>
+            <div>
+              {editRecord.returnRemarks || 'Review this claim and make the requested corrections.'}
+            </div>
+            <div className="small mt-1">Submitting will restart the workflow at checking.</div>
+          </CAlert>
+        </CCardBody>
+      )}
+      <CCardBody className="salary-section-body pb-0">
+        <details className="salary-claim-guidance">
+          <summary>Evidence requirements</summary>
+          <p className="mb-0">
+            Add one item at a time. Expense, medical, taxi, toll, parking, and other travel claims
+            need supporting evidence; mileage route proof is optional. Submitted claims can be
+            edited until review begins. Returned claims can be corrected and resubmitted; rejected
+            claims have a final decision.
+          </p>
+        </details>
+      </CCardBody>
       <CCardBody className="salary-section-body">
         <input
           id="otherClaimMonth"
@@ -1587,6 +1630,22 @@ const OtherClaimApply = ({
             ))}
           </div>
         </div>
+        {!isAdjusting && (
+          <div className="salary-apply-context-action">
+            <CButton
+              color="primary"
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                setIsAdjusting(true)
+                setShowClaimDraft(true)
+              }}
+            >
+              Add Claim
+            </CButton>
+          </div>
+        )}
       </CCardBody>
       {isAdjusting && (
         <CCardBody className="salary-section-body">{renderAdjustmentForm()}</CCardBody>
@@ -1620,7 +1679,19 @@ const OtherClaimApply = ({
           draftSaveError &&
           !(notice.visible && notice.scope === 'submission-error') && (
             <CAlert color="warning" className="py-2" role="alert">
-              Your entries remain saved on this device. Server sync failed: {draftSaveError}
+              <div>
+                Your entries remain saved on this device. Server sync failed: {draftSaveError}
+              </div>
+              <CButton
+                color="warning"
+                variant="outline"
+                size="sm"
+                type="button"
+                className="mt-2"
+                onClick={retryDraftSync}
+              >
+                Retry sync
+              </CButton>
             </CAlert>
           )}
         <div className="salary-submit-actions">

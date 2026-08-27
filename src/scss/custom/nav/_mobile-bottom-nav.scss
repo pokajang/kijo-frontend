@@ -26,7 +26,7 @@
 
   .header.header-sticky > .container-fluid.app-bottom-nav-container {
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
     column-gap: 0;
   }
@@ -39,9 +39,9 @@
   }
 
   .app-bottom-nav-actions {
-    grid-column: 2 / span 7;
+    grid-column: 2 / span 4;
     display: grid !important;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     margin-left: 0 !important;
     align-items: stretch;
   }
@@ -113,6 +113,7 @@
     line-height: 1;
     font-weight: 500;
     letter-spacing: 0.01em;
+    white-space: nowrap;
   }
 
   .app-bottom-nav-link.active,
@@ -160,13 +161,14 @@
 
   /* Keep page content and footer above the fixed bottom nav */
   .body {
+    --app-page-mobile-inline-inset: max(0.75rem, env(safe-area-inset-left));
     padding-top: 0.75rem;
     padding-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 1.25rem);
   }
 
   /* Global modules: reduce mobile side margins to match top spacing */
   .app-content-container {
-    padding-left: max(0.75rem, env(safe-area-inset-left)) !important;
+    padding-left: var(--app-page-mobile-inline-inset) !important;
     padding-right: max(0.75rem, env(safe-area-inset-right)) !important;
   }
 
@@ -175,4 +177,3 @@
     padding-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 1.25rem);
   }
 }
-

@@ -36,6 +36,7 @@ const statusTone = {
   Checked: 'primary',
   Approved: 'success',
   Paid: 'success',
+  Returned: 'warning',
   Rejected: 'danger',
   Cancelled: 'warning',
 }
@@ -209,11 +210,15 @@ const OtherClaimRecordDetailPage = () => {
     ]
   }, [record])
 
+  const returnEvent = [...(record?.workflow?.history || [])]
+    .reverse()
+    .find((entry) => entry.action === 'return')
+
   const actions = useMemo(() => {
-    const canRevise = record?.status === 'Rejected'
+    const canCorrect = record?.status === 'Returned'
     const canEditDraft = record?.status === 'Draft'
     const canEditSubmitted = ['Submitted', 'Prepared'].includes(record?.status)
-    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Rejected'].includes(
+    const canWithdraw = ['Submitted', 'Prepared', 'Checked', 'Approved', 'Returned'].includes(
       record?.status,
     )
     const canArchive = record?.status === 'Cancelled' && !record?.archivedAt
@@ -248,28 +253,13 @@ const OtherClaimRecordDetailPage = () => {
           }
         },
       },
-      canEditDraft || canEditSubmitted || canRevise
+      canEditDraft || canEditSubmitted || canCorrect
         ? {
             key: 'edit',
-            label: canRevise ? 'Create Revision' : canEditDraft ? 'Edit Draft' : 'Edit Claim',
+            label: canCorrect ? 'Edit & Resubmit' : canEditDraft ? 'Edit Draft' : 'Edit Claim',
             onClick: async (otherClaimRecord) => {
               let amendmentReason = ''
-              if (otherClaimRecord.status === 'Rejected') {
-                const reason = await dialog.prompt(
-                  'Enter a reason for revising this rejected other claim. The original claim will remain in the audit history.',
-                  {
-                    title: 'Create Other Claim Revision',
-                    confirmText: 'Create Revision',
-                    required: true,
-                    multiline: true,
-                    rows: 4,
-                    placeholder: 'Reason for amending this other claim',
-                  },
-                )
-                if (reason === null) return
-                amendmentReason = String(reason || '').trim()
-                if (!amendmentReason) return
-              } else if (['Submitted', 'Prepared'].includes(otherClaimRecord.status)) {
+              if (['Submitted', 'Prepared'].includes(otherClaimRecord.status)) {
                 const confirmed = await dialog.confirm(
                   'Editing this claim will restart its review. The claim will need to be submitted again after your changes.',
                   {
@@ -384,6 +374,7 @@ const OtherClaimRecordDetailPage = () => {
   return (
     <DataTableDetailShell
       title="Other Claim Details"
+      mobileFlat
       onBack={() => navigate(returnTo)}
       loading={loading}
       error={error}
@@ -404,6 +395,22 @@ const OtherClaimRecordDetailPage = () => {
       {record?.status === 'Rejected' && (record.checkedRemarks || record.approvedRemarks) && (
         <CAlert color="danger" className="py-2">
           <strong>Rejection reason:</strong> {record.approvedRemarks || record.checkedRemarks}
+        </CAlert>
+      )}
+      {record?.status === 'Returned' && record.returnRemarks && (
+        <CAlert color="warning" className="py-2">
+          <strong>Changes requested:</strong> {record.returnRemarks}
+          <div className="small mt-1">
+            Returned from {record.returnedStage === 'approve' ? 'approval' : 'checking'}
+            {returnEvent?.actorName || returnEvent?.actorCode
+              ? ` by ${returnEvent.actorName || returnEvent.actorCode}`
+              : ''}
+            {record.returnedAt || returnEvent?.actedAt
+              ? ` on ${formatDateTime(record.returnedAt || returnEvent.actedAt)}`
+              : ''}
+            .
+          </div>
+          <div className="small mt-1">Edit this claim and resubmit it to restart checking.</div>
         </CAlert>
       )}
       {record?.status === 'Cancelled' && record?.cancelReason && (

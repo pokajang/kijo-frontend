@@ -24,7 +24,7 @@ describe('salaryCalculations', () => {
     expect(calculateMileageAmount(42, 0.6, 'one_way')).toBe(25.2)
   })
 
-  it('summarizes salary, claims, deductions, and payable salary', () => {
+  it('summarizes salary, claims, deductions, and net pay', () => {
     const summary = calculateSalarySummary({
       basicSalary: 3000,
       allowanceItems: [{ amount: 120 }],

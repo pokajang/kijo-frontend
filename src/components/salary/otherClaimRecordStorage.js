@@ -100,6 +100,14 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
     record.claimsTotal === null || record.claimsTotal === undefined
       ? null
       : Number(record.claimsTotal),
+  claimItemCount:
+    record.claimItemCount === null || record.claimItemCount === undefined
+      ? null
+      : Number(record.claimItemCount),
+  attachmentCount:
+    record.attachmentCount === null || record.attachmentCount === undefined
+      ? null
+      : Number(record.attachmentCount),
   medicalClaimsTotal:
     record.medicalClaimsTotal === null || record.medicalClaimsTotal === undefined
       ? null
@@ -126,6 +134,10 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
   approvedRemarks: record.approvedRemarks || '',
   approverName: record.approverName || '',
   approverCode: record.approverCode || '',
+  returnedBy: record.returnedBy || null,
+  returnedAt: record.returnedAt || '',
+  returnedStage: record.returnedStage || '',
+  returnRemarks: record.returnRemarks || '',
   cancelledAt: record.cancelledAt || '',
   cancelledBy: record.cancelledBy || null,
   cancelReason: record.cancelReason || '',
@@ -135,6 +147,8 @@ export const normalizeOtherClaimRecord = (record = {}) => ({
   canRestoreArchived: Boolean(record.canRestoreArchived),
   canViewFinancialDetails: record.canViewFinancialDetails !== false,
   financialDetailsRestricted: Boolean(record.financialDetailsRestricted),
+  canViewFinancialAmounts: record.canViewFinancialAmounts !== false,
+  financialAmountsRestricted: Boolean(record.financialAmountsRestricted),
   claimReference:
     record.claimReference || (record.id ? `OC-${String(record.id).padStart(6, '0')}` : ''),
   revisionNo: Number(record.revisionNo || 1),
@@ -252,13 +266,11 @@ const claimForPayload = (claim) => ({
   chargeToProjectId: claim.chargeToProjectId || '',
   locationDetail: claim.locationDetail || '',
   expenseType: claim.expenseType || '',
-  attachments: getClaimAttachments(claim)
-    .filter(Boolean)
-    .map((attachment) => ({
-      id: attachment.id ?? null,
-      clientId: attachment.clientId || attachment.id || attachment.name,
-      purpose: attachment.purpose || '',
-    })),
+  attachments: normalizeAttachments(claim).map((attachment) => ({
+    id: attachment.id ?? null,
+    clientId: attachment.clientId,
+    purpose: attachment.purpose || '',
+  })),
   attachmentId: claim.attachment?.id ?? null,
 })
 
@@ -287,14 +299,17 @@ const attachmentFileFromDataUrl = (attachment) => {
 
 const appendClaimAttachments = (formData, claims) => {
   claims.forEach((claim) => {
-    const attachments = getClaimAttachments(claim)
-    attachments.forEach((attachment, index) => {
+    const attachments = normalizeAttachments(claim)
+    attachments.forEach((attachment) => {
       if (attachment?.id) return
 
       const file = attachmentFileFromDataUrl(attachment)
       if (isServerSafeAttachmentFile(file)) {
-        const clientId = attachment.clientId || `attachment-${index}`
-        formData.append(`attachments[${claim.id}][${clientId}]`, file, attachment.name || file.name)
+        formData.append(
+          `attachments[${claim.id}][${attachment.clientId}]`,
+          file,
+          attachment.name || file.name,
+        )
       }
     })
   })
@@ -395,6 +410,12 @@ export const saveOtherClaimDraft = async (draft, { signal } = {}) => {
 
   // PHP parses multipart uploads reliably as POST. Laravel then routes this as PUT.
   formData.append('_method', 'PUT')
+  if (Number(draft.applicationId) > 0) {
+    formData.append('application_id', String(draft.applicationId))
+  }
+  if (Number(draft.recordVersion) > 0) {
+    formData.append('record_version', String(draft.recordVersion))
+  }
   formData.append('claim_month', claimMonth)
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
   formData.append('draft_payload', JSON.stringify(serverDraftPayload(draft.draftPayload || {})))

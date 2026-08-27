@@ -5,6 +5,39 @@
     padding-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 1rem) !important;
   }
 
+  // Salary and other-claim details use the page margin on mobile instead of a nested card.
+  // This is opt-in because DataTableDetailShell is also used by desktop-oriented detail pages.
+  .data-table-detail-shell--mobile-flat {
+    margin-bottom: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .data-table-detail-shell--mobile-flat > .card-header,
+  .data-table-detail-shell--mobile-flat > .card-body {
+    border: 0 !important;
+    background: transparent !important;
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .data-table-detail-shell--mobile-flat > .card-header {
+    margin-top: 1rem;
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .data-table-detail-shell--mobile-flat > .card-header:first-child {
+    margin-top: 0;
+  }
+
+  .data-table-detail-shell--mobile-flat > .card-body {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
   .card-header.d-flex {
     align-items: flex-start !important;
     flex-wrap: wrap;
@@ -61,6 +94,21 @@
 
   .records-mobile-rows-select {
     max-width: 76px;
+  }
+
+  // Keep record-action menus compact while retaining a reliable, consistent touch target.
+  // Every action uses the same box model, including the first and last item.
+  .record-action-menu {
+    --cui-dropdown-padding-y: 0;
+    padding-block: 0;
+  }
+
+  .record-action-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    min-height: 40px !important;
+    margin: 0;
+    padding: 0.4rem 0.75rem;
   }
 
   .records-mobile-wrap {

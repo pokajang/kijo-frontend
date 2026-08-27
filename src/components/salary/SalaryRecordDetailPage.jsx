@@ -2,8 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilExternalLink } from '@coreui/icons'
-import { CAlert, CButton, CSpinner } from '@coreui/react'
-import { DataTableDetailShell } from '../datatable'
+import {
+  CAlert,
+  CButton,
+  CSpinner,
+  CTable,
+  CTableBody,
+  CTableDataCell,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
+} from '@coreui/react'
+import { DataTableDetailShell, DataTableStatusBadge } from '../datatable'
 import dialog from '../dialog/dialogService'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { formatMoney } from './salaryCalculations'
@@ -17,6 +27,30 @@ import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 
 const reviewedMutableStatuses = new Set(['Checked', 'Approved'])
 const paidStatuses = new Set(['Paid'])
+const statusTone = {
+  Draft: 'secondary',
+  Submitted: 'info',
+  Checked: 'primary',
+  Approved: 'success',
+  Returned: 'warning',
+  Rejected: 'danger',
+  Paid: 'success',
+  Cancelled: 'warning',
+}
+
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(String(value).replace(' ', 'T'))
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : new Intl.DateTimeFormat('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(date)
+}
 
 const deductionRows = (record) => [
   {
@@ -167,6 +201,9 @@ const SalaryRecordDetailPage = () => {
   }, [consumeEntity, record?.id])
 
   const statutoryRows = useMemo(() => deductionRows(record), [record])
+  const returnEvent = [...(record?.workflow?.history || [])]
+    .reverse()
+    .find((entry) => entry.action === 'return')
   const statutoryEmployeeTotal = statutoryRows.reduce(
     (total, row) => total + Number(row.employee),
     0,
@@ -233,6 +270,7 @@ const SalaryRecordDetailPage = () => {
 
   const actions = useMemo(() => {
     const isPaid = paidStatuses.has(record?.status)
+    const isFinal = isPaid || record?.status === 'Rejected'
     const payslipAvailability = getSalaryPayslipAvailability(record)
     const exportingClaims = exportingPdfAction === 'claims'
     const exportingPayslip = exportingPdfAction === 'payslip'
@@ -241,14 +279,14 @@ const SalaryRecordDetailPage = () => {
     return [
       {
         key: 'export-claims',
-        label: exportingClaims ? 'Preparing PDF...' : 'Export Claims',
+        label: exportingClaims ? 'Preparing PDF...' : 'Export Salary',
         buttonLabel: exportingClaims ? (
           <span className="d-inline-flex align-items-center gap-2">
             <CSpinner size="sm" />
             Preparing PDF...
           </span>
         ) : (
-          'Export Claims'
+          'Export Salary'
         ),
         hidden: record?.status === 'Draft',
         disabled: isExportingPdf,
@@ -270,14 +308,14 @@ const SalaryRecordDetailPage = () => {
       },
       {
         key: 'export-payslip',
-        label: exportingPayslip ? 'Preparing PDF...' : 'Export Payslip',
+        label: exportingPayslip ? 'Preparing PDF...' : 'Generate Payslip',
         buttonLabel: exportingPayslip ? (
           <span className="d-inline-flex align-items-center gap-2">
             <CSpinner size="sm" />
             Preparing PDF...
           </span>
         ) : (
-          'Export Payslip'
+          'Generate Payslip'
         ),
         disabled: isExportingPdf || !payslipAvailability.available,
         tooltip: payslipAvailability.available ? '' : payslipAvailability.tooltip,
@@ -299,9 +337,13 @@ const SalaryRecordDetailPage = () => {
       },
       {
         key: 'edit',
-        label: 'Edit',
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        label: record?.status === 'Returned' ? 'Edit & Resubmit' : 'Edit',
+        disabled: isFinal,
+        tooltip: isPaid
+          ? 'Paid records cannot be changed.'
+          : record?.status === 'Rejected'
+            ? 'Rejected records have a final decision.'
+            : '',
         onClick: async (salaryRecord) => {
           if (paidStatuses.has(salaryRecord?.status)) return
           let amendmentReason = ''
@@ -330,8 +372,12 @@ const SalaryRecordDetailPage = () => {
         key: 'delete',
         label: 'Delete',
         danger: true,
-        disabled: isPaid,
-        tooltip: isPaid ? 'Paid records cannot be changed.' : '',
+        disabled: isFinal,
+        tooltip: isPaid
+          ? 'Paid records cannot be changed.'
+          : record?.status === 'Rejected'
+            ? 'Rejected records have a final decision.'
+            : '',
         onClick: async (salaryRecord) => {
           if (paidStatuses.has(salaryRecord?.status)) return
           let cancellationReason = ''
@@ -375,6 +421,7 @@ const SalaryRecordDetailPage = () => {
   return (
     <DataTableDetailShell
       title="Salary Record Details"
+      mobileFlat
       onBack={() => navigate(returnTo)}
       loading={loading}
       error={error}
@@ -382,6 +429,43 @@ const SalaryRecordDetailPage = () => {
       actions={record ? actions : []}
       emptyMessage="Salary record not found."
     >
+      <CAlert color={statusTone[record?.status] || 'secondary'} className="py-2">
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <strong>{record?.salaryMonth || 'Salary record'}</strong>
+          <span>Submitted {formatDateTime(record?.submittedAt)}</span>
+          <DataTableStatusBadge tone={statusTone[record?.status] || 'secondary'}>
+            {record?.status || '-'}
+          </DataTableStatusBadge>
+        </div>
+      </CAlert>
+      {record?.status === 'Rejected' && (record.checkedRemarks || record.approvedRemarks) && (
+        <CAlert color="danger" className="py-2">
+          <strong>Rejection reason:</strong> {record.approvedRemarks || record.checkedRemarks}
+        </CAlert>
+      )}
+      {record?.status === 'Returned' && record.returnRemarks && (
+        <CAlert color="warning" className="py-2">
+          <strong>Changes requested:</strong> {record.returnRemarks}
+          <div className="small mt-1">
+            Returned from {record.returnedStage === 'approve' ? 'approval' : 'checking'}
+            {returnEvent?.actorName || returnEvent?.actorCode
+              ? ` by ${returnEvent.actorName || returnEvent.actorCode}`
+              : ''}
+            {record.returnedAt || returnEvent?.actedAt
+              ? ` on ${formatDateTime(record.returnedAt || returnEvent.actedAt)}`
+              : ''}
+            .
+          </div>
+          <div className="small mt-1">
+            Edit this salary request and resubmit it to restart checking.
+          </div>
+        </CAlert>
+      )}
+      {record?.cancelReason && (
+        <CAlert color="warning" className="py-2">
+          <strong>Cancellation reason:</strong> {record.cancelReason}
+        </CAlert>
+      )}
       {exportingPdfAction && (
         <CAlert color="info" className="py-2 d-flex align-items-center gap-2">
           <CSpinner size="sm" />
@@ -397,6 +481,39 @@ const SalaryRecordDetailPage = () => {
       )}
       <section aria-label="Salary summary">
         <SalaryPayablePreviewTable rows={summaryRows} payableSalary={record?.payableSalary || 0} />
+      </section>
+      <section className="mt-4" aria-labelledby="salaryWorkflowHeading">
+        <h3 className="salary-form-panel-heading mb-3" id="salaryWorkflowHeading">
+          Workflow history
+        </h3>
+        <CTable responsive small>
+          <CTableHead>
+            <CTableRow>
+              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              <CTableHeaderCell scope="col">By</CTableHeaderCell>
+              <CTableHeaderCell scope="col">When</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Remarks</CTableHeaderCell>
+            </CTableRow>
+          </CTableHead>
+          <CTableBody>
+            {(record?.workflow?.history || []).length ? (
+              record.workflow.history.map((entry) => (
+                <CTableRow key={entry.id}>
+                  <CTableDataCell>{entry.label || entry.action}</CTableDataCell>
+                  <CTableDataCell>{entry.actorName || entry.actorCode || '-'}</CTableDataCell>
+                  <CTableDataCell>{formatDateTime(entry.actedAt)}</CTableDataCell>
+                  <CTableDataCell>{entry.remarks || '-'}</CTableDataCell>
+                </CTableRow>
+              ))
+            ) : (
+              <CTableRow>
+                <CTableDataCell colSpan={4} className="text-center text-body-secondary">
+                  No workflow events recorded.
+                </CTableDataCell>
+              </CTableRow>
+            )}
+          </CTableBody>
+        </CTable>
       </section>
       <AttachmentPreviewModal
         attachment={previewAttachment}

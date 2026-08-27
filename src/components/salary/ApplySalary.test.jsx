@@ -63,7 +63,7 @@ describe('ApplySalary', () => {
 
     const loading = screen.queryByText('Loading salary settings...')
     if (loading) expect(loading).toBeInTheDocument()
-    await screen.findByText('Salary Summary')
+    await screen.findByRole('heading', { name: 'Apply Salary' })
 
     return result
   }
@@ -74,7 +74,6 @@ describe('ApplySalary', () => {
     amount = '120',
   } = {}) => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Adjustment' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Salary Adjustment' }))
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: date } })
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: description } })
     fireEvent.change(screen.getByLabelText('Amount'), { target: { value: amount } })
@@ -130,16 +129,15 @@ describe('ApplySalary', () => {
     expect(screen.getAllByText('RM 3000.00').length).toBeGreaterThan(0)
   })
 
-  it('shows only salary adjustment as the salary claim entry type', async () => {
+  it('opens the salary adjustment form directly', async () => {
     await renderApplySalary()
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Adjustment' }))
 
-    expect(screen.getByRole('heading', { name: 'Adjustment Type' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Salary Adjustment' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Expense' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Mileage' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Medical' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Salary Adjustment' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Date')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Adjustment Type' })).not.toBeInTheDocument()
+    expect(screen.getByText('Supporting document (optional)')).toBeInTheDocument()
   })
 
   it('adds and edits a payroll adjustment row', async () => {
@@ -263,7 +261,7 @@ describe('ApplySalary', () => {
 
     expect(await screen.findByText('Salary submission failed.')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveFocus()
-    expect(screen.getByText('Salary Summary')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Apply Salary' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Apply Another' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled()
   })

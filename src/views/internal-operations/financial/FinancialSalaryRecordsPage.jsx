@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -6,13 +7,8 @@ import {
   CCardBody,
   CCol,
   CFormLabel,
+  CFormCheck,
   CFormSelect,
-  CFormTextarea,
-  CModal,
-  CModalBody,
-  CModalFooter,
-  CModalHeader,
-  CModalTitle,
   CRow,
   CSpinner,
 } from '@coreui/react'
@@ -29,17 +25,19 @@ import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { financialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import { StatsStrip } from '../../../components/stats'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
-import { showToast } from '../../../components/toast/toastService'
 import { formatCount, formatMoney, sumBy } from '../../../utils/stats/formatStats'
 import {
   exportFinancialSalaryClaimsPdf,
   exportFinancialSalaryPayslipPdf,
   fetchFinancialSalaryRecords,
-  submitFinancialSalaryAction,
 } from './financialSalaryApi'
+import { submitFinancialWorkflowBulkAction } from './financialWorkflowApi'
 import { SalaryRecordTable } from '../../../components/salary/SalaryTables'
 import { openBlobInNewTab, openPreparingPdfTab } from '../../../components/salary/salaryFileUtils'
 import { getSalaryPayslipAvailability } from '../../../components/salary/salaryPayslipAvailability'
+import FinancialWorkflowBatchActions, {
+  primaryWorkflowAction,
+} from './FinancialWorkflowBatchActions'
 
 const submittedStatuses = new Set(['Submitted', 'Prepared'])
 const displayStatus = (status) => {
@@ -49,13 +47,25 @@ const displayStatus = (status) => {
 }
 
 const restrictedMoneyLabel = '-'
-const canViewSalary = (record = {}) =>
+const canViewSalaryDetails = (record = {}) =>
   record.canViewSalaryDetails !== false && !record.salaryRestricted
+const canViewSalaryAmount = (record = {}) =>
+  canViewSalaryDetails(record) && record.canViewFinancialAmounts !== false
 const formatSalaryMoney = (record, value) =>
-  canViewSalary(record) ? formatMoney(value || 0) : restrictedMoneyLabel
-const numericSalaryValue = (record, value) => (canViewSalary(record) ? Number(value || 0) : null)
+  canViewSalaryAmount(record) ? formatMoney(value || 0) : restrictedMoneyLabel
+const numericSalaryValue = (record, value) =>
+  canViewSalaryAmount(record) ? Number(value || 0) : null
 
 const dataColumns = [
+  {
+    key: 'select',
+    label: '',
+    width: '44px',
+    sortable: false,
+    align: 'center',
+    shrinkToFit: true,
+    getExportValue: () => '',
+  },
   {
     key: 'status',
     label: 'Status',
@@ -133,13 +143,13 @@ const dataColumns = [
     align: 'right',
     shrinkToFit: true,
     getExportValue: (record) =>
-      canViewSalary(record)
+      canViewSalaryAmount(record)
         ? `-${formatMoney(record.employeeDeductions || 0)}`
         : restrictedMoneyLabel,
   },
   {
     key: 'payableSalary',
-    label: 'Payable Salary',
+    label: 'Net Pay',
     width: '120px',
     sortable: true,
     sortType: 'number',
@@ -150,6 +160,7 @@ const dataColumns = [
 ]
 
 const defaultVisibleColumns = {
+  select: true,
   status: true,
   workflow: true,
   staff: true,
@@ -166,6 +177,7 @@ const requiredColumns = new Set(['workflow', 'staff', 'salaryMonth', 'payableSal
 const getStatusTone = (status) => {
   if (displayStatus(status) === 'Approved') return 'success'
   if (status === 'Checked') return 'primary'
+  if (status === 'Returned') return 'warning'
   if (submittedStatuses.has(status)) return 'info'
   if (status === 'Draft') return 'secondary'
   if (status === 'Rejected') return 'danger'
@@ -176,6 +188,7 @@ const getStatusSortPriority = (status) => {
   if (submittedStatuses.has(status)) return 0
   if (status === 'Checked') return 1
   if (displayStatus(status) === 'Approved') return 2
+  if (status === 'Returned') return 3
   if (status === 'Rejected') return 4
   return 3
 }
@@ -260,26 +273,6 @@ const getSalaryWorkflowText = (record = {}) => {
   return steps.join('\n')
 }
 
-const getActionLabel = (action) => {
-  if (action === 'check') return 'Check'
-  if (action === 'approve') return 'Approve'
-  if (action === 'reject') return 'Reject'
-  return 'Action'
-}
-
-const getWorkflowActionColor = (action = {}) => {
-  if (action.tone === 'danger' || action.action === 'reject') return 'danger'
-  if (action.tone === 'success' || action.action === 'approve') return 'success'
-  return 'info'
-}
-
-const getPastActionLabel = (action) => {
-  if (action === 'check') return 'checked'
-  if (action === 'approve') return 'approved'
-  if (action === 'reject') return 'rejected'
-  return 'updated'
-}
-
 const getLegacyWorkflowPayload = (record = {}) => {
   if (submittedStatuses.has(record.status)) {
     return {
@@ -288,7 +281,8 @@ const getLegacyWorkflowPayload = (record = {}) => {
         record.checkedBy
           ? { action: 'approve', label: 'Approve', tone: 'success' }
           : { action: 'check', label: 'Check', tone: 'info' },
-        { action: 'reject', label: 'Reject', tone: 'danger' },
+        { action: 'return', label: 'Return for changes', tone: 'warning' },
+        ...(record.checkedBy ? [{ action: 'reject', label: 'Reject', tone: 'danger' }] : []),
       ],
       history: [],
       currentStepLabel: record.checkedBy ? 'Approve' : 'Check',
@@ -299,6 +293,7 @@ const getLegacyWorkflowPayload = (record = {}) => {
       instanceId: null,
       availableActions: [
         { action: 'approve', label: 'Approve', tone: 'success' },
+        { action: 'return', label: 'Return for changes', tone: 'warning' },
         { action: 'reject', label: 'Reject', tone: 'danger' },
       ],
       history: [],
@@ -313,28 +308,17 @@ const FinancialSalaryRecordsPage = () => {
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('financial.salary-records')
   const { consumeRouteGroup } = useAppNotifications()
+  const navigate = useNavigate()
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [reviewScope, setReviewScope] = useState('mine')
+  const [salaryMonthFilter, setSalaryMonthFilter] = useState('all')
+  const [selectedIds, setSelectedIds] = useState([])
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [exportingRecordId, setExportingRecordId] = useState(null)
-  const [actionModal, setActionModal] = useState({
-    visible: false,
-    recordId: null,
-    workflowInstanceId: null,
-    action: '',
-    label: '',
-  })
-  const [remarks, setRemarks] = useState('')
-  const [isSubmittingAction, setIsSubmittingAction] = useState(false)
-  const [responseModal, setResponseModal] = useState({
-    visible: false,
-    title: '',
-    message: '',
-    color: 'info',
-  })
 
   const loadRecords = useCallback(async () => {
     setLoading(true)
@@ -409,10 +393,36 @@ const FinancialSalaryRecordsPage = () => {
             .includes(query),
         )
       const matchesStatus = statusFilter === 'all' || record.status === statusFilter
+      const matchesMonth =
+        salaryMonthFilter === 'all' || record.salaryMonthValue === salaryMonthFilter
+      const matchesScope = reviewScope !== 'mine' || Boolean(primaryWorkflowAction(record))
 
-      return matchesSearch && matchesStatus
+      return matchesSearch && matchesStatus && matchesMonth && matchesScope
     })
-  }, [normalizedRecords, searchText, statusFilter])
+  }, [normalizedRecords, searchText, statusFilter, salaryMonthFilter, reviewScope])
+
+  const salaryMonthOptions = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          normalizedRecords
+            .filter((record) => record.salaryMonthValue)
+            .map((record) => [record.salaryMonthValue, record.salaryMonth]),
+        ),
+      ).map(([value, label]) => ({ value, label })),
+    [normalizedRecords],
+  )
+
+  const selectedRecords = useMemo(
+    () => filteredRecords.filter((record) => selectedIds.includes(record.id)),
+    [filteredRecords, selectedIds],
+  )
+
+  useEffect(() => {
+    setSelectedIds((current) =>
+      current.filter((id) => filteredRecords.some((record) => record.id === id)),
+    )
+  }, [filteredRecords])
 
   const statsItems = useMemo(
     () => [
@@ -438,12 +448,14 @@ const FinancialSalaryRecordsPage = () => {
       },
       {
         key: 'payable',
-        label: 'Visible Payable',
-        value: formatMoney(
-          sumBy(filteredRecords, (record) =>
-            canViewSalary(record) ? record.payableSalary || 0 : 0,
-          ),
-        ),
+        label: filteredRecords.some(canViewSalaryAmount) ? 'Visible Payable' : 'Financial totals',
+        value: filteredRecords.some(canViewSalaryAmount)
+          ? formatMoney(
+              sumBy(filteredRecords, (record) =>
+                canViewSalaryAmount(record) ? record.payableSalary || 0 : 0,
+              ),
+            )
+          : 'Restricted',
         tone: 'warning',
       },
     ],
@@ -455,87 +467,39 @@ const FinancialSalaryRecordsPage = () => {
     statusFilter !== 'all'
       ? { key: 'status', label: `Status: ${displayStatus(statusFilter)}` }
       : null,
+    salaryMonthFilter !== 'all'
+      ? {
+          key: 'month',
+          label: `Month: ${salaryMonthOptions.find((item) => item.value === salaryMonthFilter)?.label || salaryMonthFilter}`,
+        }
+      : null,
+    reviewScope === 'all' ? { key: 'review-scope', label: 'All visible records' } : null,
   ].filter(Boolean)
 
   const resetFilters = () => {
     setSearchText('')
     setStatusFilter('all')
+    setSalaryMonthFilter('all')
+    setReviewScope('mine')
   }
 
   const clearChip = (key) => {
     if (key === 'search') setSearchText('')
     if (key === 'status') setStatusFilter('all')
+    if (key === 'month') setSalaryMonthFilter('all')
+    if (key === 'review-scope') setReviewScope('mine')
   }
 
-  const openActionModal = (record, action) => {
-    const actionKey = typeof action === 'string' ? action : action?.action
-    const label = (typeof action === 'object' && action?.label) || getActionLabel(actionKey)
-    setActionModal({
-      visible: true,
-      recordId: record?.id || record,
-      workflowInstanceId: record?.workflowPayload?.instanceId || null,
-      action: actionKey,
-      label,
-    })
-    setRemarks('')
-  }
-
-  const closeActionModal = (force = false) => {
-    if (isSubmittingAction && !force) return
-    setActionModal({
-      visible: false,
-      recordId: null,
-      workflowInstanceId: null,
-      action: '',
-      label: '',
-    })
-    setRemarks('')
-  }
-
-  const handleActionSubmit = async () => {
-    if (!actionModal.recordId || !actionModal.action) return
-
-    try {
-      setIsSubmittingAction(true)
-      const updatedRecord = await submitFinancialSalaryAction(
-        actionModal.recordId,
-        actionModal.action,
-        remarks,
-        actionModal.workflowInstanceId,
-      )
-      if (updatedRecord) {
-        setRecords((currentRecords) =>
-          currentRecords.map((record) =>
-            record.id === updatedRecord.id ? { ...record, ...updatedRecord } : record,
-          ),
-        )
-      } else {
-        await loadRecords()
-      }
-      const successMessage = `Salary record successfully ${getPastActionLabel(actionModal.action)}.`
-      closeActionModal(true)
-      showToast(successMessage)
-    } catch (err) {
-      closeActionModal(true)
-      setResponseModal({
-        visible: true,
-        title: 'Action Failed',
-        message: err?.message || `Failed to ${actionModal.action} salary record.`,
-        color: 'danger',
-      })
-    } finally {
-      setIsSubmittingAction(false)
-    }
+  const openDetail = (record) => {
+    if (!record?.id || !canViewSalaryDetails(record)) return
+    navigate(`/financial/salary-records/${encodeURIComponent(record.id)}`, { state: { record } })
   }
 
   const renderWorkflowCell = (record) => {
     const availableActions = Array.isArray(record.workflowPayload?.availableActions)
       ? record.workflowPayload.availableActions
       : []
-    const primaryAction = availableActions.find((action) => action.action !== 'reject')
-    const rejectAction = availableActions.find((action) => action.action === 'reject')
-    const workflowActions = [primaryAction, rejectAction].filter(Boolean)
-    const isActionable = workflowActions.length > 0
+    const isActionable = availableActions.length > 0
 
     if (!isActionable) {
       const steps = record.workflowSteps?.length ? record.workflowSteps : [record.workflow]
@@ -559,9 +523,9 @@ const FinancialSalaryRecordsPage = () => {
       )
     }
 
-    const openPendingAction = (event, action) => {
+    const openPendingAction = (event) => {
       event.stopPropagation()
-      openActionModal(record, action)
+      openDetail(record)
     }
 
     return (
@@ -579,26 +543,42 @@ const FinancialSalaryRecordsPage = () => {
           </div>
         )}
         <div className="d-flex align-items-center flex-wrap gap-1">
-          {workflowActions.map((action) => (
-            <CButton
-              key={action.action}
-              color={getWorkflowActionColor(action)}
-              size="sm"
-              variant="outline"
-              className="py-0 px-2"
-              data-no-row-open="true"
-              onMouseDown={(event) => event.stopPropagation()}
-              onClick={(event) => openPendingAction(event, action)}
-            >
-              {action.label}
-            </CButton>
-          ))}
+          <CButton
+            color="primary"
+            size="sm"
+            variant="outline"
+            className="py-0 px-2"
+            data-no-row-open="true"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={openPendingAction}
+          >
+            Review details to continue
+          </CButton>
         </div>
       </div>
     )
   }
 
   const renderCell = (record, column) => {
+    if (column.key === 'select') {
+      const actionable = Boolean(primaryWorkflowAction(record))
+      return (
+        <CFormCheck
+          aria-label={`Select ${record.salaryMonth || 'salary record'}`}
+          checked={selectedIds.includes(record.id)}
+          disabled={!actionable || (!selectedIds.includes(record.id) && selectedIds.length >= 50)}
+          data-no-row-open="true"
+          onClick={(event) => event.stopPropagation()}
+          onChange={(event) =>
+            setSelectedIds((current) =>
+              event.target.checked
+                ? [...new Set([...current, record.id])]
+                : current.filter((id) => id !== record.id),
+            )
+          }
+        />
+      )
+    }
     if (column.key === 'staff') {
       return <DataTableTextCell value={record.staffLabel} maxWidth="170px" title="Staff" />
     }
@@ -607,12 +587,12 @@ const FinancialSalaryRecordsPage = () => {
     if (column.key === 'basicSalary') return formatSalaryMoney(record, record.basicSalary)
     if (column.key === 'claimsTotal') return formatSalaryMoney(record, record.claimsTotal)
     if (column.key === 'employeeDeductions') {
-      return canViewSalary(record)
+      return canViewSalaryAmount(record)
         ? `-${formatMoney(record.employeeDeductions || 0)}`
         : restrictedMoneyLabel
     }
     if (column.key === 'payableSalary') {
-      return canViewSalary(record) ? (
+      return canViewSalaryAmount(record) ? (
         <strong>{formatMoney(record.payableSalary || 0)}</strong>
       ) : (
         restrictedMoneyLabel
@@ -630,7 +610,7 @@ const FinancialSalaryRecordsPage = () => {
   }
 
   const getActions = (record) => {
-    if (!canViewSalary(record)) {
+    if (!canViewSalaryDetails(record)) {
       return []
     }
 
@@ -638,7 +618,20 @@ const FinancialSalaryRecordsPage = () => {
     const isExportingPayslip = exportingRecordId === `payslip-${record.id}`
     const payslipAvailability = getSalaryPayslipAvailability(record)
 
+    const actions = [
+      {
+        key: 'review-details',
+        label: 'Review Details',
+        onClick: openDetail,
+      },
+    ]
+
+    if (!canViewSalaryAmount(record)) {
+      return actions
+    }
+
     return [
+      ...actions,
       {
         key: 'export-claims',
         label: isExportingClaims ? 'Preparing PDF...' : 'Export Claims',
@@ -686,7 +679,7 @@ const FinancialSalaryRecordsPage = () => {
   }
 
   const renderActions = (record, actionKey) => {
-    if (!canViewSalary(record)) return null
+    if (!canViewSalaryDetails(record)) return null
 
     return (
       <DataTableActionMenu record={record} actions={getActions(record)} actionKey={actionKey} />
@@ -751,7 +744,7 @@ const FinancialSalaryRecordsPage = () => {
           <div className="records-mobile-kv">
             <span className="records-mobile-k">Deductions</span>
             <span className="records-mobile-v">
-              {canViewSalary(record)
+              {canViewSalaryAmount(record)
                 ? `-${formatMoney(record.employeeDeductions || 0)}`
                 : restrictedMoneyLabel}
             </span>
@@ -777,7 +770,7 @@ const FinancialSalaryRecordsPage = () => {
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4 records-page-card">
-            <DataTableCardHeader title="Salary Records">
+            <DataTableCardHeader title="Review Salary">
               <DataTableStatsToggle
                 visible={statsVisible}
                 onToggle={toggleStatsVisible}
@@ -800,6 +793,19 @@ const FinancialSalaryRecordsPage = () => {
                 </CAlert>
               )}
               {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
+              <FinancialWorkflowBatchActions
+                selectedRecords={selectedRecords}
+                onClear={() => setSelectedIds([])}
+                onSubmit={async (action, batchRecords, remarks) => {
+                  await submitFinancialWorkflowBulkAction(action, batchRecords, remarks)
+                  await loadRecords()
+                }}
+                getRecordLabel={(record) =>
+                  `${record.salaryMonth || 'Salary'} · ${record.staffLabel} · ${formatSalaryMoney(record, record.payableSalary)}`
+                }
+                getRecordAmount={(record) => record.payableSalary}
+                showAmounts={selectedRecords.every(canViewSalaryAmount)}
+              />
               <DataTableRecordControls
                 visible={controlsVisible}
                 searchValue={searchText}
@@ -808,7 +814,11 @@ const FinancialSalaryRecordsPage = () => {
                 searchAriaLabel="Search salary records"
                 showAdvancedFilters={showAdvancedFilters}
                 setShowAdvancedFilters={setShowAdvancedFilters}
-                activeFilterCount={statusFilter !== 'all' ? 1 : 0}
+                activeFilterCount={
+                  (statusFilter !== 'all' ? 1 : 0) +
+                  (salaryMonthFilter !== 'all' ? 1 : 0) +
+                  (reviewScope !== 'mine' ? 1 : 0)
+                }
                 activeChips={activeChips}
                 clearChip={clearChip}
                 resetFilters={resetFilters}
@@ -819,6 +829,32 @@ const FinancialSalaryRecordsPage = () => {
                 advancedClassName="mt-2"
                 loading={loading}
               >
+                <CCol xs={12} md={4}>
+                  <CFormLabel htmlFor="financialSalaryReviewScope">Worklist</CFormLabel>
+                  <CFormSelect
+                    id="financialSalaryReviewScope"
+                    value={reviewScope}
+                    onChange={(event) => setReviewScope(event.target.value)}
+                  >
+                    <option value="mine">My actionable queue</option>
+                    <option value="all">All visible records</option>
+                  </CFormSelect>
+                </CCol>
+                <CCol xs={12} md={4}>
+                  <CFormLabel htmlFor="financialSalaryMonthFilter">Salary month</CFormLabel>
+                  <CFormSelect
+                    id="financialSalaryMonthFilter"
+                    value={salaryMonthFilter}
+                    onChange={(event) => setSalaryMonthFilter(event.target.value)}
+                  >
+                    <option value="all">All months</option>
+                    {salaryMonthOptions.map((month) => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </CFormSelect>
+                </CCol>
                 <CCol xs={12} md={4}>
                   <CFormLabel htmlFor="financialSalaryStatusFilter">Status</CFormLabel>
                   <CFormSelect
@@ -852,6 +888,7 @@ const FinancialSalaryRecordsPage = () => {
                 getRowKey={(record, index) => record.id || index}
                 renderCell={renderCell}
                 getActions={getActions}
+                onRowOpen={openDetail}
                 renderActions={renderActions}
                 renderMobileItem={renderMobileRecordItem}
                 getSortValue={(record, field) => {
@@ -914,7 +951,7 @@ const FinancialSalaryRecordsPage = () => {
                     {
                       key: 'deductions',
                       label: 'Deductions',
-                      value: canViewSalary(record)
+                      value: canViewSalaryAmount(record)
                         ? `-${formatMoney(record.employeeDeductions || 0)}`
                         : restrictedMoneyLabel,
                     },
@@ -933,78 +970,12 @@ const FinancialSalaryRecordsPage = () => {
                   submittedAt: 'desc',
                   payableSalary: 'desc',
                 }}
-                resetDeps={[searchText, statusFilter]}
+                resetDeps={[searchText, statusFilter, salaryMonthFilter, reviewScope]}
               />
             </CCardBody>
           </CCard>
         </CCol>
       </CRow>
-
-      <CModal
-        visible={actionModal.visible}
-        onClose={closeActionModal}
-        alignment="center"
-        backdrop="static"
-      >
-        <CModalHeader>
-          <CModalTitle>{actionModal.label} Salary</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <p className="mb-3">
-            Confirm to {actionModal.label.toLowerCase()} this salary record and provide remarks.
-          </p>
-          <CFormTextarea
-            rows={4}
-            value={remarks}
-            onChange={(event) => setRemarks(event.target.value)}
-            placeholder="Enter remarks"
-            disabled={isSubmittingAction}
-          />
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            onClick={closeActionModal}
-            disabled={isSubmittingAction}
-          >
-            Cancel
-          </CButton>
-          <CButton
-            color={getWorkflowActionColor({ action: actionModal.action })}
-            size="sm"
-            onClick={handleActionSubmit}
-            disabled={isSubmittingAction}
-          >
-            {isSubmittingAction ? 'Submitting...' : actionModal.label || 'Confirm'}
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      <CModal
-        visible={responseModal.visible}
-        onClose={() => setResponseModal((prev) => ({ ...prev, visible: false }))}
-        alignment="center"
-      >
-        <CModalHeader>
-          <CModalTitle>{responseModal.title}</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <CAlert color={responseModal.color} className="mb-0">
-            {responseModal.message}
-          </CAlert>
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="primary"
-            size="sm"
-            onClick={() => setResponseModal((prev) => ({ ...prev, visible: false }))}
-          >
-            OK
-          </CButton>
-        </CModalFooter>
-      </CModal>
     </>
   )
 }

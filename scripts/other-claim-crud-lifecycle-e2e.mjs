@@ -383,7 +383,7 @@ const run = async () => {
       await page.goto(`${baseUrl}/my/salary/other-claims/apply`, {
         waitUntil: 'domcontentloaded',
       })
-      await page.getByText('Other Claim Summary', { exact: true }).waitFor()
+      await page.getByRole('heading', { name: /^(New Other Claim|Other Claim Summary)$/ }).waitFor()
       await selectClaimMonth()
       await openNewAllowance()
       await fillAllowance(draftDescription, draftAmount)
@@ -467,7 +467,7 @@ const run = async () => {
       await page.goto(`${baseUrl}/my/salary/other-claims/apply`, {
         waitUntil: 'domcontentloaded',
       })
-      await page.getByText('Other Claim Summary', { exact: true }).waitFor()
+      await page.getByRole('heading', { name: /^(New Other Claim|Other Claim Summary)$/ }).waitFor()
       await selectClaimMonth()
       await openNewAllowance()
       await fillAllowance(submittedDescription, submittedAmount)

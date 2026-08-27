@@ -222,6 +222,11 @@ const AppHeader = () => {
 
   const signatureMissing = signatureStatus.checked && !signatureStatus.url && !signatureDismissed
   const hasUnreadWhatsNew = unreadWhatsNewCount > 0
+  const themeToggleLabel = colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+  const themeToggleTooltip = colorMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'
+  const handleThemeToggle = () => {
+    setColorMode(colorMode === 'dark' ? 'light' : 'dark')
+  }
   const whatsNewLabel = hasUnreadWhatsNew
     ? `What's New, ${unreadWhatsNewCount} unread update${unreadWhatsNewCount === 1 ? '' : 's'}`
     : "What's New"
@@ -286,18 +291,15 @@ const AppHeader = () => {
             </CNavLink>
           </CNavItem>
 
-          <CNavItem className="me-2 app-bottom-nav-entry">
+          <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
             <CButton
               type="button"
               color="link"
               className="app-bottom-nav-link--button"
-              onClick={() => setColorMode(colorMode === 'dark' ? 'light' : 'dark')}
-              aria-label={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              onClick={handleThemeToggle}
+              aria-label={themeToggleLabel}
             >
-              <CTooltip
-                content={colorMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                placement="bottom"
-              >
+              <CTooltip content={themeToggleTooltip} placement="bottom">
                 <span className="app-bottom-nav-icon" aria-hidden="true">
                   <CIcon icon={colorMode === 'dark' ? cilSun : cilMoon} />
                 </span>
@@ -306,7 +308,7 @@ const AppHeader = () => {
             </CButton>
           </CNavItem>
 
-          <CNavItem className="me-2 app-bottom-nav-entry">
+          <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
             <CNavLink
               to="/whats-new"
               as={NavLink}
@@ -337,7 +339,7 @@ const AppHeader = () => {
             </CNavLink>
           </CNavItem>
 
-          <CNavItem className="me-2 app-bottom-nav-entry">
+          <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
             <CButton
               type="button"
               color="link"
@@ -360,6 +362,9 @@ const AppHeader = () => {
           <AppHeaderDropdown
             sessionUser={sessionUser}
             onOpenTicket={openTicketModal}
+            onToggleTheme={handleThemeToggle}
+            themeToggleLabel={themeToggleLabel}
+            whatsNewLabel={whatsNewLabel}
             onAccountActiveChange={setAccountActive}
           />
         </CHeaderNav>

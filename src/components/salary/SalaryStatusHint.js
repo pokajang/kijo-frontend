@@ -4,7 +4,12 @@ import { CBadge } from '@coreui/react'
 const salaryStatuses = [
   { key: 'Draft', color: 'secondary', description: 'not submitted yet' },
   { key: 'Submitted', color: 'info', description: 'submitted for review' },
-  { key: 'Approved', color: 'success', description: 'approved' },
+  { key: 'Checked', color: 'primary', description: 'review complete' },
+  { key: 'Approved', color: 'success', description: 'approved for payment' },
+  { key: 'Returned', color: 'warning', description: 'changes requested' },
+  { key: 'Rejected', color: 'danger', description: 'final decline' },
+  { key: 'Paid', color: 'success', description: 'payment completed' },
+  { key: 'Cancelled', color: 'warning', description: 'withdrawn' },
 ]
 
 const SalaryStatusHint = ({ className = '' }) => (

@@ -40,6 +40,8 @@ const normalizeFinancialSalaryRecord = (record = {}) => ({
   payableSalary: nullableMoney(record.payableSalary),
   canViewSalaryDetails: record.canViewSalaryDetails !== false,
   salaryRestricted: Boolean(record.salaryRestricted || record.canViewSalaryDetails === false),
+  canViewFinancialAmounts: record.canViewFinancialAmounts !== false,
+  financialAmountsRestricted: Boolean(record.financialAmountsRestricted),
   status: normalizeSalaryStatus(record.status || 'Submitted'),
   submittedAt: record.submittedAt || '',
   checkedBy: record.checkedBy || null,
@@ -54,6 +56,12 @@ const normalizeFinancialSalaryRecord = (record = {}) => ({
   approvedRemarks: record.approvedRemarks || '',
   approverName: record.approverName || '',
   approverCode: record.approverCode || '',
+  returnedBy: record.returnedBy || null,
+  returnedAt: record.returnedAt || '',
+  returnedStage: record.returnedStage || '',
+  returnRemarks: record.returnRemarks || '',
+  recordVersion: Number(record.recordVersion || 1),
+  claims: Array.isArray(record.claims) ? record.claims : [],
   workflow: record.workflow || null,
 })
 
@@ -63,11 +71,17 @@ export const fetchFinancialSalaryRecords = async () => {
   return Array.isArray(payload.records) ? payload.records.map(normalizeFinancialSalaryRecord) : []
 }
 
+export const fetchFinancialSalaryRecord = async (id) => {
+  const payload = await apiJson(`${API_BASE}hr/salary/financial-records/${encodeURIComponent(id)}`)
+  return payload.record ? normalizeFinancialSalaryRecord(payload.record) : null
+}
+
 export const submitFinancialSalaryAction = async (
   id,
   action,
   remarks = '',
   workflowInstanceId = null,
+  recordVersion = null,
 ) => {
   if (workflowInstanceId) {
     const payload = await apiJson(
@@ -75,7 +89,7 @@ export const submitFinancialSalaryAction = async (
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, remarks }),
+        body: JSON.stringify({ action, remarks, record_version: recordVersion || undefined }),
       },
     )
 
@@ -88,7 +102,7 @@ export const submitFinancialSalaryAction = async (
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, remarks }),
+      body: JSON.stringify({ action, remarks, record_version: recordVersion || undefined }),
     },
   )
 

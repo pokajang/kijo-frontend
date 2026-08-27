@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { CButton } from '@coreui/react'
 import DataTableActionMenu from './DataTableActionMenu'
 import DataTableDesktop from './DataTableDesktop'
 import DataTableFooter from './DataTableFooter'
@@ -32,6 +33,34 @@ const getSafeGroupKey = (groupKey) =>
   groupKey === null || typeof groupKey === 'undefined' || groupKey === ''
     ? 'Ungrouped'
     : String(groupKey)
+
+const withGroupHeaders = ({ rows, getRowGroupKey, getRowGroupLabel, rowGroupSortComparator }) => {
+  if (typeof getRowGroupKey !== 'function') return rows
+
+  const groups = new Map()
+  rows.forEach((row) => {
+    const safeGroupKey = getSafeGroupKey(getRowGroupKey(row))
+    if (!groups.has(safeGroupKey)) groups.set(safeGroupKey, [])
+    groups.get(safeGroupKey).push(row)
+  })
+
+  const entries = Array.from(groups.entries())
+  if (typeof rowGroupSortComparator === 'function') {
+    entries.sort(([leftKey, leftRows], [rightKey, rightRows]) =>
+      rowGroupSortComparator(leftKey, rightKey, leftRows, rightRows),
+    )
+  }
+
+  return entries.flatMap(([groupKey, groupRows]) => [
+    {
+      __dataTableGroupRow: true,
+      key: `group-${groupKey}`,
+      label:
+        typeof getRowGroupLabel === 'function' ? getRowGroupLabel(groupKey, groupRows) : groupKey,
+    },
+    ...groupRows,
+  ])
+}
 
 const readRecordListState = (key) => {
   if (!key || typeof window === 'undefined') return {}
@@ -152,11 +181,17 @@ const DataTableRecordList = ({
   mobileUtilityPortalId,
   showMobileUtilityRow = true,
   showMobileTopFooter = true,
+  mobilePaginationMode = 'paged',
+  mobileLoadMorePageSize = 10,
+  mobileLoadMoreLabel = 'Load more records',
+  mobileLoadMoreSummaryLabel = 'records',
   showFooter = true,
   className = '',
   scrollStorageKey,
 }) => {
   const [openActionDropdown, setOpenActionDropdown] = useState(null)
+  const mobileBatchSize = Math.max(1, Number(mobileLoadMorePageSize) || 10)
+  const [mobileVisibleRows, setMobileVisibleRows] = useState(mobileBatchSize)
   const [desktopUtilityPortalTarget, setDesktopUtilityPortalTarget] = useState(null)
   const [mobileUtilityPortalTarget, setMobileUtilityPortalTarget] = useState(null)
   const didMountControlledPageResetRef = useRef(false)
@@ -325,33 +360,42 @@ const DataTableRecordList = ({
   const pagedRows = hasControlledPagination
     ? displayOrderedRows.slice(pageStart, pageEnd)
     : internalPagedRows
-  const displayRows = useMemo(() => {
-    if (typeof getRowGroupKey !== 'function') return pagedRows
+  const displayRows = useMemo(
+    () =>
+      withGroupHeaders({
+        rows: pagedRows,
+        getRowGroupKey,
+        getRowGroupLabel,
+        rowGroupSortComparator,
+      }),
+    [getRowGroupKey, getRowGroupLabel, pagedRows, rowGroupSortComparator],
+  )
+  const mobileLoadMoreEnabled = mobilePaginationMode === 'load-more'
+  const mobilePaginationResetKey = useMemo(
+    () => displayOrderedRows.map((row, index) => getRowKey(row, index)).join('|'),
+    [displayOrderedRows, getRowKey],
+  )
 
-    const groups = new Map()
-    pagedRows.forEach((row) => {
-      const safeGroupKey = getSafeGroupKey(getRowGroupKey(row))
-      if (!groups.has(safeGroupKey)) groups.set(safeGroupKey, [])
-      groups.get(safeGroupKey).push(row)
-    })
+  useEffect(() => {
+    if (mobileLoadMoreEnabled) setMobileVisibleRows(mobileBatchSize)
+  }, [mobileBatchSize, mobileLoadMoreEnabled, mobilePaginationResetKey])
 
-    const entries = Array.from(groups.entries())
-    if (typeof rowGroupSortComparator === 'function') {
-      entries.sort(([leftKey, leftRows], [rightKey, rightRows]) =>
-        rowGroupSortComparator(leftKey, rightKey, leftRows, rightRows),
-      )
-    }
-
-    return entries.flatMap(([groupKey, groupRows]) => [
-      {
-        __dataTableGroupRow: true,
-        key: `group-${groupKey}`,
-        label:
-          typeof getRowGroupLabel === 'function' ? getRowGroupLabel(groupKey, groupRows) : groupKey,
-      },
-      ...groupRows,
-    ])
-  }, [getRowGroupKey, getRowGroupLabel, pagedRows, rowGroupSortComparator])
+  const mobileBaseRows = useMemo(
+    () => (mobileLoadMoreEnabled ? displayOrderedRows.slice(0, mobileVisibleRows) : pagedRows),
+    [displayOrderedRows, mobileLoadMoreEnabled, mobileVisibleRows, pagedRows],
+  )
+  const mobileDisplayRows = useMemo(
+    () =>
+      withGroupHeaders({
+        rows: mobileBaseRows,
+        getRowGroupKey,
+        getRowGroupLabel,
+        rowGroupSortComparator,
+      }),
+    [getRowGroupKey, getRowGroupLabel, mobileBaseRows, rowGroupSortComparator],
+  )
+  const mobileShownRows = Math.min(mobileVisibleRows, totalRows)
+  const canLoadMoreMobileRows = mobileLoadMoreEnabled && mobileShownRows < totalRows
   useDataTableScrollMemory(tableViewportRef, scrollMemoryKey, [
     showInitialLoading,
     totalRows,
@@ -647,7 +691,7 @@ const DataTableRecordList = ({
           </div>
         )}
 
-        {showMobileTopFooter && (
+        {showMobileTopFooter && !mobileLoadMoreEnabled && (
           <div className={`d-${desktopBreakpoint}-none mb-2`}>
             <DataTableFooter
               desktopBreakpoint={desktopBreakpoint}
@@ -684,10 +728,10 @@ const DataTableRecordList = ({
         </DataTableViewport>
 
         <DataTableMobileList
-          rows={displayRows}
+          rows={mobileDisplayRows}
           getRowKey={getRowKey}
           renderItem={renderMobileItem}
-          pageStart={pageStart}
+          pageStart={mobileLoadMoreEnabled ? 0 : pageStart}
           getTitle={getMobileTitle}
           getSubtitle={getMobileSubtitle}
           getMeta={getMobileMeta}
@@ -706,6 +750,27 @@ const DataTableRecordList = ({
           resetRowIndexOnGroup={resetRowIndexOnGroup}
         />
 
+        {mobileLoadMoreEnabled && totalRows > mobileBatchSize && (
+          <div className={`d-${desktopBreakpoint}-none data-table-mobile-load-more`}>
+            <small className="text-muted" aria-live="polite">
+              Showing {mobileShownRows} of {totalRows} {mobileLoadMoreSummaryLabel}
+            </small>
+            {canLoadMoreMobileRows && (
+              <CButton
+                type="button"
+                color="primary"
+                variant="outline"
+                size="sm"
+                className="rounded-pill"
+                aria-label={`${mobileLoadMoreLabel}. Showing ${mobileShownRows} of ${totalRows} ${mobileLoadMoreSummaryLabel}.`}
+                onClick={() => setMobileVisibleRows((count) => count + mobileBatchSize)}
+              >
+                {mobileLoadMoreLabel}
+              </CButton>
+            )}
+          </div>
+        )}
+
         {showFooter && (
           <DataTableFooter
             desktopBreakpoint={desktopBreakpoint}
@@ -722,6 +787,7 @@ const DataTableRecordList = ({
             safeCurrentPage={safeCurrentPage}
             totalPages={totalPages}
             setCurrentPage={setCurrentPage}
+            showMobileFooter={!mobileLoadMoreEnabled}
           />
         )}
       </DataTableShell>

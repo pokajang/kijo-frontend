@@ -55,6 +55,7 @@ const DefaultLayoutShell = () => {
         <div className="body flex-grow-1">
           <div className="knowledge-layout-shell">
             <div className="knowledge-layout-main">
+              <div id="app-page-navigation-slot" className="app-page-navigation-slot" />
               <AppContent />
             </div>
             <KnowledgeSidePanel />

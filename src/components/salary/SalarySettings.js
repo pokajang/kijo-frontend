@@ -9,6 +9,11 @@ import {
   CForm,
   CFormInput,
   CFormLabel,
+  CModal,
+  CModalBody,
+  CModalFooter,
+  CModalHeader,
+  CModalTitle,
   CRow,
 } from '@coreui/react'
 import { DataTableActionMenu, DataTableLoadingState } from '../datatable'
@@ -56,15 +61,32 @@ const previousYearFromMonth = (month) => {
   return Number.isFinite(year) && year > 0 ? String(year - 1) : ''
 }
 
+const cloneSalaryProfile = (profile) => ({
+  ...profile,
+  recurringAllowances: (profile?.recurringAllowances || []).map((allowance) => ({ ...allowance })),
+  previousYearSnapshot: profile?.previousYearSnapshot
+    ? { ...profile.previousYearSnapshot }
+    : profile?.previousYearSnapshot,
+})
+
 const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementSaved }) => {
   const [profile, setProfile] = useState(getSalaryProfile)
+  const [savedProfile, setSavedProfile] = useState(() => cloneSalaryProfile(getSalaryProfile()))
+  const [viewMode, setViewMode] = useState(medicalEntitlementSetup ? 'edit' : 'preview')
   const [allowanceDraft, setAllowanceDraft] = useState(createAllowanceRow)
+  const [allowanceDraftErrors, setAllowanceDraftErrors] = useState({})
   const [editingAllowanceId, setEditingAllowanceId] = useState(null)
   const [showAllowanceDraft, setShowAllowanceDraft] = useState(false)
   const [notice, setNotice] = useState(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [successMessage, setSuccessMessage] = useState(null)
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false)
   const medicalEntitlementInputRef = useRef(null)
+  const basicSalaryInputRef = useRef(null)
+  const effectiveMonthInputRef = useRef(null)
+  const recurringAllowanceDescriptionInputRef = useRef(null)
 
   useEffect(() => {
     let isMounted = true
@@ -73,6 +95,7 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
       .then((loadedProfile) => {
         if (!isMounted) return
         setProfile(loadedProfile)
+        setSavedProfile(cloneSalaryProfile(loadedProfile))
       })
       .catch((err) => {
         if (!isMounted) return
@@ -102,6 +125,10 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
 
     return () => window.clearTimeout(focusTimer)
   }, [isLoadingProfile, medicalEntitlementSetup])
+
+  useEffect(() => {
+    if (medicalEntitlementSetup) setViewMode('edit')
+  }, [medicalEntitlementSetup])
 
   const activeAllowanceItems = useMemo(
     () =>
@@ -186,6 +213,13 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
 
   const handleProfileChange = (event) => {
     const { name, value } = event.target
+    setFieldErrors((currentErrors) => {
+      if (!currentErrors[name]) return currentErrors
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[name]
+      return nextErrors
+    })
+    setSuccessMessage(null)
     setProfile((prev) => {
       const nextProfile = { ...prev, [name]: value }
       if (name === 'effectiveMonth') {
@@ -212,28 +246,42 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
 
   const handleAllowanceDraftChange = (event) => {
     const { name, value } = event.target
+    setAllowanceDraftErrors((currentErrors) => {
+      if (!currentErrors[name]) return currentErrors
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[name]
+      return nextErrors
+    })
     setAllowanceDraft((prev) => ({ ...prev, [name]: value }))
   }
 
   const resetAllowanceDraft = () => {
     setAllowanceDraft(createAllowanceRow())
+    setAllowanceDraftErrors({})
     setEditingAllowanceId(null)
     setShowAllowanceDraft(false)
   }
 
   const startAllowanceDraft = () => {
     setAllowanceDraft(createAllowanceRow())
+    setAllowanceDraftErrors({})
     setEditingAllowanceId(null)
     setShowAllowanceDraft(true)
     setNotice(null)
   }
 
   const saveAllowanceDraft = () => {
-    if (!allowanceDraft.description.trim() || Number(allowanceDraft.amount) <= 0) {
-      setNotice({
-        color: 'warning',
-        message: 'Enter recurring allowance description and a valid amount.',
-      })
+    const nextErrors = {}
+    if (!allowanceDraft.description.trim()) {
+      nextErrors.description = 'Enter an allowance description.'
+    }
+    if (Number(allowanceDraft.amount) <= 0) {
+      nextErrors.amount = 'Enter an amount greater than RM0.00.'
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setAllowanceDraftErrors(nextErrors)
+      if (nextErrors.description) recurringAllowanceDescriptionInputRef.current?.focus()
       return
     }
 
@@ -279,6 +327,7 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
 
   const editAllowance = (allowance) => {
     setAllowanceDraft({ ...allowance })
+    setAllowanceDraftErrors({})
     setEditingAllowanceId(allowance.id)
     setShowAllowanceDraft(true)
     setNotice(null)
@@ -346,26 +395,71 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
     },
   ]
 
+  const isDirty = Boolean(savedProfile) && JSON.stringify(profile) !== JSON.stringify(savedProfile)
+  const hasUnsavedChanges = isDirty || showAllowanceDraft
+
+  const startEditing = () => {
+    setViewMode('edit')
+    setNotice(null)
+    setSuccessMessage(null)
+    setFieldErrors({})
+  }
+
+  const discardChanges = () => {
+    if (savedProfile) setProfile(cloneSalaryProfile(savedProfile))
+    resetAllowanceDraft()
+    setFieldErrors({})
+    setNotice(null)
+    setShowDiscardDialog(false)
+    setViewMode('preview')
+  }
+
+  const handleCancelEdit = () => {
+    if (hasUnsavedChanges) {
+      setShowDiscardDialog(true)
+      return
+    }
+
+    discardChanges()
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (isSavingProfile) return
 
-    if (!profile.effectiveMonth) {
-      setNotice({ color: 'warning', message: 'Select an effective month.' })
+    if (showAllowanceDraft) {
+      setNotice({
+        color: 'warning',
+        message:
+          'Save or cancel the recurring allowance currently being edited before saving settings.',
+      })
+      recurringAllowanceDescriptionInputRef.current?.focus()
       return
+    }
+
+    const nextFieldErrors = {}
+    let firstInvalidInput = null
+
+    if (!medicalEntitlementSetup && !profile.effectiveMonth) {
+      nextFieldErrors.effectiveMonth = 'Select the month these settings take effect.'
+      firstInvalidInput = effectiveMonthInputRef.current
     }
 
     if (!medicalEntitlementSetup && Number(profile.basicSalary) <= 0) {
-      setNotice({ color: 'warning', message: 'Enter a valid fixed monthly salary.' })
-      return
+      nextFieldErrors.basicSalary = 'Enter a fixed monthly salary greater than RM0.00.'
+      if (!firstInvalidInput) firstInvalidInput = basicSalaryInputRef.current
     }
 
     if (medicalEntitlementSetup && Number(profile.yearlyMedicalClaim) <= 0) {
-      setNotice({
-        color: 'warning',
-        message: 'Enter an annual medical entitlement greater than RM0.00 before continuing.',
-      })
-      medicalEntitlementInputRef.current?.focus()
+      nextFieldErrors.yearlyMedicalClaim =
+        'Enter an annual medical entitlement greater than RM0.00.'
+      if (!firstInvalidInput) firstInvalidInput = medicalEntitlementInputRef.current
+    }
+
+    if (Object.keys(nextFieldErrors).length) {
+      setFieldErrors(nextFieldErrors)
+      setNotice(null)
+      firstInvalidInput?.focus()
       return
     }
 
@@ -384,16 +478,21 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
 
     try {
       setIsSavingProfile(true)
-      const savedProfile = await saveSalaryProfile(profile)
-      setProfile(savedProfile)
+      const nextSavedProfile = await saveSalaryProfile(profile)
+      setProfile(nextSavedProfile)
+      setSavedProfile(cloneSalaryProfile(nextSavedProfile))
+      setFieldErrors({})
+      setNotice(null)
+
       if (medicalEntitlementSetup) {
         showToast('Medical entitlement saved. Returning to your medical claim.')
-        onMedicalEntitlementSaved?.(savedProfile)
-      } else {
-        showToast(
-          'Salary settings saved. Apply Salary uses these values for new monthly applications.',
-        )
+        onMedicalEntitlementSaved?.(nextSavedProfile)
+        return
       }
+
+      setSuccessMessage('Salary settings saved. Payable Salary now reflects the updated values.')
+      setViewMode('preview')
+      showToast('Salary settings saved.')
     } catch (err) {
       setNotice({
         color: 'danger',
@@ -406,7 +505,7 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
 
   if (isLoadingProfile) {
     return (
-      <CCard className="salary-workspace">
+      <CCard className="salary-settings-card">
         <CCardBody className="salary-section-body">
           <DataTableLoadingState message="Loading salary settings..." />
         </CCardBody>
@@ -430,318 +529,450 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
       Number(previousYearSnapshot.allowanceTotal || 0) +
       Number(previousYearSnapshot.incrementAmount || 0),
   ).replace('RM ', '')
+  const renderFieldError = (field) =>
+    fieldErrors[field] ? <div className="invalid-feedback d-block">{fieldErrors[field]}</div> : null
+  const renderAllowanceDraftError = (field) =>
+    allowanceDraftErrors[field] ? (
+      <div className="invalid-feedback d-block">{allowanceDraftErrors[field]}</div>
+    ) : null
 
-  return (
+  const medicalEntitlementEditor = (
     <CForm onSubmit={handleSubmit} className="salary-settings-form salary-settings-card-stack">
-      {medicalEntitlementSetup && (
-        <CAlert color="info" className="mb-0">
-          <strong>Complete your medical entitlement setup.</strong>
-          <div className="small mt-1">
-            Update Annual Medical Entitlement below, then save to return to your preserved medical
-            claim draft.
-          </div>
-        </CAlert>
-      )}
-      <CCard className="salary-workspace">
+      <CCard className="salary-settings-card">
         <CCardHeader className="salary-section-header">
-          <h3 className="salary-form-panel-heading" id="salaryProfileHeading">
-            Fixed Monthly Salary
-          </h3>
+          <h2 className="salary-form-panel-heading mb-0">Annual Medical Entitlement</h2>
         </CCardHeader>
         <CCardBody className="salary-section-body">
-          <CRow className="g-3 salary-settings-profile-row">
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="basicSalary" className="mb-1">
-                Basic Salary
-              </CFormLabel>
-              <CFormInput
-                id="basicSalary"
-                name="basicSalary"
-                type="number"
-                min="0"
-                step="0.01"
-                value={profile.basicSalary}
-                onChange={handleProfileChange}
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="effectiveMonth" className="mb-1">
-                Effective From
-              </CFormLabel>
-              <CFormInput
-                id="effectiveMonth"
-                name="effectiveMonth"
-                type="month"
-                value={profile.effectiveMonth}
-                onChange={handleProfileChange}
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="vehicle" className="mb-1">
-                Vehicle
-              </CFormLabel>
-              <CFormInput
-                id="vehicle"
-                name="vehicle"
-                value={profile.vehicle}
-                onChange={handleProfileChange}
-                placeholder="Vehicle plate or model"
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="defaultMileageRate" className="mb-1">
-                Mileage Rate / KM
-              </CFormLabel>
-              <CFormInput
-                id="defaultMileageRate"
-                name="defaultMileageRate"
-                type="number"
-                min="0"
-                step="0.01"
-                value={profile.defaultMileageRate}
-                onChange={handleProfileChange}
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="yearlyMedicalClaim" className="mb-1">
-                Annual Medical Entitlement (RM)
-              </CFormLabel>
-              <CFormInput
-                id="yearlyMedicalClaim"
-                ref={medicalEntitlementInputRef}
-                name="yearlyMedicalClaim"
-                type="number"
-                min="0"
-                step="0.01"
-                aria-describedby="yearlyMedicalClaimHelp"
-                value={profile.yearlyMedicalClaim}
-                onChange={handleProfileChange}
-              />
-              <div id="yearlyMedicalClaimHelp" className="form-text">
-                Enter your annual medical claim limit. HR can verify the entitlement when reviewing
-                submitted claims.
-              </div>
-            </CCol>
-          </CRow>
-        </CCardBody>
-
-        <CCardHeader className="salary-section-header">
-          <h3 className="salary-form-panel-heading" id="recurringAllowancesHeading">
-            Recurring Monthly Additions
-          </h3>
-          {!showAllowanceDraft && (
-            <CButton
-              color="primary"
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={startAllowanceDraft}
-            >
-              Add Recurring Allowance
-            </CButton>
-          )}
-        </CCardHeader>
-
-        <CCardBody className="salary-section-body">
-          {showAllowanceDraft && (
-            <>
-              <CRow className="g-3 salary-claim-field-row">
-                <CCol xs={12} md className="salary-claim-grow-col">
-                  <CFormLabel htmlFor="recurringAllowanceDescription" className="mb-1">
-                    Description
-                  </CFormLabel>
-                  <CFormInput
-                    id="recurringAllowanceDescription"
-                    name="description"
-                    value={allowanceDraft.description}
-                    onChange={handleAllowanceDraftChange}
-                    placeholder="Phone allowance"
-                  />
-                </CCol>
-                <CCol xs={12} md="auto" className="salary-claim-amount-col">
-                  <CFormLabel htmlFor="recurringAllowanceAmount" className="mb-1">
-                    Amount
-                  </CFormLabel>
-                  <CFormInput
-                    id="recurringAllowanceAmount"
-                    name="amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={allowanceDraft.amount}
-                    onChange={handleAllowanceDraftChange}
-                  />
-                </CCol>
-                <CCol xs={12} md="auto" className="salary-settings-month-col">
-                  <CFormLabel htmlFor="recurringAllowanceStart" className="mb-1">
-                    Start
-                  </CFormLabel>
-                  <CFormInput
-                    id="recurringAllowanceStart"
-                    name="startMonth"
-                    type="month"
-                    value={allowanceDraft.startMonth}
-                    onChange={handleAllowanceDraftChange}
-                  />
-                </CCol>
-              </CRow>
-              <div className="salary-claim-draft-actions">
-                <CButton
-                  color="primary"
-                  size="sm"
-                  type="button"
-                  className="salary-claim-draft-button"
-                  onClick={saveAllowanceDraft}
-                >
-                  Save
-                </CButton>
-                <CButton
-                  color="secondary"
-                  variant="outline"
-                  size="sm"
-                  type="button"
-                  className="salary-claim-draft-button"
-                  onClick={resetAllowanceDraft}
-                >
-                  Cancel
-                </CButton>
-              </div>
-            </>
-          )}
-
-          {(profile.recurringAllowances.length || !showAllowanceDraft) && (
-            <SalaryEmbeddedTable
-              rows={profile.recurringAllowances}
-              columns={recurringAllowanceColumns}
-              getRowKey={(allowance) => allowance.id}
-              emptyMessage="No recurring additions configured."
-              mobileMode="stacked"
-              renderMobileItem={renderRecurringAllowanceMobileItem}
-            />
-          )}
-        </CCardBody>
-
-        <CCardHeader className="salary-section-header">
-          <div>
-            <h3 className="salary-form-panel-heading" id="previousYearSnapshotHeading">
-              Previous Year Salary Snapshot
-            </h3>
-            <div className="text-muted small">
-              Used for the prior-year reference column in Salary Claim PDFs when no approved
-              December salary record exists.
-            </div>
+          <p className="text-muted small mb-3">
+            Set the annual limit for this medical claim, then continue with the preserved draft.
+          </p>
+          <CFormLabel htmlFor="yearlyMedicalClaim" className="mb-1">
+            Annual Medical Entitlement (RM)
+          </CFormLabel>
+          <CFormInput
+            id="yearlyMedicalClaim"
+            ref={medicalEntitlementInputRef}
+            name="yearlyMedicalClaim"
+            type="number"
+            min="0"
+            step="0.01"
+            invalid={Boolean(fieldErrors.yearlyMedicalClaim)}
+            aria-describedby="yearlyMedicalClaimHelp"
+            value={profile.yearlyMedicalClaim}
+            onChange={handleProfileChange}
+          />
+          {renderFieldError('yearlyMedicalClaim')}
+          <div id="yearlyMedicalClaimHelp" className="form-text">
+            HR can verify this entitlement when reviewing submitted claims.
           </div>
-        </CCardHeader>
-
-        <CCardBody className="salary-section-body">
-          <div className="salary-settings-snapshot-meta">
-            <span className="fw-semibold">{previousYearSnapshot.year}</span>
-            <span className="text-muted">{previousYearSnapshotStatus}</span>
-          </div>
-          <CRow className="g-3 salary-settings-profile-row">
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="previousYearBasicSalary" className="mb-1">
-                Basic
-              </CFormLabel>
-              <CFormInput
-                id="previousYearBasicSalary"
-                name="basicSalary"
-                type="number"
-                min="0"
-                step="0.01"
-                value={previousYearSnapshot.basicSalary}
-                onChange={handlePreviousYearSnapshotChange}
-                readOnly={previousYearSnapshotReadOnly}
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="previousYearAllowanceTotal" className="mb-1">
-                Allowance
-              </CFormLabel>
-              <CFormInput
-                id="previousYearAllowanceTotal"
-                name="allowanceTotal"
-                type="number"
-                min="0"
-                step="0.01"
-                value={previousYearSnapshot.allowanceTotal}
-                onChange={handlePreviousYearSnapshotChange}
-                readOnly={previousYearSnapshotReadOnly}
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="previousYearIncrementAmount" className="mb-1">
-                Increment
-              </CFormLabel>
-              <CFormInput
-                id="previousYearIncrementAmount"
-                name="incrementAmount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={previousYearSnapshot.incrementAmount}
-                onChange={handlePreviousYearSnapshotChange}
-                readOnly={previousYearSnapshotReadOnly}
-              />
-            </CCol>
-            <CCol xs={12} md className="salary-settings-profile-col">
-              <CFormLabel htmlFor="previousYearSnapshotTotal" className="mb-1">
-                Total
-              </CFormLabel>
-              <CFormInput
-                id="previousYearSnapshotTotal"
-                value={previousYearSnapshotTotal}
-                readOnly
-              />
-            </CCol>
-          </CRow>
         </CCardBody>
-
         <CCardBody className="salary-settings-actions-body">
           {notice && (
             <CAlert
               color={notice.color}
-              className="py-2"
+              className="py-2 mb-3"
               dismissible
               onClose={() => setNotice(null)}
             >
-              <div className="salary-settings-notice">
-                <span>{notice.message}</span>
-              </div>
+              {notice.message}
             </CAlert>
           )}
-
           <div className="salary-submit-actions">
-            <CButton
-              color="primary"
-              size="sm"
-              type="submit"
-              disabled={isLoadingProfile || isSavingProfile}
-            >
-              {isSavingProfile
-                ? 'Saving'
-                : medicalEntitlementSetup
-                  ? 'Save and Return to Medical Claim'
-                  : 'Save Salary'}
+            <CButton color="primary" size="sm" type="submit" disabled={isSavingProfile}>
+              {isSavingProfile ? 'Saving' : 'Save and Return to Medical Claim'}
             </CButton>
           </div>
         </CCardBody>
       </CCard>
+    </CForm>
+  )
 
-      <CCard className="salary-workspace">
+  const preview = (
+    <div className="salary-settings-card-stack">
+      {notice && (
+        <CAlert color={notice.color} className="mb-0" dismissible onClose={() => setNotice(null)}>
+          {notice.message}
+        </CAlert>
+      )}
+      {successMessage && (
+        <CAlert
+          color="success"
+          className="mb-0"
+          dismissible
+          onClose={() => setSuccessMessage(null)}
+        >
+          {successMessage}
+        </CAlert>
+      )}
+      <CCard className="salary-settings-card salary-settings-preview-card">
         <CCardHeader className="salary-section-header">
-          <h3 className="salary-form-panel-heading" id="salarySettingsPreviewHeading">
-            Monthly Payable Salary Preview
-          </h3>
+          <div>
+            <h2 className="salary-form-panel-heading mb-0">Payable Salary</h2>
+            <div className="text-muted small">
+              {profile.effectiveMonth
+                ? `Effective from ${formatMonthLabel(profile.effectiveMonth)}`
+                : 'Set an effective month to calculate your salary'}
+            </div>
+          </div>
+          <CButton color="primary" variant="outline" size="sm" type="button" onClick={startEditing}>
+            Edit settings
+          </CButton>
         </CCardHeader>
         <CCardBody className="salary-section-body">
           <SalaryPayablePreviewTable
             rows={payablePreviewRows}
             payableSalary={summary.payableSalary}
           />
+          <details className="salary-settings-calculation-settings">
+            <summary>Calculation settings</summary>
+            <div
+              className="salary-settings-summary-grid"
+              aria-label="Current salary settings summary"
+            >
+              <div className="salary-settings-summary-item">
+                <span>Effective from</span>
+                <strong>{formatMonthLabel(profile.effectiveMonth) || 'Not set'}</strong>
+              </div>
+              <div className="salary-settings-summary-item">
+                <span>Medical entitlement</span>
+                <strong>{formatMoney(profile.yearlyMedicalClaim || 0)}</strong>
+              </div>
+              <div className="salary-settings-summary-item">
+                <span>Mileage rate</span>
+                <strong>{formatMoney(profile.defaultMileageRate || 0)} / KM</strong>
+              </div>
+            </div>
+          </details>
+        </CCardBody>
+      </CCard>
+    </div>
+  )
+
+  const editor = (
+    <CForm onSubmit={handleSubmit} className="salary-settings-form salary-settings-card-stack">
+      <CCard className="salary-settings-card">
+        <CCardHeader className="salary-section-header">
+          <div>
+            <h2 className="salary-form-panel-heading mb-0">Edit salary settings</h2>
+            <div className="text-muted small">
+              Changes are used for future salary applications and claims.
+            </div>
+          </div>
+        </CCardHeader>
+        <CCardBody className="salary-section-body">
+          <section className="salary-settings-section" aria-labelledby="salaryBasisHeading">
+            <h3 className="salary-settings-section-heading" id="salaryBasisHeading">
+              Salary basis
+            </h3>
+            <CRow className="g-3 salary-settings-profile-row">
+              <CCol xs={12} md={6} className="salary-settings-profile-col">
+                <CFormLabel htmlFor="basicSalary" className="mb-1">
+                  Basic Salary (RM)
+                </CFormLabel>
+                <CFormInput
+                  id="basicSalary"
+                  ref={basicSalaryInputRef}
+                  name="basicSalary"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={profile.basicSalary}
+                  onChange={handleProfileChange}
+                  invalid={Boolean(fieldErrors.basicSalary)}
+                />
+                {renderFieldError('basicSalary')}
+              </CCol>
+              <CCol xs={12} md={6} className="salary-settings-profile-col">
+                <CFormLabel htmlFor="effectiveMonth" className="mb-1">
+                  Effective From
+                </CFormLabel>
+                <CFormInput
+                  id="effectiveMonth"
+                  ref={effectiveMonthInputRef}
+                  name="effectiveMonth"
+                  type="month"
+                  value={profile.effectiveMonth}
+                  onChange={handleProfileChange}
+                  invalid={Boolean(fieldErrors.effectiveMonth)}
+                />
+                {renderFieldError('effectiveMonth')}
+              </CCol>
+            </CRow>
+          </section>
+
+          <section className="salary-settings-section" aria-labelledby="claimEntitlementsHeading">
+            <h3 className="salary-settings-section-heading" id="claimEntitlementsHeading">
+              Claim entitlements
+            </h3>
+            <CRow className="g-3 salary-settings-profile-row">
+              <CCol xs={12} md={4} className="salary-settings-profile-col">
+                <CFormLabel htmlFor="yearlyMedicalClaim" className="mb-1">
+                  Annual Medical Entitlement (RM)
+                </CFormLabel>
+                <CFormInput
+                  id="yearlyMedicalClaim"
+                  ref={medicalEntitlementInputRef}
+                  name="yearlyMedicalClaim"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={profile.yearlyMedicalClaim}
+                  onChange={handleProfileChange}
+                />
+              </CCol>
+              <CCol xs={12} md={4} className="salary-settings-profile-col">
+                <CFormLabel htmlFor="defaultMileageRate" className="mb-1">
+                  Mileage Rate / KM
+                </CFormLabel>
+                <CFormInput
+                  id="defaultMileageRate"
+                  name="defaultMileageRate"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={profile.defaultMileageRate}
+                  onChange={handleProfileChange}
+                />
+              </CCol>
+              <CCol xs={12} md={4} className="salary-settings-profile-col">
+                <CFormLabel htmlFor="vehicle" className="mb-1">
+                  Vehicle
+                </CFormLabel>
+                <CFormInput
+                  id="vehicle"
+                  name="vehicle"
+                  value={profile.vehicle}
+                  onChange={handleProfileChange}
+                  placeholder="Vehicle plate or model"
+                />
+              </CCol>
+            </CRow>
+          </section>
+
+          <section className="salary-settings-section" aria-labelledby="recurringAllowancesHeading">
+            <div className="salary-settings-section-heading-row">
+              <h3 className="salary-settings-section-heading mb-0" id="recurringAllowancesHeading">
+                Recurring monthly additions
+              </h3>
+              {!showAllowanceDraft && (
+                <CButton
+                  color="primary"
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={startAllowanceDraft}
+                >
+                  Add recurring allowance
+                </CButton>
+              )}
+            </div>
+            {showAllowanceDraft && (
+              <>
+                <CRow className="g-3 salary-claim-field-row mt-0">
+                  <CCol xs={12} md className="salary-claim-grow-col">
+                    <CFormLabel htmlFor="recurringAllowanceDescription" className="mb-1">
+                      Description
+                    </CFormLabel>
+                    <CFormInput
+                      id="recurringAllowanceDescription"
+                      ref={recurringAllowanceDescriptionInputRef}
+                      name="description"
+                      value={allowanceDraft.description}
+                      onChange={handleAllowanceDraftChange}
+                      placeholder="Phone allowance"
+                      invalid={Boolean(allowanceDraftErrors.description)}
+                    />
+                    {renderAllowanceDraftError('description')}
+                  </CCol>
+                  <CCol xs={12} md="auto" className="salary-claim-amount-col">
+                    <CFormLabel htmlFor="recurringAllowanceAmount" className="mb-1">
+                      Amount
+                    </CFormLabel>
+                    <CFormInput
+                      id="recurringAllowanceAmount"
+                      name="amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={allowanceDraft.amount}
+                      onChange={handleAllowanceDraftChange}
+                      invalid={Boolean(allowanceDraftErrors.amount)}
+                    />
+                    {renderAllowanceDraftError('amount')}
+                  </CCol>
+                  <CCol xs={12} md="auto" className="salary-settings-month-col">
+                    <CFormLabel htmlFor="recurringAllowanceStart" className="mb-1">
+                      Start
+                    </CFormLabel>
+                    <CFormInput
+                      id="recurringAllowanceStart"
+                      name="startMonth"
+                      type="month"
+                      value={allowanceDraft.startMonth}
+                      onChange={handleAllowanceDraftChange}
+                    />
+                  </CCol>
+                </CRow>
+                <div className="salary-claim-draft-actions">
+                  <CButton
+                    color="primary"
+                    size="sm"
+                    type="button"
+                    className="salary-claim-draft-button"
+                    onClick={saveAllowanceDraft}
+                  >
+                    Save allowance
+                  </CButton>
+                  <CButton
+                    color="secondary"
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    className="salary-claim-draft-button"
+                    onClick={resetAllowanceDraft}
+                  >
+                    Cancel
+                  </CButton>
+                </div>
+              </>
+            )}
+            {(profile.recurringAllowances.length || !showAllowanceDraft) && (
+              <SalaryEmbeddedTable
+                rows={profile.recurringAllowances}
+                columns={recurringAllowanceColumns}
+                getRowKey={(allowance) => allowance.id}
+                emptyMessage="No recurring additions configured."
+                mobileMode="stacked"
+                renderMobileItem={renderRecurringAllowanceMobileItem}
+              />
+            )}
+          </section>
+
+          <details className="salary-settings-advanced">
+            <summary>Previous year salary snapshot</summary>
+            <p className="text-muted small mb-3">
+              Used for the prior-year reference in Salary Claim PDFs when no approved December
+              salary record exists.
+            </p>
+            <div className="salary-settings-snapshot-meta">
+              <span className="fw-semibold">{previousYearSnapshot.year}</span>
+              <span className="text-muted">{previousYearSnapshotStatus}</span>
+            </div>
+            <CRow className="g-3 salary-settings-profile-row">
+              <CCol xs={12} md className="salary-settings-profile-col">
+                <CFormLabel htmlFor="previousYearBasicSalary" className="mb-1">
+                  Basic
+                </CFormLabel>
+                <CFormInput
+                  id="previousYearBasicSalary"
+                  name="basicSalary"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={previousYearSnapshot.basicSalary}
+                  onChange={handlePreviousYearSnapshotChange}
+                  readOnly={previousYearSnapshotReadOnly}
+                />
+              </CCol>
+              <CCol xs={12} md className="salary-settings-profile-col">
+                <CFormLabel htmlFor="previousYearAllowanceTotal" className="mb-1">
+                  Allowance
+                </CFormLabel>
+                <CFormInput
+                  id="previousYearAllowanceTotal"
+                  name="allowanceTotal"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={previousYearSnapshot.allowanceTotal}
+                  onChange={handlePreviousYearSnapshotChange}
+                  readOnly={previousYearSnapshotReadOnly}
+                />
+              </CCol>
+              <CCol xs={12} md className="salary-settings-profile-col">
+                <CFormLabel htmlFor="previousYearIncrementAmount" className="mb-1">
+                  Increment
+                </CFormLabel>
+                <CFormInput
+                  id="previousYearIncrementAmount"
+                  name="incrementAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={previousYearSnapshot.incrementAmount}
+                  onChange={handlePreviousYearSnapshotChange}
+                  readOnly={previousYearSnapshotReadOnly}
+                />
+              </CCol>
+              <CCol xs={12} md className="salary-settings-profile-col">
+                <CFormLabel htmlFor="previousYearSnapshotTotal" className="mb-1">
+                  Total
+                </CFormLabel>
+                <CFormInput
+                  id="previousYearSnapshotTotal"
+                  value={previousYearSnapshotTotal}
+                  readOnly
+                />
+              </CCol>
+            </CRow>
+          </details>
+        </CCardBody>
+        <CCardBody className="salary-settings-actions-body">
+          {notice && (
+            <CAlert
+              color={notice.color}
+              className="py-2 mb-3"
+              dismissible
+              onClose={() => setNotice(null)}
+            >
+              {notice.message}
+            </CAlert>
+          )}
+          <div className="salary-submit-actions">
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={handleCancelEdit}
+            >
+              Cancel
+            </CButton>
+            <CButton color="primary" size="sm" type="submit" disabled={isSavingProfile}>
+              {isSavingProfile ? 'Saving' : 'Save salary settings'}
+            </CButton>
+          </div>
         </CCardBody>
       </CCard>
     </CForm>
+  )
+
+  return (
+    <>
+      {medicalEntitlementSetup
+        ? medicalEntitlementEditor
+        : viewMode === 'preview'
+          ? preview
+          : editor}
+      <CModal
+        visible={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        alignment="center"
+      >
+        <CModalHeader closeButton>
+          <CModalTitle>Discard unsaved changes?</CModalTitle>
+        </CModalHeader>
+        <CModalBody>Your edited salary settings have not been saved.</CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" variant="outline" onClick={() => setShowDiscardDialog(false)}>
+            Keep editing
+          </CButton>
+          <CButton color="danger" onClick={discardChanges}>
+            Discard changes
+          </CButton>
+        </CModalFooter>
+      </CModal>
+    </>
   )
 }
 

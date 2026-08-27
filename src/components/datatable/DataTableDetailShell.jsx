@@ -16,10 +16,15 @@ const DataTableDetailShell = ({
   children,
   actionsTitle = 'Actions',
   emptyMessage = 'Record not found.',
+  mobileFlat = false,
 }) => (
   <CRow>
     <CCol xs={12}>
-      <CCard className="mb-4 data-table-detail-shell">
+      <CCard
+        className={`mb-4 data-table-detail-shell${
+          mobileFlat ? ' data-table-detail-shell--mobile-flat' : ''
+        }`}
+      >
         <CCardHeader className="d-flex align-items-center justify-content-between gap-2">
           <strong>{title}</strong>
           {onBack && (

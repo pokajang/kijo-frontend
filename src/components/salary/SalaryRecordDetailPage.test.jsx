@@ -94,6 +94,9 @@ describe('SalaryRecordDetailPage', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
+    expect(document.querySelector('.data-table-detail-shell')).toHaveClass(
+      'data-table-detail-shell--mobile-flat',
+    )
     expect(screen.getAllByText(/Salary Adjustments/).length).toBeGreaterThan(0)
     expect(screen.queryByText(/Parking receipt/)).not.toBeInTheDocument()
     expect(screen.getAllByText('-RM 374.05').length).toBeGreaterThan(0)
@@ -125,7 +128,7 @@ describe('SalaryRecordDetailPage', () => {
       expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Export Claims' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Export Salary' }))
     await waitFor(() => {
       expect(apiMock.apiFetch).toHaveBeenCalledWith(
         expect.stringContaining('hr/salary/records/10/claims-pdf'),
@@ -195,7 +198,7 @@ describe('SalaryRecordDetailPage', () => {
       expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Export Payslip' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Payslip' }))
 
     await waitFor(() => {
       expect(apiMock.apiFetch).toHaveBeenCalledWith(

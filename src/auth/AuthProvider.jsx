@@ -7,12 +7,26 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/' // ensure trailing path se
 const SESSION_CHECK_INTERVAL_MS = 2 * 60 * 1000
 const PUBLIC_PATH_PREFIXES = ['/share/workload/', '/reset-password/']
 const LOGIN_SERVICE_ERROR = 'Login service returned an unexpected response. Please try again later.'
+const HANDBOOK_ACKNOWLEDGEMENT_DISMISSAL_PREFIX = 'kijo:handbook-acknowledgement:dismissed:'
 
 const isJsonResponse = (response) =>
   (response.headers.get('content-type') || '').toLowerCase().includes('application/json')
 
 const isPublicPath = (path) =>
   PUBLIC_PATH_PREFIXES.some((prefix) => String(path || '').startsWith(prefix))
+
+const clearHandbookAcknowledgementDismissals = (staffId) => {
+  if (!staffId || typeof window === 'undefined') return
+
+  const prefix = `${HANDBOOK_ACKNOWLEDGEMENT_DISMISSAL_PREFIX}${staffId}:`
+
+  for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.sessionStorage.key(index)
+    if (key?.startsWith(prefix)) {
+      window.sessionStorage.removeItem(key)
+    }
+  }
+}
 
 const normalizeSessionUser = (payload) => {
   const user = payload?.user || payload?.data?.user || null
@@ -185,6 +199,7 @@ const AuthProvider = ({ children }) => {
 
     const sessionUser = normalizeSessionUser(data)
     if ((data?.status === 'success' || sessionUser) && sessionUser?.staff_id) {
+      clearHandbookAcknowledgementDismissals(sessionUser.staff_id)
       setUser(sessionUser)
       setStatus('authenticated')
       return { ok: true, data }

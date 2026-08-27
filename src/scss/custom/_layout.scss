@@ -39,6 +39,23 @@ body,
   }
 }
 
+@media (max-width: 767.98px) {
+  .body:has(.app-page-navigation-slot:not(:empty)) {
+    padding-top: 0;
+  }
+
+  .app-page-navigation-slot:not(:empty) {
+    background: var(--cui-body-bg, #fff);
+    isolation: isolate;
+    margin-bottom: 0.25rem;
+    padding: 0.75rem max(0.75rem, env(safe-area-inset-right))
+      0.75rem var(--app-page-mobile-inline-inset);
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+  }
+}
+
 // Hide blinking caret on non-input containers site-wide
 div,
 section,

@@ -618,18 +618,18 @@ const PaymentQueueRecords = ({
               variant="outline"
               size="sm"
               disabled={bulkMarkRecords.length === 0}
-              onClick={() => openActionModal('bulk-mark-paid', selectedRecords)}
+              onClick={() => openActionModal('bulk-mark-paid', bulkMarkRecords)}
             >
-              Mark Paid Selected
+              Mark Paid — {bulkMarkRecords.length} selected
             </CButton>
             <CButton
               color="warning"
               variant="outline"
               size="sm"
               disabled={bulkUndoRecords.length === 0}
-              onClick={() => openActionModal('bulk-undo-paid', selectedRecords)}
+              onClick={() => openActionModal('bulk-undo-paid', bulkUndoRecords)}
             >
-              Undo Paid Selected
+              Undo Paid — {bulkUndoRecords.length} selected
             </CButton>
           </div>
         </div>
@@ -672,6 +672,7 @@ const PaymentQueueRecords = ({
         isUndoAction={isUndoAction}
         isBulkAction={isBulkAction}
         rowCount={actionContext?.rows?.length || 0}
+        rows={actionContext?.rows || []}
         paymentForm={paymentForm}
         setPaymentForm={setPaymentForm}
         undoReason={undoReason}
@@ -690,6 +691,7 @@ export const PaymentQueueActionModal = ({
   isUndoAction,
   isBulkAction,
   rowCount,
+  rows = [],
   paymentForm,
   setPaymentForm,
   undoReason,
@@ -707,6 +709,26 @@ export const PaymentQueueActionModal = ({
       </CModalTitle>
     </CModalHeader>
     <CModalBody>
+      {isBulkAction && (
+        <CAlert color="light" className="border py-2 small">
+          <div className="d-flex justify-content-between gap-3">
+            <strong>{rowCount} selected payment rows</strong>
+            <strong>
+              {formatMoney(
+                roundMoney(rows.reduce((total, row) => total + Number(row.totalDue || 0), 0)),
+              )}
+            </strong>
+          </div>
+          <ul className="mb-0 mt-2 ps-3">
+            {rows.map((row) => (
+              <li key={row.id}>
+                {row.staffName || 'Restricted'} · {row.periodLabel || row.period} ·{' '}
+                {formatQueueMoney(row.totalDue, row.restricted)}
+              </li>
+            ))}
+          </ul>
+        </CAlert>
+      )}
       {isUndoAction ? (
         <div>
           <CFormLabel htmlFor="paymentQueueUndoReason">Reason</CFormLabel>

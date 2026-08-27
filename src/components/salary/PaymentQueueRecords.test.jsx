@@ -222,7 +222,7 @@ describe('PaymentQueueRecords', () => {
 
     fireEvent.click(screen.getByLabelText('Select Pending Staff'))
     fireEvent.click(screen.getByLabelText('Select Paid Staff'))
-    fireEvent.click(screen.getByRole('button', { name: /mark paid selected/i }))
+    fireEvent.click(screen.getByRole('button', { name: /mark paid.*selected/i }))
     fireEvent.change(screen.getByLabelText('Reference (required)'), {
       target: { value: 'BANK-2026-06-01' },
     })
@@ -235,19 +235,16 @@ describe('PaymentQueueRecords', () => {
       expect(storageMock.bulkMarkPaymentQueuePaid).toHaveBeenCalledTimes(1)
     })
     expect(storageMock.bulkMarkPaymentQueuePaid.mock.calls[0][0]).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ staffName: 'Pending Staff' }),
-        expect.objectContaining({ staffName: 'Paid Staff' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ staffName: 'Pending Staff' })]),
     )
-    expect(storageMock.bulkMarkPaymentQueuePaid.mock.calls[0][0]).toHaveLength(2)
+    expect(storageMock.bulkMarkPaymentQueuePaid.mock.calls[0][0]).toHaveLength(1)
 
     await waitFor(() => {
       expect(screen.getAllByText('Paid Staff').length).toBeGreaterThan(0)
     })
     fireEvent.click(screen.getByLabelText('Select Pending Staff'))
     fireEvent.click(screen.getByLabelText('Select Paid Staff'))
-    fireEvent.click(screen.getByRole('button', { name: /undo paid selected/i }))
+    fireEvent.click(screen.getByRole('button', { name: /undo paid.*selected/i }))
     fireEvent.change(screen.getByLabelText('Reason'), {
       target: { value: 'Wrong batch.' },
     })
@@ -257,12 +254,9 @@ describe('PaymentQueueRecords', () => {
       expect(storageMock.bulkUndoPaymentQueuePaid).toHaveBeenCalledTimes(1)
     })
     expect(storageMock.bulkUndoPaymentQueuePaid.mock.calls[0][0]).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ staffName: 'Pending Staff' }),
-        expect.objectContaining({ staffName: 'Paid Staff' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ staffName: 'Paid Staff' })]),
     )
-    expect(storageMock.bulkUndoPaymentQueuePaid.mock.calls[0][0]).toHaveLength(2)
+    expect(storageMock.bulkUndoPaymentQueuePaid.mock.calls[0][0]).toHaveLength(1)
   }, 20000)
 
   it('presents the staff route as read-only My Payments', async () => {

@@ -20,8 +20,7 @@ vi.mock('../../views/project/manage/projectApi', () => ({
 }))
 
 const openTravelClaim = async () => {
-  await screen.findByText('Other Claim Summary')
-  fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
+  await screen.findByText('New Other Claim')
   fireEvent.click(screen.getByRole('button', { name: 'Travel & Mileage' }))
 }
 
@@ -111,17 +110,17 @@ describe('OtherClaimApply', () => {
     expect(mergeCanonicalAttachments([attachment], [])).toEqual([attachment])
   })
 
-  it('opens the default claim entry fields from Add Claim and keeps all claim types selectable', async () => {
+  it('shows claim-type choices immediately and keeps all claim types selectable', async () => {
     render(<OtherClaimApply />)
 
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
+    await screen.findByText('New Other Claim')
 
     expect(screen.getByRole('heading', { name: 'Adjustment Type' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Non-Recurring Allowance' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Expense' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Medical' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Travel & Mileage' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Non-Recurring Allowance' }))
     expect(screen.getByLabelText('Attachment (optional)')).toBeInTheDocument()
     expect(screen.getByLabelText('Claim month')).toBeInTheDocument()
   })
@@ -145,9 +144,8 @@ describe('OtherClaimApply', () => {
 
     render(<OtherClaimApply onConfigureMedicalEntitlement={onConfigureMedicalEntitlement} />)
 
-    await screen.findByText('Other Claim Summary')
+    await screen.findByText('New Other Claim')
     fireEvent.click(screen.getByRole('button', { name: 'June 2026' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
     fireEvent.click(screen.getByRole('button', { name: 'Medical' }))
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-24' } })
     fireEvent.change(screen.getByLabelText('Description'), {
@@ -167,6 +165,27 @@ describe('OtherClaimApply', () => {
         }),
       }),
     )
+  })
+
+  it('does not silently move a non-empty draft into another claim month', async () => {
+    render(<OtherClaimApply />)
+
+    await screen.findByText('New Other Claim')
+    fireEvent.click(screen.getByRole('button', { name: 'Non-Recurring Allowance' }))
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-24' } })
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Meal allowance' } })
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '25' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Other Claim Summary')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'July 2026' }))
+
+    expect(
+      screen.getByText(
+        'Finish, submit, or clear the current draft before changing the claim month.',
+      ),
+    ).toBeInTheDocument()
+    expect(document.getElementById('otherClaimMonth')).not.toHaveValue('2026-07')
   })
 
   it('stays on the claim when the medical draft cannot be preserved locally', async () => {
@@ -191,8 +210,7 @@ describe('OtherClaimApply', () => {
 
     render(<OtherClaimApply onConfigureMedicalEntitlement={onConfigureMedicalEntitlement} />)
 
-    await screen.findByText('Other Claim Summary')
-    fireEvent.click(screen.getByRole('button', { name: 'Add Claim' }))
+    await screen.findByText('New Other Claim')
     fireEvent.click(screen.getByRole('button', { name: 'Medical' }))
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Clinic consultation' },

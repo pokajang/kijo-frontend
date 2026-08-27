@@ -49,6 +49,7 @@ const statusTone = {
   Checked: 'primary',
   Approved: 'success',
   Paid: 'success',
+  Returned: 'warning',
   Rejected: 'danger',
   Cancelled: 'warning',
 }
@@ -57,6 +58,7 @@ const displayStatus = (status) => (status === 'Cancelled' ? 'Withdrawn' : status
 
 const actionColor = (action) => {
   if (action === 'reject') return 'danger'
+  if (action === 'return') return 'warning'
   if (action === 'approve') return 'success'
   return 'info'
 }
@@ -200,8 +202,12 @@ const FinancialOtherClaimRecordDetailPage = () => {
 
   const submitAction = async () => {
     if (!actionContext || !record || submitting) return
-    if (actionContext.action === 'reject' && !remarks.trim()) {
-      setActionError('Enter a reason before rejecting this claim.')
+    if (['reject', 'return'].includes(actionContext.action) && !remarks.trim()) {
+      setActionError(
+        actionContext.action === 'return'
+          ? 'Describe the changes required before returning this claim.'
+          : 'Enter a reason before rejecting this claim.',
+      )
       document.getElementById('financialOtherClaimActionRemarks')?.focus()
       return
     }
@@ -241,6 +247,11 @@ const FinancialOtherClaimRecordDetailPage = () => {
         {record?.status === 'Rejected' && (record.checkedRemarks || record.approvedRemarks) && (
           <CAlert color="danger" className="mt-3 py-2">
             <strong>Rejection reason:</strong> {record.approvedRemarks || record.checkedRemarks}
+          </CAlert>
+        )}
+        {record?.status === 'Returned' && record.returnRemarks && (
+          <CAlert color="warning" className="mt-3 py-2">
+            <strong>Changes requested:</strong> {record.returnRemarks}
           </CAlert>
         )}
         {record?.archivedAt && (
@@ -356,58 +367,60 @@ const FinancialOtherClaimRecordDetailPage = () => {
           headingClassName="h6 mb-2"
           id="financialOtherClaimAudit"
         />
-        <section className="mt-4" aria-labelledby="financialOtherClaimPayments">
-          <h3 className="h6 mb-2" id="financialOtherClaimPayments">
-            Payment history
-          </h3>
-          <CTable responsive small>
-            <CTableHead>
-              <CTableRow>
-                <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-                <CTableHeaderCell scope="col">Payment details</CTableHeaderCell>
-                <CTableHeaderCell scope="col">Audit</CTableHeaderCell>
-                <CTableHeaderCell scope="col" className="text-end">
-                  Amount
-                </CTableHeaderCell>
-              </CTableRow>
-            </CTableHead>
-            <CTableBody>
-              {(record?.paymentHistory || []).length ? (
-                record.paymentHistory.map((payment) => (
-                  <CTableRow key={payment.id}>
-                    <CTableDataCell>{payment.status}</CTableDataCell>
-                    <CTableDataCell>
-                      <div>{payment.paymentDate || '-'}</div>
-                      <div className="small text-body-secondary">
-                        {payment.paymentMethod || '-'} · {payment.paymentReference || '-'}
-                      </div>
-                    </CTableDataCell>
-                    <CTableDataCell>
-                      <div>Paid by {payment.paidBy || '-'}</div>
-                      <div className="small text-body-secondary">
-                        {formatDateTime(payment.paidAt)}
-                      </div>
-                      {payment.reversedAt && (
-                        <div className="small text-danger mt-1">
-                          Reversed by {payment.reversedBy || '-'}: {payment.reversalReason || '-'}
+        {record?.canViewFinancialAmounts !== false && (
+          <section className="mt-4" aria-labelledby="financialOtherClaimPayments">
+            <h3 className="h6 mb-2" id="financialOtherClaimPayments">
+              Payment history
+            </h3>
+            <CTable responsive small>
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Payment details</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Audit</CTableHeaderCell>
+                  <CTableHeaderCell scope="col" className="text-end">
+                    Amount
+                  </CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {(record?.paymentHistory || []).length ? (
+                  record.paymentHistory.map((payment) => (
+                    <CTableRow key={payment.id}>
+                      <CTableDataCell>{payment.status}</CTableDataCell>
+                      <CTableDataCell>
+                        <div>{payment.paymentDate || '-'}</div>
+                        <div className="small text-body-secondary">
+                          {payment.paymentMethod || '-'} · {payment.paymentReference || '-'}
                         </div>
-                      )}
-                    </CTableDataCell>
-                    <CTableDataCell className="text-end">
-                      <strong>{formatMoney(payment.amount)}</strong>
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <div>Paid by {payment.paidBy || '-'}</div>
+                        <div className="small text-body-secondary">
+                          {formatDateTime(payment.paidAt)}
+                        </div>
+                        {payment.reversedAt && (
+                          <div className="small text-danger mt-1">
+                            Reversed by {payment.reversedBy || '-'}: {payment.reversalReason || '-'}
+                          </div>
+                        )}
+                      </CTableDataCell>
+                      <CTableDataCell className="text-end">
+                        <strong>{formatMoney(payment.amount)}</strong>
+                      </CTableDataCell>
+                    </CTableRow>
+                  ))
+                ) : (
+                  <CTableRow>
+                    <CTableDataCell colSpan={4} className="text-center text-body-secondary">
+                      No payment activity recorded.
                     </CTableDataCell>
                   </CTableRow>
-                ))
-              ) : (
-                <CTableRow>
-                  <CTableDataCell colSpan={4} className="text-center text-body-secondary">
-                    No payment activity recorded.
-                  </CTableDataCell>
-                </CTableRow>
-              )}
-            </CTableBody>
-          </CTable>
-        </section>
+                )}
+              </CTableBody>
+            </CTable>
+          </section>
+        )}
       </DataTableDetailShell>
       <AttachmentPreviewModal
         attachment={previewAttachment}
@@ -429,8 +442,15 @@ const FinancialOtherClaimRecordDetailPage = () => {
             {record?.staffName || 'Staff'} · {formatMoney(record?.claimsTotal || 0)} · revision{' '}
             {record?.revisionNo || 1}
           </p>
+          {actionContext?.action === 'return' && (
+            <CAlert color="warning" className="py-2">
+              The applicant can edit this same claim. After resubmission, it will restart at the
+              checking stage.
+            </CAlert>
+          )}
           <CFormLabel htmlFor="financialOtherClaimActionRemarks">
-            Remarks{actionContext?.action === 'reject' ? ' (required)' : ' (optional)'}
+            {actionContext?.action === 'return' ? 'Changes required' : 'Remarks'}
+            {['reject', 'return'].includes(actionContext?.action) ? ' (required)' : ' (optional)'}
           </CFormLabel>
           <CFormTextarea
             id="financialOtherClaimActionRemarks"
@@ -439,6 +459,11 @@ const FinancialOtherClaimRecordDetailPage = () => {
             value={remarks}
             aria-invalid={Boolean(actionError)}
             aria-describedby={actionError ? 'financialOtherClaimActionError' : undefined}
+            placeholder={
+              actionContext?.action === 'return'
+                ? 'Explain exactly what the applicant needs to correct'
+                : undefined
+            }
             onChange={(event) => setRemarks(event.target.value)}
             disabled={submitting}
           />

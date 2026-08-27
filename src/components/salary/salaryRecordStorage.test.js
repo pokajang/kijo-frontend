@@ -114,6 +114,12 @@ describe('salaryRecordStorage API adapter', () => {
           type: 'Allowance',
           description: 'Payroll adjustment',
           amount: 75,
+          attachment: {
+            file: new File(['adjustment evidence'], 'adjustment.pdf', {
+              type: 'application/pdf',
+            }),
+            name: 'adjustment.pdf',
+          },
         },
         {
           id: 'claim-1',
@@ -139,7 +145,7 @@ describe('salaryRecordStorage API adapter', () => {
         attachmentId: null,
       }),
     ])
-    expect(options.body.get('attachments[claim-1]')).toBeNull()
+    expect(options.body.get('attachments[claim-allowance]')).toBeInstanceOf(File)
     expect(saved.id).toBe(10)
   })
 

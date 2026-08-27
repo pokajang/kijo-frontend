@@ -49,3 +49,11 @@ export const hasAnyAllowedRole = (userRoles = [], allowedRoles = []) => {
     userSet.has(normalizeRole(role)),
   )
 }
+
+export const hasExplicitAllowedRole = (userRoles = [], allowedRoles = []) => {
+  const userSet = new Set((Array.isArray(userRoles) ? userRoles : []).map(normalizeRole))
+
+  return (Array.isArray(allowedRoles) ? allowedRoles : []).some((role) =>
+    userSet.has(normalizeRole(role)),
+  )
+}

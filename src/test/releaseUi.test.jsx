@@ -1,16 +1,19 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { Provider, useDispatch, useSelector } from 'react-redux'
 
 import store from '../store'
 import AppHeader from '../components/AppHeader'
+import AppHeaderDropdown from '../components/header/AppHeaderDropdown'
+import AppNotificationsDropdown from '../components/header/AppNotificationsDropdown'
 import WhatsNewNotifier from '../components/WhatsNewNotifier'
 import { RightDrawerProvider, useRightDrawer } from '../components/right-drawer/RightDrawerContext'
 import { SidebarRightDrawerCoordinator } from '../layout/DefaultLayout'
 import { KnowledgePanelProvider } from '../views/knowledge/KnowledgePanelContext'
 import KnowledgeSidePanel from '../views/knowledge/KnowledgeSidePanel'
+import AppNotificationProvider from '../notifications/AppNotificationProvider'
 
 vi.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({
@@ -19,16 +22,17 @@ vi.mock('../auth/AuthProvider', () => ({
   }),
 }))
 
-vi.mock('../components/header/index', () => ({
-  AppHeaderDropdown: () => <div data-testid="header-dropdown" />,
-  AppNotificationsDropdown: () => <div data-testid="notifications-dropdown" />,
-}))
-
 const jsonResponse = (payload) => ({
   ok: true,
   status: 200,
+  headers: new Headers({ 'content-type': 'application/json' }),
   json: async () => payload,
 })
+
+const LocationPathDisplay = () => {
+  const { pathname } = useLocation()
+  return <div data-testid="route-path">{pathname}</div>
+}
 
 const DrawerSidebarCoordinatorHarness = () => {
   const dispatch = useDispatch()
@@ -151,7 +155,7 @@ describe('release UI behavior', () => {
     expect(screen.queryByTestId('whats-new-notifier')).not.toBeInTheDocument()
   })
 
-  it('keeps theme and news header actions available for the mobile nav', () => {
+  it('renders five mobile nav actions and hides Theme/News/Ticket in the bottom bar', () => {
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
       setItem: vi.fn(),
@@ -183,11 +187,69 @@ describe('release UI behavior', () => {
       </Provider>,
     )
 
-    const themeButton = screen.getByRole('button', { name: 'Switch to dark mode' })
+    const menuButton = screen.getByRole('button', { name: 'Toggle menu' })
+    const homeLink = screen.getByRole('link', { name: 'Home' })
+    const tasksLink = screen.getByRole('link', { name: 'Tasks' })
+    const alertsButton = screen.getByRole('button', { name: 'Notifications' })
+    const accountButton = screen.getByRole('button', { name: 'Account' })
+    const themeButton = screen.getByRole('button', { name: /switch to (dark|light) mode/i })
     const whatsNewLink = screen.getByRole('link', { name: "What's New" })
+    const ticketButton = screen.getByRole('button', { name: 'Open support ticket' })
 
-    expect(themeButton.closest('.app-bottom-nav-entry')).not.toHaveClass('d-none')
-    expect(whatsNewLink.closest('.app-bottom-nav-entry')).not.toHaveClass('d-none')
+    expect(menuButton).toBeInTheDocument()
+    expect(homeLink).toBeInTheDocument()
+    expect(tasksLink).toBeInTheDocument()
+    expect(alertsButton).toBeInTheDocument()
+    expect(accountButton).toBeInTheDocument()
+
+    expect(themeButton.closest('.app-bottom-nav-entry')).toHaveClass('d-none')
+    expect(whatsNewLink.closest('.app-bottom-nav-entry')).toHaveClass('d-none')
+    expect(ticketButton.closest('.app-bottom-nav-entry')).toHaveClass('d-none')
+
+    const mobileVisibleEntries = Array.from(
+      document.querySelectorAll('.app-bottom-nav-item, .app-bottom-nav-entry'),
+    ).filter((entry) => !entry.classList.contains('d-none'))
+    expect(mobileVisibleEntries).toHaveLength(5)
+  })
+
+  it('keeps desktop header actions direct in nav (theme, news, ticket)', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    })
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ status: 'success', data: null, meta: { unread_count: 0 } })),
+    )
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter>
+          <AppHeader />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    expect(screen.getByRole('button', { name: /switch to (dark|light) mode/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Home' }).closest('.app-bottom-nav-entry')).toHaveClass(
+      'd-md-none',
+    )
+    expect(screen.getByRole('link', { name: "What's New" })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open support ticket' })).toBeInTheDocument()
   })
 
   it('opens the Knowledge panel from the header Help button on touch activation', async () => {
@@ -282,6 +344,106 @@ describe('release UI behavior', () => {
       expect(screen.getByTestId('sidebar-state')).toHaveTextContent('true')
       expect(screen.getByTestId('drawer-state')).toHaveTextContent('none')
     })
+  })
+
+  it("opens account utility actions for Theme, What's New, and Submit Ticket", async () => {
+    const onToggleTheme = vi.fn()
+    const onOpenTicket = vi.fn()
+    const onAccountActiveChange = vi.fn()
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <LocationPathDisplay />
+        <AppHeaderDropdown
+          sessionUser={{ full_name: 'QA User', roles: ['Staff'] }}
+          onOpenTicket={onOpenTicket}
+          onToggleTheme={onToggleTheme}
+          onAccountActiveChange={onAccountActiveChange}
+          themeToggleLabel="Switch to light mode"
+          whatsNewLabel="What's New, 1 unread update"
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }))
+    expect(onAccountActiveChange).toHaveBeenLastCalledWith(true)
+    expect(screen.getByText('Utilities')).toHaveClass('app-header-dropdown-heading')
+    expect(screen.getByText('Utilities').closest('.app-header-dropdown-section')).toHaveClass(
+      'd-md-none',
+    )
+
+    fireEvent.click(
+      screen.getByText('Theme', { selector: '.app-header-dropdown-item-label' }).parentElement,
+    )
+    await waitFor(() => {
+      expect(onToggleTheme).toHaveBeenCalledTimes(1)
+      expect(onAccountActiveChange).toHaveBeenLastCalledWith(false)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }))
+    fireEvent.click(
+      screen.getByText("What's New", { selector: '.app-header-dropdown-item-label' }).parentElement,
+    )
+    await waitFor(() => {
+      expect(screen.getByTestId('route-path')).toHaveTextContent('/whats-new')
+    })
+    expect(onAccountActiveChange).toHaveBeenLastCalledWith(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Account' }))
+    fireEvent.click(
+      screen.getByText('Submit Ticket', { selector: '.app-header-dropdown-item-label' })
+        .parentElement,
+    )
+    await waitFor(() => {
+      expect(onOpenTicket).toHaveBeenCalledTimes(1)
+      expect(onAccountActiveChange).toHaveBeenLastCalledWith(false)
+    })
+  })
+
+  it('keeps Alerts with unread badge visible and opens the notification list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url) => {
+        const path = String(url)
+
+        if (path.includes('notifications/summary')) {
+          return jsonResponse({
+            status: 'success',
+            data: { listable_total: 2, total: 2, by_module: {}, by_route_group: {}, by_tab: {} },
+          })
+        }
+
+        if (path.includes('notifications/list')) {
+          return jsonResponse({
+            status: 'success',
+            data: {
+              items: [
+                {
+                  id: 1,
+                  title: 'Sales Update',
+                  message: 'Your sales report is ready.',
+                },
+              ],
+            },
+          })
+        }
+
+        return jsonResponse({ status: 'success', data: null, meta: {} })
+      }),
+    )
+
+    render(
+      <MemoryRouter>
+        <AppNotificationProvider>
+          <AppNotificationsDropdown />
+        </AppNotificationProvider>
+      </MemoryRouter>,
+    )
+
+    const alertsButton = await screen.findByRole('button', { name: /2 unread notifications/i })
+    fireEvent.click(alertsButton)
+
+    expect(await screen.findByText('Sales Update')).toBeInTheDocument()
   })
 
   it('lets users dismiss the missing-signature warning for the current session', async () => {

@@ -101,6 +101,22 @@ const normalizeRecord = (record = {}) => {
         : null,
     draftSavedAt: record.draftSavedAt || '',
     submittedAt: record.submittedAt || '',
+    checkedAt: record.checkedAt || '',
+    checkedRemarks: record.checkedRemarks || '',
+    checkerName: record.checkerName || '',
+    checkerCode: record.checkerCode || '',
+    approvedAt: record.approvedAt || '',
+    approvedRemarks: record.approvedRemarks || '',
+    approverName: record.approverName || '',
+    approverCode: record.approverCode || '',
+    returnedBy: record.returnedBy || null,
+    returnedAt: record.returnedAt || '',
+    returnedStage: record.returnedStage || '',
+    returnRemarks: record.returnRemarks || '',
+    cancelledAt: record.cancelledAt || '',
+    cancelReason: record.cancelReason || '',
+    workflow: record.workflow || null,
+    recordVersion: Math.max(1, Number(record.recordVersion || 1)),
   }
 }
 
@@ -162,6 +178,38 @@ const claimForPayload = (claim) => ({
   attachmentId: claim.attachment?.id ?? null,
 })
 
+const attachmentFileFromDataUrl = (attachment) => {
+  if (attachment?.file instanceof File) return attachment.file
+  if (!attachment?.dataUrl || typeof File === 'undefined') return null
+
+  const [header, encoded] = String(attachment.dataUrl).split(',', 2)
+  if (!header || !encoded || !header.startsWith('data:')) return null
+
+  try {
+    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0))
+    const mimeType =
+      header.match(/^data:([^;]+)/i)?.[1] || attachment.type || 'application/octet-stream'
+
+    return new File([bytes], attachment.name || attachment.originalName || 'attachment', {
+      type: mimeType,
+      lastModified: Date.now(),
+    })
+  } catch {
+    return null
+  }
+}
+
+const appendClaimAttachments = (formData, claims) => {
+  claims.forEach((claim) => {
+    if (claim?.attachment?.id) return
+
+    const file = attachmentFileFromDataUrl(claim?.attachment)
+    if (file instanceof File) {
+      formData.append(`attachments[${claim.id}]`, file, file.name)
+    }
+  })
+}
+
 export const getSalaryRecords = async () => {
   const payload = await apiJson(`${API_BASE}hr/salary/records`)
   return Array.isArray(payload.records) ? payload.records.map(normalizeRecord) : []
@@ -200,6 +248,9 @@ export const saveSalaryRecord = async (record) => {
     : []
 
   formData.append('salary_month', record.salaryMonthValue)
+  if (Number(record.recordVersion) > 0) {
+    formData.append('record_version', String(record.recordVersion))
+  }
   formData.append('basic_salary', String(record.basicSalary))
   formData.append('claims_total', String(record.claimsTotal))
   formData.append('employee_deductions', String(record.employeeDeductions))
@@ -207,6 +258,7 @@ export const saveSalaryRecord = async (record) => {
   formData.append('payable_salary', String(record.payableSalary))
   formData.append('deductions', JSON.stringify(record.deductions || {}))
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
+  appendClaimAttachments(formData, claims)
   if (String(record.amendmentReason || '').trim()) {
     formData.append('amendment_reason', String(record.amendmentReason).trim())
   }
@@ -261,9 +313,13 @@ export const saveSalaryApplicationDraft = async (draft) => {
   // PHP parses multipart request bodies as POST; Laravel applies the PUT override.
   formData.append('_method', 'PUT')
   formData.append('salary_month', salaryMonth)
+  if (Number(draft.recordVersion) > 0) {
+    formData.append('record_version', String(draft.recordVersion))
+  }
   formData.append('basic_salary', String(draft.basicSalary || 0))
   formData.append('claims', JSON.stringify(claims.map(claimForPayload)))
   formData.append('draft_payload', JSON.stringify(serverDraftPayload(draft.draftPayload || {})))
+  appendClaimAttachments(formData, claims)
   const payload = await apiJson(`${API_BASE}hr/salary/applications/draft`, {
     method: 'POST',
     body: formData,

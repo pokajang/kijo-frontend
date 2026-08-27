@@ -70,7 +70,7 @@ export const createSalaryPayableFooter = (payableSalary) => [
     key: 'estimated-payable',
     className: 'salary-payable-preview-footer-row',
     cells: [
-      { key: 'item', content: <strong>Estimated Payable Salary</strong> },
+      { key: 'item', content: <strong>Net Pay</strong> },
       {
         key: 'amount',
         align: 'right',
@@ -120,9 +120,7 @@ const renderSalaryPreviewMobileItem = (row) => (
 
 const renderSalaryPreviewMobileFooterItem = (row, rowIndex, cells = []) => (
   <div className="salary-preview-mobile-row salary-preview-mobile-row--footer">
-    <span className="salary-preview-mobile-label">
-      {cells[0]?.content || 'Estimated Payable Salary'}
-    </span>
+    <span className="salary-preview-mobile-label">{cells[0]?.content || 'Net Pay'}</span>
     <span className="salary-preview-mobile-amount">
       {cells[1]?.content || formatMoney(row.amount)}
     </span>
@@ -169,6 +167,7 @@ export const SalaryRecordTable = ({
   desktopUtilityPlacement = 'portal',
   mobileUtilityPlacement = 'portal',
   showMobileUtilityRow = false,
+  showMobileTopFooter = false,
   ...props
 }) => (
   <DataTableRecordList
@@ -180,6 +179,7 @@ export const SalaryRecordTable = ({
     desktopUtilityPlacement={desktopUtilityPlacement}
     mobileUtilityPlacement={mobileUtilityPlacement}
     showMobileUtilityRow={showMobileUtilityRow}
+    showMobileTopFooter={showMobileTopFooter}
   />
 )
 

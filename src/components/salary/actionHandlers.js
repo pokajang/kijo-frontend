@@ -300,6 +300,7 @@ export const useApplySalaryHandlers = ({
   const [medicalItems, setMedicalItems] = useState(initialSalaryState.medicalItems)
   const [editingClaim, setEditingClaim] = useState(null)
   const [activeRecordId, setActiveRecordId] = useState(initialRecord?.id || null)
+  const activeRecordVersionRef = useRef(Number(initialRecord?.recordVersion || 0) || null)
   const [attachmentInputVersion, setAttachmentInputVersion] = useState(0)
   const [attachmentProcessing, setAttachmentProcessing] = useState(createAttachmentProcessingState)
   const attachmentProcessingRef = useRef(createAttachmentProcessingState())
@@ -354,6 +355,7 @@ export const useApplySalaryHandlers = ({
 
         if (serverDraft) {
           hasPersistedDraftRef.current = true
+          activeRecordVersionRef.current = Number(serverDraft.recordVersion || 0) || null
           if (shouldUseServerDraft) {
             setDraftSaveState('restored')
           }
@@ -440,6 +442,7 @@ export const useApplySalaryHandlers = ({
       initialRecordRef.current = null
       isInitialDraftRecordRef.current = false
       setActiveRecordId(null)
+      activeRecordVersionRef.current = null
       setFormData({
         salaryMonth,
         basicSalary: salaryProfile?.basicSalary || '',
@@ -463,10 +466,11 @@ export const useApplySalaryHandlers = ({
   )
 
   const applyDraftMonthState = useCallback(
-    (salaryMonth, draftState, recordId = null) => {
+    (salaryMonth, draftState, recordId = null, recordVersion = null) => {
       initialRecordRef.current = null
       isInitialDraftRecordRef.current = Boolean(recordId)
       setActiveRecordId(recordId)
+      activeRecordVersionRef.current = Number(recordVersion || 0) || null
       setFormData({
         salaryMonth,
         basicSalary: draftState?.formData?.basicSalary || salaryProfile?.basicSalary || '',
@@ -498,6 +502,7 @@ export const useApplySalaryHandlers = ({
       initialRecordRef.current = record
       isInitialDraftRecordRef.current = record.status === 'Draft'
       setActiveRecordId(record.id || null)
+      activeRecordVersionRef.current = Number(record.recordVersion || 0) || null
       setFormData({
         ...recordState.formData,
         mileageRate: recordState.formData.mileageRate || salaryProfile?.defaultMileageRate || '',
@@ -526,7 +531,12 @@ export const useApplySalaryHandlers = ({
           : null
 
       if (serverDraftState) {
-        applyDraftMonthState(salaryMonth, serverDraftState, serverDraft?.id || null)
+        applyDraftMonthState(
+          salaryMonth,
+          serverDraftState,
+          serverDraft?.id || null,
+          serverDraft?.recordVersion || null,
+        )
         return true
       }
 
@@ -665,7 +675,7 @@ export const useApplySalaryHandlers = ({
       amount: roundMoney(amount),
       source: 'manual',
       sourceLabel: 'Manual adjustment',
-      attachment: null,
+      attachment: formData.allowanceAttachment,
     }
     setAllowanceItems((prev) =>
       editingClaim?.type === 'allowance'
@@ -1019,11 +1029,13 @@ export const useApplySalaryHandlers = ({
       setDraftSaveState('saving')
       saveSalaryApplicationDraft({
         salaryMonthValue: salaryMonth,
+        recordVersion: activeRecordVersionRef.current,
         basicSalary: summary.basicSalary,
         claims: mapClaimItems(allowanceItems, 'Allowance').filter(isCompleteDraftClaim),
         draftPayload: applicationDraftPayload,
       })
-        .then(() => {
+        .then((savedDraft) => {
+          activeRecordVersionRef.current = Number(savedDraft?.recordVersion || 0) || null
           hasPersistedDraftRef.current = true
           setDraftSaveError('')
           setDraftSaveState('saved')
@@ -1106,6 +1118,7 @@ export const useApplySalaryHandlers = ({
     setMedicalItems([])
     setEditingClaim(null)
     setActiveRecordId(null)
+    activeRecordVersionRef.current = null
     resetAttachmentProcessing()
     resetAttachmentInputs()
   }
@@ -1118,6 +1131,29 @@ export const useApplySalaryHandlers = ({
     setEditingClaim(null)
     resetAttachmentProcessing()
     resetAttachmentInputs()
+  }
+
+  const retryDraftSync = async () => {
+    if (draftSaveState !== 'error') return
+
+    const salaryMonth = applicationDraftPayload.formData.salaryMonth || getCurrentSalaryMonth()
+    setDraftSaveError('')
+    setDraftSaveState('saving')
+    try {
+      const savedDraft = await saveSalaryApplicationDraft({
+        salaryMonthValue: salaryMonth,
+        recordVersion: activeRecordVersionRef.current,
+        basicSalary: summary.basicSalary,
+        claims: mapClaimItems(allowanceItems, 'Allowance').filter(isCompleteDraftClaim),
+        draftPayload: applicationDraftPayload,
+      })
+      activeRecordVersionRef.current = Number(savedDraft?.recordVersion || 0) || null
+      hasPersistedDraftRef.current = true
+      setDraftSaveState('saved')
+    } catch (error) {
+      setDraftSaveError(error?.message || 'Could not sync the draft to the server.')
+      setDraftSaveState('error')
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -1170,6 +1206,7 @@ export const useApplySalaryHandlers = ({
         deductions: summary.deductions,
         submittedAt: new Date().toISOString(),
         amendmentReason: amendmentReasonRef.current,
+        recordVersion: activeRecordVersionRef.current,
       })
       hasSubmittedRef.current = true
       if (draftSaveTimerRef.current) {
@@ -1185,6 +1222,7 @@ export const useApplySalaryHandlers = ({
         return [savedRecord, ...nextRecords]
       })
       setActiveRecordId(savedRecord.id || null)
+      activeRecordVersionRef.current = Number(savedRecord.recordVersion || 0) || null
       await Promise.resolve()
       if (savedRecord.mailStatus === 'digest') {
         notify(
@@ -1237,6 +1275,7 @@ export const useApplySalaryHandlers = ({
     medicalBalance,
     draftSaveState,
     draftSaveError,
+    retryDraftSync,
     isSubmitting,
     isLoadingProfile,
     isSwitchingSalaryMonth,

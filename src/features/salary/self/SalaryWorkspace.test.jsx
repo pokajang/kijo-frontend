@@ -42,10 +42,6 @@ vi.mock('../../../components/salary/OtherClaimRecordDetailPage', () => ({
   default: () => <div>Other Claim Record Detail Mock</div>,
 }))
 
-vi.mock('../../../components/salary/PaymentQueueRecords', () => ({
-  default: () => <div>Payment Queue Mock</div>,
-}))
-
 vi.mock('../../../components/salary/SalarySettings', () => ({
   default: ({ medicalEntitlementSetup, onMedicalEntitlementSaved }) => (
     <div>
@@ -81,7 +77,7 @@ const BackButton = () => {
 }
 
 describe('SalaryWorkspace', () => {
-  it('renders salary and other-claim module tabs for salary tab pages', () => {
+  it('keeps salary and other claims as the only workspace tabs', () => {
     render(
       <MemoryRouter initialEntries={['/my/salary/settings']}>
         <Routes>
@@ -104,45 +100,61 @@ describe('SalaryWorkspace', () => {
               </>
             }
           />
+          <Route
+            path="/my/salary/other-claims/records"
+            element={
+              <>
+                <SalaryWorkspace routeSection="other-claim-records" />
+                <LocationProbe />
+              </>
+            }
+          />
+          <Route
+            path="/my/salary/other-claims/apply"
+            element={
+              <>
+                <SalaryWorkspace routeSection="other-claim-apply" />
+                <LocationProbe />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>,
     )
 
-    const tabs = screen.getByRole('tablist', { name: 'My salary sections' })
+    const tabs = screen.getByRole('navigation', { name: 'Salary workspace' })
     const tabLabels = within(tabs)
-      .getAllByRole('tab')
+      .getAllByRole('link')
       .map((tab) => tab.textContent)
-    expect(tabLabels).toEqual([
-      'My Payments',
-      'Apply Salary',
-      'Salary Records',
-      'Apply Other Claim',
-      'Other Claim Records',
-      'Settings',
-    ])
-    expect(within(tabs).getByRole('tab', { name: 'Apply Salary' })).toBeInTheDocument()
-    expect(within(tabs).getByRole('tab', { name: 'Salary Records' })).toBeInTheDocument()
-    expect(within(tabs).getByRole('tab', { name: 'Settings' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    expect(tabLabels).toEqual(['Salary', 'Other Claims'])
+    expect(within(tabs).queryByRole('link', { name: 'Apply Salary' })).not.toBeInTheDocument()
+    expect(within(tabs).queryByRole('link', { name: 'My Payments' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Salary settings' })).toHaveAttribute(
+      'aria-current',
+      'page',
     )
     expect(screen.getByText('Salary Settings Mock')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
     expect(screen.queryByText('Salary Settings')).not.toBeInTheDocument()
     expect(document.querySelector('.salary-workspace.card')).not.toBeInTheDocument()
 
-    fireEvent.click(within(tabs).getByRole('tab', { name: 'Salary Records' }))
+    fireEvent.click(within(tabs).getByRole('link', { name: 'Salary' }))
     expect(screen.getByTestId('location')).toHaveTextContent('/my/salary/records')
     expect(screen.getByText('Salary Records Mock')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Apply Salary' })).toBeInTheDocument()
 
-    fireEvent.click(
-      within(screen.getByRole('tablist', { name: 'My salary sections' })).getByRole('tab', {
-        name: 'Apply Salary',
-      }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'Apply Salary' }))
     expect(screen.getByTestId('location')).toHaveTextContent('/my/salary/apply')
     expect(screen.getByText('Apply Salary Mock')).toBeInTheDocument()
+
+    fireEvent.click(
+      within(screen.getByRole('navigation', { name: 'Salary workspace' })).getByRole('link', {
+        name: 'Other Claims',
+      }),
+    )
+    expect(screen.getByTestId('location')).toHaveTextContent('/my/salary/other-claims/records')
+    expect(screen.getByText('Other Claim Records Mock')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Apply Other Claim' })).toBeInTheDocument()
   })
 
   it('renders the salary detail page when mounted on a detail URL', () => {

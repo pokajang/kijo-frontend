@@ -190,6 +190,9 @@ const About = React.lazy(() => import('./views/about/About'))
 const FinancialSalaryRecordsPage = React.lazy(
   () => import('./views/internal-operations/financial/FinancialSalaryRecordsPage'),
 )
+const FinancialSalaryRecordDetailPage = React.lazy(
+  () => import('./views/internal-operations/financial/FinancialSalaryRecordDetailPage'),
+)
 const FinancialOtherClaimRecordsPage = React.lazy(
   () => import('./views/internal-operations/financial/FinancialOtherClaimRecordsPage'),
 )
@@ -249,6 +252,7 @@ const staffAllowedRoles = ['Manager', 'System Admin', 'HR']
 const leaveAdminAllowedRoles = ['System Admin', 'HR']
 const systemAdminAllowedRoles = ['System Admin']
 const financialAllowedRoles = ['System Admin', 'Manager', 'HR', 'Finance', 'Account', 'Bank']
+const financialPaymentAllowedRoles = ['Finance', 'Account', 'Bank']
 const LegacyRouteRedirect = ({ to, paramName }) => {
   const location = useLocation()
   const params = useParams()
@@ -810,17 +814,13 @@ const routes = [
   },
   {
     path: '/my/salary',
-    name: 'My Salary Payment Queue',
-    element: <Navigate to="/my/salary/payment-queue" replace />,
+    name: 'My Salary Records',
+    element: <Navigate to="/my/salary/records" replace />,
   },
   {
     path: '/my/salary/payment-queue',
     name: 'My Salary Payment Queue',
-    element: (
-      <ProtectedRoute>
-        <SalaryWorkspace routeSection="payment-queue" />
-      </ProtectedRoute>
-    ),
+    element: <Navigate to="/my/salary/records" replace />,
   },
   {
     path: '/my/salary/payment-queue/:staffId/:period',
@@ -914,7 +914,7 @@ const routes = [
     path: '/financial/payment-queue',
     name: 'Payment Queue',
     element: (
-      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+      <ProtectedRoute allowedRoles={financialPaymentAllowedRoles} requireExplicitRole>
         <FinancialPaymentQueuePage />
       </ProtectedRoute>
     ),
@@ -923,14 +923,14 @@ const routes = [
     path: '/financial/payment-queue/:staffId/:period',
     name: 'Payment Queue Details',
     element: (
-      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+      <ProtectedRoute allowedRoles={financialPaymentAllowedRoles} requireExplicitRole>
         <PaymentQueueRecordDetailPage />
       </ProtectedRoute>
     ),
   },
   {
     path: '/financial/salary-records',
-    name: 'Salary Records',
+    name: 'Review Salary',
     element: (
       <ProtectedRoute allowedRoles={financialAllowedRoles}>
         <FinancialSalaryRecordsPage />
@@ -938,8 +938,17 @@ const routes = [
     ),
   },
   {
+    path: '/financial/salary-records/:id',
+    name: 'Salary Review',
+    element: (
+      <ProtectedRoute allowedRoles={financialAllowedRoles}>
+        <FinancialSalaryRecordDetailPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/financial/other-claim-records',
-    name: 'Other Claim Records',
+    name: 'Review Claims',
     element: (
       <ProtectedRoute allowedRoles={financialAllowedRoles}>
         <FinancialOtherClaimRecordsPage />

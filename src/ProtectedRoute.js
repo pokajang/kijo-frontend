@@ -2,7 +2,7 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './auth/AuthProvider'
-import { extractRolesFromSession, hasAnyAllowedRole } from './utils/roles'
+import { extractRolesFromSession, hasAnyAllowedRole, hasExplicitAllowedRole } from './utils/roles'
 
 /**
  * Wrap any routes you want to protect.
@@ -14,7 +14,7 @@ import { extractRolesFromSession, hasAnyAllowedRole } from './utils/roles'
  *   allowedRoles?: string[]
  *   children: React.ReactNode
  */
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, requireExplicitRole = false }) => {
   const location = useLocation()
   const { user, status, isAuthenticated } = useAuth()
   const roles = extractRolesFromSession({ user })
@@ -27,7 +27,10 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  if (Array.isArray(allowedRoles) && !hasAnyAllowedRole(roles, allowedRoles)) {
+  const canAccess = requireExplicitRole
+    ? hasExplicitAllowedRole(roles, allowedRoles)
+    : hasAnyAllowedRole(roles, allowedRoles)
+  if (Array.isArray(allowedRoles) && !canAccess) {
     return <Navigate to="/dashboard" replace />
   }
 

@@ -2,7 +2,6 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import SalarySettings from './SalarySettings'
-import { toastEvents } from '../toast/toastService'
 
 const apiMock = vi.hoisted(() => ({
   apiJson: vi.fn(),
@@ -45,6 +44,11 @@ describe('SalarySettings', () => {
     })
 
     return document.querySelector('.data-table-action-menu.show')
+  }
+
+  const openSettingsEditor = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit settings' }))
+    return screen.findByLabelText('Basic Salary (RM)')
   }
 
   beforeEach(() => {
@@ -97,87 +101,74 @@ describe('SalarySettings', () => {
   })
 
   it('saves fixed salary and recurring allowance settings', async () => {
-    const toastHandler = vi.fn()
-    window.addEventListener(toastEvents.name, toastHandler)
     render(<SalarySettings />)
 
-    try {
-      await screen.findByDisplayValue('3000')
+    await openSettingsEditor()
 
-      fireEvent.change(screen.getByLabelText('Basic Salary'), { target: { value: '4800' } })
-      fireEvent.change(screen.getByLabelText('Effective From'), { target: { value: '2026-06' } })
-      fireEvent.change(screen.getByLabelText('Annual Medical Entitlement (RM)'), {
-        target: { value: '1200' },
-      })
-      expect(screen.getByText('Previous Year Salary Snapshot')).toBeInTheDocument()
-      expect(
-        screen.getByText(
-          'No approved Dec 2025 salary record found. Configure this snapshot for Salary Claim PDF reference.',
-        ),
-      ).toBeInTheDocument()
-      fireEvent.change(screen.getByLabelText('Basic'), { target: { value: '3600' } })
-      fireEvent.change(screen.getByLabelText('Allowance'), { target: { value: '240' } })
-      fireEvent.change(screen.getByLabelText('Increment'), { target: { value: '100' } })
-      expect(screen.getByLabelText('Total')).toHaveValue('3940.00')
-      expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
-      expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Basic Salary (RM)'), { target: { value: '4800' } })
+    fireEvent.change(screen.getByLabelText('Effective From'), { target: { value: '2026-06' } })
+    fireEvent.change(screen.getByLabelText('Annual Medical Entitlement (RM)'), {
+      target: { value: '1200' },
+    })
+    fireEvent.click(screen.getByText('Previous year salary snapshot'))
+    expect(
+      screen.getByText(
+        'No approved Dec 2025 salary record found. Configure this snapshot for Salary Claim PDF reference.',
+      ),
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Basic'), { target: { value: '3600' } })
+    fireEvent.change(screen.getByLabelText('Allowance'), { target: { value: '240' } })
+    fireEvent.change(screen.getByLabelText('Increment'), { target: { value: '100' } })
+    expect(screen.getByLabelText('Total')).toHaveValue('3940.00')
+    expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
 
-      fireEvent.click(screen.getByRole('button', { name: 'Add Recurring Allowance' }))
-      fireEvent.change(screen.getByLabelText('Description'), {
-        target: { value: 'Phone allowance' },
-      })
-      fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '180' } })
-      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add recurring allowance' }))
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Phone allowance' },
+    })
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '180' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save allowance' }))
 
-      expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
-      expect(screen.getAllByText('Phone allowance').length).toBeGreaterThan(0)
-      expect(screen.getByText('Monthly Payable Salary Preview')).toBeInTheDocument()
-      expect(screen.getAllByText('Estimated Payable Salary').length).toBeGreaterThan(0)
+    expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Phone allowance').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Payable Salary')).not.toBeInTheDocument()
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save salary settings' }))
 
-      await waitFor(() =>
-        expect(toastHandler).toHaveBeenCalledWith(
-          expect.objectContaining({
-            detail: expect.objectContaining({
-              type: 'toast',
-              message:
-                'Salary settings saved. Apply Salary uses these values for new monthly applications.',
-            }),
-          }),
-        ),
-      )
-      expect(profile.basicSalary).toBe('4800')
-      expect(profile.effectiveMonth).toBe('2026-06')
-      expect(profile.yearlyMedicalClaim).toBe('1200')
-      expect(profile.previousYearSnapshot).toEqual(
-        expect.objectContaining({
-          year: '2025',
-          basicSalary: '3600',
-          allowanceTotal: '240',
-          incrementAmount: '100',
-        }),
-      )
-      expect(profile.recurringAllowances[0]).toEqual(
-        expect.objectContaining({
-          description: 'Phone allowance',
-          amount: '180',
-          active: true,
-        }),
-      )
-    } finally {
-      window.removeEventListener(toastEvents.name, toastHandler)
-    }
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Salary settings saved. Payable Salary now reflects the updated values.',
+    )
+    expect(profile.basicSalary).toBe('4800')
+    expect(profile.effectiveMonth).toBe('2026-06')
+    expect(profile.yearlyMedicalClaim).toBe('1200')
+    expect(profile.previousYearSnapshot).toEqual(
+      expect.objectContaining({
+        year: '2025',
+        basicSalary: '3600',
+        allowanceTotal: '240',
+        incrementAmount: '100',
+      }),
+    )
+    expect(profile.recurringAllowances[0]).toEqual(
+      expect.objectContaining({
+        description: 'Phone allowance',
+        amount: '180',
+        active: true,
+      }),
+    )
   })
 
   it('shows validation for invalid fixed salary', async () => {
     render(<SalarySettings />)
-    await screen.findByDisplayValue('3000')
+    await openSettingsEditor()
 
-    fireEvent.change(screen.getByLabelText('Basic Salary'), { target: { value: '' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
+    fireEvent.change(screen.getByLabelText('Basic Salary (RM)'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save salary settings' }))
 
-    expect(screen.getByText('Enter a valid fixed monthly salary.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Enter a fixed monthly salary greater than RM0.00.'),
+    ).toBeInTheDocument()
   })
 
   it('guides medical entitlement setup and returns only after a successful save', async () => {
@@ -194,9 +185,7 @@ describe('SalarySettings', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save and Return to Medical Claim' }))
     expect(
-      screen.getByText(
-        'Enter an annual medical entitlement greater than RM0.00 before continuing.',
-      ),
+      screen.getByText('Enter an annual medical entitlement greater than RM0.00.'),
     ).toBeInTheDocument()
     expect(onMedicalEntitlementSaved).not.toHaveBeenCalled()
 
@@ -225,7 +214,9 @@ describe('SalarySettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save and Return to Medical Claim' }))
 
     await waitFor(() => expect(onMedicalEntitlementSaved).toHaveBeenCalledTimes(1))
-    expect(screen.queryByText('Enter a valid fixed monthly salary.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Enter a fixed monthly salary greater than RM0.00.'),
+    ).not.toBeInTheDocument()
   })
 
   it('stays in medical entitlement setup when saving fails', async () => {
@@ -253,14 +244,14 @@ describe('SalarySettings', () => {
 
   it('removes recurring allowance rows with the compact remove action', async () => {
     render(<SalarySettings />)
-    await screen.findByDisplayValue('3000')
+    await openSettingsEditor()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Recurring Allowance' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add recurring allowance' }))
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Phone allowance' },
     })
     fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '180' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save allowance' }))
     fireEvent.click(within(await openAllowanceActionMenu()).getByText('Remove'))
 
     expect(screen.getByText('No recurring additions configured.')).toBeInTheDocument()
@@ -268,14 +259,14 @@ describe('SalarySettings', () => {
 
   it('loads recurring allowance rows into the single draft row for editing', async () => {
     render(<SalarySettings />)
-    await screen.findByDisplayValue('3000')
+    await openSettingsEditor()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Recurring Allowance' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add recurring allowance' }))
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Phone allowance' },
     })
     fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '180' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save allowance' }))
 
     fireEvent.click(within(await openAllowanceActionMenu()).getByText('Edit'))
 
@@ -285,7 +276,7 @@ describe('SalarySettings', () => {
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Internet allowance' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save allowance' }))
 
     expect(screen.getAllByText('Internet allowance').length).toBeGreaterThan(0)
     expect(screen.queryByText('Phone allowance')).not.toBeInTheDocument()
@@ -294,34 +285,21 @@ describe('SalarySettings', () => {
 
   it('does not show the apply salary shortcut before settings are saved', async () => {
     render(<SalarySettings />)
-    await screen.findByDisplayValue('3000')
+    await screen.findByRole('button', { name: 'Edit settings' })
 
     expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
   })
 
   it('shows a settings-saved notice that distinguishes settings from salary submission', async () => {
-    const toastHandler = vi.fn()
-    window.addEventListener(toastEvents.name, toastHandler)
     render(<SalarySettings />)
-    try {
-      await screen.findByDisplayValue('3000')
+    await openSettingsEditor()
 
-      fireEvent.click(screen.getByRole('button', { name: 'Save Salary' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save salary settings' }))
 
-      await waitFor(() =>
-        expect(toastHandler).toHaveBeenCalledWith(
-          expect.objectContaining({
-            detail: expect.objectContaining({
-              type: 'toast',
-              message: expect.stringContaining('Apply Salary uses these values'),
-            }),
-          }),
-        ),
-      )
-      expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
-    } finally {
-      window.removeEventListener(toastEvents.name, toastHandler)
-    }
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Salary settings saved. Payable Salary now reflects the updated values.',
+    )
+    expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
   })
 
   it('renders approved December previous-year snapshot values as read-only', async () => {
@@ -342,7 +320,8 @@ describe('SalarySettings', () => {
     }
 
     render(<SalarySettings />)
-    await screen.findByDisplayValue('3000')
+    await openSettingsEditor()
+    fireEvent.click(screen.getByText('Previous year salary snapshot'))
 
     expect(screen.getByText('Using approved Dec 2025 salary record.')).toBeInTheDocument()
     expect(screen.getByLabelText('Basic')).toHaveValue(3800)
