@@ -87,6 +87,9 @@ export const getLegalComplianceAssessment = (assessmentId, { signal } = {}) =>
 export const getLegalComplianceAssessmentPdfUrl = (assessmentId) =>
   `${API_BASE}legal-compliance-assessments/${encodeURIComponent(assessmentId)}/pdf`
 
+export const getLegalComplianceAssessmentWordUrl = (assessmentId) =>
+  `${API_BASE}legal-compliance-assessments/${encodeURIComponent(assessmentId)}/word`
+
 export const saveLegalComplianceAssessment = (payload, { signal } = {}) =>
   requestJson(
     'legal-compliance-assessments',

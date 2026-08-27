@@ -28,8 +28,10 @@ import {
   buildVendorLoaCreatePayload,
   getCreatedAssignmentId,
   getVendorLoaUrl,
+  getVendorLoaWordUrl,
 } from './vendorLoaCreatePayload'
 import VendorLoaReviewStep from './VendorLoaReviewStep'
+import { downloadCommercialWord } from '../../shared/commercialWordDownload'
 import useCommercialCreationSuccess from '../../shared/useCommercialCreationSuccess'
 
 const paymentTermOptions = ['Before pickup/delivery', '14 days', '30 days', '45 days', '60 days']
@@ -37,6 +39,12 @@ const vendorLoaSuccessActions = [
   {
     key: 'generate',
     label: 'Generate LOA',
+    color: 'secondary',
+    variant: 'outline',
+  },
+  {
+    key: 'generate-word',
+    label: 'Generate Word',
     color: 'secondary',
     variant: 'outline',
   },
@@ -91,15 +99,17 @@ const VendorLoaCreateFlow = ({ project, origin = 'project', onBack }) => {
   )
   const handleSuccessAction = useCallback(
     (action, receipt) => {
-      if (action !== 'generate' || !project?.id || !receipt.vendorId) return
-      window.open(
-        getVendorLoaUrl({
-          projectId: project.id,
-          vendorId: receipt.vendorId,
-          assignmentId: receipt.detailId,
-        }),
-        '_blank',
-      )
+      if (!project?.id || !receipt.vendorId) return
+      const urlParams = {
+        projectId: project.id,
+        vendorId: receipt.vendorId,
+        assignmentId: receipt.detailId,
+      }
+      if (action === 'generate-word') {
+        return downloadCommercialWord(getVendorLoaWordUrl(urlParams), 'vendor-loa.docx')
+      }
+      if (action !== 'generate') return
+      window.open(getVendorLoaUrl(urlParams), '_blank')
     },
     [project?.id],
   )

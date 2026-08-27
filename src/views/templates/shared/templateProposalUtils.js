@@ -17,6 +17,7 @@ import {
   API_BASE,
   getTemplateBaseUrl,
   getTemplatePdfUrl as buildTemplatePdfUrl,
+  getTemplateWordUrl as buildTemplateWordUrl,
   getTemplateResourceUrl,
 } from './templateApi'
 import { getProposalListPath } from '../proposals/proposalTabs'
@@ -141,3 +142,5 @@ export const normalizeTemplateRow = (row, type) => {
 }
 
 export const getTemplatePdfUrl = (type, templateId) => templateConfigs[type].pdfUrl(templateId)
+
+export const getTemplateWordUrl = (type, templateId) => buildTemplateWordUrl(type, templateId)

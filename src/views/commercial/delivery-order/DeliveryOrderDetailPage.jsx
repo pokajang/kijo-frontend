@@ -9,6 +9,7 @@ import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 import { buildDeliveryOrderUpdatePayload } from './deliveryOrderUpdatePayload'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
 
 const normalizeDeliveryOrder = (order = {}) => {
   const normalizedItems = Array.isArray(order?.items)
@@ -83,6 +84,14 @@ const DeliveryOrderDetailPage = () => {
   const handleGeneratePdf = () => {
     if (!record?.do_id) return
     window.open(`${import.meta.env.VITE_API_BASE}delivery-orders/${record.do_id}/pdf`, '_blank')
+  }
+
+  const handleGenerateWord = () => {
+    if (!record?.do_id) return
+    return downloadCommercialWord(
+      `${import.meta.env.VITE_API_BASE}delivery-orders/${record.do_id}/word`,
+      `delivery-order-${record.do_number || record.do_id}.docx`,
+    )
   }
 
   const handleDelete = async () => {
@@ -170,6 +179,7 @@ const DeliveryOrderDetailPage = () => {
             : null,
           { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) },
           { key: 'pdf', label: 'Generate PDF', onClick: handleGeneratePdf },
+          { key: 'word', label: 'Generate Word', onClick: handleGenerateWord },
           {
             key: 'delete',
             label: 'Delete',

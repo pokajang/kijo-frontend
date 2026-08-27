@@ -78,6 +78,19 @@ export const getVendorLoaUrl = ({ projectId, vendorId, assignmentId }) => {
   return `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(projectId)}/loa?${params.toString()}`
 }
 
+export const getVendorLoaWordUrl = ({ projectId, vendorId, assignmentId }) => {
+  const params = new URLSearchParams({
+    project_id: String(projectId),
+    vendor_id: String(vendorId),
+  })
+
+  if (assignmentId) {
+    params.set('assignment_id', String(assignmentId))
+  }
+
+  return `${import.meta.env.VITE_API_BASE}projects/${encodeURIComponent(projectId)}/loa/word?${params.toString()}`
+}
+
 export const getCreatedAssignmentId = (result) =>
   result?.assignment_id ??
   result?.data?.assignment_id ??

@@ -96,6 +96,7 @@ describe('invoice receivable action handlers', () => {
             id: 12,
             invoice_ref_no: 'INV-012',
             invoice_date: '2026-08-04',
+            service_type: 'Equipment Supply',
             amount: 100,
             grand_total: 100,
             quotation_remarks: 'Deliver all items together.',
@@ -120,6 +121,7 @@ describe('invoice receivable action handlers', () => {
     expect(setInvoices).toHaveBeenCalledWith([
       expect.objectContaining({
         quotationRemarks: 'Deliver all items together.',
+        isEquipment: true,
         breakdown: [expect.objectContaining({ item_remarks: 'Matte navy-blue enclosure.' })],
       }),
     ])

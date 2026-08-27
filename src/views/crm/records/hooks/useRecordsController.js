@@ -1098,6 +1098,7 @@ export const useRecordsController = () => {
     handleEdit,
     handleRevise,
     handleGeneratePdf,
+    handleGenerateWord,
     handleSyncClientDetails: handleSyncClientDetailsDirect,
   } = handlers
   const {
@@ -1296,9 +1297,11 @@ export const useRecordsController = () => {
       : handleDelete,
     onChangeToFail: isAggregateTab ? handleAllChangeToFail : handleChangeToFail,
     onChangeToSuccess: isAggregateTab ? handleAllChangeToSuccess : handleChangeToSuccessWithDetails,
-    onGenerate: isAggregateTab
-      ? (record) => runByRecordService(record, 'handleGeneratePdf', record)
-      : handleGeneratePdf,
+    onGenerate: (record, format = 'pdf') => {
+      const handlerName = format === 'word' ? 'handleGenerateWord' : 'handleGeneratePdf'
+      if (isAggregateTab) return runByRecordService(record, handlerName, record)
+      return format === 'word' ? handleGenerateWord?.(record) : handleGeneratePdf(record)
+    },
     onReAward: isAggregateTab ? handleAllReAward : handleReAwardWithDetails,
     onUnAward: isAggregateTab
       ? (record) => runByRecordService(record, 'handleUnAward', record?.id)

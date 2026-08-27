@@ -9,9 +9,11 @@ import {
 } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
+import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 import AttachmentsModal from '../list-special/AttachmentsModal'
 import {
   getTemplatePdfUrl,
+  getTemplateWordUrl,
   normalizeTemplateRow,
   stripHtml,
   templateConfigs,
@@ -324,6 +326,19 @@ const TemplateProposalTable = ({
       label: config.exportLabel,
       onClick: () => window.open(getTemplatePdfUrl(type, row.templateId), '_blank'),
     },
+    ...(type !== 'special' || row.proposalMode === 'write'
+      ? [
+          {
+            key: 'word',
+            label: type === 'ih' ? 'Generate Word Brochure' : 'Generate Word Proposal',
+            onClick: () =>
+              downloadWordDocument(
+                getTemplateWordUrl(type, row.templateId),
+                `${type}-proposal-${row.templateId}.docx`,
+              ),
+          },
+        ]
+      : []),
     ...(type === 'special' && row.attachmentsCount > 0
       ? [
           {

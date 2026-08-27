@@ -17,6 +17,7 @@ import {
   buildExistingBmCopyConfirmation,
   getTemplateId,
   getTemplatePdfUrl,
+  getTemplateWordUrl,
   isSuccess,
   normalizeTemplateRow,
   sanitizeDisplayHtml,
@@ -25,6 +26,7 @@ import {
 } from './templateProposalUtils'
 import { getProposalListPath } from '../proposals/proposalTabs'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 
 const DetailField = ({ label, value, children }) => (
   <CCol xs={12} md={6} lg={4}>
@@ -244,6 +246,19 @@ const TemplateProposalDetailPage = ({ type }) => {
           label: config.exportLabel,
           onClick: () => window.open(getTemplatePdfUrl(type, record.templateId), '_blank'),
         },
+        ...(type !== 'special' || record.proposalMode === 'write'
+          ? [
+              {
+                key: 'word',
+                label: type === 'ih' ? 'Generate Word Brochure' : 'Generate Word Proposal',
+                onClick: () =>
+                  downloadWordDocument(
+                    getTemplateWordUrl(type, record.templateId),
+                    `${type}-proposal-${record.templateId}.docx`,
+                  ),
+              },
+            ]
+          : []),
         ...(record.proposalLanguage !== 'ms-MY'
           ? [
               {

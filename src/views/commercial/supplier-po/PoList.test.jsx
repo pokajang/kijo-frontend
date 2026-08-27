@@ -178,6 +178,7 @@ describe('SupplierPoRecords table wiring', () => {
       'View',
       'Preview',
       'PDF PO',
+      'Word PO',
       'Mark Paid',
       'Delete',
     ])

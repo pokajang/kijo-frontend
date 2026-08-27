@@ -9,9 +9,11 @@ import {
 } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
+import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 import AttachmentsModal from '../list-special/AttachmentsModal'
 import {
   getTemplatePdfUrl,
+  getTemplateWordUrl,
   normalizeTemplateRow,
   stripHtml,
   templateConfigs,
@@ -19,6 +21,7 @@ import {
 import {
   getTrainingEditUrl,
   getTrainingPdfUrl,
+  getTrainingWordUrl,
   normalizeTrainingTemplateRow,
 } from '../list-training/trainingTemplateUtils'
 import { PROPOSAL_TYPES, getProposalDetailPath, proposalTypeMeta } from './proposalTabs'
@@ -124,6 +127,11 @@ const getEditUrl = (row) => {
 const getPdfUrl = (row) => {
   if (row.type === 'training') return getTrainingPdfUrl(row.templateId)
   return getTemplatePdfUrl(row.type, row.templateId)
+}
+
+const getWordUrl = (row) => {
+  if (row.type === 'training') return getTrainingWordUrl(row.templateId)
+  return getTemplateWordUrl(row.type, row.templateId)
 }
 
 const normalizeRows = (dataByType) =>
@@ -284,6 +292,19 @@ const AllProposalsTable = ({
       label: row.type === 'training' || row.type === 'ih' ? 'Export Brochure' : 'Export Proposal',
       onClick: () => window.open(getPdfUrl(row), '_blank'),
     },
+    ...(row.type !== 'special' || row.proposalMode === 'write'
+      ? [
+          {
+            key: 'word',
+            label:
+              row.type === 'training' || row.type === 'ih'
+                ? 'Generate Word Brochure'
+                : 'Generate Word Proposal',
+            onClick: () =>
+              downloadWordDocument(getWordUrl(row), `${row.type}-proposal-${row.templateId}.docx`),
+          },
+        ]
+      : []),
     ...(row.type === 'special' && row.attachmentsCount > 0
       ? [
           {

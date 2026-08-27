@@ -84,8 +84,19 @@ const RecordDetailsActions = ({
             onClick={() => handlers?.handleGeneratePdf?.(record)}
             {...pdfIssuanceProps}
           >
-            Generate Quote
+            Generate PDF
           </CButton>
+          {handlers?.handleGenerateWord ? (
+            <CButton
+              size="sm"
+              color="secondary"
+              variant="outline"
+              onClick={() => handlers.handleGenerateWord(record)}
+              {...issuanceProps}
+            >
+              Generate Word
+            </CButton>
+          ) : null}
           <CButton
             size="sm"
             color="secondary"

@@ -4,6 +4,7 @@ import {
   deleteTemplate,
   getTemplate,
   getTemplatePdfUrl,
+  getTemplateWordUrl,
   listTemplates,
   updateTemplate,
 } from './templateApi'
@@ -21,6 +22,13 @@ describe('templateApi', () => {
 
   it('builds PDF URLs', () => {
     expect(getTemplatePdfUrl('training', 12)).toContain('proposal-templates/training/12/pdf')
+  })
+
+  it('builds Word URLs', () => {
+    expect(getTemplateWordUrl('training', 12)).toContain('proposal-templates/training/12/word')
+    expect(getTemplateWordUrl('ih', 12)).toContain('proposal-templates/ih/12/word')
+    expect(getTemplateWordUrl('manpower', 12)).toContain('proposal-templates/manpower/12/word')
+    expect(getTemplateWordUrl('special', 12)).toContain('proposal-templates/special/12/word')
   })
 
   it('lists and gets templates with credentials', async () => {

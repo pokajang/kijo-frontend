@@ -247,6 +247,59 @@ describe('recordsActions PDF opening', () => {
   )
 })
 
+describe('recordsActions Word download', () => {
+  it.each([
+    ['training-tab', 'training'],
+    ['ih-tab', 'ih'],
+    ['equipment-tab', 'equipment'],
+    ['manpower-tab', 'manpower'],
+    ['special-tab', 'special'],
+  ])('downloads a %s quotation DOCX using the response filename', async (serviceKey, route) => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: {
+        get: vi.fn((name) =>
+          name === 'content-type'
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            : 'attachment; filename="quotation.docx"',
+        ),
+      },
+      blob: vi.fn(async () => new Blob(['docx'])),
+    })
+
+    const { handlers } = createDeleteHarness({ serviceKey })
+    await handlers.handleGenerateWord({ id: 68 })
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`quote-records/${route}/68/word`),
+      expect.objectContaining({ credentials: 'include', silentError: true }),
+    )
+    expect(click).toHaveBeenCalled()
+    expect(click.mock.instances.at(-1).download).toBe('quotation.docx')
+  })
+
+  it('refreshes authoritative approval state after a contextual Word 409', async () => {
+    fetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      headers: { get: vi.fn(() => 'application/json') },
+      json: vi.fn(async () => ({
+        message: 'Approval is required.',
+        issuance_context: { requires_approval: true, required_step: 'bd' },
+      })),
+    })
+    const onApprovalStateChanged = vi.fn()
+    const { handlers } = createDeleteHarness({ onApprovalStateChanged })
+
+    await handlers.handleGenerateWord({ id: 157 })
+
+    expect(onApprovalStateChanged).toHaveBeenCalledOnce()
+    expect(dialog.alert).toHaveBeenCalledWith(expect.stringContaining('Approval is required.'))
+  })
+})
+
 describe('recordsActions un-award safeguards', () => {
   it.each([
     ['training-tab', 'training'],

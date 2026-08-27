@@ -28,6 +28,8 @@ import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { fetchJson } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { getPaymentTermsCompactLabel } from '../../../shared/paymentTerms'
+import { downloadCommercialWord } from '../shared/commercialWordDownload'
+import { isWordInvoiceService } from '../invoice/actionHandlers'
 import DebtorUpdatePaymentModal from './DebtorUpdatePaymentModal'
 import DebtorLifecycleTabs from './DebtorLifecycleTabs'
 import { buildDebtorStats } from './debtorStats'
@@ -416,6 +418,11 @@ const Debtors = () => {
   }
 
   const getActions = (debtor) => {
+    const hasInvoiceDocument =
+      debtor.sourceType === 'invoice' &&
+      debtor.sourceId !== null &&
+      debtor.sourceId !== undefined &&
+      debtor.sourceId !== ''
     const paymentAction = isCancelledStatus(debtor.status)
       ? debtor.hasPaymentHistory
         ? {
@@ -448,7 +455,7 @@ const Debtors = () => {
                 state: { record, returnTo: getCurrentReturnTo(location) },
               }),
           },
-      debtor.sourceType === 'invoice'
+      hasInvoiceDocument
         ? {
             key: 'pdf',
             label: 'PDF Invoice',
@@ -456,6 +463,17 @@ const Debtors = () => {
               window.open(
                 `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(record.sourceId)}/pdf`,
                 '_blank',
+              ),
+          }
+        : null,
+      hasInvoiceDocument && isWordInvoiceService(debtor.serviceType)
+        ? {
+            key: 'word',
+            label: 'Word Invoice',
+            onClick: (record) =>
+              downloadCommercialWord(
+                `${import.meta.env.VITE_API_BASE}invoices/${encodeURIComponent(record.sourceId)}/word`,
+                `invoice-${record.sourceId}.docx`,
               ),
           }
         : null,

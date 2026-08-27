@@ -4,12 +4,23 @@ import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
 import { getAgeTone } from '../debtors/debtorUtils'
 import { getInvoicePaymentTermsSourceLabel } from '../../../shared/paymentTerms'
+import { isWordInvoiceService, isWordReceiptService } from './actionHandlers'
 
 const emptyValue = '-'
 const columnStorageKey = 'commercial.invoices.visible-columns.v4'
 const isCancelledInvoice = (status) =>
   ['cancelled', 'canceled', 'void'].includes(
     String(status || '')
+      .trim()
+      .toLowerCase(),
+  )
+const isPaidInvoice = (status) =>
+  String(status || '')
+    .trim()
+    .toLowerCase() === 'paid'
+const isEquipmentService = (serviceType) =>
+  ['equipment', 'equipment supply'].includes(
+    String(serviceType || '')
       .trim()
       .toLowerCase(),
   )
@@ -205,6 +216,11 @@ const InvoiceTable = ({
           String(inv?.paymentMethod || '')
             .toLowerCase()
             .includes('hrd')
+        const isEquipment = inv.isEquipment ?? isEquipmentService(serviceType)
+        const isWordInvoiceSupported =
+          inv.isWordInvoiceSupported ?? isWordInvoiceService(serviceType)
+        const isWordReceiptSupported =
+          inv.isWordReceiptSupported ?? isWordReceiptService(serviceType)
 
         return {
           ...inv,
@@ -232,6 +248,9 @@ const InvoiceTable = ({
           totalDisplay: inv.grandTotal || emptyValue,
           status: inv.status || emptyValue,
           isHrdTraining,
+          isEquipment,
+          isWordInvoiceSupported,
+          isWordReceiptSupported,
           internalPicDisplay:
             inv.internalPic?.code || inv.internalPic?.name || inv.internalPic?.id || emptyValue,
         }
@@ -308,11 +327,25 @@ const InvoiceTable = ({
         label: 'PDF Invoice',
         onClick: () => onAction('generate', inv),
       },
-      inv.status === 'Paid'
+      inv.isWordInvoiceSupported
+        ? {
+            key: 'generate-word',
+            label: 'Word Invoice',
+            onClick: () => onAction('generateWord', inv),
+          }
+        : null,
+      isPaidInvoice(inv.status)
         ? {
             key: 'receipt',
             label: 'PDF Receipt',
             onClick: () => onAction('receipt', inv),
+          }
+        : null,
+      inv.isWordReceiptSupported && isPaidInvoice(inv.status)
+        ? {
+            key: 'receipt-word',
+            label: 'Word Receipt',
+            onClick: () => onAction('receiptWord', inv),
           }
         : null,
       !isCancelledInvoice(inv.status)

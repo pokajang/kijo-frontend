@@ -9,9 +9,11 @@ import {
 } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { countByPredicate, formatCount } from '../../../utils/stats/formatStats'
+import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 import {
   getTrainingEditUrl,
   getTrainingPdfUrl,
+  getTrainingWordUrl,
   normalizeTrainingTemplateRow,
 } from './trainingTemplateUtils'
 import { getProposalDetailPath } from '../proposals/proposalTabs'
@@ -331,6 +333,15 @@ export default function TemplateTable({
       key: 'export',
       label: 'Export Brochure',
       onClick: () => window.open(getTrainingPdfUrl(row.templateId), '_blank'),
+    },
+    {
+      key: 'word',
+      label: 'Generate Word Brochure',
+      onClick: () =>
+        downloadWordDocument(
+          getTrainingWordUrl(row.templateId),
+          `training-proposal-${row.templateId}.docx`,
+        ),
     },
     ...(row.proposalLanguage !== 'ms-MY'
       ? [
