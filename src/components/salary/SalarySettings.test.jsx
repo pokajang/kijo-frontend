@@ -119,7 +119,7 @@ describe('SalarySettings', () => {
     fireEvent.change(screen.getByLabelText('Basic'), { target: { value: '3600' } })
     fireEvent.change(screen.getByLabelText('Allowance'), { target: { value: '240' } })
     fireEvent.change(screen.getByLabelText('Increment'), { target: { value: '100' } })
-    expect(screen.getByLabelText('Total')).toHaveValue('3940.00')
+    expect(screen.getByLabelText('Total')).toHaveValue('3,940.00')
     expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Description')).not.toBeInTheDocument()
 

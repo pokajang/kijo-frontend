@@ -6,6 +6,7 @@ import WhatsNewNotifier from '../components/WhatsNewNotifier'
 import { RightDrawerProvider, useRightDrawer } from '../components/right-drawer/RightDrawerContext'
 import { KnowledgePanelProvider, useKnowledgePanel } from '../views/knowledge/KnowledgePanelContext'
 import KnowledgeSidePanel from '../views/knowledge/KnowledgeSidePanel'
+import { GlobalPromptProvider } from '../components/global-prompts/GlobalPromptCoordinator'
 
 export const SidebarRightDrawerCoordinator = () => {
   const dispatch = useDispatch()
@@ -70,7 +71,9 @@ const DefaultLayoutShell = () => {
 const DefaultLayout = () => (
   <RightDrawerProvider>
     <KnowledgePanelProvider>
-      <DefaultLayoutShell />
+      <GlobalPromptProvider>
+        <DefaultLayoutShell />
+      </GlobalPromptProvider>
     </KnowledgePanelProvider>
   </RightDrawerProvider>
 )

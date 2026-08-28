@@ -264,9 +264,9 @@ const OtherClaimRecords = ({
       },
       {
         key: 'rejected',
-        label: 'Action Needed',
+        label: 'Rejected',
         value: countForStatus('Rejected'),
-        sublabel: 'revise rejected claims',
+        sublabel: 'final decision',
         tone: 'danger',
         onClick: () => setStatusFilter('Rejected'),
         actionTooltip: 'Show rejected claims',

@@ -32,6 +32,7 @@ const PasswordReset = React.lazy(() => import('./views/pages/login/PasswordReset
 const SharedWorkloadDashboard = React.lazy(
   () => import('./views/dashboard/workload/SharedWorkloadDashboard'),
 )
+const PaymentSummaryPublicPage = React.lazy(() => import('./views/public/PaymentSummaryPublicPage'))
 
 const App = () => {
   const { colorMode } = useColorModes('coreui-free-react-admin-template-theme')
@@ -71,6 +72,11 @@ const App = () => {
                           <SharedWorkloadDashboard />
                         </RightDrawerProvider>
                       }
+                    />
+                    <Route
+                      path="/share/payment-summary"
+                      name="Approved Payments Summary"
+                      element={<PaymentSummaryPublicPage />}
                     />
                     {/* Wildcard route for everything else */}
                     <Route

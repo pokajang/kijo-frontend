@@ -98,6 +98,22 @@ const AppSidebar = () => {
     }
   }, [])
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined
+
+    const mobileQuery = window.matchMedia('(max-width: 991.98px)')
+    const closeSidebarForMobile = (event = mobileQuery) => {
+      if (event.matches) {
+        dispatch({ type: 'set', sidebarShow: false })
+      }
+    }
+
+    closeSidebarForMobile()
+    mobileQuery.addEventListener('change', closeSidebarForMobile)
+
+    return () => mobileQuery.removeEventListener('change', closeSidebarForMobile)
+  }, [dispatch])
+
   return (
     <CSidebar
       ref={sidebarRef}

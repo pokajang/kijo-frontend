@@ -151,7 +151,7 @@ describe('PaymentQueueRecords', () => {
     expect(screen.getAllByText('Paid').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Blocked').length).toBeGreaterThan(0)
     expect(screen.getByText('Visible Total')).toBeInTheDocument()
-    expect(screen.getByText('RM 11121.29')).toBeInTheDocument()
+    expect(screen.getByText('RM 11,121.29')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /columns/i }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('button', { name: /csv/i }).length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: /^view$/i })).not.toBeInTheDocument()

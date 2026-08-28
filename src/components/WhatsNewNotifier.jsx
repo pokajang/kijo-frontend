@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CAlert, CButton, CCloseButton } from '@coreui/react'
 
 import { useAuth } from '../auth/AuthProvider'
+import { useGlobalPrompt } from './global-prompts/GlobalPromptCoordinator'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 
@@ -43,6 +44,7 @@ const WhatsNewNotifier = () => {
   const [notice, setNotice] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [visible, setVisible] = useState(false)
+  const promptActive = useGlobalPrompt('whats-new', 10, Boolean(notice && visible))
 
   useEffect(() => {
     if (!isAuthenticated || !user?.staff_id) return
@@ -99,7 +101,7 @@ const WhatsNewNotifier = () => {
     navigate('/whats-new')
   }
 
-  if (!notice || !visible) return null
+  if (!notice || !visible || !promptActive) return null
 
   const hasMultipleUnread = unreadCount > 1
 

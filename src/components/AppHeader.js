@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   CAlert,
@@ -60,9 +60,12 @@ const clearSignatureWarningDismissal = (staffId) => {
   window.sessionStorage.removeItem(key)
 }
 
+const SIGNATURE_REQUIRED_ROUTE_PREFIXES = ['/commercial/invoice']
+
 const AppHeader = () => {
   const headerRef = useRef()
   const navigate = useNavigate()
+  const location = useLocation()
   const dispatch = useDispatch()
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
@@ -220,7 +223,14 @@ const AppHeader = () => {
     }
   }
 
-  const signatureMissing = signatureStatus.checked && !signatureStatus.url && !signatureDismissed
+  const signatureRelevantToRoute = SIGNATURE_REQUIRED_ROUTE_PREFIXES.some((prefix) =>
+    location.pathname.startsWith(prefix),
+  )
+  const signatureMissing =
+    signatureRelevantToRoute &&
+    signatureStatus.checked &&
+    !signatureStatus.url &&
+    !signatureDismissed
   const hasUnreadWhatsNew = unreadWhatsNewCount > 0
   const themeToggleLabel = colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
   const themeToggleTooltip = colorMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'

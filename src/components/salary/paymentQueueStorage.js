@@ -28,6 +28,7 @@ export const normalizePaymentQueueRow = (row = {}) => ({
   paidAt: row.paidAt || '',
   paidBy: row.paidBy || '',
   paymentRunId: row.paymentRunId || null,
+  paymentSummaryId: row.paymentSummaryId || null,
   paymentDate: row.paymentDate || '',
   paymentReference: row.paymentReference || '',
   paymentMethod: row.paymentMethod || '',
@@ -75,6 +76,7 @@ export const markPaymentQueuePaid = async ({
   paymentReference = '',
   paymentMethod = '',
   remarks = '',
+  paymentSummaryId,
 }) => {
   const payload = await apiJson(`${API_BASE}hr/salary/payment-queue/mark-paid`, {
     method: 'POST',
@@ -86,6 +88,7 @@ export const markPaymentQueuePaid = async ({
       payment_reference: paymentReference,
       payment_method: paymentMethod,
       remarks,
+      payment_summary_id: paymentSummaryId,
       idempotency_key: `${staffId}:${period}:${paymentDate}:${paymentReference || paymentMethod}`,
     }),
   })
@@ -113,6 +116,7 @@ const toBulkRowsPayload = (rows = []) =>
   rows.map((row) => ({
     staff_id: row.staffId,
     payment_period: row.period,
+    payment_summary_id: row.paymentSummaryId,
   }))
 
 export const bulkMarkPaymentQueuePaid = async (rows, paymentForm = {}) => {

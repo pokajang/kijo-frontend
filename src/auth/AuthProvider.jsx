@@ -5,7 +5,7 @@ import { installApiClient, setCsrfToken } from '../api/apiClient'
 export const AuthContext = createContext(undefined)
 const API_BASE = import.meta.env.VITE_API_BASE || '/' // ensure trailing path segments resolve
 const SESSION_CHECK_INTERVAL_MS = 2 * 60 * 1000
-const PUBLIC_PATH_PREFIXES = ['/share/workload/', '/reset-password/']
+const PUBLIC_PATH_PREFIXES = ['/share/workload/', '/share/payment-summary', '/reset-password/']
 const LOGIN_SERVICE_ERROR = 'Login service returned an unexpected response. Please try again later.'
 const HANDBOOK_ACKNOWLEDGEMENT_DISMISSAL_PREFIX = 'kijo:handbook-acknowledgement:dismissed:'
 

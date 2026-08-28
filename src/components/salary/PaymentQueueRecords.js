@@ -380,6 +380,7 @@ const PaymentQueueRecords = ({
         payload = await markPaymentQueuePaid({
           staffId: row.staffId,
           period: row.period,
+          paymentSummaryId: row.paymentSummaryId,
           ...paymentForm,
         })
       } else if (actionContext.type === 'undo-paid') {

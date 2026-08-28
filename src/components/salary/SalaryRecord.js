@@ -264,9 +264,9 @@ const SalaryRecord = ({
       },
       {
         key: 'rejected',
-        label: 'Action Needed',
+        label: 'Rejected',
         value: countForStatus('Rejected'),
-        sublabel: 'revise rejected records',
+        sublabel: 'final decision',
         tone: 'danger',
         onClick: () => setStatusFilter('Rejected'),
         actionTooltip: 'Show rejected salary records',

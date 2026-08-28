@@ -1,7 +1,12 @@
 const API_EVENT = 'kijo:api'
 const API_BASE = import.meta.env.VITE_API_BASE || '/'
 const SILENT_PATHS = ['auth/session', 'auth/logout']
-const PUBLIC_UNSAFE_PATHS = ['auth/login', 'auth/password/forgot', 'auth/password/reset']
+const PUBLIC_UNSAFE_PATHS = [
+  'auth/login',
+  'auth/password/forgot',
+  'auth/password/reset',
+  'public/salary/payment-summary/',
+]
 
 let activeRequests = 0
 let unauthorizedHandler = null

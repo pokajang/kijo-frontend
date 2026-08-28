@@ -153,6 +153,7 @@ const PaymentQueueRecordDetailPage = () => {
           : await markPaymentQueuePaid({
               staffId: record.staffId,
               period: record.period,
+              paymentSummaryId: record.paymentSummaryId,
               ...paymentForm,
             })
       setNotice(payload?.message || 'Payment queue updated.')

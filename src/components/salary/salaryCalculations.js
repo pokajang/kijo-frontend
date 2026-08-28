@@ -1,5 +1,6 @@
 import socsoEisTable from './socsoEisTable'
 import socsoTable from './socsoTable'
+import { formatMoney as formatMoneyValue } from '../../utils/formatters/numberFormatters'
 
 export const MILEAGE_RATE = 0.6
 
@@ -10,7 +11,7 @@ const toMoneyNumber = (value) => {
 
 export const roundMoney = (value) => Math.round((toMoneyNumber(value) + Number.EPSILON) * 100) / 100
 
-export const formatMoney = (value) => `RM ${roundMoney(value).toFixed(2)}`
+export const formatMoney = (value) => formatMoneyValue(roundMoney(value))
 
 export const calculateMileageAmount = (km, rate = MILEAGE_RATE, distanceMethod = 'return') =>
   roundMoney(

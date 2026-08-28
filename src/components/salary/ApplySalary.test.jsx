@@ -126,7 +126,7 @@ describe('ApplySalary', () => {
     expect(screen.queryByLabelText('Salary Month')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Basic Salary')).not.toBeInTheDocument()
     expect(screen.getAllByText('Salary Period').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('RM 3000.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('RM 3,000.00').length).toBeGreaterThan(0)
   })
 
   it('opens the salary adjustment form directly', async () => {

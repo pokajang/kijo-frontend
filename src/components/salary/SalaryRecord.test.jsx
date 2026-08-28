@@ -115,6 +115,23 @@ describe('SalaryRecord', () => {
     expect(screen.getAllByText('RM 75.00').length).toBeGreaterThan(0)
   })
 
+  it('presents rejected salary records as a final decision rather than an action needed', async () => {
+    apiMock.apiJson.mockResolvedValue({
+      records: [{ ...detailRecord, status: 'Rejected', claims: undefined }],
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/my/salary/records']}>
+        <SalaryRecord />
+      </MemoryRouter>,
+    )
+
+    expect((await screen.findAllByText('Rejected')).length).toBeGreaterThan(0)
+    expect(screen.getByText('final decision')).toBeInTheDocument()
+    expect(screen.queryByText('Action Needed')).not.toBeInTheDocument()
+    expect(screen.queryByText('revise rejected records')).not.toBeInTheDocument()
+  })
+
   it('wires dropdown export claims, edit, and delete actions', async () => {
     const LocationProbe = () => {
       const location = useLocation()

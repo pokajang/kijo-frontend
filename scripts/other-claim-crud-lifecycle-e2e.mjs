@@ -243,19 +243,33 @@ const run = async () => {
     const removed = []
 
     for (const record of records) {
-      if (record.status === 'Cancelled' || record.status === 'Paid') continue
+      if (['Cancelled', 'Paid', 'Rejected'].includes(record.status)) continue
       const detail = await ownRecord(record.id)
       const belongsToE2E = detail?.claims?.some((claim) =>
         String(claim.description || '').startsWith('E2E '),
       )
       if (!belongsToE2E) continue
 
+      let deletableDetail = detail
+      if (record.status !== 'Draft' && record.status !== 'Cancelled') {
+        const { payload } = await apiRequest({
+          route: `hr/salary/other-claims/${record.id}/withdraw`,
+          method: 'POST',
+          body: {
+            reason: `${runLabel} cleanup of interrupted E2E record`,
+            record_version: Number(detail.recordVersion || 0) || undefined,
+          },
+        })
+        deletableDetail = payload.record || (await ownRecord(record.id))
+      }
+
       await apiRequest({
         route: `hr/salary/other-claims/${record.id}`,
         method: 'DELETE',
         body: {
+          confirmation: 'DELETE',
           reason: `${runLabel} cleanup of interrupted E2E record`,
-          record_version: Number(detail.recordVersion || 0) || undefined,
+          record_version: Number(deletableDetail?.recordVersion || 0) || undefined,
         },
       })
       removed.push(record.id)
@@ -272,8 +286,13 @@ const run = async () => {
   }
 
   const openNewAllowance = async () => {
-    await page.getByRole('button', { name: 'Add Claim', exact: true }).click()
+    const addClaim = page.getByRole('button', { name: 'Add Claim', exact: true })
+    if (await addClaim.count()) await addClaim.click()
     await page.getByRole('button', { name: 'Non-Recurring Allowance', exact: true }).click()
+    const addSelectedType = page.getByRole('button', { name: 'Add', exact: true })
+    if (!(await page.locator('#otherAllowanceDate').count()) && (await addSelectedType.count())) {
+      await addSelectedType.click()
+    }
     await page.locator('#otherAllowanceDate').waitFor({ state: 'visible' })
   }
 
@@ -353,6 +372,35 @@ const run = async () => {
     return rows.find(
       (row) => String(row.staffId) === String(staffId) && String(row.period) === String(period),
     )
+  }
+
+  const prepareAndIssuePaymentSummary = async (period) => {
+    const readiness = await apiRequest({
+      route: 'hr/salary/payment-summaries/readiness',
+      method: 'POST',
+      body: { payment_period: period },
+    })
+    assert(readiness.payload?.readiness?.ready, 'Payment summary readiness check failed.')
+
+    const prepared = await apiRequest({
+      route: 'hr/salary/payment-summaries',
+      method: 'POST',
+      body: {
+        payment_period: period,
+        recipient_email: 'salary.boss@amiosh.test',
+        recipient_name: 'Salary Boss UAT',
+        remarks: `${runLabel} payment summary lifecycle`,
+      },
+    })
+    const summaryId = prepared.payload?.record?.id
+    assert(summaryId, 'Preparing the payment summary did not return a record ID.')
+
+    const issued = await apiRequest({
+      route: `hr/salary/payment-summaries/${summaryId}/issue`,
+      method: 'POST',
+    })
+    assert(issued.payload?.record?.status === 'Issued', 'Payment summary was not issued.')
+    return issued.payload.record
   }
 
   try {
@@ -447,9 +495,20 @@ const run = async () => {
         .first()
       await row.waitFor({ state: 'visible' })
       await row.locator('.data-table-action-toggle').click()
-      await page.locator('.dropdown-menu.show').getByText('Delete Draft', { exact: true }).click()
+      await page
+        .locator('.dropdown-menu.show')
+        .getByText(/^(Delete Draft|Delete Permanently)$/)
+        .click()
       const dialog = page.getByRole('dialog')
-      await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
+      const confirmation = dialog.locator('input[placeholder="Type DELETE"]')
+      if (await confirmation.count()) {
+        await confirmation.fill('DELETE')
+        await poll(
+          'delete confirmation input',
+          async () => (await confirmation.inputValue()) === 'DELETE',
+        )
+      }
+      await dialog.getByRole('button', { name: /^(Delete|Delete Permanently)$/ }).click()
 
       await poll('draft deletion', async () => {
         const record = await ownRecord(draftRecordId, [200, 404])
@@ -513,11 +572,17 @@ const run = async () => {
       return `record=${edited.id}`
     })
 
-    await recordStep('REJECT submitted claim through finance detail UI', async () => {
+    await recordStep('CHECK then REJECT submitted claim through finance detail UI', async () => {
       await loginAs({ email: reviewerEmail, password: reviewerPassword })
+      await performFinancialAction(
+        originalRecordId,
+        'check',
+        `${runLabel} reviewer check before rejection`,
+      )
+      await loginAs({ email: approverEmail, password: approverPassword })
       const before = await financialRecord(originalRecordId)
       const reject = before.workflow?.availableActions?.find((action) => action.action === 'reject')
-      assert(reject, `Reject is not available for initial status ${before.status}.`)
+      assert(reject, `Reject is not available for checked status ${before.status}.`)
       const rejected = await performFinancialAction(
         originalRecordId,
         'reject',
@@ -528,51 +593,48 @@ const run = async () => {
       return rejected.status
     })
 
-    await recordStep('UPDATE rejected claim by creating and submitting a revision', async () => {
+    await recordStep('verify rejected claim is final and submit a replacement claim', async () => {
       await loginAs({ email, password })
       await page.goto(`${baseUrl}/my/salary/other-claims/records/${originalRecordId}`, {
         waitUntil: 'domcontentloaded',
       })
       await page.getByText('Rejected', { exact: true }).first().waitFor()
-      await page.getByRole('button', { name: 'Create Revision', exact: true }).click()
-      const dialog = page.getByRole('dialog')
-      await dialog.locator('textarea').fill(`${runLabel} corrected description and amount`)
-      await dialog.getByRole('button', { name: 'Create Revision', exact: true }).click()
-      await page.waitForURL(/\/my\/salary\/other-claims\/apply/)
+      assert(
+        !(await page.getByRole('button', { name: 'Create Revision', exact: true }).count()),
+        'Rejected claim unexpectedly permits revision.',
+      )
 
-      await page
-        .getByRole('button', { name: `Edit ${editedSubmittedDescription}`, exact: true })
-        .click()
-      await page.locator('#otherAllowanceDescription').fill(revisedDescription)
-      await page.locator('#otherAllowanceAmount').fill(updatedAmount)
-      await page.getByRole('button', { name: 'Save', exact: true }).click()
+      await page.goto(`${baseUrl}/my/salary/other-claims/apply`, {
+        waitUntil: 'domcontentloaded',
+      })
+      await selectClaimMonth()
+      await openNewAllowance()
+      await fillAllowance(revisedDescription, updatedAmount)
       await page.getByRole('button', { name: 'Submit', exact: true }).click()
       await page.getByRole('button', { name: 'Apply Another', exact: true }).waitFor()
 
-      const revision = await poll('revision submission', () =>
+      const revision = await poll('replacement submission', () =>
         findOwnRecordByDescription(revisedDescription, 'Submitted'),
       )
-      const original = await ownRecord(originalRecordId)
-      assert(revision.id !== originalRecordId, 'Revision reused the rejected application id.')
-      assert(Number(revision.revisionNo) === 2, `Expected revision 2, got ${revision.revisionNo}.`)
-      assert(
-        revision.claimReference === original.claimReference,
-        'Revision did not preserve the claim reference.',
-      )
+      assert(revision.id !== originalRecordId, 'Replacement reused the rejected application id.')
       revisionRecordId = revision.id
-      await screenshot('05-revision-submitted')
-      return `${revision.claimReference} rev ${revision.revisionNo}`
+      await screenshot('05-replacement-submitted')
+      return `${revision.claimReference} new record`
     })
 
-    await recordStep('APPROVE revised claim through every available finance stage', async () => {
-      const approved = await progressToApproved(revisionRecordId)
-      assert(approved.status === 'Approved', `Expected Approved, received ${approved.status}.`)
-      await screenshot('06-revision-approved')
-      return approved.status
-    })
+    await recordStep(
+      'APPROVE replacement claim through every available finance stage',
+      async () => {
+        const approved = await progressToApproved(revisionRecordId)
+        assert(approved.status === 'Approved', `Expected Approved, received ${approved.status}.`)
+        await screenshot('06-revision-approved')
+        return approved.status
+      },
+    )
 
     await recordStep('MARK PAID from payment queue UI', async () => {
       const approved = await financialRecord(revisionRecordId)
+      await prepareAndIssuePaymentSummary(claimMonth)
       const queueRow = await poll('payment queue row', () =>
         queueRecordFor(approved.staffId, claimMonth),
       )

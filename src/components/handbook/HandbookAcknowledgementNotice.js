@@ -13,6 +13,7 @@ import {
 } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { getHandbookAcknowledgementStatus } from '../../views/handbook/api/handbookApi'
+import { useGlobalPrompt } from '../global-prompts/GlobalPromptCoordinator'
 
 const STATUS = {
   IDLE: 'idle',
@@ -49,6 +50,11 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
   const [isMobile, setIsMobile] = useState(false)
   const [mobileModalVisible, setMobileModalVisible] = useState(false)
   const latestRequestRef = useRef(0)
+  const promptActive = useGlobalPrompt(
+    'handbook-acknowledgement',
+    100,
+    status === STATUS.REQUIRED && !dismissed,
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -123,7 +129,7 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
   }, [loadStatus, staffId])
 
   useEffect(() => {
-    if (!isMobile || status !== STATUS.REQUIRED || dismissed) {
+    if (!isMobile || status !== STATUS.REQUIRED || dismissed || !promptActive) {
       setMobileModalVisible(false)
       return undefined
     }
@@ -131,7 +137,7 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
     const timeoutId = window.setTimeout(() => setMobileModalVisible(true), MOBILE_REMINDER_DELAY_MS)
 
     return () => window.clearTimeout(timeoutId)
-  }, [dismissed, isMobile, status])
+  }, [dismissed, isMobile, promptActive, status])
 
   const dismissNotice = () => {
     dismissNoticeForSession(staffId, versionId)
@@ -144,12 +150,15 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
     navigate('/handbook')
   }
 
+  const requiredPromptBlocked = status === STATUS.REQUIRED && !promptActive
+
   if (
     !staffId ||
     status === STATUS.IDLE ||
     status === STATUS.LOADING ||
     status === STATUS.ACKNOWLEDGED ||
-    dismissed
+    dismissed ||
+    requiredPromptBlocked
   ) {
     return null
   }

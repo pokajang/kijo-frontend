@@ -4,10 +4,12 @@ import { DataTableCardHeader, DataTableStatsToggle } from '../../../components/d
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { financialModuleTabs } from '../../../components/navigation/moduleNavConfigs'
 import PaymentQueueRecords from '../../../components/salary/PaymentQueueRecords'
+import PaymentSummaryPanel from '../../../components/salary/PaymentSummaryPanel'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 
 const FinancialPaymentQueuePage = () => {
   const [scopeLabel, setScopeLabel] = useState('')
+  const [queueRefreshKey, setQueueRefreshKey] = useState(0)
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('financial.payment-queue')
 
@@ -30,7 +32,11 @@ const FinancialPaymentQueuePage = () => {
               />
             </DataTableCardHeader>
             <CCardBody className="records-page-card-body">
+              <PaymentSummaryPanel
+                onQueueChanged={() => setQueueRefreshKey((value) => value + 1)}
+              />
               <PaymentQueueRecords
+                key={queueRefreshKey}
                 onScopeLabelChange={setScopeLabel}
                 statsVisible={statsVisible}
                 controlsVisible={controlsVisible}

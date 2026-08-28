@@ -203,6 +203,33 @@ Current scheduler-dependent release jobs:
 - `workload:check-daily-capture` daily at 00:30.
 - `workload:prune-snapshot-payloads` weekly on Monday at 03:40.
 
+## Backend Queue Worker
+
+`QUEUE_CONNECTION=database` requires a continuously running Laravel queue
+worker. The scheduler does not process queued mail. Without a worker, password
+resets, workflow notices, and boss payment-summary links remain in the `jobs`
+table and recipients receive nothing.
+
+Configure the production process manager to keep this command running:
+
+```bash
+cd ~/kijo-laravel && php artisan queue:work database --sleep=3 --tries=5 --backoff=60 --timeout=120
+```
+
+After each deployment, restart the worker so it loads the new code, then verify
+queue health before issuing a payment summary:
+
+```bash
+php artisan queue:restart
+php artisan queue:monitor database:default --max=25
+php artisan queue:failed
+```
+
+Investigate an existing backlog before starting a stopped worker; starting it
+will attempt every queued historical email. Confirm a newly issued test summary
+leaves the `jobs` table and that its recipient receives both the secure-link
+email and the follow-up verification code.
+
 ## Release-Specific Migrations and Backfills
 
 Backfills are not part of the reusable deployment checklist unless the release
@@ -226,6 +253,88 @@ For every applicable data operation:
 - Record unexpected or unresolved rows instead of silently ignoring them.
 - Keep repair/inference backfills out of migrations unless the release design
   intentionally requires an automatic transactional transformation.
+
+### Salary and Other Claims Workflow and Payment Summaries (2026-08-28)
+
+This is a coordinated backend-and-frontend release. It completes salary and
+other-claim workflow email delivery, finance batch actions, payment-summary
+preparation, and the secure read-only payment briefing for Amin Rozak. Deploy
+the backend and its migrations before publishing the matching frontend build.
+
+Apply these additive migrations in order:
+
+```text
+database/migrations/2026_08_27_020000_create_hr_salary_email_deliveries_table.php
+database/migrations/2026_08_27_030000_create_hr_salary_payment_summaries.php
+database/migrations/2026_08_27_040000_allow_external_salary_payment_summary_recipients.php
+database/migrations/2026_08_28_010000_create_hr_salary_payment_summary_attachments.php
+```
+
+Review all pending migrations first. If this release is being deployed without
+other pending work, apply only the four paths above so unrelated migrations are
+not introduced accidentally:
+
+```bash
+cd ~/kijo-laravel
+
+php artisan migrate:status
+php artisan migrate --path=database/migrations/2026_08_27_020000_create_hr_salary_email_deliveries_table.php --force
+php artisan migrate --path=database/migrations/2026_08_27_030000_create_hr_salary_payment_summaries.php --force
+php artisan migrate --path=database/migrations/2026_08_27_040000_allow_external_salary_payment_summary_recipients.php --force
+php artisan migrate --path=database/migrations/2026_08_28_010000_create_hr_salary_payment_summary_attachments.php --force
+php artisan migrate:status | grep -E '2026_08_(27_0(20000|30000|40000)|28_010000)'
+```
+
+The migrations do not rewrite salary or claim amounts. Existing approved
+records remain authoritative and become eligible for a newly prepared payment
+summary. Existing attachments are copied into an immutable summary snapshot
+only when Finance prepares or regenerates that summary; there is no attachment
+backfill to run at deployment. The email-delivery deduplication ledger also
+starts empty intentionally and must not be populated from historical mail.
+
+The application default summary recipient is `Amin Rozak
+<aminrozak@amiosh.com>` in version-controlled configuration. This release does
+not require or authorize a production `.env` replacement. Confirm the address
+with Finance before issuing the first live summary.
+
+An optional notification reconciliation is available for workflow records that
+already existed before this release. Its apply mode can create in-app notices
+and queue email to current reviewers, approvers, applicants, or payment roles.
+Always retain and review the dry-run counts first; do not apply it merely
+because the command exists:
+
+```bash
+php artisan salary:reconcile-workflow-notifications --dry-run \
+  | tee "$HOME/salary-notification-reconcile-dry-run.txt"
+
+# Run only after Finance/HR approves notifying the reported historical records.
+php artisan salary:reconcile-workflow-notifications \
+  | tee "$HOME/salary-notification-reconcile-applied.txt"
+```
+
+After deployment, rebuild Laravel caches and restart the database queue worker
+using the standard commands above. Verify `jobs` and `failed_jobs` are clear,
+then exercise one disposable end-to-end cycle:
+
+- Applicant creates, edits, submits, receives a return comment, revises, and
+  resubmits one salary application and one other claim with an attachment.
+- Finance reviewer and approver process individual and batch actions, and the
+  notification badge count matches the visible actionable worklist.
+- Finance prepares the period summary, confirms readiness warnings and totals,
+  issues it to Amin Rozak, and verifies both secure-link and verification-code
+  messages leave the queue.
+- Open the public briefing with the emailed code, confirm staff totals and
+  line-item amounts, open a snapshotted attachment, then revoke or supersede the
+  disposable summary and confirm the old link no longer grants access.
+- Confirm non-Finance reviewer/approver views do not disclose protected final
+  payment amounts.
+
+Do not run `SalaryPaymentSummaryDemoSeeder` or
+`SalaryReleaseCandidateUatSeeder` in production. They are local/testing
+fixtures only. Rollback should normally revert the coordinated application
+commits while retaining the additive audit/snapshot tables. Do not roll back or
+drop summary tables after a live summary has been issued without a database
+backup and an explicit retention decision from Finance.
 
 ### Quotation and Equipment Commercial-Cycle DOCX Export
 

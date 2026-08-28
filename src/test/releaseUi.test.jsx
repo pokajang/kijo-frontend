@@ -487,7 +487,7 @@ describe('release UI behavior', () => {
 
     render(
       <Provider store={store}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={['/commercial/invoice']}>
           <AppHeader />
         </MemoryRouter>
       </Provider>,
@@ -501,5 +501,37 @@ describe('release UI behavior', () => {
       expect(screen.queryByText('Signature missing.')).not.toBeInTheDocument()
     })
     expect(window.sessionStorage.getItem('kijo:signature-warning:dismissed:7')).toBe('1')
+  })
+
+  it('suppresses the invoicing signature warning on salary and claim workflows', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url) => {
+        if (String(url).includes('signature')) {
+          return jsonResponse({ status: 'success', url: null })
+        }
+        return jsonResponse({ status: 'success', data: null, meta: { unread_count: 0 } })
+      }),
+    )
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={['/financial/payment-queue']}>
+          <AppHeader />
+        </MemoryRouter>
+      </Provider>,
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalled())
+    expect(screen.queryByText('Signature missing.')).not.toBeInTheDocument()
   })
 })
