@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { CCard, CCardBody, CCol, CProgress, CRow } from '@coreui/react'
 import { DataTableLoadingState } from '../../../components/datatable'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 
-const formatCurrency = (value) => `RM ${Number(value || 0).toLocaleString()}`
+const formatCurrency = (value) => formatMoney(value)
 
 const buildAchievement = (label, targetValue, currentValue, color = 'success') => {
   const target = Number(targetValue || 0)

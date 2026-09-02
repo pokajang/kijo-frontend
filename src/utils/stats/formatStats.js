@@ -1,16 +1,11 @@
-export const formatCount = (value) => {
-  const number = Number(value)
-  return Number.isFinite(number) ? Math.round(number).toLocaleString() : '0'
-}
+import {
+  formatCount as formatCanonicalCount,
+  formatMoney as formatCanonicalMoney,
+} from '../formatters/numberFormatters'
 
-export const formatMoney = (value) => {
-  const number = Number(value)
-  const amount = Number.isFinite(number) ? number : 0
-  return `RM ${amount.toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
+export const formatCount = (value) => formatCanonicalCount(value)
+
+export const formatMoney = (value) => formatCanonicalMoney(value)
 
 export const formatPercent = (value) => {
   const number = Number(value)

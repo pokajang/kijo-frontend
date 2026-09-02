@@ -1,0 +1,1 @@
+const o=(...e)=>{for(const r of e){const t=String(r??"").trim();if(t)return t}return""},c=(e={})=>o(e.project_type,e.projectType),s=(e={})=>o(e.service_category,e.serviceCategory,c(e))||"-",i=(e={})=>Number(e.quote_id??e.quoteId??0)>0;export{s as g,i};

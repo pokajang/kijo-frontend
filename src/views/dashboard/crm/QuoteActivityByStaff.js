@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { CButton, CButtonGroup } from '@coreui/react'
+import { formatCount, formatMoney } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import RankedMetricBreakdownCard from './RankedMetricBreakdownCard'
 
@@ -90,11 +91,7 @@ const QuoteActivityByStaff = ({ startDate, endDate }) => {
       error={error}
       startDate={startDate}
       endDate={endDate}
-      formatValue={
-        isValueMetric
-          ? (value) => `RM ${Number(value || 0).toLocaleString()}`
-          : (value) => Number(value || 0).toLocaleString()
-      }
+      formatValue={isValueMetric ? formatMoney : formatCount}
       barColorClass="bg-primary"
       headerActions={
         <CButtonGroup size="sm" role="group" aria-label="Select staff quotation metric">

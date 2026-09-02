@@ -11,6 +11,7 @@ import {
   useChartTickColor,
 } from '../../../utils/chartTheme'
 import { StatsStrip } from '../../../components/stats'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const stageColumns = [
   { key: 'LEADS', label: 'Leads' },
@@ -28,7 +29,7 @@ const formatAxisTick = (value) => {
   return numeric.toLocaleString()
 }
 
-const formatCurrency = (value) => `RM ${Number(value || 0).toLocaleString()}`
+const formatCurrency = (value) => formatMoney(value)
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`
 const normalizeScopeLabel = (value) =>
   String(value || '').replace(

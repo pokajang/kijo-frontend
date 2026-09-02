@@ -39,7 +39,8 @@
     "release:ih-readiness": "node scripts/ih-release-readiness.mjs",
     "datatable:audit": "node scripts/datatable-audit.mjs",
     "qa:tables": "node scripts/table-unification-qa.mjs",
-    "guard:api-routes": "node scripts/guard-api-routes.mjs"
+    "guard:api-routes": "node scripts/guard-api-routes.mjs",
+    "guard:money-formatting": "node scripts/guard-money-display-formatting.mjs"
   },
   "dependencies": {
     "@coreui/chartjs": "^4.1.0",

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { DataTableRecordList, DataTableStatusBadge } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
+import { formatCount } from '../../../utils/formatters/numberFormatters'
 import { formatMoney } from '../../../utils/stats/formatStats'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { recordsDesktopBreakpoint } from '../../crm/records/config/recordsTableUiShared'
@@ -62,10 +63,9 @@ const computeAge = (date, asOfDate) => {
   return `${diff}d`
 }
 
-const formatInvoiceAmount = (value) => Number(value || 0).toLocaleString()
 const formatProjectCount = (count) => {
   const normalizedCount = Number(count || 0)
-  return `${normalizedCount.toLocaleString()} ${normalizedCount === 1 ? 'project' : 'projects'}`
+  return `${formatCount(normalizedCount)} ${normalizedCount === 1 ? 'project' : 'projects'}`
 }
 const formatInvoiceRef = (invoice) => String(invoice?.invoice_ref_no || '').trim() || '-'
 const getInvoiceDebtor = (invoice) => invoice.client_name || invoice.invoice_client_name || '-'
@@ -165,8 +165,7 @@ const debtorTableColumns = [
     align: 'end',
     width: '6rem',
     shrinkToFit: true,
-    getExportValue: (invoice) =>
-      `RM ${formatInvoiceAmount(invoice.outstanding_amount ?? invoice.grand_total)}`,
+    getExportValue: (invoice) => formatMoney(invoice.outstanding_amount ?? invoice.grand_total),
   },
 ]
 
@@ -422,9 +421,7 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                 }
                 if (column.key === 'paymentTerms') return renderInvoicePaymentTerms(invoice)
                 if (column.key === 'amount') {
-                  return `RM ${formatInvoiceAmount(
-                    invoice.outstanding_amount ?? invoice.grand_total,
-                  )}`
+                  return formatMoney(invoice.outstanding_amount ?? invoice.grand_total)
                 }
                 return '-'
               }}
@@ -487,7 +484,7 @@ const MonthlyIncomeStatement = ({ startDate, endDate }) => {
                     label: 'Outstanding',
                     value: (
                       <span className="fw-semibold text-warning">
-                        RM {formatInvoiceAmount(invoice.outstanding_amount ?? invoice.grand_total)}
+                        {formatMoney(invoice.outstanding_amount ?? invoice.grand_total)}
                       </span>
                     ),
                   },

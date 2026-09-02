@@ -3,6 +3,7 @@ import CIcon from '@coreui/icons-react'
 import { cilChevronBottom, cilChevronTop } from '@coreui/icons'
 import { CButton } from '@coreui/react'
 import { DataTableLoadingState, DataTableSheet } from '../../../components/datatable'
+import { formatCount, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { API_BASE } from '../../marketing/pipeline/pipelineEntryUtils'
 import MonitoringCellDetailsPopover from './MonitoringCellDetailsPopover'
@@ -35,12 +36,12 @@ const secondaryMobileStages = [
   { key: 'NEGOTIATION', label: 'Negotiation' },
 ]
 
-const formatNumber = (value) => Number(value || 0).toLocaleString()
-const formatRm = (value) => Number(value || 0).toLocaleString()
+const formatMetricCount = (value) => formatCount(value)
+const formatRm = (value) => formatNumber(value, { minimumFractionDigits: 2 })
 const formatPeriodScope = (rangeLabel) =>
   rangeLabel ? `Reporting period: ${rangeLabel}` : 'Reporting period: selected period'
 
-const renderDetailMetric = (value, details, title, metricLabel, formatter = formatNumber) => (
+const renderDetailMetric = (value, details, title, metricLabel, formatter = formatMetricCount) => (
   <MonitoringCellDetailsPopover
     value={value}
     details={details}

@@ -1,5 +1,6 @@
 import { getPeriodRangeLabel, isDefaultPeriodRange } from '../../../../components/filters'
 import { formatCount, getTopGroupByCount } from '../../../../utils/stats/formatStats'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 import {
   classificationLabel,
   classificationTypes,
@@ -31,10 +32,7 @@ export const formatPipelineCurrency = (value) => {
   if (value === null || value === undefined || value === '') return '-'
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '-'
-  return `RM ${amount.toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+  return formatMoney(amount, { fallback: '-' })
 }
 
 export const getPipelineRecordMobileMeta = (entry) =>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import CIcon from '@coreui/icons-react'
 import { cilX } from '@coreui/icons'
 import { CButton, CModal, CModalBody, CModalHeader, CModalTitle, CPopover } from '@coreui/react'
+import { formatCount, formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const dateFormatter = new Intl.DateTimeFormat('en-MY', {
   day: 'numeric',
@@ -16,9 +17,7 @@ const formatDate = (value) => {
 }
 
 const formatRm = (value) =>
-  value === null || value === undefined || value === ''
-    ? ''
-    : `RM ${Number(value || 0).toLocaleString()}`
+  value === null || value === undefined || value === '' ? '' : formatMoney(value)
 
 const getDetailsCount = (details) => Number(details?.count || 0)
 
@@ -144,7 +143,7 @@ const MonitoringCellDetailsContent = ({ details, metricLabel, onProofPreview }) 
     <div className="monitoring-cell-details-content">
       <div className="d-flex align-items-center gap-2 mb-2">
         <span className="badge rounded-pill text-bg-light border fw-normal text-muted">
-          {count.toLocaleString()} {count === 1 ? 'record' : 'records'}
+          {formatCount(count)} {count === 1 ? 'record' : 'records'}
         </span>
         {metricLabel && <span className="text-muted">{metricLabel}</span>}
       </div>
@@ -156,7 +155,7 @@ const MonitoringCellDetailsContent = ({ details, metricLabel, onProofPreview }) 
                 <div className="monitoring-cell-details-stage-row d-flex align-items-center justify-content-between gap-2 mb-1">
                   <span className="fw-semibold text-body">{group.label}</span>
                   <span className="badge rounded-pill text-bg-light border fw-normal text-muted">
-                    {group.items.length.toLocaleString()}{' '}
+                    {formatCount(group.items.length)}{' '}
                     {group.items.length === 1 ? 'record' : 'records'}
                   </span>
                 </div>
@@ -187,7 +186,7 @@ const MonitoringCellDetailsContent = ({ details, metricLabel, onProofPreview }) 
         )}
       </div>
       {details?.truncated && hiddenCount > 0 && (
-        <div className="small text-muted mt-2">+{hiddenCount.toLocaleString()} more</div>
+        <div className="small text-muted mt-2">+{formatCount(hiddenCount)} more</div>
       )}
     </div>
   )

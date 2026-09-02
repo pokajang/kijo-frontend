@@ -14,6 +14,7 @@ import {
 } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatMoney, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
@@ -33,7 +34,7 @@ const formatAxisTick = (value) => {
   return numeric.toLocaleString()
 }
 
-const formatAmount = (value) => Number(value || 0).toLocaleString()
+const formatAmount = (value) => formatNumber(value, { minimumFractionDigits: 2 })
 
 const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
   const tickColor = useChartTickColor()
@@ -248,10 +249,10 @@ const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
                 <div className="text-muted small">Total for period ({periodRangeLabel})</div>
                 <div className="d-flex flex-wrap align-items-baseline gap-3">
                   {showInvoicedSeries && (
-                    <div className="h4 mb-1 text-primary">RM {formatAmount(periodInvoiced)}</div>
+                    <div className="h4 mb-1 text-primary">{formatMoney(periodInvoiced)}</div>
                   )}
                   {showReceivedSeries && (
-                    <div className="h4 mb-1 text-success">RM {formatAmount(periodReceived)}</div>
+                    <div className="h4 mb-1 text-success">{formatMoney(periodReceived)}</div>
                   )}
                 </div>
               </div>
@@ -328,12 +329,12 @@ const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
                       <div className="dashboard-metric-mobile-values">
                         {showInvoicedSeries && (
                           <div className="dashboard-metric-mobile-primary">
-                            Invoiced RM {formatAmount(row.invoiced)}
+                            Invoiced {formatMoney(row.invoiced)}
                           </div>
                         )}
                         {showReceivedSeries && (
                           <div className="dashboard-metric-mobile-secondary">
-                            Received RM {formatAmount(row.received)}
+                            Received {formatMoney(row.received)}
                           </div>
                         )}
                       </div>
@@ -348,12 +349,12 @@ const MonthlyFinancialTrendWidget = ({ startDate, endDate }) => {
                       <div className="dashboard-metric-mobile-values">
                         {showInvoicedSeries && (
                           <div className="dashboard-metric-mobile-primary">
-                            Invoiced RM {formatAmount(periodInvoiced)}
+                            Invoiced {formatMoney(periodInvoiced)}
                           </div>
                         )}
                         {showReceivedSeries && (
                           <div className="dashboard-metric-mobile-secondary">
-                            Received RM {formatAmount(periodReceived)}
+                            Received {formatMoney(periodReceived)}
                           </div>
                         )}
                       </div>

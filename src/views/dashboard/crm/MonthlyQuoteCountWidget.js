@@ -2,6 +2,7 @@
 import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatCount } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
 
@@ -70,7 +71,7 @@ const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
       key: 'count',
       label: 'Count',
       align: 'end',
-      render: (row) => row.countValue?.toLocaleString(),
+      render: (row) => formatCount(row.countValue),
     },
   ]
   const footerRows = [
@@ -81,7 +82,7 @@ const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
         { key: 'label', content: 'Total', className: 'text-muted' },
         {
           key: 'count',
-          content: periodTotal.toLocaleString(),
+          content: formatCount(periodTotal),
           align: 'end',
           className: 'text-muted',
         },
@@ -108,7 +109,7 @@ const MonthlyQuoteCountWidget = ({ period, startDate, endDate }) => {
             <CCol xs={12} lg={8} className="d-flex flex-column">
               <div className="mb-2">
                 <div className="text-muted small">Total for period</div>
-                <div className="h4 mb-1 text-warning">{periodTotal.toLocaleString()} quotes</div>
+                <div className="h4 mb-1 text-warning">{formatCount(periodTotal)} quotes</div>
               </div>
               <div className="position-relative w-100 flex-grow-1" style={{ minHeight: '260px' }}>
                 <CChartLine

@@ -1,9 +1,10 @@
 ﻿import React from 'react'
 import { CCard, CCardHeader, CCardBody, CRow, CCol, CPopover } from '@coreui/react'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatMoney, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 
-const formatCurrency = (value) => `RM ${Number(value || 0).toLocaleString()}`
+const formatCurrency = (value) => formatMoney(value)
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)}%`
 
 const RoiCalculationPopoverContent = ({ awardedValue, targetValue, roi }) => (
@@ -120,7 +121,7 @@ const AwardedValueBreakdownCard = ({
       key: 'value',
       label: 'Value (RM)',
       align: 'end',
-      render: (item) => Number(item.value || 0).toLocaleString(),
+      render: (item) => formatNumber(item.value, { minimumFractionDigits: 2 }),
     },
   ]
   const footerRows = [
@@ -136,7 +137,7 @@ const AwardedValueBreakdownCard = ({
         },
         {
           key: 'total-value',
-          content: Number(totalAwarded).toLocaleString(),
+          content: formatNumber(totalAwarded, { minimumFractionDigits: 2 }),
           align: 'end',
           className: 'text-muted',
         },

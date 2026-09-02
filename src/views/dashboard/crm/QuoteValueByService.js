@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import RankedMetricBreakdownCard from './RankedMetricBreakdownCard'
 
@@ -61,7 +62,7 @@ const QuoteValueByService = ({ startDate, endDate }) => {
       error={error}
       startDate={startDate}
       endDate={endDate}
-      formatValue={(value) => `RM ${Number(value || 0).toLocaleString()}`}
+      formatValue={formatMoney}
       barColorClass="bg-primary"
     />
   )

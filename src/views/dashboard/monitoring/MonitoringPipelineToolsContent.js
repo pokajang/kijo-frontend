@@ -3,6 +3,7 @@ import CIcon from '@coreui/icons-react'
 import { cilInfo } from '@coreui/icons'
 import { CButton, CPopover } from '@coreui/react'
 import { DataTableSheet } from '../../../components/datatable'
+import { formatCount, formatNumber } from '../../../utils/formatters/numberFormatters'
 import MonitoringCellDetailsPopover from './MonitoringCellDetailsPopover'
 
 const notTrackedLabel = <span className="small text-muted">Not tracked</span>
@@ -64,7 +65,8 @@ const PipelineQuantityInfo = () => (
   </div>
 )
 
-const formatNumber = (value) => Number(value || 0).toLocaleString()
+const formatMetricCount = (value) => formatCount(value)
+const formatRm = (value) => formatNumber(value, { minimumFractionDigits: 2 })
 const formatPeriodScope = (rangeLabel) =>
   rangeLabel ? `Reporting period: ${rangeLabel}` : 'Reporting period: selected period'
 
@@ -91,7 +93,7 @@ const renderDetailMetric = (value, details, title, metricLabel) => (
     details={details}
     title={title}
     metricLabel={metricLabel}
-    formatter={formatNumber}
+    formatter={formatMetricCount}
   />
 )
 
@@ -100,7 +102,7 @@ const renderSegmentCell = (value, details, title, metricLabel) =>
     ? notTrackedLabel
     : renderDetailMetric(value, details, title, metricLabel)
 const renderSegmentPlainCell = (value) =>
-  value === null || value === undefined ? notTrackedLabel : formatNumber(value)
+  value === null || value === undefined ? notTrackedLabel : formatRm(value)
 
 const PeriodQuantityMobileList = ({ rows, periodColumns, totals }) => (
   <div className="d-md-none d-grid gap-2">
@@ -110,7 +112,7 @@ const PeriodQuantityMobileList = ({ rows, periodColumns, totals }) => (
           <div className="fw-semibold">
             {index + 1}. {formatPipelineToolLabel(row.label)}
           </div>
-          <div className="fw-semibold">Total: {formatNumber(row.total)}</div>
+          <div className="fw-semibold">Total: {formatMetricCount(row.total)}</div>
         </div>
         <div className="row g-2">
           {periodColumns.map((column) => (
@@ -135,7 +137,7 @@ const PeriodQuantityMobileList = ({ rows, periodColumns, totals }) => (
     <div className="dashboard-table-mobile-card dashboard-metric-mobile-total-row fw-semibold">
       <div className="d-flex justify-content-between gap-2 mb-2">
         <div>Total</div>
-        <div>{formatNumber(totals?.total)}</div>
+        <div>{formatMetricCount(totals?.total)}</div>
       </div>
       <div className="row g-2">
         {periodColumns.map((column) => (
@@ -290,7 +292,7 @@ const PeriodQuantityTable = ({ rows, periodColumns, totals }) => {
           })),
           {
             key: 'total',
-            content: formatNumber(row.total),
+            content: formatMetricCount(row.total),
             className: 'border-0 text-center fw-semibold monitoring-total-col',
           },
         ],
@@ -318,7 +320,7 @@ const PeriodQuantityTable = ({ rows, periodColumns, totals }) => {
             })),
             {
               key: 'total',
-              content: formatNumber(totals?.total),
+              content: formatMetricCount(totals?.total),
               className: 'border-0 text-center monitoring-total-col',
             },
           ],

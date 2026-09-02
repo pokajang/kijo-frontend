@@ -8,14 +8,12 @@ import dialog from '../../../components/dialog/dialogService'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { fetchDetailJson } from '../../../utils/detailPages'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const emptyValue = '-'
 
-const money = (value) => {
-  const parsed = Number.parseFloat(value)
-  return `RM ${Number.isFinite(parsed) ? parsed.toFixed(2) : '0.00'}`
-}
+const money = (value) => formatMoney(Number.parseFloat(value) || 0)
 
 const DetailLongField = ({ label, value }) => (
   <CCol xs={12}>

@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import LoadingImage from '../../../components/LoadingImage'
 import { DataTableDetailShell, DataTableStatusBadge } from '../../../components/datatable'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import { fetchJson, fetchJsonGet, isAbortError } from '../../dashboard/shared/fetchUtils'
 import {
   API_BASE,
@@ -18,10 +19,7 @@ const formatCurrency = (value) => {
   if (value === null || value === undefined || value === '') return '-'
   const amount = Number(value)
   if (!Number.isFinite(amount)) return '-'
-  return `RM ${amount.toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+  return formatMoney(amount, { fallback: '-' })
 }
 
 const getEntryTypeTone = (entryType) => {

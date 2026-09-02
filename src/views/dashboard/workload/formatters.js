@@ -1,4 +1,7 @@
-import { CURRENCY_FRACTION_DIGITS, CURRENCY_PREFIX } from './constants'
+import {
+  formatMoney,
+  formatNumber as formatDisplayNumber,
+} from '../../../utils/formatters/numberFormatters'
 
 export const formatDateLocal = (date) => {
   const year = date.getFullYear()
@@ -7,13 +10,9 @@ export const formatDateLocal = (date) => {
   return `${year}-${month}-${day}`
 }
 
-export const formatCount = (value) => Number(value || 0).toLocaleString()
+export const formatCount = (value) => formatDisplayNumber(value)
 
-export const formatCurrency = (value) =>
-  `${CURRENCY_PREFIX}${Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: CURRENCY_FRACTION_DIGITS,
-    maximumFractionDigits: CURRENCY_FRACTION_DIGITS,
-  })}`
+export const formatCurrency = (value) => formatMoney(value)
 
 export const formatCountLabel = (value, singular, plural = `${singular}s`) => {
   const count = Number(value || 0)

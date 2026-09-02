@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { CCard, CCardHeader, CCardBody, CRow, CCol, CWidgetStatsB } from '@coreui/react'
 import { DataTableLoadingState } from '../../../components/datatable'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 
@@ -88,7 +89,7 @@ const QuoteValueByPerson = ({ startDate, endDate }) => {
                         <small className="text-muted">({pct}%)</small>
                       </>
                     }
-                    value={`RM ${item.totalValue.toLocaleString()}`}
+                    value={formatMoney(item.totalValue)}
                   />
                 </CCol>
               )

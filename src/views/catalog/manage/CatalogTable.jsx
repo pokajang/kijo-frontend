@@ -3,6 +3,7 @@ import React, { useMemo } from 'react'
 import { DataTableRecordList, DataTableTextCell } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { countByPredicate, formatCount, getTopGroupByCount } from '../../../utils/stats/formatStats'
+import { formatNumber } from '../../../utils/formatters/numberFormatters'
 
 const emptyValue = '-'
 const columnStorageKey = 'catalog.manage.visible-columns.v4'
@@ -95,9 +96,11 @@ const dataColumns = [
   },
 ]
 
-const formatMoney = (value) => {
+const formatPrice = (value) => {
   const price = Number.parseFloat(value)
-  return Number.isFinite(price) ? price.toFixed(2) : '0.00'
+  return Number.isFinite(price)
+    ? formatNumber(price, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '0.00'
 }
 
 const renderTextCell = (value, column) => (
@@ -130,7 +133,7 @@ const CatalogTable = ({
           category: item.category_id || emptyValue,
           supplier: item.supplier_name || emptyValue,
           latestPrice: Number.isFinite(price) ? price : 0,
-          latestPriceDisplay: formatMoney(item.supplier_price),
+          latestPriceDisplay: formatPrice(item.supplier_price),
           unit: item.unit || emptyValue,
           priceDate: item.price_date || '',
           priceDateDisplay: item.price_date || emptyValue,

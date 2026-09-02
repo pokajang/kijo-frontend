@@ -14,6 +14,7 @@ import {
 } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatCount, formatMoney, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
@@ -103,7 +104,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
           {formatMonthLabel(row.month)}
           {Number(row.terminatedAmount || 0) > 0 && (
             <div className="small text-muted">
-              Excl. terminated RM {Number(row.terminatedAmount || 0).toLocaleString()}
+              Excl. terminated {formatMoney(row.terminatedAmount)}
             </div>
           )}
         </>
@@ -115,7 +116,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
             key: 'amount',
             label: 'Value (RM)',
             align: 'end',
-            render: (row) => (Number(row.amount) || 0).toLocaleString(),
+            render: (row) => formatNumber(row.amount, { minimumFractionDigits: 2 }),
           },
         ]
       : []),
@@ -125,7 +126,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
             key: 'count',
             label: 'Realized Jobs',
             align: 'end',
-            render: (row) => (Number(row.count) || 0).toLocaleString(),
+            render: (row) => formatCount(row.count),
           },
         ]
       : []),
@@ -145,7 +146,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
           ? [
               {
                 key: 'total-value',
-                content: periodTotal.toLocaleString(),
+                content: formatNumber(periodTotal, { minimumFractionDigits: 2 }),
                 mobileLabel: 'Value (RM)',
                 align: 'end',
                 className: 'text-muted',
@@ -156,7 +157,7 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
           ? [
               {
                 key: 'total-count',
-                content: periodQuoteTotal.toLocaleString(),
+                content: formatCount(periodQuoteTotal),
                 mobileLabel: 'Realized Jobs',
                 align: 'end',
                 className: 'text-muted',
@@ -267,18 +268,18 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                 <div className="text-muted small">Total for period ({periodRangeLabel})</div>
                 <div className="d-flex flex-wrap align-items-baseline gap-3">
                   {showValueSeries && (
-                    <div className="h4 mb-1 text-success">RM {periodTotal.toLocaleString()}</div>
+                    <div className="h4 mb-1 text-success">{formatMoney(periodTotal)}</div>
                   )}
                   {showCountSeries && (
                     <div className="h4 mb-1 text-warning">
-                      Realized Jobs: {periodQuoteTotal.toLocaleString()}
+                      Realized Jobs: {formatCount(periodQuoteTotal)}
                     </div>
                   )}
                 </div>
                 {terminatedTotal > 0 && (
                   <div className="small text-muted">
-                    Excludes terminated: RM {terminatedTotal.toLocaleString()} across{' '}
-                    {terminatedCountTotal.toLocaleString()} jobs
+                    Excludes terminated: {formatMoney(terminatedTotal)} across{' '}
+                    {formatCount(terminatedCountTotal)} jobs
                   </div>
                 )}
               </div>
@@ -376,19 +377,19 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                           </div>
                           {terminatedAmount > 0 && (
                             <div className="dashboard-metric-mobile-subtitle">
-                              Excl. terminated RM {terminatedAmount.toLocaleString()}
+                              Excl. terminated {formatMoney(terminatedAmount)}
                             </div>
                           )}
                         </div>
                         <div className="dashboard-metric-mobile-values">
                           {showValueSeries && (
                             <div className="dashboard-metric-mobile-primary">
-                              RM {amount.toLocaleString()}
+                              {formatMoney(amount)}
                             </div>
                           )}
                           {showCountSeries && (
                             <div className="dashboard-metric-mobile-secondary">
-                              Realized Jobs {count.toLocaleString()}
+                              Realized Jobs {formatCount(count)}
                             </div>
                           )}
                         </div>
@@ -404,12 +405,12 @@ const MonthlySalesWidget = ({ period, startDate, endDate }) => {
                       <div className="dashboard-metric-mobile-values">
                         {showValueSeries && (
                           <div className="dashboard-metric-mobile-primary">
-                            RM {periodTotal.toLocaleString()}
+                            {formatMoney(periodTotal)}
                           </div>
                         )}
                         {showCountSeries && (
                           <div className="dashboard-metric-mobile-secondary">
-                            Realized Jobs {periodQuoteTotal.toLocaleString()}
+                            Realized Jobs {formatCount(periodQuoteTotal)}
                           </div>
                         )}
                       </div>

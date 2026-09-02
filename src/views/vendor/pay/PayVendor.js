@@ -25,6 +25,7 @@ import { listActiveProjectOptions, listAssignedVendors } from '../../project/man
 import slugify from '../../../lib/slugify'
 import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
 import { apiFetch } from '../../../api/apiClient'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -555,10 +556,7 @@ const PayVendor = () => {
                   <>
                     <CCol md={3}>
                       <CFormLabel>Award Value</CFormLabel>
-                      <CFormInput
-                        value={`RM ${parseFloat(selectedVendor?.award_value || 0).toFixed(2)}`}
-                        disabled
-                      />
+                      <CFormInput value={formatMoney(selectedVendor?.award_value)} disabled />
                     </CCol>
 
                     <CCol md={3}>

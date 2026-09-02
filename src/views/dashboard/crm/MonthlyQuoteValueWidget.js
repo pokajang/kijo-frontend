@@ -14,6 +14,7 @@ import {
 } from '@coreui/react'
 import { CChartLine } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatCount, formatMoney, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { useChartSemanticColors, useChartTickColor } from '../../../utils/chartTheme'
@@ -126,7 +127,7 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
             key: 'amount',
             label: 'Value (RM)',
             align: 'end',
-            render: (row) => row.amount.toLocaleString(),
+            render: (row) => formatNumber(row.amount, { minimumFractionDigits: 2 }),
           },
         ]
       : []),
@@ -136,7 +137,7 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
             key: 'count',
             label: 'Quotes',
             align: 'end',
-            render: (row) => row.count.toLocaleString(),
+            render: (row) => formatCount(row.count),
           },
         ]
       : []),
@@ -151,7 +152,7 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
           ? [
               {
                 key: 'value',
-                content: periodTotal.toLocaleString(),
+                content: formatNumber(periodTotal, { minimumFractionDigits: 2 }),
                 align: 'end',
                 className: 'text-muted',
               },
@@ -161,7 +162,7 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
           ? [
               {
                 key: 'count',
-                content: periodCountTotal.toLocaleString(),
+                content: formatCount(periodCountTotal),
                 align: 'end',
                 className: 'text-muted',
               },
@@ -270,12 +271,10 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
               <div className="mb-2">
                 <div className="text-muted small">Total for period ({periodRangeLabel})</div>
                 {showValueSeries && (
-                  <div className="h4 mb-1 text-primary">RM {periodTotal.toLocaleString()}</div>
+                  <div className="h4 mb-1 text-primary">{formatMoney(periodTotal)}</div>
                 )}
                 {showCountSeries && (
-                  <div className="h6 mb-0 text-warning">
-                    {periodCountTotal.toLocaleString()} quotes
-                  </div>
+                  <div className="h6 mb-0 text-warning">{formatCount(periodCountTotal)} quotes</div>
                 )}
               </div>
               <div className="position-relative w-100 flex-grow-1" style={{ minHeight: '260px' }}>
@@ -380,12 +379,12 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
                         <div className="dashboard-metric-mobile-values">
                           {showValueSeries && (
                             <div className="dashboard-metric-mobile-primary">
-                              RM {amount.toLocaleString()}
+                              {formatMoney(amount)}
                             </div>
                           )}
                           {showCountSeries && (
                             <div className="dashboard-metric-mobile-secondary">
-                              Quotes {count.toLocaleString()}
+                              Quotes {formatCount(count)}
                             </div>
                           )}
                         </div>
@@ -401,12 +400,12 @@ const MonthlyQuoteValueWidget = ({ period, startDate, endDate }) => {
                       <div className="dashboard-metric-mobile-values">
                         {showValueSeries && (
                           <div className="dashboard-metric-mobile-primary">
-                            RM {periodTotal.toLocaleString()}
+                            {formatMoney(periodTotal)}
                           </div>
                         )}
                         {showCountSeries && (
                           <div className="dashboard-metric-mobile-secondary">
-                            Quotes {periodCountTotal.toLocaleString()}
+                            Quotes {formatCount(periodCountTotal)}
                           </div>
                         )}
                       </div>

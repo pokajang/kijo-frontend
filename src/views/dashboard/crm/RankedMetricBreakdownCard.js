@@ -1,9 +1,10 @@
 ﻿import React from 'react'
 import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatCount } from '../../../utils/formatters/numberFormatters'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 
-const defaultFormatValue = (value) => Number(value || 0).toLocaleString()
+const defaultFormatValue = (value) => formatCount(value)
 
 const RankedMetricBreakdownCard = ({
   metricTitle,

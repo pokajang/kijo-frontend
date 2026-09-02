@@ -156,8 +156,9 @@ export const formatContributionMoney = (value) =>
 
 export const formatCompactContributionMoney = (value) => {
   const amount = Number(value || 0)
-  if (Math.abs(amount) >= 1_000_000) return `RM ${(amount / 1_000_000).toFixed(2)}M`
-  if (Math.abs(amount) >= 1_000) return `RM ${(amount / 1_000).toFixed(0)}K`
+  // money-formatting-guard: allow compact notation
+  if (Math.abs(amount) >= 1_000_000) return `RM ${(amount / 1_000_000).toFixed(2)}M` // money-formatting-guard: allow
+  if (Math.abs(amount) >= 1_000) return `RM ${(amount / 1_000).toFixed(0)}K` // money-formatting-guard: allow
   return `RM ${amount.toLocaleString('en-MY')}`
 }
 

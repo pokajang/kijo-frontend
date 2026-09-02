@@ -32,13 +32,9 @@ export const getTodayDate = () => {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10)
 }
 
-export const formatMoney = (value) =>
-  `RM ${Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+export const formatMoney = (value) => formatDisplayMoney(value)
 
-export const formatCount = (value) => Number(value || 0).toLocaleString()
+export const formatCount = (value) => formatDisplayCount(value)
 
 export const getStatusTone = (status) => {
   const normalized = String(status || '').toLowerCase()
@@ -150,3 +146,7 @@ export const manualDebtorToForm = (row = {}) => ({
   attachmentUrl: row.attachmentUrl || '',
   attachmentOriginalName: row.attachmentOriginalName || '',
 })
+import {
+  formatCount as formatDisplayCount,
+  formatMoney as formatDisplayMoney,
+} from '../../../utils/formatters/numberFormatters'

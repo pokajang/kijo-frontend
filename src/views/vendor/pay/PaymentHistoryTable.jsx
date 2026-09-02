@@ -18,7 +18,8 @@ import {
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
-import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatCount, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 
 const dataColumns = [
@@ -169,7 +170,7 @@ const PaymentHistoryTable = ({
           status: payment.status || '-',
           invoice: payment.receipt_url || payment.receipt_path || '',
           amount: Number(payment.amount || 0),
-          amountDisplay: `RM ${Number(payment.amount || 0).toFixed(2)}`,
+          amountDisplay: formatMoney(payment.amount),
         })),
     [payments],
   )
@@ -446,9 +447,9 @@ const PaymentHistoryTable = ({
         resetDeps={[searchText, selectedPeriodRange, statusFilter]}
       />
       <div className="text-end fw-bold mt-2">
-        <div>Total Paid: RM {totalPaid.toFixed(2)}</div>
-        <div>Total Due: RM {totalDue.toFixed(2)}</div>
-        <div>Grand Total: RM {grandTotal.toFixed(2)}</div>
+        <div>Total Paid: {formatMoney(totalPaid)}</div>
+        <div>Total Due: {formatMoney(totalDue)}</div>
+        <div>Grand Total: {formatMoney(grandTotal)}</div>
       </div>
     </>
   )

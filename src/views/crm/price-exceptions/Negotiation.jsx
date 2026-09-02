@@ -36,6 +36,7 @@ import { useDataTableStatsVisibility } from '../../../hooks/datatable'
 import { extractRolesFromSession, hasAnyAllowedRole } from '../../../utils/roles'
 import { quoteApiUrl } from '../quotes/quoteApi'
 import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
+import { formatNumber } from '../../../utils/formatters/numberFormatters'
 
 const serviceOptions = [
   { value: 'all', label: 'All services' },
@@ -154,11 +155,7 @@ const defaultVisibleColumns = {
 
 const requiredColumns = new Set(['request', 'status', 'workflow'])
 
-const money = (value) =>
-  Number(value || 0).toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+const money = (value) => formatNumber(value, { minimumFractionDigits: 2 })
 
 const statusTone = (status) => {
   if (status === 'pending') return 'warning'

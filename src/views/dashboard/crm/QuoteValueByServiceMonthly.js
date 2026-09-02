@@ -2,6 +2,7 @@
 import { CCard, CCardHeader, CCardBody, CRow, CCol } from '@coreui/react'
 import { CChartBar } from '@coreui/react-chartjs'
 import { DataTableEmbeddedList, DataTableLoadingState } from '../../../components/datatable'
+import { formatMoney, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { fetchJsonGet, isAbortError } from '../shared/fetchUtils'
 import { formatDateRangeLabel } from '../shared/dateRangeUtils'
 import { useChartPalette, useChartTickColor } from '../../../utils/chartTheme'
@@ -97,7 +98,7 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
       key: 'totalValue',
       label: 'Total (RM)',
       align: 'end',
-      render: (row) => row.totalValue.toLocaleString(),
+      render: (row) => formatNumber(row.totalValue, { minimumFractionDigits: 2 }),
     },
   ]
   const monthFooterRows = [
@@ -108,7 +109,7 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
         { key: 'label', content: 'Total', className: 'text-muted' },
         {
           key: 'value',
-          content: totalValue.toLocaleString(),
+          content: formatNumber(totalValue, { minimumFractionDigits: 2 }),
           align: 'end',
           className: 'text-muted',
         },
@@ -155,7 +156,7 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
                       Total quotation value for period ({periodRangeLabel})
                     </div>
                     <div className="h2 mb-0 text-primary text-end ms-auto">
-                      RM {totalValue.toLocaleString()}
+                      {formatMoney(totalValue)}
                     </div>
                   </div>
                 </CCol>
@@ -231,7 +232,7 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
                         </div>
                         <div className="dashboard-metric-mobile-values">
                           <div className="dashboard-metric-mobile-primary">
-                            RM {row.totalValue.toLocaleString()}
+                            {formatMoney(row.totalValue)}
                           </div>
                         </div>
                       </div>
@@ -244,7 +245,7 @@ const QuoteValueByServiceMonthly = ({ startDate, endDate }) => {
                         </div>
                         <div className="dashboard-metric-mobile-values">
                           <div className="dashboard-metric-mobile-primary">
-                            RM {totalValue.toLocaleString()}
+                            {formatMoney(totalValue)}
                           </div>
                         </div>
                       </div>

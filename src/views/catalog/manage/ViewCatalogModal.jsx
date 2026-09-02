@@ -13,6 +13,7 @@ import {
   CButton,
 } from '@coreui/react'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const ViewCatalogModal = ({ visible, onClose, item }) => {
   if (!item) return null
@@ -49,7 +50,7 @@ const ViewCatalogModal = ({ visible, onClose, item }) => {
               <CCol md={6}>
                 <CFormLabel>Supplier Price</CFormLabel>
                 <div>
-                  RM {parseFloat(item.supplier_price || 0).toFixed(2)}/{item.unit}
+                  {formatMoney(item.supplier_price)}/{item.unit}
                 </div>
               </CCol>
             </CRow>

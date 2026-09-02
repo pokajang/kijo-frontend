@@ -5,6 +5,7 @@ import { DataTableLoadingState, DataTableStatusBadge } from '../../../components
 import { quoteApiUrl } from '../quotes/quoteApi'
 import { useAuth } from '../../../auth/AuthProvider'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { formatNumber } from '../../../utils/formatters/numberFormatters'
 
 const serviceOptions = [
   { value: 'training', label: 'Training' },
@@ -33,11 +34,7 @@ const canApplyNegotiation = (row, user) =>
   getUserStaffId(user) > 0 &&
   getUserStaffId(user) === Number(row?.requested_by_id || 0)
 
-const money = (value) =>
-  Number(value || 0).toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+const money = (value) => formatNumber(value, { minimumFractionDigits: 2 })
 
 const hasValue = (value) => value !== null && value !== undefined && value !== ''
 
