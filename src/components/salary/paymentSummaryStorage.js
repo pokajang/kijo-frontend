@@ -21,17 +21,39 @@ export const fetchPaymentSummaries = async (period = '') => {
   }
 }
 
-export const checkPaymentSummaryReadiness = async (paymentPeriod) =>
-  post('hr/salary/payment-summaries/readiness', { payment_period: paymentPeriod })
+export const fetchPaymentSummaryCandidates = async (filters = {}) => {
+  const query = new URLSearchParams()
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) query.set(key, value)
+  })
+  const payload = await request(
+    `hr/salary/payment-summaries/candidates${query.size ? `?${query.toString()}` : ''}`,
+  )
+  return Array.isArray(payload.records) ? payload.records : []
+}
+
+export const checkPaymentSummaryReadiness = async (selectedItems, replacesSummaryId = null) =>
+  post('hr/salary/payment-summaries/readiness', {
+    selected_items: selectedItems,
+    replaces_summary_id: replacesSummaryId,
+  })
 
 export const preparePaymentSummary = async ({
   paymentPeriod,
   recipientEmail,
   recipientName,
   remarks,
+  batchDate,
+  batchName,
+  selectedItems,
+  replacesSummaryId,
 }) =>
   post('hr/salary/payment-summaries', {
     payment_period: paymentPeriod,
+    batch_date: batchDate,
+    batch_name: batchName,
+    selected_items: selectedItems,
+    replaces_summary_id: replacesSummaryId,
     recipient_email: recipientEmail,
     recipient_name: recipientName,
     remarks,
@@ -48,6 +70,16 @@ export const resendPaymentSummary = async (id) =>
 
 export const revokePaymentSummary = async (id, reason) =>
   post(`hr/salary/payment-summaries/${encodeURIComponent(id)}/revoke`, { reason })
+
+export const markPaymentSummaryPaid = async (id, payment) =>
+  post(`hr/salary/payment-summaries/${encodeURIComponent(id)}/mark-paid`, payment)
+
+export const updatePaymentSummaryCandidatePreference = async (preference) =>
+  request('hr/salary/payment-summaries/candidates/preference', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(preference),
+  })
 
 export const fetchBossPaymentSummaryStatus = async (token) =>
   post('public/salary/payment-summary/status', { token })

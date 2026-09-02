@@ -20,6 +20,7 @@
     padding: 0.25rem;
     background: var(--app-surface-raised);
     border-radius: 14px;
+    scroll-snap-type: x proximity;
   }
 
   .records-service-strip__tabs-viewport,
@@ -63,6 +64,7 @@
     min-width: var(--app-mobile-touch-target);
     padding: 0.5rem 0.75rem !important;
     line-height: 1.1;
+    scroll-snap-align: center;
   }
 
   .records-service-strip__tab.is-active,
@@ -202,4 +204,3 @@
     padding-top: 0.1rem;
   }
 }
-

@@ -52,7 +52,14 @@ export const paymentSummaryViewModel = (record = {}) => {
     },
     employeeCount: Number(snapshot.counts?.employees ?? employees.length),
     recordCount: Number(snapshot.counts?.records || 0),
-    periodLabel: snapshot.periodLabel || record.paymentPeriod || '—',
+    periodLabel:
+      snapshot.batchName ||
+      record.batchName ||
+      snapshot.batchDate ||
+      record.batchDate ||
+      snapshot.periodLabel ||
+      record.paymentPeriod ||
+      '—',
   }
 }
 

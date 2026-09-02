@@ -21,15 +21,19 @@ import {
 } from '@coreui/react'
 import { formatMoney } from './salaryCalculations'
 import PaymentSummaryDocument from './payment-summary/PaymentSummaryDocument'
+import PaymentSummaryCandidateSelector from './payment-summary/PaymentSummaryCandidateSelector'
 import {
   checkPaymentSummaryReadiness,
+  fetchPaymentSummaryCandidates,
   fetchPaymentSummaries,
   fetchPaymentSummary,
   getFinancePaymentSummaryAttachmentUrl,
   issuePaymentSummary,
+  markPaymentSummaryPaid,
   preparePaymentSummary,
   resendPaymentSummary,
   revokePaymentSummary,
+  updatePaymentSummaryCandidatePreference,
 } from './paymentSummaryStorage'
 
 const DEFAULT_BOSS_EMAIL = 'aminrozak@amiosh.com'
@@ -37,32 +41,50 @@ const currentPeriod = () => {
   const today = new Date()
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
 }
+const today = () => new Date().toISOString().slice(0, 10)
 const tones = {
   Draft: 'secondary',
   Issued: 'info',
+  'Partially Paid': 'warning',
   Paid: 'success',
   Revoked: 'danger',
   Superseded: 'warning',
   'Payment Reversed': 'danger',
 }
 
-const PaymentSummaryActions = ({ record, busy, onPreview, onRun, onRegenerate, onRevoke }) => (
+const PaymentSummaryActions = ({
+  record,
+  busy,
+  onPreview,
+  onRun,
+  onRegenerate,
+  onRevoke,
+  onMarkPaid,
+}) => (
   <div className="d-flex flex-wrap gap-1">
     <CButton size="sm" variant="outline" color="secondary" onClick={onPreview}>
       Preview
     </CButton>
     {record.status === 'Draft' && (
-      <CButton
-        size="sm"
-        color="primary"
-        disabled={busy}
-        onClick={() => onRun(() => issuePaymentSummary(record.id), 'Payment summary issued.')}
-      >
-        Issue
-      </CButton>
-    )}
-    {record.status === 'Issued' && (
       <>
+        <CButton
+          size="sm"
+          color="primary"
+          disabled={busy}
+          onClick={() => onRun(() => issuePaymentSummary(record.id), 'Payment summary issued.')}
+        >
+          Issue
+        </CButton>
+        <CButton size="sm" variant="outline" color="danger" onClick={onRevoke}>
+          Discard
+        </CButton>
+      </>
+    )}
+    {['Issued', 'Partially Paid'].includes(record.status) && (
+      <>
+        <CButton size="sm" color="success" disabled={busy} onClick={onMarkPaid}>
+          Record paid
+        </CButton>
         <CButton
           size="sm"
           variant="outline"
@@ -72,12 +94,16 @@ const PaymentSummaryActions = ({ record, busy, onPreview, onRun, onRegenerate, o
         >
           Resend
         </CButton>
-        <CButton size="sm" variant="outline" color="warning" onClick={onRegenerate}>
-          Regenerate
-        </CButton>
-        <CButton size="sm" variant="outline" color="danger" onClick={onRevoke}>
-          Revoke
-        </CButton>
+        {record.status === 'Issued' && (
+          <>
+            <CButton size="sm" variant="outline" color="warning" onClick={onRegenerate}>
+              Revise
+            </CButton>
+            <CButton size="sm" variant="outline" color="danger" onClick={onRevoke}>
+              Revoke
+            </CButton>
+          </>
+        )}
       </>
     )}
   </div>
@@ -96,14 +122,35 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
   const [prepareOpen, setPrepareOpen] = useState(false)
   const [preview, setPreview] = useState(null)
   const [readiness, setReadiness] = useState(null)
+  const [candidates, setCandidates] = useState([])
+  const [candidateLoading, setCandidateLoading] = useState(false)
+  const [selectedKeys, setSelectedKeys] = useState(() => new Set())
   const [form, setForm] = useState({
     paymentPeriod: currentPeriod(),
+    batchDate: today(),
+    batchName: '',
     recipientEmail: DEFAULT_BOSS_EMAIL,
     recipientName: 'Amin Rozak',
     remarks: '',
+    replacesSummaryId: null,
   })
   const [revokeTarget, setRevokeTarget] = useState(null)
   const [revokeReason, setRevokeReason] = useState('')
+  const [paidTarget, setPaidTarget] = useState(null)
+  const [paymentForm, setPaymentForm] = useState({
+    payment_date: today(),
+    payment_reference: '',
+    payment_method: 'Bank Transfer',
+    remarks: '',
+  })
+  const [paymentResult, setPaymentResult] = useState(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const activeStatuses = new Set(['Draft', 'Issued', 'Partially Paid'])
+  const activeRecords = records.filter((record) => activeStatuses.has(record.status))
+  const historyRecords = records.filter((record) => !activeStatuses.has(record.status))
+  const visibleRecords = historyOpen
+    ? [...activeRecords, ...historyRecords]
+    : [...activeRecords, ...historyRecords.slice(0, 3)]
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -143,12 +190,39 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
     }
   }
 
+  const selectedItems = () =>
+    candidates
+      .filter((record) => selectedKeys.has(record.key))
+      .map((record) => ({
+        subject_type: record.subjectType,
+        subject_id: record.subjectId,
+        record_version: record.recordVersion,
+      }))
+
+  const loadCandidates = async (record = null) => {
+    setCandidateLoading(true)
+    try {
+      const rows = await fetchPaymentSummaryCandidates()
+      setCandidates(rows)
+      const existingKeys = new Set(
+        (record?.selectedItems || []).map((item) => `${item.subjectType}:${item.subjectId}`),
+      )
+      setSelectedKeys(existingKeys)
+    } catch (err) {
+      setError(err?.message || 'Could not load approved payment requests.')
+      setCandidates([])
+      setSelectedKeys(new Set())
+    } finally {
+      setCandidateLoading(false)
+    }
+  }
+
   const checkReadiness = async () => {
     setBusy(true)
     setError('')
     setReadiness(null)
     try {
-      const payload = await checkPaymentSummaryReadiness(form.paymentPeriod)
+      const payload = await checkPaymentSummaryReadiness(selectedItems(), form.replacesSummaryId)
       setReadiness(payload.readiness)
     } catch (err) {
       setError(err?.message || 'Could not check payment readiness.')
@@ -158,7 +232,10 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
   }
 
   const prepare = async () => {
-    const payload = await run(() => preparePaymentSummary(form), 'Payment summary prepared.')
+    const payload = await run(
+      () => preparePaymentSummary({ ...form, selectedItems: selectedItems() }),
+      'Payment summary prepared.',
+    )
     if (payload?.record) {
       setPrepareOpen(false)
       setReadiness(null)
@@ -183,11 +260,65 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
     setReadiness(null)
     setForm({
       paymentPeriod: record?.paymentPeriod || currentPeriod(),
+      batchDate: record?.batchDate || today(),
+      batchName: record?.batchName || '',
       recipientEmail: record?.recipientEmail || defaultRecipient.email,
       recipientName: record?.recipientName || defaultRecipient.name,
-      remarks: record ? `Regenerated from ${record.reference}: ` : '',
+      remarks: record ? `Revised from ${record.reference}: ` : '',
+      replacesSummaryId: record?.id || null,
     })
     setPrepareOpen(true)
+    loadCandidates(record)
+  }
+
+  const updatePreference = async (record, values) => {
+    try {
+      const payload = await updatePaymentSummaryCandidatePreference({
+        subject_type: record.subjectType,
+        subject_id: record.subjectId,
+        ...values,
+      })
+      if (payload?.record) {
+        setCandidates((rows) => rows.map((row) => (row.key === record.key ? payload.record : row)))
+        if (!payload.record.eligible) {
+          setSelectedKeys((keys) => {
+            const next = new Set(keys)
+            next.delete(record.key)
+            return next
+          })
+          setReadiness(null)
+        }
+      }
+      return payload?.record || null
+    } catch (err) {
+      setError(err?.message || 'Could not update payment priority.')
+      throw err
+    }
+  }
+
+  const recordPaid = async () => {
+    if (!paidTarget) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    setPaymentResult(null)
+    try {
+      const payload = await markPaymentSummaryPaid(paidTarget.id, paymentForm)
+      await load()
+      onQueueChanged?.()
+      const skipped = Number(payload?.summary?.skipped || 0)
+      const failed = Number(payload?.summary?.failed || 0)
+      if (payload?.status === 'success' && skipped === 0 && failed === 0) {
+        setNotice(payload?.message || 'Payment recorded by Finance.')
+        setPaidTarget(null)
+      } else {
+        setPaymentResult(payload)
+      }
+    } catch (err) {
+      setError(err?.message || 'Could not record payment.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -198,7 +329,8 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
             Boss payment summaries
           </h2>
           <p className="small text-body-secondary mb-0">
-            Issue a verified, read-only briefing only after every review and approval is final.
+            Select approved, unpaid requests and issue a read-only payment briefing. Unselected
+            requests remain in the Finance queue.
           </p>
         </div>
         <CButton size="sm" color="primary" onClick={() => startPrepare()}>
@@ -237,7 +369,7 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {records.map((record) => (
+                {visibleRecords.map((record) => (
                   <CTableRow key={record.id}>
                     <CTableDataCell>
                       <button
@@ -248,7 +380,8 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
                         {record.reference}
                       </button>
                       <div className="small text-body-secondary">
-                        {record.paymentPeriod} · revision {record.revision}
+                        {record.batchName || record.batchDate || record.paymentPeriod} · revision{' '}
+                        {record.revision}
                       </div>
                     </CTableDataCell>
                     <CTableDataCell>
@@ -271,6 +404,16 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
                           setRevokeTarget(record)
                           setRevokeReason('')
                         }}
+                        onMarkPaid={() => {
+                          setPaymentResult(null)
+                          setPaidTarget(record)
+                          setPaymentForm({
+                            payment_date: today(),
+                            payment_reference: '',
+                            payment_method: 'Bank Transfer',
+                            remarks: '',
+                          })
+                        }}
                       />
                     </CTableDataCell>
                   </CTableRow>
@@ -280,7 +423,7 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
           </div>
 
           <div className="payment-summary-record-list d-grid gap-2 d-md-none">
-            {records.map((record) => (
+            {visibleRecords.map((record) => (
               <article className="payment-summary-record-card" key={record.id}>
                 <button
                   type="button"
@@ -294,7 +437,8 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
                   </span>
                   <span className="payment-summary-record-card__meta">
                     <span>
-                      {record.paymentPeriod} · revision {record.revision}
+                      {record.batchName || record.batchDate || record.paymentPeriod} · revision{' '}
+                      {record.revision}
                     </span>
                     <span>{record.recipientName || 'Configured recipient'}</span>
                   </span>
@@ -314,37 +458,89 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
                       setRevokeTarget(record)
                       setRevokeReason('')
                     }}
+                    onMarkPaid={() => {
+                      setPaymentResult(null)
+                      setPaidTarget(record)
+                      setPaymentForm({
+                        payment_date: today(),
+                        payment_reference: '',
+                        payment_method: 'Bank Transfer',
+                        remarks: '',
+                      })
+                    }}
                   />
                 </div>
               </article>
             ))}
           </div>
+          {historyRecords.length > 3 && (
+            <div className="d-flex justify-content-center mt-2">
+              <CButton
+                size="sm"
+                color="secondary"
+                variant="ghost"
+                onClick={() => setHistoryOpen((value) => !value)}
+              >
+                {historyOpen
+                  ? 'Show less history'
+                  : `View payment summary history (${historyRecords.length})`}
+              </CButton>
+            </div>
+          )}
         </>
       )}
 
-      <CModal visible={prepareOpen} onClose={() => !busy && setPrepareOpen(false)} size="lg">
+      <CModal
+        visible={prepareOpen}
+        onClose={() => !busy && setPrepareOpen(false)}
+        size="xl"
+        scrollable
+        className="payment-summary-prepare-modal"
+      >
         <CModalHeader>
           <CModalTitle>Prepare payment summary</CModalTitle>
         </CModalHeader>
         <CModalBody>
-          <CAlert color="warning" className="py-2">
-            The readiness check covers the entire period. Pending reviews, approvals, duplicate
-            salary records, or changed values must be resolved first.
-          </CAlert>
+          <PaymentSummaryCandidateSelector
+            records={candidates}
+            loading={candidateLoading}
+            selectedKeys={selectedKeys}
+            onSelectionChange={(keys) => {
+              setSelectedKeys(keys)
+              setReadiness(null)
+            }}
+            onPreferenceChange={updatePreference}
+          />
+          <hr className="my-4" />
           <div className="row g-3">
-            <div className="col-md-5">
-              <CFormLabel htmlFor="summaryPeriod">Payment period</CFormLabel>
+            <div className="col-md-4">
+              <CFormLabel htmlFor="summaryBatchDate">Batch date</CFormLabel>
               <CFormInput
-                id="summaryPeriod"
-                type="month"
-                value={form.paymentPeriod}
+                id="summaryBatchDate"
+                type="date"
+                value={form.batchDate}
                 onChange={(event) => {
-                  setForm((value) => ({ ...value, paymentPeriod: event.target.value }))
+                  setForm((value) => ({
+                    ...value,
+                    batchDate: event.target.value,
+                    paymentPeriod: event.target.value.slice(0, 7),
+                  }))
                   setReadiness(null)
                 }}
               />
             </div>
-            <div className="col-md-7">
+            <div className="col-md-4">
+              <CFormLabel htmlFor="summaryBatchName">Batch name</CFormLabel>
+              <CFormInput
+                id="summaryBatchName"
+                value={form.batchName}
+                placeholder="Optional, e.g. Urgent reimbursements"
+                onChange={(event) =>
+                  setForm((value) => ({ ...value, batchName: event.target.value }))
+                }
+              />
+            </div>
+            <div className="col-md-4">
               <CFormLabel htmlFor="summaryRecipient">Boss email</CFormLabel>
               <CFormInput
                 id="summaryRecipient"
@@ -386,9 +582,14 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
             <CAlert color={readiness.ready ? 'success' : 'danger'} className="mt-3 mb-0">
               <strong>{readiness.ready ? 'Ready to prepare' : 'Not ready'}</strong>
               <div>
-                {readiness.employees} employees · {readiness.approvedRecords} approved records ·{' '}
+                {readiness.employees} employees · {readiness.selectedCount} selected requests ·{' '}
                 {formatMoney(readiness.grandTotal)}
               </div>
+              {readiness.warnings?.map((warning) => (
+                <div className="small mt-1" key={warning}>
+                  {warning}
+                </div>
+              ))}
               {readiness.blockers?.length > 0 && (
                 <ul className="mb-0 mt-2">
                   {readiness.blockers.map((item, index) => (
@@ -414,14 +615,14 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
           <CButton
             variant="outline"
             color="primary"
-            disabled={busy || !form.paymentPeriod}
+            disabled={busy || candidateLoading || selectedKeys.size === 0}
             onClick={checkReadiness}
           >
             Check readiness
           </CButton>
           <CButton
             color="primary"
-            disabled={busy || !readiness?.ready || !form.recipientEmail.trim()}
+            disabled={busy || !readiness?.ready || !form.recipientEmail.trim() || !form.batchDate}
             onClick={prepare}
           >
             Prepare draft
@@ -463,6 +664,116 @@ const PaymentSummaryPanel = ({ onQueueChanged }) => {
             }}
           >
             Revoke access
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      <CModal
+        visible={Boolean(paidTarget)}
+        onClose={() => {
+          if (!busy) {
+            setPaidTarget(null)
+            setPaymentResult(null)
+          }
+        }}
+      >
+        <CModalHeader>
+          <CModalTitle>Record payment by Finance</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <CAlert color="warning" className="py-2">
+            This records payment only for the requests selected in {paidTarget?.reference}. The boss
+            briefing remains read-only.
+          </CAlert>
+          <div className="row g-3">
+            <div className="col-md-5">
+              <CFormLabel htmlFor="summaryPaymentDate">Payment date</CFormLabel>
+              <CFormInput
+                id="summaryPaymentDate"
+                type="date"
+                value={paymentForm.payment_date}
+                onChange={(event) =>
+                  setPaymentForm((value) => ({ ...value, payment_date: event.target.value }))
+                }
+              />
+            </div>
+            <div className="col-md-7">
+              <CFormLabel htmlFor="summaryPaymentReference">Bank reference</CFormLabel>
+              <CFormInput
+                id="summaryPaymentReference"
+                value={paymentForm.payment_reference}
+                onChange={(event) =>
+                  setPaymentForm((value) => ({ ...value, payment_reference: event.target.value }))
+                }
+              />
+            </div>
+            <div className="col-12">
+              <CFormLabel htmlFor="summaryPaymentMethod">Payment method</CFormLabel>
+              <CFormInput
+                id="summaryPaymentMethod"
+                value={paymentForm.payment_method}
+                onChange={(event) =>
+                  setPaymentForm((value) => ({ ...value, payment_method: event.target.value }))
+                }
+              />
+            </div>
+            <div className="col-12">
+              <CFormLabel htmlFor="summaryPaymentRemarks">Remarks</CFormLabel>
+              <CFormTextarea
+                id="summaryPaymentRemarks"
+                rows={2}
+                value={paymentForm.remarks}
+                onChange={(event) =>
+                  setPaymentForm((value) => ({ ...value, remarks: event.target.value }))
+                }
+              />
+            </div>
+          </div>
+          {paymentResult && (
+            <CAlert
+              color={paymentResult.status === 'partial' ? 'warning' : 'danger'}
+              className="mt-3 mb-0"
+            >
+              <strong>{paymentResult.message}</strong>
+              <div className="d-grid gap-2 mt-2">
+                {(paymentResult.results || []).map((result, index) => (
+                  <div
+                    className="border rounded-2 p-2 bg-body"
+                    key={`${result.staffId}-${result.paymentPeriod}-${index}`}
+                  >
+                    <div className="d-flex justify-content-between gap-2">
+                      <span>
+                        {result.staffName || `Staff #${result.staffId}`} · {result.paymentPeriod}
+                      </span>
+                      <CBadge
+                        color={
+                          result.status === 'success'
+                            ? 'success'
+                            : result.status === 'skipped'
+                              ? 'warning'
+                              : 'danger'
+                        }
+                      >
+                        {result.status}
+                      </CBadge>
+                    </div>
+                    <div className="small text-body-secondary mt-1">{result.message}</div>
+                  </div>
+                ))}
+              </div>
+            </CAlert>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton variant="outline" color="secondary" onClick={() => setPaidTarget(null)}>
+            Cancel
+          </CButton>
+          <CButton
+            color="success"
+            disabled={busy || !paymentForm.payment_date || !paymentForm.payment_reference.trim()}
+            onClick={recordPaid}
+          >
+            {paymentResult ? 'Retry unpaid requests' : 'Record selected requests paid'}
           </CButton>
         </CModalFooter>
       </CModal>

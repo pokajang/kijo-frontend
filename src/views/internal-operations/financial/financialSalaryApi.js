@@ -82,6 +82,7 @@ export const submitFinancialSalaryAction = async (
   remarks = '',
   workflowInstanceId = null,
   recordVersion = null,
+  paymentRecommendation = {},
 ) => {
   if (workflowInstanceId) {
     const payload = await apiJson(
@@ -89,7 +90,13 @@ export const submitFinancialSalaryAction = async (
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, remarks, record_version: recordVersion || undefined }),
+        body: JSON.stringify({
+          action,
+          remarks,
+          record_version: recordVersion || undefined,
+          payment_recommendation: paymentRecommendation.priority || undefined,
+          payment_recommendation_remarks: paymentRecommendation.remarks || undefined,
+        }),
       },
     )
 
@@ -102,7 +109,13 @@ export const submitFinancialSalaryAction = async (
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, remarks, record_version: recordVersion || undefined }),
+      body: JSON.stringify({
+        action,
+        remarks,
+        record_version: recordVersion || undefined,
+        payment_recommendation: paymentRecommendation.priority || undefined,
+        payment_recommendation_remarks: paymentRecommendation.remarks || undefined,
+      }),
     },
   )
 

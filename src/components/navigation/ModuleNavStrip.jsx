@@ -178,6 +178,18 @@ const ModuleNavStripShell = ({
     }
   }, [visibleTabs])
 
+  useEffect(() => {
+    const tabsNode = tabsRef.current
+    const activeNode = tabsNode?.querySelector('.module-nav-strip__tab.is-active')
+    if (!tabsNode || !activeNode || tabsNode.scrollWidth <= tabsNode.clientWidth) return
+
+    const nextLeft = Math.max(
+      0,
+      activeNode.offsetLeft - (tabsNode.clientWidth - activeNode.offsetWidth) / 2,
+    )
+    tabsNode.scrollTo({ left: nextLeft, behavior: 'smooth' })
+  }, [inferredActiveTab, visibleTabs])
+
   if (shouldHideForNestedRoute) return null
   if (visibleTabs.length === 0) return null
 

@@ -102,7 +102,7 @@ describe('HandbookAcknowledgementNotice', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/handbook')
   })
 
-  it('shows the unsigned acknowledgement as a delayed mobile modal', async () => {
+  it('shows the unsigned acknowledgement as a non-blocking mobile banner', async () => {
     vi.useFakeTimers()
     vi.stubGlobal('matchMedia', () => ({
       matches: true,
@@ -122,15 +122,12 @@ describe('HandbookAcknowledgementNotice', () => {
     renderNotice()
 
     await act(async () => {})
-    expect(screen.queryByText('Handbook acknowledgement required')).not.toBeInTheDocument()
-
-    await act(async () => {
-      vi.advanceTimersByTime(3000)
-    })
-
-    expect(screen.getByText('Handbook acknowledgement required')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Later' }))
-    expect(screen.queryByText('Handbook acknowledgement required')).not.toBeInTheDocument()
+    expect(screen.getByText('Handbook acknowledgement required.')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Dismiss handbook acknowledgement reminder' }),
+    )
+    expect(screen.queryByText('Handbook acknowledgement required.')).not.toBeInTheDocument()
   })
 
   it('refreshes and removes the notice after the handbook is signed', async () => {

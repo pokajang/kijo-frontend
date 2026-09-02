@@ -500,8 +500,13 @@ const FinancialOtherClaimRecordsPage = () => {
               <FinancialWorkflowBatchActions
                 selectedRecords={selectedRecords}
                 onClear={() => setSelectedIds([])}
-                onSubmit={async (action, batchRecords, remarks) => {
-                  await submitFinancialWorkflowBulkAction(action, batchRecords, remarks)
+                onSubmit={async (action, batchRecords, remarks, paymentRecommendation) => {
+                  await submitFinancialWorkflowBulkAction(
+                    action,
+                    batchRecords,
+                    remarks,
+                    paymentRecommendation,
+                  )
                   await loadRecords()
                 }}
                 getRecordLabel={(record) =>

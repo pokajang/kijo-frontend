@@ -4,6 +4,7 @@ import {
   CAlert,
   CButton,
   CFormLabel,
+  CFormSelect,
   CFormTextarea,
   CModal,
   CModalBody,
@@ -62,6 +63,8 @@ const FinancialSalaryRecordDetailPage = () => {
   const [error, setError] = useState('')
   const [actionContext, setActionContext] = useState(null)
   const [remarks, setRemarks] = useState('')
+  const [paymentRecommendation, setPaymentRecommendation] = useState('')
+  const [paymentRecommendationRemarks, setPaymentRecommendationRemarks] = useState('')
   const [actionError, setActionError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [previewAttachment, setPreviewAttachment] = useState(null)
@@ -123,6 +126,8 @@ const FinancialSalaryRecordDetailPage = () => {
     onClick: () => {
       setActionContext(action)
       setRemarks('')
+      setPaymentRecommendation('')
+      setPaymentRecommendationRemarks('')
       setActionError('')
     },
   }))
@@ -146,6 +151,7 @@ const FinancialSalaryRecordDetailPage = () => {
         remarks,
         record.workflow?.instanceId,
         record.recordVersion,
+        { priority: paymentRecommendation, remarks: paymentRecommendationRemarks },
       )
       setActionContext(null)
       await loadRecord()
@@ -314,6 +320,36 @@ const FinancialSalaryRecordDetailPage = () => {
             }
             onChange={(event) => setRemarks(event.target.value)}
           />
+          {['check', 'approve'].includes(actionContext?.action) && (
+            <div className="mt-3">
+              <CFormLabel htmlFor="financialSalaryPaymentRecommendation">
+                Payment recommendation (optional)
+              </CFormLabel>
+              <CFormSelect
+                id="financialSalaryPaymentRecommendation"
+                value={paymentRecommendation}
+                disabled={submitting}
+                onChange={(event) => setPaymentRecommendation(event.target.value)}
+              >
+                <option value="">No recommendation</option>
+                <option value="Urgent">Urgent</option>
+                <option value="Normal">Normal</option>
+                <option value="Deferred">Recommend deferral</option>
+              </CFormSelect>
+              {paymentRecommendation && (
+                <CFormTextarea
+                  className="mt-2"
+                  rows={2}
+                  aria-label="Payment recommendation note"
+                  placeholder="Optional context for Finance"
+                  value={paymentRecommendationRemarks}
+                  disabled={submitting}
+                  onChange={(event) => setPaymentRecommendationRemarks(event.target.value)}
+                />
+              )}
+              <div className="form-text">Finance controls final payment scheduling.</div>
+            </div>
+          )}
           {actionError && (
             <div className="text-danger small mt-2" role="alert">
               {actionError}

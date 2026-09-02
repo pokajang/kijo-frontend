@@ -4,6 +4,7 @@ import {
   CButton,
   CFormCheck,
   CFormLabel,
+  CFormSelect,
   CFormTextarea,
   CModal,
   CModalBody,
@@ -32,6 +33,8 @@ const FinancialWorkflowBatchActions = ({
   const [action, setAction] = useState('')
   const [remarks, setRemarks] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+  const [recommendation, setRecommendation] = useState('')
+  const [recommendationRemarks, setRecommendationRemarks] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -48,6 +51,8 @@ const FinancialWorkflowBatchActions = ({
     setAction(nextAction)
     setRemarks('')
     setConfirmed(false)
+    setRecommendation('')
+    setRecommendationRemarks('')
     setError('')
   }
   const close = () => {
@@ -61,7 +66,10 @@ const FinancialWorkflowBatchActions = ({
     setSubmitting(true)
     setError('')
     try {
-      await onSubmit(action, batchRecords, remarks)
+      await onSubmit(action, batchRecords, remarks, {
+        priority: recommendation,
+        remarks: recommendationRemarks,
+      })
       setAction('')
       onClear()
     } catch (err) {
@@ -138,6 +146,38 @@ const FinancialWorkflowBatchActions = ({
             disabled={submitting}
             onChange={(event) => setRemarks(event.target.value)}
           />
+          <hr />
+          <CFormLabel htmlFor="financialBatchPaymentRecommendation">
+            Payment recommendation (optional)
+          </CFormLabel>
+          <CFormSelect
+            id="financialBatchPaymentRecommendation"
+            value={recommendation}
+            disabled={submitting}
+            onChange={(event) => setRecommendation(event.target.value)}
+          >
+            <option value="">No recommendation</option>
+            <option value="Urgent">Urgent</option>
+            <option value="Normal">Normal</option>
+            <option value="Deferred">Recommend deferral</option>
+          </CFormSelect>
+          {recommendation && (
+            <>
+              <CFormLabel htmlFor="financialBatchPaymentRecommendationRemarks" className="mt-2">
+                Recommendation note (optional)
+              </CFormLabel>
+              <CFormTextarea
+                id="financialBatchPaymentRecommendationRemarks"
+                rows={2}
+                value={recommendationRemarks}
+                disabled={submitting}
+                onChange={(event) => setRecommendationRemarks(event.target.value)}
+              />
+              <div className="form-text">
+                Finance sees this recommendation but controls final payment scheduling.
+              </div>
+            </>
+          )}
           {error && (
             <div className="text-danger small mt-2" role="alert">
               {error}

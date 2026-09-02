@@ -126,6 +126,14 @@ describe('OtherClaimApply', () => {
   })
 
   it('preserves the medical draft before opening entitlement setup', async () => {
+    const [currentYear, currentMonth] = getCurrentClaimMonth().split('-').map(Number)
+    const targetDate = new Date(currentYear, currentMonth - 3, 1)
+    const targetClaimMonth = targetDate.toLocaleDateString('en-CA').slice(0, 7)
+    const targetClaimMonthLabel = targetDate.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    })
+    const medicalDate = `${targetClaimMonth}-15`
     const onConfigureMedicalEntitlement = vi.fn()
     apiMock.apiJson.mockImplementation(async (url) => {
       if (String(url).includes('hr/salary/profile')) {
@@ -145,9 +153,9 @@ describe('OtherClaimApply', () => {
     render(<OtherClaimApply onConfigureMedicalEntitlement={onConfigureMedicalEntitlement} />)
 
     await screen.findByText('New Other Claim')
-    fireEvent.click(screen.getByRole('button', { name: 'June 2026' }))
+    fireEvent.click(screen.getByRole('button', { name: targetClaimMonthLabel }))
     fireEvent.click(screen.getByRole('button', { name: 'Medical' }))
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-07-24' } })
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: medicalDate } })
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Clinic consultation' },
     })
@@ -155,11 +163,11 @@ describe('OtherClaimApply', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Set Medical Entitlement' }))
 
-    expect(onConfigureMedicalEntitlement).toHaveBeenCalledWith({ claimMonth: '2026-06' })
-    expect(readOtherClaimDraft({ claimMonth: '2026-06' })).toEqual(
+    expect(onConfigureMedicalEntitlement).toHaveBeenCalledWith({ claimMonth: targetClaimMonth })
+    expect(readOtherClaimDraft({ claimMonth: targetClaimMonth })).toEqual(
       expect.objectContaining({
         formData: expect.objectContaining({
-          medicalDate: '2026-07-24',
+          medicalDate,
           medicalDescription: 'Clinic consultation',
           medicalAmount: '85',
         }),

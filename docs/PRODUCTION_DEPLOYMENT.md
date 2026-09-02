@@ -254,7 +254,7 @@ For every applicable data operation:
 - Keep repair/inference backfills out of migrations unless the release design
   intentionally requires an automatic transactional transformation.
 
-### Salary and Other Claims Workflow and Payment Summaries (2026-08-28)
+### Salary and Other Claims Workflow and Payment Summaries (2026-08-30)
 
 This is a coordinated backend-and-frontend release. It completes salary and
 other-claim workflow email delivery, finance batch actions, payment-summary
@@ -268,10 +268,12 @@ database/migrations/2026_08_27_020000_create_hr_salary_email_deliveries_table.ph
 database/migrations/2026_08_27_030000_create_hr_salary_payment_summaries.php
 database/migrations/2026_08_27_040000_allow_external_salary_payment_summary_recipients.php
 database/migrations/2026_08_28_010000_create_hr_salary_payment_summary_attachments.php
+database/migrations/2026_08_30_020000_support_selective_salary_payment_batches.php
+database/migrations/2026_08_30_030000_add_payment_recommendations_to_salary_queue_preferences.php
 ```
 
 Review all pending migrations first. If this release is being deployed without
-other pending work, apply only the four paths above so unrelated migrations are
+other pending work, apply only the six paths above so unrelated migrations are
 not introduced accidentally:
 
 ```bash
@@ -282,7 +284,44 @@ php artisan migrate --path=database/migrations/2026_08_27_020000_create_hr_salar
 php artisan migrate --path=database/migrations/2026_08_27_030000_create_hr_salary_payment_summaries.php --force
 php artisan migrate --path=database/migrations/2026_08_27_040000_allow_external_salary_payment_summary_recipients.php --force
 php artisan migrate --path=database/migrations/2026_08_28_010000_create_hr_salary_payment_summary_attachments.php --force
-php artisan migrate:status | grep -E '2026_08_(27_0(20000|30000|40000)|28_010000)'
+php artisan migrate --path=database/migrations/2026_08_30_020000_support_selective_salary_payment_batches.php --force
+php artisan migrate --path=database/migrations/2026_08_30_030000_add_payment_recommendations_to_salary_queue_preferences.php --force
+php artisan migrate:status | grep -E '2026_08_(27_0(20000|30000|40000)|28_010000|30_0(20000|30000))'
+```
+
+The selective-batch migration adds batch metadata, Finance queue preferences,
+and a unique active-summary reservation for each salary or claim request. It
+does not mark, move, or pay any source request. Existing active Draft or Issued
+summaries must have their unpaid items reserved before Finance prepares a new
+batch. Run the guarded command as a dry run, retain its counts and fingerprint,
+resolve every reported conflict, and then rerun with the current fingerprint:
+
+```bash
+php artisan salary:backfill-payment-summary-reservations \
+  | tee "$HOME/salary-payment-reservations-dry-run.txt"
+
+# Only after confirming there are no conflicts and the counts are expected.
+php artisan salary:backfill-payment-summary-reservations --commit \
+  --confirm='<fingerprint-from-the-immediately-preceding-dry-run>' \
+  | tee "$HOME/salary-payment-reservations-applied.txt"
+
+# A second dry run must report zero missing reservations.
+php artisan salary:backfill-payment-summary-reservations
+```
+
+Normalize any legacy `Deferred` preference that has no enforceable defer date.
+The command resets only those incomplete rows to `Normal`; valid future-dated
+deferrals are untouched:
+
+```bash
+php artisan salary:normalize-payment-deferrals \
+  | tee "$HOME/salary-payment-deferrals-dry-run.txt"
+
+php artisan salary:normalize-payment-deferrals --commit \
+  --confirm='<fingerprint-from-the-immediately-preceding-dry-run>' \
+  | tee "$HOME/salary-payment-deferrals-applied.txt"
+
+php artisan salary:normalize-payment-deferrals
 ```
 
 The migrations do not rewrite salary or claim amounts. Existing approved
@@ -316,16 +355,37 @@ After deployment, rebuild Laravel caches and restart the database queue worker
 using the standard commands above. Verify `jobs` and `failed_jobs` are clear,
 then exercise one disposable end-to-end cycle:
 
+- Confirm the queue worker and scheduler are supervised, mail credentials and
+  the public HTTPS frontend URL are correct, failed-job alerts are enabled, and
+  queue retry/timeout settings cannot duplicate a payment-summary email.
+
 - Applicant creates, edits, submits, receives a return comment, revises, and
   resubmits one salary application and one other claim with an attachment.
 - Finance reviewer and approver process individual and batch actions, and the
   notification badge count matches the visible actionable worklist.
-- Finance prepares the period summary, confirms readiness warnings and totals,
-  issues it to Amin Rozak, and verifies both secure-link and verification-code
-  messages leave the queue.
+- Finance opens the approved/unpaid queue, confirms that nothing is selected by
+  default, selects a mixture of urgent salary and claim requests (including a
+  cross-period selection), and confirms omitted approved requests remain queued.
+- Set one request to Deferred with a future date, confirm it is excluded from
+  all bulk selection controls, then clear the deferral and confirm it becomes
+  eligible again. Confirm reviewer/approver recommendations remain advisory and
+  Finance retains the final priority and deferral controls.
+- Finance prepares and issues only the selected requests to Amin Rozak, verifies
+  both secure-link and verification-code messages leave the queue, and confirms
+  the same requests cannot be selected into another active summary.
 - Open the public briefing with the emailed code, confirm staff totals and
-  line-item amounts, open a snapshotted attachment, then revoke or supersede the
-  disposable summary and confirm the old link no longer grants access.
+  line-item amounts, and open a snapshotted attachment. Confirm the public page
+  has no approval or payment action. Finance records the issued batch paid and
+  verifies only its selected requests become Paid while omitted approved
+  requests remain eligible for a later batch.
+- Force one selected staff/period group to become stale before Record Paid and
+  confirm the UI reports partial completion with the exact skipped group rather
+  than a generic success message. Resolve the stale group and verify an
+  idempotent retry completes the same summary without duplicate payment runs.
+- Prepare a disposable revision, verify the original batch cannot be paid while
+  its requests are reserved by that draft, discard the draft, and confirm the
+  original reservations are restored. Revoke or supersede the disposable
+  summary and confirm the old link no longer grants access.
 - Confirm non-Finance reviewer/approver views do not disclose protected final
   payment amounts.
 

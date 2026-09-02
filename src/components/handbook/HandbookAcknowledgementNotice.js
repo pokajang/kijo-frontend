@@ -1,16 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import {
-  CAlert,
-  CButton,
-  CCloseButton,
-  CContainer,
-  CModal,
-  CModalBody,
-  CModalFooter,
-  CModalHeader,
-  CModalTitle,
-} from '@coreui/react'
+import { CAlert, CButton, CCloseButton, CContainer } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { getHandbookAcknowledgementStatus } from '../../views/handbook/api/handbookApi'
 import { useGlobalPrompt } from '../global-prompts/GlobalPromptCoordinator'
@@ -22,9 +12,6 @@ const STATUS = {
   REQUIRED: 'required',
   UNAVAILABLE: 'unavailable',
 }
-
-const MOBILE_BREAKPOINT_QUERY = '(max-width: 767.98px)'
-const MOBILE_REMINDER_DELAY_MS = 3000
 
 const getDismissalKey = (staffId, versionId) =>
   staffId && versionId ? `kijo:handbook-acknowledgement:dismissed:${staffId}:${versionId}` : null
@@ -47,28 +34,12 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
   const [versionLabel, setVersionLabel] = useState('')
   const [versionId, setVersionId] = useState(null)
   const [dismissed, setDismissed] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const [mobileModalVisible, setMobileModalVisible] = useState(false)
   const latestRequestRef = useRef(0)
   const promptActive = useGlobalPrompt(
     'handbook-acknowledgement',
     100,
     status === STATUS.REQUIRED && !dismissed,
   )
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return undefined
-    }
-
-    const mediaQuery = window.matchMedia(MOBILE_BREAKPOINT_QUERY)
-    const updateIsMobile = () => setIsMobile(mediaQuery.matches)
-
-    updateIsMobile()
-    mediaQuery.addEventListener('change', updateIsMobile)
-
-    return () => mediaQuery.removeEventListener('change', updateIsMobile)
-  }, [])
 
   const loadStatus = useCallback(
     async (signal) => {
@@ -128,25 +99,12 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
     }
   }, [loadStatus, staffId])
 
-  useEffect(() => {
-    if (!isMobile || status !== STATUS.REQUIRED || dismissed || !promptActive) {
-      setMobileModalVisible(false)
-      return undefined
-    }
-
-    const timeoutId = window.setTimeout(() => setMobileModalVisible(true), MOBILE_REMINDER_DELAY_MS)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [dismissed, isMobile, promptActive, status])
-
   const dismissNotice = () => {
     dismissNoticeForSession(staffId, versionId)
-    setMobileModalVisible(false)
     setDismissed(true)
   }
 
   const reviewHandbook = () => {
-    setMobileModalVisible(false)
     navigate('/handbook')
   }
 
@@ -208,34 +166,7 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
     </CAlert>
   )
 
-  if (!isMobile) {
-    return acknowledgementBanner
-  }
-
-  return (
-    <CModal
-      alignment="center"
-      aria-label="Handbook acknowledgement reminder"
-      visible={mobileModalVisible}
-      onClose={dismissNotice}
-    >
-      <CModalHeader closeButton>
-        <CModalTitle>Handbook acknowledgement required</CModalTitle>
-      </CModalHeader>
-      <CModalBody>
-        Review and sign {versionLabel || 'the current handbook version'} to complete your
-        acknowledgement.
-      </CModalBody>
-      <CModalFooter className="flex-wrap">
-        <CButton color="secondary" variant="outline" onClick={dismissNotice}>
-          Later
-        </CButton>
-        <CButton color="warning" onClick={reviewHandbook}>
-          Review &amp; Acknowledge
-        </CButton>
-      </CModalFooter>
-    </CModal>
-  )
+  return acknowledgementBanner
 }
 
 HandbookAcknowledgementNotice.propTypes = {
