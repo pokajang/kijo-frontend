@@ -97,6 +97,12 @@ export const vendorModuleTabs = [
     to: '/vendor/payment-records',
     notificationTabKey: 'vendor.payment-records',
   },
+  {
+    key: 'payment-vouchers',
+    label: 'Voucher Records',
+    to: '/vendor/payment-vouchers',
+    allowedRoles: ['Finance', 'Account', 'Bank', 'Manager', 'System Admin'],
+  },
   { key: 'paid', label: 'Vendor Ledger', to: '/vendor/paid' },
   { key: 'manage', label: 'Manage Vendors', to: '/vendor/manage' },
   { key: 'frozen', label: 'Frozen Vendors', to: '/vendor/frozen' },

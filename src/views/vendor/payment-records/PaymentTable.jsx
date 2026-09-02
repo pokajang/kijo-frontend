@@ -16,12 +16,14 @@ import {
   isDefaultPeriodRange,
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
-import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatCount, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import VendorPaymentWorkflowCell from './VendorPaymentWorkflowCell'
 import {
   getVendorPaymentWorkflowSteps,
   getVendorPaymentWorkflowSummary,
 } from './vendorPaymentWorkflow'
+import { getVendorPaymentPermissions, getVendorPaymentStage } from './vendorPaymentModel'
 
 const dataColumns = [
   { key: 'vendor', label: 'Vendor', width: '180px', sortable: true, sortType: 'string' },
@@ -139,7 +141,6 @@ const PaymentTable = ({
   onApprove,
   onReject,
   onReturn,
-  onMarkPaid,
   onEdit,
   onCancel,
   onResubmit,
@@ -171,11 +172,12 @@ const PaymentTable = ({
           paymentType: payment.payment_type || '-',
           method: payment.method || '-',
           status: payment.status || '-',
+          statusDisplay: getVendorPaymentStage(payment).label,
           workflow: workflowSteps.join('\n') || payment.status || '-',
           workflowCurrent: workflowSummary.primary,
           workflowProgress: workflowSummary.progress,
           amount: Number(payment.amount || 0),
-          amountDisplay: `RM ${Number(payment.amount || 0).toFixed(2)}`,
+          amountDisplay: formatMoney(payment.amount),
           paidDate: payment.paid_date || '',
           checkedBy: payment.checked_by || '',
           approvedBy: payment.approved_by || '',
@@ -300,30 +302,10 @@ const PaymentTable = ({
     methodFilter !== 'all' ? { key: 'method', label: `Method: ${methodFilter}` } : null,
   ].filter(Boolean)
 
-  const getPaymentPermissions = (payment) => {
-    const permissions = payment.permissions || {}
-    const getCapability = (key, legacyKey) =>
-      typeof permissions[key] === 'boolean'
-        ? permissions[key]
-        : typeof payment[legacyKey] === 'boolean'
-          ? payment[legacyKey]
-          : false
-    const canCheck = getCapability('can_check', 'can_check')
-    const canApprove = getCapability('can_approve', 'can_approve')
-    const canReturn = getCapability('can_return', 'can_return')
-    const canReject = getCapability('can_reject', 'can_reject')
-    const canPay = getCapability('can_record_payment', 'can_mark_paid')
-    const canEdit = getCapability('can_edit', 'can_edit')
-    const canCancel = getCapability('can_cancel', 'can_cancel')
-    const canResubmit = getCapability('can_resubmit', 'can_resubmit')
-
-    return { canCheck, canApprove, canReturn, canReject, canPay, canEdit, canCancel, canResubmit }
-  }
-
   const getWorkflowActions = (payment) => {
     const paymentId = payment.id || payment.payment_id
     const status = payment.status
-    const { canCheck, canApprove, canReturn, canReject, canPay } = getPaymentPermissions(payment)
+    const { canCheck, canApprove, canReturn, canReject } = getVendorPaymentPermissions(payment)
 
     return [
       status === 'Pending' && canCheck && typeof onCheck === 'function'
@@ -358,23 +340,15 @@ const PaymentTable = ({
             onClick: () => onApprove(paymentId),
           }
         : null,
-      ['Approved', 'Partially Paid'].includes(status) && canPay && typeof onMarkPaid === 'function'
-        ? {
-            key: 'mark-paid',
-            label: 'Mark Paid',
-            color: 'success',
-            onClick: () => onMarkPaid(payment),
-          }
-        : null,
     ].filter(Boolean)
   }
 
   const getActions = (payment) => {
-    const { canEdit, canCancel, canResubmit } = getPaymentPermissions(payment)
+    const { canEdit, canCancel, canResubmit } = getVendorPaymentPermissions(payment)
 
     return [
       typeof onView === 'function'
-        ? { key: 'view', label: 'View Payment', onClick: () => onView(payment) }
+        ? { key: 'view', label: 'Open Payment Request', onClick: () => onView(payment) }
         : null,
       canEdit && typeof onEdit === 'function'
         ? {
@@ -428,7 +402,7 @@ const PaymentTable = ({
     if (column.key === 'status') {
       return (
         <DataTableStatusBadge tone={getStatusTone(payment.status)}>
-          {payment.status}
+          {payment.statusDisplay}
         </DataTableStatusBadge>
       )
     }
@@ -527,7 +501,7 @@ const PaymentTable = ({
         getMobileTitle={(payment) => payment.vendor}
         getMobileSubtitle={(payment) => payment.paymentFor}
         getMobileMeta={(payment) => `${payment.paymentFor} | ${payment.amountDisplay}`}
-        getMobileStatus={(payment) => payment.status}
+        getMobileStatus={(payment) => payment.statusDisplay}
         getMobileStatusTone={(payment) => getStatusTone(payment.status)}
         mobileFieldKeys={{
           title: 'vendor',
@@ -542,7 +516,7 @@ const PaymentTable = ({
           badges: (payment) => [
             {
               key: 'status',
-              label: payment.status,
+              label: payment.statusDisplay,
               tone: getStatusTone(payment.status),
             },
           ],
@@ -562,7 +536,7 @@ const PaymentTable = ({
         resetDeps={[searchText, selectedPeriodRange, statusFilter, methodFilter]}
       />
       <div className="text-end fw-bold mt-2">
-        Grand Total: RM {grandTotal(filteredPayments).toFixed(2)}
+        Grand Total: {formatMoney(grandTotal(filteredPayments))}
       </div>
     </>
   )

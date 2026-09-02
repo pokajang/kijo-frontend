@@ -113,71 +113,6 @@ const PaymentRecords = () => {
     })
   }
 
-  const handleMarkPaid = async (payment) => {
-    const paidDate = await dialog.prompt('Paid date (YYYY-MM-DD)', {
-      defaultValue: new Date().toISOString().slice(0, 10),
-      inputType: 'date',
-      required: true,
-    })
-    if (paidDate === null) return
-    const paidAmount = await dialog.prompt('Paid amount (RM)', {
-      defaultValue: Math.max(
-        Number(payment.amount || 0) - Number(payment.paid_amount || 0),
-        0,
-      ).toFixed(2),
-      inputType: 'number',
-      required: true,
-    })
-    if (paidAmount === null) return
-    const normalizedPaidAmount = Number(paidAmount)
-    if (!Number.isFinite(normalizedPaidAmount) || normalizedPaidAmount <= 0) {
-      dialog.alert('Enter a paid amount greater than 0.')
-      return
-    }
-    const method = await dialog.prompt('Payment method', {
-      defaultValue: payment.method || 'Online Transfer',
-      required: true,
-    })
-    if (method === null) return
-    const referenceNumber = await dialog.prompt('Transaction reference number', {
-      required: true,
-    })
-    if (referenceNumber === null) return
-    const remarks = await dialog.prompt('Payment remarks', {
-      multiline: true,
-      defaultValue: '',
-    })
-    if (remarks === null) return
-    try {
-      const paymentId = payment.id || payment.payment_id
-      const res = await apiFetch(`${API_BASE}vendor-payments/${paymentId}/transactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          paid_date: paidDate,
-          amount: normalizedPaidAmount,
-          method,
-          reference_number: referenceNumber,
-          remarks,
-          version: Number(payment.version || 1),
-          idempotency_key:
-            globalThis.crypto?.randomUUID?.() ||
-            `vendor-payment-transaction-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data?.status !== 'success') {
-        throw new Error(data?.message || 'Failed to record payment transaction.')
-      }
-      dialog.alert(data.message || 'Payment transaction recorded.')
-      reloadPayments()
-      dispatchAppNotificationsChanged()
-    } catch (err) {
-      dialog.alert('Error recording payment: ' + err.message)
-    }
-  }
-
   const handleCancel = async (payment) => {
     const paymentId = payment.id || payment.payment_id
     const reason = await dialog.prompt('Cancellation reason', {
@@ -185,9 +120,12 @@ const PaymentRecords = () => {
       required: true,
     })
     if (reason === null) return
+    const voucherIssued = Boolean(payment.voucher || payment.voucher_issued)
     if (
       !(await dialog.confirm(
-        'Cancel this payment request? The record will remain visible for audit.',
+        voucherIssued
+          ? 'Cancel this payment request? Its issued voucher will be permanently marked VOID and retained for audit.'
+          : 'Cancel this payment request? The record will remain visible for audit.',
         {
           confirmText: 'Cancel request',
           confirmColor: 'danger',
@@ -204,7 +142,11 @@ const PaymentRecords = () => {
       })
       const data = await res.json()
       if (res.ok && (data?.status === 'success' || data?.success === true)) {
-        dialog.alert('Payment request cancelled.')
+        dialog.alert(
+          voucherIssued
+            ? 'Payment request cancelled and its voucher marked VOID.'
+            : 'Payment request cancelled.',
+        )
         reloadPayments()
         dispatchAppNotificationsChanged()
       } else {
@@ -250,7 +192,6 @@ const PaymentRecords = () => {
             onApprove={handleApprove}
             onReject={handleReject}
             onReturn={handleReturn}
-            onMarkPaid={handleMarkPaid}
             onEdit={(payment) => navigate('/vendor/pay', { state: { editRecord: payment } })}
             onCancel={handleCancel}
             onResubmit={(payment) =>

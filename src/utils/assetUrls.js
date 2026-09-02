@@ -59,7 +59,8 @@ export const resolveAssetUrl = (value) => {
   if (/^(data:|blob:)/i.test(raw) || raw.startsWith('//')) return raw
 
   const cleanPath = raw.replace(/^\/+/, '')
-  const privateApiRoute = /^\/?vendor-payments\/\d+\/invoice(?:[?#].*)?$/i
+  const privateApiRoute =
+    /^\/?vendor-payments\/\d+\/(?:invoice|voucher\/(?:pdf|paid-pdf))(?:[?#].*)?$/i
   if (privateApiRoute.test(raw)) {
     return toApiAssetUrl(cleanPath)
   }

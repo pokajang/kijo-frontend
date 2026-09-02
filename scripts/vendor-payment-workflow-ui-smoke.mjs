@@ -153,7 +153,11 @@ const run = async () => {
           'Reject',
           ['Pending', 'Checked'].includes(selectedPayment.status) && selectedPayment.can_reject,
         ],
-        ['Mark Paid', selectedPayment.status === 'Approved' && selectedPayment.can_mark_paid],
+        [
+          selectedPayment.status === 'Partially Paid' ? 'Record Remaining' : 'Record Payment',
+          ['Approved', 'Partially Paid'].includes(selectedPayment.status) &&
+            (selectedPayment.permissions?.can_record_payment ?? selectedPayment.can_mark_paid),
+        ],
       ]
       for (const [label, expected] of expectedActions) {
         const count = await cell.getByRole('button', { name: label, exact: true }).count()

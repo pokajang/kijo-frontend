@@ -128,7 +128,12 @@ const legacyCurrentStage = (payment = {}) => {
       stageType: 'finance',
       label: 'Finance',
       state: 'current',
-      status: payment.status === 'Partially Paid' ? 'Partially paid' : 'Ready for payment',
+      status:
+        payment.status === 'Partially Paid'
+          ? 'Partially paid'
+          : payment.voucher || payment.voucher_issued
+            ? 'Awaiting payment'
+            : 'Voucher required',
     }
   }
   return null
@@ -137,7 +142,21 @@ const legacyCurrentStage = (payment = {}) => {
 export const getVendorPaymentWorkflowStages = (payment = {}) => {
   const flowStages = payment.workflow_flow?.stages || payment.workflowFlow?.stages
   if (Array.isArray(flowStages) && flowStages.length) {
-    return flowStages.map(normalizeWorkflowStage)
+    return flowStages.map((stage) => {
+      const normalized = normalizeWorkflowStage(stage)
+      if (
+        normalized.stageType === 'finance' &&
+        normalized.state === 'current' &&
+        payment.status === 'Approved'
+      ) {
+        return {
+          ...normalized,
+          status:
+            payment.voucher || payment.voucher_issued ? 'Awaiting payment' : 'Voucher required',
+        }
+      }
+      return normalized
+    })
   }
 
   const stages = legacyProgressStages(payment)

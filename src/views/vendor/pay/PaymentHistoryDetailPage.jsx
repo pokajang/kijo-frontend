@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   DataTableDetailFields,
@@ -8,10 +8,20 @@ import {
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
 import { resolveAssetUrl } from '../../../utils/assetUrls'
 import { useAppNotifications } from '../../../notifications/AppNotificationProvider'
-import { apiFetch } from '../../../api/apiClient'
+import { apiFetch, showApiToast } from '../../../api/apiClient'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import VendorPaymentWorkflowTimeline from '../payment-records/VendorPaymentWorkflowTimeline'
 import { getVendorPaymentCurrentStageLabel } from '../payment-records/vendorPaymentWorkflow'
 import VendorPaymentInvoicePreview from './VendorPaymentInvoicePreview'
+import GeneratePaymentVoucherDialog from './GeneratePaymentVoucherDialog'
+import RecordVendorPaymentModal from './RecordVendorPaymentModal'
+import VendorPaymentNextActionPanel from './VendorPaymentNextActionPanel'
+import VendorPaymentVoucherPanel from './VendorPaymentVoucherPanel'
+import VendorPaymentVoucherPreview from './VendorPaymentVoucherPreview'
+import dialog from '../../../components/dialog/dialogService'
+import { dispatchAppNotificationsChanged } from '../../../notifications/appNotificationEvents'
+import { getVendorPaymentPermissions } from '../payment-records/vendorPaymentModel'
+import { transitionVendorPayment } from '../payment-records/vendorPaymentApi'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -89,8 +99,8 @@ const normalizePayment = (payment) => {
     invoiceOriginalName: payment.receipt_original_name || 'invoice',
     invoiceState: payment.receipt_state || 'unavailable',
     amount,
-    amountDisplay: `RM ${amount.toFixed(2)}`,
-    paidAmountDisplay: `RM ${Number(payment.paid_amount || 0).toFixed(2)}`,
+    amountDisplay: formatMoney(amount),
+    paidAmountDisplay: formatMoney(payment.paid_amount),
     currentWorkflowStage: getVendorPaymentCurrentStageLabel(payment),
   }
 }
@@ -109,6 +119,9 @@ const PaymentHistoryDetailPage = () => {
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
   const [invoiceVisible, setInvoiceVisible] = useState(false)
+  const [generateVoucherVisible, setGenerateVoucherVisible] = useState(false)
+  const [recordPaymentVisible, setRecordPaymentVisible] = useState(false)
+  const [voucherPreview, setVoucherPreview] = useState(null)
   const { consumeEntity } = useAppNotifications()
 
   const loadPayment = useCallback(async () => {
@@ -148,22 +161,62 @@ const PaymentHistoryDetailPage = () => {
   }, [consumeEntity, paymentId])
 
   const receiptUrl = resolveAssetUrl(payment?.invoice)
-  const actions = useMemo(
-    () => [
-      {
-        key: 'invoice',
-        label: 'View Invoice',
-        disabled: !receiptUrl,
-        onClick: () => setInvoiceVisible(true),
-      },
-    ],
-    [receiptUrl],
-  )
+  const voucherUrl = resolveAssetUrl(payment?.voucher?.pdf_url)
+  const paidVoucherUrl = resolveAssetUrl(payment?.voucher?.paid_pdf_url)
+  const transition = async (action, label, { required = false } = {}) => {
+    const remarks = await dialog.prompt(`${label} remarks`, {
+      multiline: true,
+      required,
+      defaultValue: '',
+    })
+    if (remarks === null) return
+    try {
+      await transitionVendorPayment(paymentId, action, remarks)
+      await loadPayment()
+      dispatchAppNotificationsChanged()
+      showApiToast(`Payment request ${label.toLowerCase()}.`)
+    } catch (requestError) {
+      dialog.alert(
+        requestError?.message || `Unable to ${label.toLowerCase()} this payment request.`,
+      )
+    }
+  }
+  const handleNextAction = async (action) => {
+    if (action === 'review') await transition('check', 'Review')
+    if (action === 'approve') await transition('approve', 'Approval')
+    if (action === 'generate-voucher') setGenerateVoucherVisible(true)
+    if (action === 'record-payment') setRecordPaymentVisible(true)
+    if (action === 'view-paid-voucher') setVoucherPreview('paid')
+  }
+  const permissions = getVendorPaymentPermissions(payment)
+  const actions = [
+    {
+      key: 'invoice',
+      label: 'View Invoice',
+      disabled: !receiptUrl,
+      onClick: () => setInvoiceVisible(true),
+    },
+    permissions.canReturn
+      ? {
+          key: 'return',
+          label: 'Return for Amendment',
+          onClick: () => transition('return', 'Return', { required: true }),
+        }
+      : null,
+    permissions.canReject
+      ? {
+          key: 'reject',
+          label: 'Reject Request',
+          danger: true,
+          onClick: () => transition('reject', 'Rejection', { required: true }),
+        }
+      : null,
+  ].filter(Boolean)
 
   return (
     <>
       <DataTableDetailShell
-        title="Payment History Details"
+        title={`Payment Request #${paymentId}`}
         onBack={() => navigate(returnTo)}
         loading={loading}
         error={error}
@@ -171,6 +224,15 @@ const PaymentHistoryDetailPage = () => {
         actions={actions}
         emptyMessage="Payment record not found."
       >
+        <VendorPaymentNextActionPanel payment={payment} onAction={handleNextAction} />
+        {(permissions.canViewVoucher || permissions.canGenerateVoucher) && (
+          <VendorPaymentVoucherPanel
+            payment={payment}
+            onPreview={() => setVoucherPreview('approved')}
+            onPreviewPaid={() => setVoucherPreview('paid')}
+          />
+        )}
+        <h2 className="vendor-payment-section-title">Request details</h2>
         <DataTableDetailFields
           fields={[
             { key: 'requested', label: 'Date Requested', value: payment?.requestedDisplay },
@@ -216,7 +278,7 @@ const PaymentHistoryDetailPage = () => {
                   ? payment.transactions
                       .map(
                         (transaction) =>
-                          `${transaction.paid_date}: RM ${Number(transaction.amount || 0).toFixed(2)} · ${transaction.reference_number}${transaction.reversed_at ? ' (reversed)' : ''}`,
+                          `${transaction.paid_date}: ${formatMoney(transaction.amount)} · ${transaction.reference_number}${transaction.reversed_at ? ' (reversed)' : ''}`,
                       )
                       .join('\n')
                   : 'No transactions recorded',
@@ -263,6 +325,36 @@ const PaymentHistoryDetailPage = () => {
         onClose={() => setInvoiceVisible(false)}
         url={receiptUrl}
         originalName={payment?.invoiceOriginalName}
+      />
+      <GeneratePaymentVoucherDialog
+        visible={generateVoucherVisible}
+        payment={payment}
+        onClose={() => setGenerateVoucherVisible(false)}
+        onGenerated={async () => {
+          setGenerateVoucherVisible(false)
+          await loadPayment()
+          setVoucherPreview('approved')
+          showApiToast('Payment voucher generated.')
+        }}
+      />
+      <RecordVendorPaymentModal
+        visible={recordPaymentVisible}
+        payment={payment}
+        onClose={() => setRecordPaymentVisible(false)}
+        onRecorded={async () => {
+          setRecordPaymentVisible(false)
+          await loadPayment()
+          showApiToast('Payment transaction recorded.')
+        }}
+      />
+      <VendorPaymentVoucherPreview
+        visible={Boolean(voucherPreview)}
+        onClose={() => setVoucherPreview(null)}
+        url={voucherPreview === 'paid' ? paidVoucherUrl : voucherUrl}
+        voucherNumber={payment?.voucher?.voucher_number}
+        documentState={
+          voucherPreview === 'paid' ? 'paid' : payment?.voucher?.document_state || 'approved'
+        }
       />
     </>
   )

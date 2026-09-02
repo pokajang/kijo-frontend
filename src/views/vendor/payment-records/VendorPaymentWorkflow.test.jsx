@@ -32,7 +32,7 @@ describe('vendor payment workflow presentation', () => {
       },
     })
 
-    expect(summary.primary).toBe('Finance · Ready for payment')
+    expect(summary.primary).toBe('Finance · Voucher required')
     expect(summary.progress).toBe('2 of 3 stages completed')
   })
 

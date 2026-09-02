@@ -111,6 +111,18 @@ describe('vendorModuleTabs', () => {
     )
   })
 
+  it('limits Voucher Records to finance-authorized roles', () => {
+    expect(vendorModuleTabs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'payment-vouchers',
+          to: '/vendor/payment-vouchers',
+          allowedRoles: ['Finance', 'Account', 'Bank', 'Manager', 'System Admin'],
+        }),
+      ]),
+    )
+  })
+
   it('includes the Workflow Settings tab', () => {
     expect(vendorModuleTabs).toEqual(
       expect.arrayContaining([
@@ -143,7 +155,10 @@ describe('vendorModuleTabs', () => {
   })
 
   it('keeps Manage Vendors after Vendor Ledger', () => {
-    expect(vendorModuleTabs[2]).toMatchObject({
+    const ledgerIndex = vendorModuleTabs.findIndex((tab) => tab.key === 'paid')
+    const manageIndex = vendorModuleTabs.findIndex((tab) => tab.key === 'manage')
+    expect(manageIndex).toBeGreaterThan(ledgerIndex)
+    expect(vendorModuleTabs[manageIndex]).toMatchObject({
       key: 'manage',
       label: 'Manage Vendors',
       to: '/vendor/manage',

@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PaymentHistoryDetailPage from './PaymentHistoryDetailPage'
 
 const mocks = vi.hoisted(() => ({
@@ -96,6 +96,8 @@ describe('PaymentHistoryDetailPage', () => {
     mocks.consumeEntity.mockClear()
   })
 
+  afterEach(cleanup)
+
   it('shows the current stage and complete configured workflow', async () => {
     render(
       <MemoryRouter
@@ -125,5 +127,45 @@ describe('PaymentHistoryDetailPage', () => {
         expect.objectContaining({ credentials: 'include' }),
       ),
     )
+  })
+
+  it('keeps settlement recording inside the payment request gate', async () => {
+    const financePayment = {
+      ...payment,
+      status: 'Approved',
+      voucher_issued: true,
+      voucher: {
+        id: 9,
+        voucher_number: 'PV-2026-000009',
+        document_state: 'approved',
+        pdf_url: '/vendor-payments/42/voucher/pdf',
+      },
+      permissions: {
+        can_record_payment: true,
+        can_view_voucher: true,
+      },
+    }
+    mocks.apiFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ status: 'success', data: financePayment }),
+    })
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/vendor/payment-records/42', state: { record: financePayment } },
+        ]}
+      >
+        <Routes>
+          <Route path="/vendor/payment-records/:paymentId" element={<PaymentHistoryDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const recordButton = await screen.findByRole('button', { name: 'Record Payment' })
+    fireEvent.click(recordButton)
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText(/Record this only after the bank/i)).toBeInTheDocument()
   })
 })
