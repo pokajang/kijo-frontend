@@ -99,7 +99,7 @@ describe('Debtors payment table wiring', () => {
     })
     const row = props.rows[0]
 
-    expect(props.storageKey).toBe('commercial.debtors.visible-columns.v4')
+    expect(props.storageKey).toBe('commercial.debtors.visible-columns.v5')
     expect(props.dataColumns.map((column) => column.key)).toContain('paid')
     expect(props.dataColumns.map((column) => column.key)).toContain('lastPayment')
     expect(props.dataColumns.map((column) => column.key)).toContain('outstanding')
@@ -110,6 +110,48 @@ describe('Debtors payment table wiring', () => {
       'Update Payment',
       'Delete',
     ])
+  })
+
+  it('displays a custom category while retaining Special Service document routing', async () => {
+    fetchJson.mockResolvedValue({
+      status: 'success',
+      debtors: [
+        {
+          sourceType: 'invoice',
+          sourceId: 24,
+          invoiceRef: 'INV-ENVIRONMENT',
+          client: 'Environment Client',
+          serviceType: 'Special Service',
+          serviceCategory: 'Environment',
+          serviceCategoryCode: 'ENV',
+          status: 'Open',
+        },
+      ],
+    })
+
+    render(
+      <MemoryRouter>
+        <Debtors />
+      </MemoryRouter>,
+    )
+
+    const props = await waitFor(() => {
+      const latest = recordListMock.mock.calls.at(-1)?.[0]
+      expect(latest?.rows).toHaveLength(1)
+      return latest
+    })
+    const row = props.rows[0]
+
+    expect(row).toMatchObject({
+      serviceType: 'Special Service',
+      workflowType: 'Special Service',
+      serviceCategory: 'Environment',
+      serviceCategoryCode: 'ENV',
+    })
+    expect(props.dataColumns.map((column) => column.key)).toContain('serviceCategory')
+    expect(props.dataColumns.map((column) => column.key)).not.toContain('serviceType')
+    expect(props.renderCell(row, { key: 'serviceCategory' })).toBe('Environment')
+    expect(props.getActions(row).map((action) => action.label)).toContain('Word Invoice')
   })
 
   it('keeps lifecycle scopes visible and requests paid debtors when Paid is selected', async () => {

@@ -63,6 +63,9 @@ export const isOpenStatus = (status) => {
 export const normalizeDebtorRow = (row = {}) => {
   const hasOverdueDays = row.overdueDays !== undefined || row.overdue_days !== undefined
   const rawOverdueDays = row.overdueDays ?? row.overdue_days
+  const workflowType =
+    row.workflowType || row.workflow_type || row.serviceType || row.service_type || ''
+  const serviceCategory = row.serviceCategory || row.service_category || workflowType || emptyValue
 
   return {
     ...row,
@@ -75,7 +78,10 @@ export const normalizeDebtorRow = (row = {}) => {
     pic: row.pic || row.pic_name || emptyValue,
     picPhone: row.picPhone || row.pic_phone || '',
     picEmail: row.picEmail || row.pic_email || '',
-    serviceType: row.serviceType || row.service_type || emptyValue,
+    serviceType: row.serviceType || row.service_type || workflowType || emptyValue,
+    workflowType,
+    serviceCategory,
+    serviceCategoryCode: row.serviceCategoryCode || row.service_category_code || '',
     servicePeriod: row.servicePeriod || row.service_period || '',
     serviceStartDate: row.serviceStartDate || row.service_start_date || '',
     serviceEndDate: row.serviceEndDate || row.service_end_date || '',

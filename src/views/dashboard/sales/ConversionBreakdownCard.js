@@ -219,6 +219,7 @@ const ConversionBreakdownCard = ({
               columns={columns}
               footerRows={footerRows}
               getRowKey={(item) =>
+                item.key ||
                 `${item.label || 'item'}-${item.totalQuotes || 0}-${item.convertedCount || 0}`
               }
               desktopBreakpoint="md"

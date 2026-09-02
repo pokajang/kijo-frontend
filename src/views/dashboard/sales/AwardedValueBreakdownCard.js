@@ -186,7 +186,7 @@ const AwardedValueBreakdownCard = ({
               rows={sortedRows}
               columns={columns}
               footerRows={footerRows}
-              getRowKey={(item) => `${item.label || 'item'}-${item.value || 0}`}
+              getRowKey={(item) => item.key || `${item.label || 'item'}-${item.value || 0}`}
               desktopBreakpoint="md"
               mobileClassName="dashboard-metric-mobile-list"
               renderMobileItem={(item, index) => {

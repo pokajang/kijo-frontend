@@ -45,13 +45,13 @@ import {
   normalizeDebtorRow,
 } from './debtorUtils'
 
-const columnStorageKey = 'commercial.debtors.visible-columns.v4'
+const columnStorageKey = 'commercial.debtors.visible-columns.v5'
 
 const defaultVisibleColumns = {
   invoice: true,
   client: true,
   pic: true,
-  serviceType: true,
+  serviceCategory: true,
   purpose: false,
   invoiceDate: true,
   age: true,
@@ -122,7 +122,13 @@ const dataColumns = [
     getExportValue: (row) => getOverdueLabel(row),
   },
   { key: 'pic', label: 'PIC', width: '160px', sortable: true, sortType: 'string' },
-  { key: 'serviceType', label: 'Service', width: '140px', sortable: true, sortType: 'string' },
+  {
+    key: 'serviceCategory',
+    label: 'Service',
+    width: '180px',
+    sortable: true,
+    sortType: 'string',
+  },
   {
     key: 'purpose',
     label: 'Remarks',
@@ -466,7 +472,7 @@ const Debtors = () => {
               ),
           }
         : null,
-      hasInvoiceDocument && isWordInvoiceService(debtor.serviceType)
+      hasInvoiceDocument && isWordInvoiceService(debtor.workflowType || debtor.serviceType)
         ? {
             key: 'word',
             label: 'Word Invoice',

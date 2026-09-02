@@ -51,7 +51,8 @@ const AwardedValueByService = ({ startDate, endDate }) => {
       dimensionLabel="Service Group"
       labelHeader="Service Group"
       rows={data.map((item) => ({
-        label: item.serviceGroup,
+        key: item.serviceKey || item.serviceGroup || 'unknown-service-group',
+        label: item.serviceGroup || 'Unknown Service Group',
         value: Number(item.awardedValue) || 0,
       }))}
       loading={loading}

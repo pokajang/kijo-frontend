@@ -289,19 +289,21 @@ describe('InvoiceCreateFlow', () => {
     expect(submitInvoicePayload).not.toHaveBeenCalled()
   })
 
-  it('shows a resolved Special category while retaining the workflow type internally', () => {
+  it('shows a resolved Special category through review while retaining the workflow type internally', async () => {
     renderFlow({
       project: {
         id: 47,
         project_name: 'Environment Project',
         project_type: 'Special Service',
         serviceCategory: 'Environment',
-        quote_id: 38,
+        quote_id: null,
         quote_value: 100,
       },
     })
 
     expect(screen.getByText('Service Category: Environment')).toBeInTheDocument()
+    await clickReviewInvoice()
+    expect(await screen.findByText('Environment | Project ID 47')).toBeInTheDocument()
   })
 
   it('can continue to the invoice list after creation', async () => {

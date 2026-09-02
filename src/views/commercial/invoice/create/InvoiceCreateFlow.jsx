@@ -587,6 +587,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     paymentTermsBaseSource: clientOverrides.paymentTermsBaseSource,
     overridePaymentTerms: clientOverrides.overridePaymentTerms,
   }
+  const serviceCategory = getProjectServiceCategory(project || {})
 
   const commercialDocsNotice = (
     <ProjectCommercialDocsNotice
@@ -719,6 +720,7 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
         <InvoiceReviewStep
           payload={reviewPayload}
           project={project}
+          serviceCategory={serviceCategory}
           projectInvoiceSummary={projectInvoiceSummary}
           closeProject={closeProject && projectInvoiceSummary.canCloseProject}
           onCloseProjectChange={setCloseProject}

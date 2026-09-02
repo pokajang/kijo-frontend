@@ -58,4 +58,31 @@ describe('InvoiceReviewStep project-value guidance', () => {
 
     expect(screen.queryByLabelText('Reason for exceeding project value')).not.toBeInTheDocument()
   })
+
+  it('shows the resolved category without replacing the submitted workflow type', () => {
+    const payload = { ...baseProps.payload, service_type: 'Special Service', project_id: 47 }
+    render(
+      <InvoiceReviewStep
+        {...baseProps}
+        payload={payload}
+        project={{ project_name: 'Environment Project' }}
+        serviceCategory="Environment"
+      />,
+    )
+
+    expect(screen.getByText('Environment | Project ID 47')).toBeInTheDocument()
+    expect(payload.service_type).toBe('Special Service')
+  })
+
+  it('falls back to the workflow type when no resolved category is available', () => {
+    render(
+      <InvoiceReviewStep
+        {...baseProps}
+        payload={{ ...baseProps.payload, service_type: 'Special Service', project_id: 48 }}
+        project={{ project_name: 'Legacy Special Project' }}
+      />,
+    )
+
+    expect(screen.getByText('Special Service | Project ID 48')).toBeInTheDocument()
+  })
 })

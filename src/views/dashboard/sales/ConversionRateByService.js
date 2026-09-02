@@ -51,6 +51,7 @@ const ConversionRateByService = ({ startDate, endDate }) => {
       dimensionLabel="Service Group"
       labelHeader="Service Group"
       rows={data.map((item) => ({
+        key: item.serviceKey || item.serviceGroup || 'unknown-service-group',
         label: item.serviceGroup || 'Unknown Service Group',
         convertedCount: item.convertedCount,
         totalQuotes: item.totalQuotes,

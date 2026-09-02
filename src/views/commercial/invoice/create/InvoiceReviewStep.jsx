@@ -40,6 +40,7 @@ const getLineTotal = (item = {}) => Number(item.quantity || 0) * Number(item.uni
 const InvoiceReviewStep = ({
   payload,
   project,
+  serviceCategory,
   projectInvoiceSummary,
   closeProject,
   onCloseProjectChange,
@@ -171,7 +172,8 @@ const InvoiceReviewStep = ({
             <div className="fw-semibold mb-1">Project</div>
             <div>{project?.project_name || emptyValue}</div>
             <div className="text-body-secondary small">
-              {payload?.service_type || emptyValue} | Project ID {payload?.project_id || emptyValue}
+              {serviceCategory || payload?.service_type || emptyValue} | Project ID{' '}
+              {payload?.project_id || emptyValue}
             </div>
             <div className="text-body-secondary small">
               Purpose: {payload?.invoice_purpose || emptyValue}

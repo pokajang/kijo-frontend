@@ -55,6 +55,7 @@ const QuoteValueByService = ({ startDate, endDate }) => {
       totalLabel="Total quotation value"
       valueColumnLabel="Value (RM)"
       rows={data.map((item) => ({
+        key: item.serviceKey || item.serviceGroup || 'unknown-service-group',
         label: item.serviceGroup || 'Unknown Service Group',
         value: Number(item.totalValue) || 0,
       }))}
