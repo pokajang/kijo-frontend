@@ -4,18 +4,25 @@ import dialog from '../../../../components/dialog/dialogService'
 import { createTemplate, getTemplate, isAbortError, updateTemplate } from '../../shared/templateApi'
 import {
   clearTemplateDraft,
-  readTemplateDraft,
+  readTemplateDraftRecord,
   writeTemplateDraft,
 } from '../../shared/templateDrafts'
 import { appendSpecialTemplateFormData, fromApiSpecialTemplate } from '../../shared/templateMappers'
 import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templateUtils'
-import { formatValidationErrors, validateSpecialTemplate } from '../../shared/templateValidation'
+import {
+  formatValidationErrors,
+  getValidationErrorMap,
+  validateSpecialTemplate,
+} from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
 import { validateAttachmentCustomNames, validateNewAttachments } from './attachmentValidation'
 import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
+import { buildTemplateCompletionState, getTemplateReturnState } from '../../shared/templateHandoff'
+import { scrollToTemplateField } from '../../shared/templateFormUi'
 // Key for localStorage draft
 const DRAFT_KEY = 'specialProposalDraft'
 const INITIAL_TEMPLATE_STATE = {
+  categoryId: '',
   proposalMode: 'upload',
   serviceTitle: '',
   serviceCode: '',
@@ -33,11 +40,14 @@ const createDefaultLineItem = () => ({
   amount: 0,
 })
 
-export default function useFormLogic({ isEdit, editId }) {
+export default function useFormLogic({ isEdit, editId, initialCategoryId = null }) {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [template, setTemplate] = useState(INITIAL_TEMPLATE_STATE)
+  const [template, setTemplate] = useState({
+    ...INITIAL_TEMPLATE_STATE,
+    categoryId: initialCategoryId || '',
+  })
   const [existingAttachments, setExistingAttachments] = useState([])
   const [newAttachments, setNewAttachments] = useState([])
   const [rejectedAttachments, setRejectedAttachments] = useState([])
@@ -47,6 +57,8 @@ export default function useFormLogic({ isEdit, editId }) {
   const [templateMeta, setTemplateMeta] = useState({ proposalLanguage: 'en' })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [validationErrors, setValidationErrors] = useState({})
+  const [draftRestored, setDraftRestored] = useState(false)
   const [loading, setLoading] = useState(Boolean(isEdit && editId))
   const [loadError, setLoadError] = useState('')
   const saveInFlightRef = useRef(false)
@@ -54,24 +66,33 @@ export default function useFormLogic({ isEdit, editId }) {
   // --- Load draft on mount (create only) ---------------------------------
   useEffect(() => {
     if (isEdit) return
-    const draft = readTemplateDraft('special', DRAFT_KEY)
+    const draftRecord = readTemplateDraftRecord('special', DRAFT_KEY)
+    const draft = draftRecord?.payload
     if (draft) {
       const nextTemplate = draft.template || {}
       setTemplate({
         ...INITIAL_TEMPLATE_STATE,
         ...nextTemplate,
+        categoryId: initialCategoryId || nextTemplate.categoryId || '',
         proposalMode:
           nextTemplate.proposalMode === 'write' || nextTemplate.proposalMode === 'upload'
             ? nextTemplate.proposalMode
             : 'upload',
       })
       setRemarks(draft.remarks || '')
+      setDraftRestored(true)
     }
-  }, [isEdit])
+  }, [initialCategoryId, isEdit])
 
   // --- Auto-save draft on changes (create only) --------------------------
   useEffect(() => {
     if (isEdit) return
+    const hasDraftContent =
+      JSON.stringify(template) !== JSON.stringify(INITIAL_TEMPLATE_STATE) || Boolean(remarks)
+    if (!hasDraftContent) {
+      clearTemplateDraft('special', DRAFT_KEY)
+      return
+    }
     writeTemplateDraft('special', { template, remarks }, DRAFT_KEY)
   }, [isEdit, template, remarks])
 
@@ -113,13 +134,27 @@ export default function useFormLogic({ isEdit, editId }) {
   }, [isEdit, editId])
 
   // --- Handlers ---------------------------------------------------------
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     let { name, value } = e.target
     if (name === 'proposalMode') {
+      if (value === template.proposalMode) return
+      const attachmentCount = newAttachments.length + existingAttachments.length
+      if (value === 'write' && attachmentCount > 0) {
+        const confirmed = await dialog.confirm(
+          `Switch to writing the proposal? ${attachmentCount} selected or existing attachment${attachmentCount === 1 ? '' : 's'} will not be included when you save.`,
+        )
+        if (!confirmed) return
+      }
       setTemplate((prev) => ({ ...prev, proposalMode: value }))
       if (value === 'write') {
         setNewAttachments([])
       }
+      setValidationErrors((current) => ({
+        ...current,
+        proposalMode: undefined,
+        attachments: undefined,
+        proposalContent: undefined,
+      }))
       return
     }
     if (name === 'serviceTitle' && value) {
@@ -131,11 +166,13 @@ export default function useFormLogic({ isEdit, editId }) {
     if (name === 'serviceCode' && value) {
       value = value.toUpperCase()
     }
+    setValidationErrors((current) => ({ ...current, [name]: undefined }))
     setTemplate((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleEditorChange = (html, field) => {
     const targetField = field === 'proposalContent' ? 'proposalContent' : 'serviceSummary'
+    setValidationErrors((current) => ({ ...current, [targetField]: undefined }))
     setTemplate((prev) => ({ ...prev, [targetField]: html }))
   }
 
@@ -147,6 +184,10 @@ export default function useFormLogic({ isEdit, editId }) {
   }
 
   const handleDefaultLineItemChange = (index, field, value) => {
+    setValidationErrors((current) => ({
+      ...current,
+      [`defaultLineItems.${index}.${field}`]: undefined,
+    }))
     setTemplate((prev) => {
       const items = [...(prev.defaultLineItems || [])]
       const current = { ...createDefaultLineItem(), ...(items[index] || {}) }
@@ -186,6 +227,9 @@ export default function useFormLogic({ isEdit, editId }) {
     ])
     setNewAttachments((prev) => [...prev, ...accepted])
     setRejectedAttachments(rejected)
+    if (accepted.length > 0) {
+      setValidationErrors((current) => ({ ...current, attachments: undefined }))
+    }
     e.target.value = ''
   }
 
@@ -217,8 +261,9 @@ export default function useFormLogic({ isEdit, editId }) {
     })
     if (validationErrors.length > 0) {
       const message = formatValidationErrors(validationErrors)
+      setValidationErrors(getValidationErrorMap(validationErrors))
       setSaveError(message)
-      dialog.alert(message)
+      scrollToTemplateField(validationErrors[0]?.field)
       return
     }
 
@@ -228,10 +273,11 @@ export default function useFormLogic({ isEdit, editId }) {
         .map(({ index, message: errorMessage }) => `Attachment ${index + 1}: ${errorMessage}`)
         .join('\n')
       setSaveError(message)
-      dialog.alert(message)
+      scrollToTemplateField(`defaultLineItems.${attachmentNameErrors[0]?.index}.attachmentName`)
       return
     }
 
+    setValidationErrors({})
     setSaveError('')
     saveInFlightRef.current = true
     setSaving(true)
@@ -271,6 +317,9 @@ export default function useFormLogic({ isEdit, editId }) {
       }
       navigate(returnTo, {
         replace: true,
+        state: !isEdit
+          ? buildTemplateCompletionState({ location, serviceKey: 'special', response: json })
+          : undefined,
       })
     } catch (err) {
       const message = err?.message || 'Failed to save.'
@@ -288,12 +337,15 @@ export default function useFormLogic({ isEdit, editId }) {
     setNewAttachments([])
     setRemovedAttachments([])
     setRemarks('')
+    setValidationErrors({})
+    setSaveError('')
+    setDraftRestored(false)
     // Clear draft
     clearTemplateDraft('special', DRAFT_KEY)
   }
 
   const handleCancel = () => {
-    navigate(returnTo)
+    navigate(returnTo, { state: getTemplateReturnState(location) })
   }
 
   return {
@@ -312,6 +364,9 @@ export default function useFormLogic({ isEdit, editId }) {
     saving,
     saveError,
     setSaveError,
+    validationErrors,
+    setValidationErrors,
+    draftRestored,
     handleInputChange,
     handleEditorChange,
     handleAddDefaultLineItem,

@@ -102,6 +102,8 @@ describe('templateMappers', () => {
     expect(
       fromApiSpecialTemplate({
         proposal_mode: 'write',
+        category_id: 3,
+        category_name: 'Engineering',
         service_summary: 'Internal',
         proposal_content: 'Written body',
         attachments: [{ id: 1 }],
@@ -109,6 +111,8 @@ describe('templateMappers', () => {
       }),
     ).toMatchObject({
       proposalMode: 'write',
+      categoryId: 3,
+      categoryName: 'Engineering',
       serviceSummary: 'Internal',
       proposalContent: 'Written body',
       defaultLineItems: [{ title: 'Audit', quantity: 1 }],
@@ -127,6 +131,7 @@ describe('templateMappers', () => {
       formData: new FormData(),
       template: {
         proposalMode: 'write',
+        categoryId: 3,
         serviceTitle: 'Special',
         serviceCode: 'SP01',
         serviceSummary: '<p>Inactive</p>',
@@ -137,6 +142,7 @@ describe('templateMappers', () => {
     })
 
     expect(formData.get('content')).toBe('<p>Active</p>')
+    expect(formData.get('categoryId')).toBe('3')
     expect(formData.get('serviceSummary')).toBe('')
     expect(formData.get('proposalContent')).toBe('<p>Active</p>')
     expect(JSON.parse(formData.get('defaultLineItems'))).toEqual([

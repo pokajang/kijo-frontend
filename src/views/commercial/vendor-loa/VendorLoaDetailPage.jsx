@@ -10,6 +10,7 @@ import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 import { downloadCommercialWord } from '../shared/commercialWordDownload'
 import { getVendorLoaWordUrl } from './create/vendorLoaCreatePayload'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const canManagePaidStatus = (roles = []) => {
   const safeRoles = Array.isArray(roles) ? roles : []
@@ -322,10 +323,14 @@ const VendorLoaDetailPage = () => {
           <DetailField label="Reference Number" value={record?.loa_ref_no} />
           <DetailField label="Vendor" value={record?.vendor_name} />
           <DetailField label="Project" value={record?.project_name} />
+          <DetailField
+            label="Service Category"
+            value={record?.service_category || record?.project_type}
+          />
           <DetailField label="Service" value={record?.services_description} />
           <DetailField label="Position" value={record?.position} />
           <DetailField label="Payment Terms" value={record?.payment_terms} />
-          <DetailField label="Value" value={Number(record?.award_value || 0).toFixed(2)} />
+          <DetailField label="Value" value={formatMoney(record?.award_value)} />
           <DetailField label="Award Date" value={record?.award_date} />
           <DetailField label="Award By" value={record?.award_by} />
           <DetailField label="Requested" value={record?.payment_requested_on} />

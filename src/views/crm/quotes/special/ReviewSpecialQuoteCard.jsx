@@ -9,6 +9,7 @@ import {
   QuoteReviewCard,
   QuoteReviewTable,
 } from '../shared/QuoteReviewComponents'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 export default function ReviewSpecialQuoteCard({
   selectedClient,
@@ -48,7 +49,7 @@ export default function ReviewSpecialQuoteCard({
     (sum, item) => sum + (parseFloat(item.amount || 0) || 0),
     0,
   )
-  const grandTotal = (subtotal + sstAmount).toFixed(2)
+  const grandTotal = subtotal + sstAmount
 
   return (
     <QuoteReviewCard
@@ -115,13 +116,12 @@ export default function ReviewSpecialQuoteCard({
           {(formData.lineItems || []).map((it, i) => (
             <CTableRow key={i}>
               <CTableDataCell className="fw-normal text-muted">{i + 1}</CTableDataCell>
-              <CTableDataCell>{parseFloat(it.amount || 0).toFixed(2)}</CTableDataCell>
+              <CTableDataCell>{formatMoney(it.amount)}</CTableDataCell>
               <CTableDataCell>
                 <div className="d-flex align-items-start gap-2 flex-wrap">
                   <strong>{it.title || '-'}</strong>
                   <small className="text-muted">
-                    ({Number(it.quantity || 0)} {it.unit || '-'} x{' '}
-                    {parseFloat(it.unitPrice || 0).toFixed(2)})
+                    ({Number(it.quantity || 0)} {it.unit || '-'} x {formatMoney(it.unitPrice)})
                   </small>
                   {it.description ? (
                     <small className="text-muted">Notes: {it.description}</small>
@@ -137,13 +137,13 @@ export default function ReviewSpecialQuoteCard({
                 <CTableHeaderCell colSpan={2} className="text-end">
                   Line Items Subtotal (RM)
                 </CTableHeaderCell>
-                <CTableDataCell>RM {lineItemsSubtotal.toFixed(2)}</CTableDataCell>
+                <CTableDataCell>{formatMoney(lineItemsSubtotal)}</CTableDataCell>
               </CTableRow>
               <CTableRow>
                 <CTableHeaderCell colSpan={2} className="text-end">
                   Discount (RM)
                 </CTableHeaderCell>
-                <CTableDataCell>- RM {discount.toFixed(2)}</CTableDataCell>
+                <CTableDataCell>- {formatMoney(discount)}</CTableDataCell>
               </CTableRow>
             </>
           )}
@@ -152,20 +152,20 @@ export default function ReviewSpecialQuoteCard({
             <CTableHeaderCell colSpan={2} className="text-end">
               Subtotal (RM)
             </CTableHeaderCell>
-            <CTableDataCell>RM {subtotal.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(subtotal)}</CTableDataCell>
           </CTableRow>
           <CTableRow>
             <CTableHeaderCell colSpan={2} className="text-end">
               {formData.sstPercent ?? 0}% SST
             </CTableHeaderCell>
-            <CTableDataCell>RM {sstAmount.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(sstAmount)}</CTableDataCell>
           </CTableRow>
           <CTableRow>
             <CTableHeaderCell colSpan={2} className="text-end">
               <strong>Grand Total (RM)</strong>
             </CTableHeaderCell>
             <CTableDataCell>
-              <strong>RM {grandTotal}</strong>
+              <strong>{formatMoney(grandTotal)}</strong>
             </CTableDataCell>
           </CTableRow>
         </CTableBody>

@@ -85,8 +85,8 @@ export const templateConfigs = {
   },
   special: {
     listPath: getProposalListPath('special'),
-    listTitle: 'Special Service Proposal Templates',
-    detailTitle: 'Special Service Proposal Details',
+    listTitle: 'Other Services Proposal Templates',
+    detailTitle: 'Other Services Proposal Details',
     listApi: getTemplateBaseUrl('special'),
     deleteUrl: (id) => getTemplateResourceUrl('special', id),
     pdfUrl: (id) => buildTemplatePdfUrl('special', id),
@@ -138,8 +138,14 @@ export const normalizeTemplateRow = (row, type) => {
     dateCreated: formatTemplateDate(row?.dateCreated || row?.created_at),
     createdBy: row?.createdBy || createdHistory?.created_by_code || '-',
     attachmentsCount: Array.isArray(row?.attachments) ? row.attachments.length : 0,
+    categoryName: row?.categoryName || row?.category_name || 'Special Service',
   }
 }
+
+export const getPopulatedCategoryOptions = (rows) =>
+  Array.from(new Set(rows.map((row) => row.categoryName).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' }),
+  )
 
 export const getTemplatePdfUrl = (type, templateId) => templateConfigs[type].pdfUrl(templateId)
 

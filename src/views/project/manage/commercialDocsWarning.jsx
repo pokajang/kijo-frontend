@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CAlert, CSpinner } from '@coreui/react'
 
 import dialog from '../../../components/dialog/dialogService'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import { getProjectCommercialDocs } from './projectApi'
 
 const emptyDocs = {
@@ -22,7 +23,7 @@ const normalizeGroupKeys = (groupKeys) => {
 
 const money = (value) => {
   const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) && parsed > 0 ? `RM ${parsed.toFixed(2)}` : ''
+  return Number.isFinite(parsed) && parsed > 0 ? formatMoney(parsed) : ''
 }
 
 const buildDocItem = ({

@@ -151,9 +151,9 @@ describe('SupplierPoRecords table wiring', () => {
       po: 'PO-2026-001',
       supplier: 'Alpha Supplier',
       createdBy: 'AZA',
-      totalDisplay: '1500.50',
+      totalDisplay: '1,500.50',
     })
-    expect(tableProps.getMobileMeta(tableProps.rows[0])).toBe('2026-05-10 | RM 1500.50')
+    expect(tableProps.getMobileMeta(tableProps.rows[0])).toBe('2026-05-10 | RM 1,500.50')
     expect(fetchAllPagedRecords).toHaveBeenCalledWith(
       expect.objectContaining({
         dataKeys: ['data'],
@@ -177,6 +177,7 @@ describe('SupplierPoRecords table wiring', () => {
     expect(pendingActions.map((action) => action.label)).toEqual([
       'View',
       'Preview',
+      'Edit',
       'PDF PO',
       'Word PO',
       'Mark Paid',
@@ -185,8 +186,15 @@ describe('SupplierPoRecords table wiring', () => {
     expect(pendingActions.find((action) => action.key === 'mark-paid')).toMatchObject({
       disabled: false,
     })
+    expect(pendingActions.find((action) => action.key === 'edit')).toMatchObject({
+      disabled: false,
+    })
 
     const paidActions = tableProps.getActions(tableProps.rows[1])
+    expect(paidActions.find((action) => action.key === 'edit')).toMatchObject({
+      disabled: true,
+      tooltip: 'Paid Supplier POs cannot be edited.',
+    })
     expect(paidActions.find((action) => action.key === 'mark-paid')).toMatchObject({
       disabled: true,
       tooltip: 'Supplier PO is already paid.',

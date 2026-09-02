@@ -17,6 +17,7 @@ import { getManpowerRate, getManpowerRateOption, inferManpowerRateType } from '.
 import { fetchPriceException } from '../priceException'
 import TrafficLightCard from '../shared/TrafficLightCard'
 import { getTrafficLightStatus } from '../shared/trafficLightConfig'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const getApprovedNegotiationDiscount = (row) =>
   Number(row?.approved_discount_amount || row?.requested_discount_amount || 0)
@@ -27,6 +28,8 @@ export default function ManpowerQuotationForm({
   isEditMode = false,
   quoteId = null,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
 }) {
   const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
   const draftContext = useMemo(
@@ -331,14 +334,10 @@ export default function ManpowerQuotationForm({
       Number(formData.unitCost) < stipulatedRate.unitCost
     ) {
       const rateOption = getManpowerRateOption(formData.manpowerRateType)
-      const formattedMinimum = stipulatedRate.unitCost.toLocaleString('en-MY', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
       dialog.alert(
         `Unit cost cannot be lower than the stipulated ${
           rateOption?.label ? `${rateOption.label} ` : ''
-        }rate of RM ${formattedMinimum} per pax per ${stipulatedRate.billingUnit}.`,
+        }rate of ${formatMoney(stipulatedRate.unitCost)} per pax per ${stipulatedRate.billingUnit}.`,
       )
       return
     }
@@ -422,6 +421,8 @@ export default function ManpowerQuotationForm({
         selectedClient={selectedClient}
         isEditMode={isEditMode}
         proposalLanguage={proposalLanguage}
+        createdProposalTemplate={createdProposalTemplate}
+        onCreatedProposalTemplateConsumed={onCreatedProposalTemplateConsumed}
         showPricingSection={hasEstimatedCost}
         appliedPriceException={appliedPriceException}
         onRequestOverride={() => {

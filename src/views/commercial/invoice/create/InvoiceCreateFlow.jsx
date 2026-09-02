@@ -10,6 +10,7 @@ import {
   useProjectCommercialDocs,
 } from '../../../project/manage/commercialDocsWarning'
 import { getCurrentProjectValue } from '../../../project/manage/projectApi'
+import { getProjectServiceCategory } from '../../../project/manage/projectServiceCategory'
 import { isProjectActive } from '../../../project/manage/projectStatus'
 import InvoiceFormShell from '../../../../shared/invoice/InvoiceFormShell'
 import { normalizePaymentTermsDays } from '../../../../shared/paymentTerms'
@@ -573,7 +574,8 @@ const InvoiceCreateFlow = ({ project, origin = 'project', onBack }) => {
     purpose: pricing.service_title || projectMeta.project_name || project?.project_name || '',
     dateIssued: invoiceMeta.dateIssued,
     status: invoiceMeta.status,
-    serviceType: project?.project_type || '',
+    serviceType: getProjectServiceCategory(project || {}),
+    serviceTypeLabel: 'Service Category',
     loaNo,
     paidDate: '',
     paidAmount: '',

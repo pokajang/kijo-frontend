@@ -143,11 +143,14 @@ const AgendaTable = ({
   return (
     <CRow className="mb-3">
       <CCol>
-        <CFormLabel>Select Training Duration</CFormLabel>
+        <CFormLabel>
+          Training duration <span className="text-danger">*</span>
+        </CFormLabel>
         <CButtonGroup
           className="mb-1 d-block"
           data-template-field="duration"
           tabIndex={validationErrors.duration ? -1 : undefined}
+          aria-invalid={Boolean(validationErrors.duration) || undefined}
         >
           {DURATION_OPTIONS.map(({ label, value }) => (
             <CButton
@@ -166,7 +169,9 @@ const AgendaTable = ({
           <div className="invalid-feedback d-block mb-3">{validationErrors.duration}</div>
         )}
 
-        <CFormLabel>Tentative Program</CFormLabel>
+        <CFormLabel>
+          Tentative programme <span className="text-danger">*</span>
+        </CFormLabel>
         {validationErrors.agenda && (
           <div className="invalid-feedback d-block mb-2" data-template-field="agenda" tabIndex={-1}>
             {validationErrors.agenda}
@@ -200,6 +205,7 @@ const AgendaTable = ({
                           value={row.start}
                           onChange={(e) => handleAgendaChange(idx, 'start', e.target.value)}
                           invalid={Boolean(rowError)}
+                          aria-invalid={Boolean(rowError) || undefined}
                           data-template-field={`agenda.${idx}`}
                         />
                       </CTableDataCell>
@@ -209,6 +215,7 @@ const AgendaTable = ({
                           value={row.end}
                           onChange={(e) => handleAgendaChange(idx, 'end', e.target.value)}
                           invalid={Boolean(rowError)}
+                          aria-invalid={Boolean(rowError) || undefined}
                         />
                       </CTableDataCell>
                       <CTableDataCell>
@@ -224,6 +231,7 @@ const AgendaTable = ({
                             handleAgendaChange(idx, 'topic', e.target.value.replace(/\n/g, '<br/>'))
                           }
                           invalid={Boolean(rowError)}
+                          aria-invalid={Boolean(rowError) || undefined}
                         />
                         {rowError && <div className="invalid-feedback d-block">{rowError}</div>}
                       </CTableDataCell>

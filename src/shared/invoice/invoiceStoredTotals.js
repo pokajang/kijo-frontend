@@ -14,11 +14,7 @@ const firstFiniteNumber = (...values) => {
 
 const roundMoney = (value) => Math.round((value + Number.EPSILON) * 100) / 100
 
-export const formatInvoiceMoney = (value) =>
-  `RM ${firstFiniteNumber(value).toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+export const formatInvoiceMoney = (value) => formatMoney(firstFiniteNumber(value))
 
 export const resolveStoredInvoiceTotals = (invoice = {}) => {
   const resolvedInvoice = invoice || {}
@@ -68,3 +64,4 @@ export const buildStoredInvoiceSummaryRows = (invoice = {}) => {
 
   return rows
 }
+import { formatMoney } from '../../utils/formatters/numberFormatters'

@@ -19,6 +19,7 @@ import {
 } from '@coreui/react'
 
 import DataTableActionMenu from '../../../../components/datatable/DataTableActionMenu'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 import {
   calculateHygieneTotals,
   isHistoricalHygienePricingRule,
@@ -243,7 +244,7 @@ const PricingCard = ({
             onChange={(event) => setItem((prev) => ({ ...prev, unit_price: event.target.value }))}
           />
         </CTableDataCell>
-        <CTableDataCell>{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
+        <CTableDataCell>{formatMoney(getItemLineTotal(item))}</CTableDataCell>
         <CTableDataCell className="record-action-cell text-center" />
       </CTableRow>
       <CTableRow>
@@ -370,10 +371,8 @@ const PricingCard = ({
                             <CTableDataCell>{item.description || '-'}</CTableDataCell>
                             <CTableDataCell>{Number(item.quantity) || 0}</CTableDataCell>
                             <CTableDataCell>{item.unit || '-'}</CTableDataCell>
-                            <CTableDataCell>
-                              {Number(item.unit_price || 0).toFixed(2)}
-                            </CTableDataCell>
-                            <CTableDataCell>{getItemLineTotal(item).toFixed(2)}</CTableDataCell>
+                            <CTableDataCell>{formatMoney(item.unit_price)}</CTableDataCell>
+                            <CTableDataCell>{formatMoney(getItemLineTotal(item))}</CTableDataCell>
                             <CTableDataCell
                               className="record-action-cell text-center"
                               data-no-row-open="true"

@@ -202,7 +202,7 @@ const DeliveryOrderDetailPage = () => {
           <DetailField label="Reference Number" value={record?.do_number} />
           <DetailField label="Project" value={record?.project_name} />
           <DetailField label="Project Code" value={record?.project_code} />
-          <DetailField label="Type" value={record?.project_type} />
+          <DetailField label="Type" value={record?.service_category || record?.project_type} />
           <DetailField label="Award Date" value={record?.project_award_date} />
           <DetailField label="Service Period" value={record?.project_service_period} />
           <DetailField

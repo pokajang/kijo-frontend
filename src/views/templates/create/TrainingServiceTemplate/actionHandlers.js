@@ -9,7 +9,7 @@ import {
 } from '../../shared/templateMappers'
 import {
   clearTemplateDraft,
-  readTemplateDraft,
+  readTemplateDraftRecord,
   writeTemplateDraft,
 } from '../../shared/templateDrafts'
 import {
@@ -18,6 +18,7 @@ import {
   validateTrainingTemplate,
 } from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
+import { buildTemplateCompletionState } from '../../shared/templateHandoff'
 // ------ LocalStorage draft key
 const DRAFT_KEY = 'trainingProposalDraft'
 
@@ -28,10 +29,12 @@ export function useLoadDraft(
   setTemplateDetails,
   setAgendaRows,
   setRemarks,
+  setDraftRestored,
 ) {
   useEffect(() => {
     if (isEdit) return
-    const draft = readTemplateDraft('training', DRAFT_KEY)
+    const draftRecord = readTemplateDraftRecord('training', DRAFT_KEY)
+    const draft = draftRecord?.payload
     if (draft) {
       const templateDetails =
         draft.templateDetails && typeof draft.templateDetails === 'object'
@@ -40,16 +43,28 @@ export function useLoadDraft(
       setTemplateDetails({ ...initialTemplateDetails, ...templateDetails })
       setAgendaRows(Array.isArray(draft.agendaRows) ? draft.agendaRows : [])
       setRemarks(draft.remarks || '')
+      setDraftRestored?.(true)
     }
-  }, [initialTemplateDetails, isEdit, setAgendaRows, setRemarks, setTemplateDetails])
+  }, [
+    initialTemplateDetails,
+    isEdit,
+    setAgendaRows,
+    setDraftRestored,
+    setRemarks,
+    setTemplateDetails,
+  ])
 }
 
 // ------ Hook: auto-save draft whenever these change (new proposals only)
-export function useAutoSaveDraft(isEdit, templateDetails, agendaRows, remarks) {
+export function useAutoSaveDraft(isEdit, templateDetails, agendaRows, remarks, hasDraftContent) {
   useEffect(() => {
     if (isEdit) return
+    if (!hasDraftContent) {
+      clearTemplateDraft('training', DRAFT_KEY)
+      return
+    }
     writeTemplateDraft('training', { templateDetails, agendaRows, remarks }, DRAFT_KEY)
-  }, [isEdit, templateDetails, agendaRows, remarks])
+  }, [agendaRows, hasDraftContent, isEdit, remarks, templateDetails])
 }
 
 // ------ Hook: load edit data when editing
@@ -181,6 +196,7 @@ export async function handleSave({
   finalizingBmTranslation = false,
   isBmProposal = false,
   returnTo,
+  location,
 }) {
   if (saving || saveInFlightRef?.current) return
 
@@ -190,7 +206,6 @@ export async function handleSave({
     const errorMap = getValidationErrorMap(validationErrors)
     setValidationErrors?.(errorMap)
     setSaveError(message)
-    dialog.alert(message)
     scrollToValidationField(validationErrors[0]?.field)
     return
   }
@@ -201,14 +216,12 @@ export async function handleSave({
   setSaving(true)
 
   try {
-    const confirmed = await dialog.confirm(
-      finalizingBmTranslation
-        ? 'Save this BM proposal and make it available for BM quotations?'
-        : isEdit
-          ? 'Are you sure you want to update this proposal?'
-          : 'Are you sure you want to create this proposal?',
-    )
-    if (!confirmed) return
+    if (finalizingBmTranslation) {
+      const confirmed = await dialog.confirm(
+        'Save this BM proposal and make it available for BM quotations?',
+      )
+      if (!confirmed) return
+    }
 
     // strip fully empty rows
     const cleanedAgenda = agendaRows.filter(
@@ -236,11 +249,15 @@ export async function handleSave({
       if (!isEdit) {
         clearTemplateDraft('training', DRAFT_KEY)
       }
-      navigate(
+      const destination =
         returnTo ||
-          getProposalListPath('training', finalizingBmTranslation || isBmProposal ? 'ms-MY' : 'en'),
-        { replace: true },
-      )
+        getProposalListPath('training', finalizingBmTranslation || isBmProposal ? 'ms-MY' : 'en')
+      navigate(destination, {
+        replace: true,
+        state: !isEdit
+          ? buildTemplateCompletionState({ location, serviceKey: 'training', response: data })
+          : undefined,
+      })
     } else {
       const message = data?.message || 'Failed to save proposal.'
       setSaveError(message)

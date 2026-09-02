@@ -226,7 +226,7 @@ const DeliveryOrder = () => {
   const serviceTypeOptions = useMemo(() => {
     const options = new Set()
     deliveryOrders.forEach((doItem) => {
-      const type = String(doItem?.project_type || '').trim()
+      const type = String(doItem?.service_category || doItem?.project_type || '').trim()
       if (type) options.add(type)
     })
     return Array.from(options).sort((a, b) => a.localeCompare(b))
@@ -351,7 +351,9 @@ const DeliveryOrder = () => {
         }
 
         if (serviceTypeFilter !== 'all') {
-          const serviceType = String(doItem?.project_type || '').toLowerCase()
+          const serviceType = String(
+            doItem?.service_category || doItem?.project_type || '',
+          ).toLowerCase()
           if (serviceType !== String(serviceTypeFilter).toLowerCase()) return false
         }
 
@@ -383,7 +385,7 @@ const DeliveryOrder = () => {
           String(doItem?.company_contact_name || '')
             .toLowerCase()
             .includes(term) ||
-          String(doItem?.project_type || '')
+          String(doItem?.service_category || doItem?.project_type || '')
             .toLowerCase()
             .includes(term) ||
           itemsText.toLowerCase().includes(term)

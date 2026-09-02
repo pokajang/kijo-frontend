@@ -12,12 +12,9 @@ import {
   CModalHeader,
   CModalTitle,
 } from '@coreui/react'
+import { formatNumber } from '../../../../../utils/formatters/numberFormatters'
 
-const amount = (value) =>
-  Number(value || 0).toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+const amount = (value) => formatNumber(value, { minimumFractionDigits: 2 })
 
 const NegotiationRequestModal = ({
   visible,

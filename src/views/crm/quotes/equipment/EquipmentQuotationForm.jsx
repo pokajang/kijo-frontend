@@ -37,8 +37,6 @@ export default function EquipmentQuotationForm({
     setDiscount,
     sstPercent,
     setSstPercent,
-    attachProposal,
-    setAttachProposal,
     estimatedTotalCost,
     setEstimatedTotalCost,
     itemsTotal,
@@ -138,8 +136,6 @@ export default function EquipmentQuotationForm({
             sstAmount={sstAmount}
             grandTotal={grandTotal}
             estimatedTotalCost={estimatedTotalCost}
-            attachProposal={attachProposal}
-            onAttachProposalChange={setAttachProposal}
             onSave={handleSaveQuote}
             onCancel={handleCancel}
             isEditMode={isEditMode}

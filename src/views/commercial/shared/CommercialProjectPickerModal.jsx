@@ -18,6 +18,7 @@ import {
 
 import { DataTableLoadingState } from '../../../components/datatable'
 import { listActiveProjectOptions } from '../../project/manage/projectApi'
+import { getProjectServiceCategory } from '../../project/manage/projectServiceCategory'
 
 const emptyValue = '-'
 
@@ -72,6 +73,8 @@ const getProjectSearchText = (project = {}) =>
     getProjectName(project),
     getClientName(project),
     getProjectType(project),
+    getProjectServiceCategory(project),
+    project.service_category_code || project.serviceCategoryCode,
     getProjectValue(project),
     formatProjectValue(project),
     project.status,
@@ -216,7 +219,7 @@ const CommercialProjectPickerModal = ({
                 const selected = String(projectId) === String(selectedProjectId)
                 const projectName = getProjectName(project) || `Project #${projectId}`
                 const clientName = getClientName(project)
-                const projectType = getProjectType(project) || emptyValue
+                const serviceCategory = getProjectServiceCategory(project) || emptyValue
                 const projectValue = formatProjectValue(project)
                 const projectTitle = clientName ? `${projectName} for ${clientName}` : projectName
 
@@ -234,7 +237,7 @@ const CommercialProjectPickerModal = ({
                       <div className="flex-grow-1" style={{ minWidth: 0 }}>
                         <div className="fw-semibold text-wrap">{projectTitle}</div>
                         <div className="d-flex flex-wrap gap-1 mt-2">
-                          <ProjectMetaBadge selected={selected}>{projectType}</ProjectMetaBadge>
+                          <ProjectMetaBadge selected={selected}>{serviceCategory}</ProjectMetaBadge>
                         </div>
                       </div>
                       <div

@@ -12,6 +12,7 @@ import {
 } from '@coreui/react'
 import { QuoteReviewSection, QuoteReviewTable } from '../shared/QuoteReviewComponents'
 import TrafficLightDecisionBadge from '../shared/TrafficLightDecisionBadge'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const MobileTotalRow = ({ label, value, strong = false, children }) => (
   <div className="d-flex justify-content-between align-items-start gap-3 py-1">
@@ -37,8 +38,6 @@ export default function ReviewQuotation({
   sstAmount,
   grandTotal,
   estimatedTotalCost,
-  attachProposal,
-  onAttachProposalChange,
   onCancel,
   onSave,
   saveLabel,
@@ -53,9 +52,6 @@ export default function ReviewQuotation({
       saveLabel={saveLabel}
       requiresApproval={requiresApproval}
       isEditMode={isEditMode}
-      attachProposal={attachProposal}
-      attachProposalLabel="Attach Proposal PDF"
-      onAttachProposalChange={onAttachProposalChange}
     >
       <CRow>
         <CCol xs={12}>
@@ -96,8 +92,8 @@ export default function ReviewQuotation({
                     </CTableDataCell>
                     <CTableDataCell className="text-center">{qty}</CTableDataCell>
                     <CTableDataCell>{item.unit}</CTableDataCell>
-                    <CTableDataCell className="text-end">{price.toFixed(2)}</CTableDataCell>
-                    <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
+                    <CTableDataCell className="text-end">{formatMoney(price)}</CTableDataCell>
+                    <CTableDataCell className="text-end">{formatMoney(qty * price)}</CTableDataCell>
                   </CTableRow>
                 )
               })}
@@ -109,7 +105,7 @@ export default function ReviewQuotation({
                     Delivery Charge
                   </CTableHeaderCell>
                   <CTableDataCell className="text-end">
-                    RM {deliveryCharge.toFixed(2)}
+                    {formatMoney(deliveryCharge)}
                   </CTableDataCell>
                 </CTableRow>
               )}
@@ -119,7 +115,7 @@ export default function ReviewQuotation({
                   <CTableHeaderCell colSpan={5} className="text-end">
                     Miscellaneous Charge
                   </CTableHeaderCell>
-                  <CTableDataCell className="text-end">RM {miscCharge.toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">{formatMoney(miscCharge)}</CTableDataCell>
                 </CTableRow>
               )}
 
@@ -128,7 +124,7 @@ export default function ReviewQuotation({
                   <CTableHeaderCell colSpan={5} className="text-end">
                     Discount
                   </CTableHeaderCell>
-                  <CTableDataCell className="text-end">- RM {discount.toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">- {formatMoney(discount)}</CTableDataCell>
                 </CTableRow>
               )}
 
@@ -137,7 +133,7 @@ export default function ReviewQuotation({
                 <CTableHeaderCell colSpan={5} className="text-end">
                   Subtotal
                 </CTableHeaderCell>
-                <CTableDataCell className="text-end">RM {subtotal.toFixed(2)}</CTableDataCell>
+                <CTableDataCell className="text-end">{formatMoney(subtotal)}</CTableDataCell>
               </CTableRow>
 
               {/* SST just above Grand Total */}
@@ -146,7 +142,7 @@ export default function ReviewQuotation({
                   <CTableHeaderCell colSpan={5} className="text-end">
                     {sstPercent}% SST
                   </CTableHeaderCell>
-                  <CTableDataCell className="text-end">RM {sstAmount.toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">{formatMoney(sstAmount)}</CTableDataCell>
                 </CTableRow>
               )}
 
@@ -156,7 +152,7 @@ export default function ReviewQuotation({
                 </CTableHeaderCell>
                 <CTableDataCell className="text-end">
                   <div className="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-                    <strong>RM {grandTotal.toFixed(2)}</strong>
+                    <strong>{formatMoney(grandTotal)}</strong>
                     <TrafficLightDecisionBadge
                       serviceKey="equipment"
                       estimatedTotalCost={estimatedTotalCost}
@@ -188,10 +184,10 @@ export default function ReviewQuotation({
                           {item.item_name}
                         </strong>
                       </div>
-                      <strong className="text-nowrap">RM {(qty * price).toFixed(2)}</strong>
+                      <strong className="text-nowrap">{formatMoney(qty * price)}</strong>
                     </div>
                     <div className="small text-body-secondary mt-2">
-                      {qty} {item.unit || 'unit'} at RM {price.toFixed(2)} each
+                      {qty} {item.unit || 'unit'} at {formatMoney(price)} each
                     </div>
                     {itemRemarks[item.id]?.trim() ? (
                       <div className="small mt-2" style={{ whiteSpace: 'pre-line' }}>
@@ -205,23 +201,20 @@ export default function ReviewQuotation({
 
             <div className="border rounded p-3 mt-3">
               {deliveryCharge > 0 ? (
-                <MobileTotalRow label="Delivery Charge" value={`RM ${deliveryCharge.toFixed(2)}`} />
+                <MobileTotalRow label="Delivery Charge" value={formatMoney(deliveryCharge)} />
               ) : null}
               {miscCharge > 0 ? (
-                <MobileTotalRow
-                  label="Miscellaneous Charge"
-                  value={`RM ${miscCharge.toFixed(2)}`}
-                />
+                <MobileTotalRow label="Miscellaneous Charge" value={formatMoney(miscCharge)} />
               ) : null}
               {discount > 0 ? (
-                <MobileTotalRow label="Discount" value={`- RM ${discount.toFixed(2)}`} />
+                <MobileTotalRow label="Discount" value={`- ${formatMoney(discount)}`} />
               ) : null}
-              <MobileTotalRow label="Subtotal" value={`RM ${subtotal.toFixed(2)}`} />
+              <MobileTotalRow label="Subtotal" value={formatMoney(subtotal)} />
               {sstPercent > 0 ? (
-                <MobileTotalRow label={`${sstPercent}% SST`} value={`RM ${sstAmount.toFixed(2)}`} />
+                <MobileTotalRow label={`${sstPercent}% SST`} value={formatMoney(sstAmount)} />
               ) : null}
               <div className="border-top mt-2 pt-2">
-                <MobileTotalRow label="Grand Total" value={`RM ${grandTotal.toFixed(2)}`} strong />
+                <MobileTotalRow label="Grand Total" value={formatMoney(grandTotal)} strong />
                 <div className="d-flex justify-content-end mt-2">
                   <TrafficLightDecisionBadge
                     serviceKey="equipment"

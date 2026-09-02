@@ -28,6 +28,10 @@ export default function SpecialQuotationForm({
   isEditMode = false,
   quoteId = null,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
+  specialCategoryId = null,
+  specialCategoryName = 'Special Service',
 }) {
   const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
   const hasPriceExceptionRequestId = Boolean(priceExceptionRequestId)
@@ -48,43 +52,49 @@ export default function SpecialQuotationForm({
   })
 
   // Default form structure
-  const defaultForm = {
-    specialId: null,
-    serviceTitle: '',
-    serviceCode: '',
-    generalRemarks: '',
-    lineItems: [], // { id, title, description, unit, quantity, unitPrice, amount }
-    discount: 0,
-    priceExceptionRequestId: '',
-    sstPercent: 0,
-    subTotal: 0,
-    sstAmount: 0,
-    attachProposal: true,
-    proposalMode: '',
-    hasAppendableProposal: null,
-    appendablePdfCount: 0,
-    hasWrittenProposalContent: false,
-    appendableProposalMessage: '',
-    clientId: null,
-    clientName: '',
-    clientSsm: '',
-    clientAddress: '',
-    clientCity: '',
-    clientState: '',
-    clientZip: '',
-    picName: '',
-    picEmail: '',
-    picPhone: '',
-    picPosition: '',
-    proposalLanguage,
-  }
+  const defaultForm = useMemo(
+    () => ({
+      specialId: null,
+      categoryId: Number(specialCategoryId) || null,
+      categoryName: specialCategoryName,
+      serviceTitle: '',
+      serviceCode: '',
+      generalRemarks: '',
+      lineItems: [], // { id, title, description, unit, quantity, unitPrice, amount }
+      discount: 0,
+      priceExceptionRequestId: '',
+      sstPercent: 0,
+      subTotal: 0,
+      sstAmount: 0,
+      attachProposal: true,
+      proposalMode: '',
+      hasAppendableProposal: null,
+      appendablePdfCount: 0,
+      hasWrittenProposalContent: false,
+      appendableProposalMessage: '',
+      clientId: null,
+      clientName: '',
+      clientSsm: '',
+      clientAddress: '',
+      clientCity: '',
+      clientState: '',
+      clientZip: '',
+      picName: '',
+      picEmail: '',
+      picPhone: '',
+      picPosition: '',
+      proposalLanguage,
+    }),
+    [proposalLanguage, specialCategoryId, specialCategoryName],
+  )
 
   // Load draft from shared draft storage (only in create mode)
   const draft =
     !isEditMode &&
     !hasPriceExceptionRequestId &&
     readQuoteServiceDraft({ serviceKey: 'special', ...draftContext })
-  const [formData, setFormData] = useState(draft || defaultForm)
+  const matchingDraft = Number(draft?.categoryId) === Number(specialCategoryId) ? draft : null
+  const [formData, setFormData] = useState(matchingDraft || defaultForm)
   const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
   const [initialized, setInitialized] = useState(false)
 
@@ -119,6 +129,8 @@ export default function SpecialQuotationForm({
 
     setFormData({
       specialId: initialFormData.specialId ?? null,
+      categoryId: initialFormData.categoryId ?? specialCategoryId ?? null,
+      categoryName: initialFormData.categoryName || specialCategoryName,
       serviceTitle: initialFormData.serviceTitle ?? '',
       serviceCode: initialFormData.serviceCode ?? '',
       generalRemarks: initialFormData.generalRemarks ?? '',
@@ -148,7 +160,26 @@ export default function SpecialQuotationForm({
       proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
     })
     setInitialized(true)
-  }, [initialFormData, isEditMode, initialized, proposalLanguage])
+  }, [
+    initialFormData,
+    isEditMode,
+    initialized,
+    proposalLanguage,
+    specialCategoryId,
+    specialCategoryName,
+  ])
+
+  useEffect(() => {
+    if (isEditMode) return
+    setFormData((prev) => {
+      if (Number(prev.categoryId) === Number(specialCategoryId)) return prev
+      return {
+        ...defaultForm,
+        categoryId: Number(specialCategoryId) || null,
+        categoryName: specialCategoryName,
+      }
+    })
+  }, [defaultForm, isEditMode, specialCategoryId, specialCategoryName])
 
   useEffect(() => {
     if (isEditMode) return
@@ -225,6 +256,7 @@ export default function SpecialQuotationForm({
 
     const corePayload = {
       sp_id: formData.specialId,
+      category_id: formData.categoryId,
       service_title: formData.serviceTitle,
       service_code: formData.serviceCode,
       general_remarks: formData.generalRemarks,
@@ -282,6 +314,10 @@ export default function SpecialQuotationForm({
           setFormData={setFormData}
           isEditMode={isEditMode}
           proposalLanguage={proposalLanguage}
+          createdProposalTemplate={createdProposalTemplate}
+          onCreatedProposalTemplateConsumed={onCreatedProposalTemplateConsumed}
+          specialCategoryId={formData.categoryId}
+          specialCategoryName={formData.categoryName}
         />
 
         {showPricing && (

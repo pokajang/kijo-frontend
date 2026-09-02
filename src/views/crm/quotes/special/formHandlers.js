@@ -3,12 +3,25 @@
 import { useState, useEffect } from 'react'
 import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
 
-export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposalLanguage = 'en') {
+export function useSpecialDetailsForm(
+  formData,
+  setFormData,
+  isEditMode,
+  proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
+  specialCategoryId = null,
+) {
   const [templates, setTemplates] = useState([])
+  const [templatesLoaded, setTemplatesLoaded] = useState(false)
 
   // 1) load available service templates
   useEffect(() => {
+    let cancelled = false
+    setTemplatesLoaded(false)
+    setTemplates([])
     const query = new URLSearchParams({ language: proposalLanguage })
+    if (specialCategoryId) query.set('category_id', String(specialCategoryId))
     fetch(quoteApiUrl(`proposal-templates/special/list?${query.toString()}`), {
       credentials: 'include',
     })
@@ -16,13 +29,83 @@ export function useSpecialDetailsForm(formData, setFormData, isEditMode, proposa
       .then((j) => {
         const rows = Array.isArray(j) ? j : Array.isArray(j?.data) ? j.data : []
         if (isQuoteResultSuccess(j)) {
-          setTemplates(rows)
+          if (!cancelled) setTemplates(rows)
         } else {
           console.error('Unexpected templates response', j)
         }
       })
       .catch((e) => console.error('Failed to load templates', e))
-  }, [proposalLanguage])
+      .finally(() => {
+        if (!cancelled) setTemplatesLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [proposalLanguage, specialCategoryId])
+
+  useEffect(() => {
+    if (!createdProposalTemplate || isEditMode) return
+    if (
+      createdProposalTemplate.serviceKey !== 'special' ||
+      createdProposalTemplate.proposalLanguage !== proposalLanguage ||
+      (createdProposalTemplate.specialCategoryId &&
+        Number(createdProposalTemplate.specialCategoryId) !== Number(specialCategoryId))
+    ) {
+      onCreatedProposalTemplateConsumed?.()
+      return
+    }
+    if (!templatesLoaded) return
+
+    const selected = templates.find(
+      (template) => Number(template.id) === Number(createdProposalTemplate.templateId),
+    )
+    if (!selected) {
+      onCreatedProposalTemplateConsumed?.(
+        'The new Special Service proposal template could not be loaded. Refresh the list or select it manually.',
+      )
+      return
+    }
+
+    const defaultLineItems = Array.isArray(selected.defaultLineItems)
+      ? selected.defaultLineItems
+      : []
+    setFormData((prev) => ({
+      ...prev,
+      specialId: selected.id,
+      serviceTitle: selected.serviceTitle || '',
+      serviceCode: selected.serviceCode || '',
+      proposalMode: selected.proposalMode || '',
+      hasAppendableProposal: Boolean(selected.hasAppendableProposal),
+      appendablePdfCount: Number(selected.appendablePdfCount || 0),
+      hasWrittenProposalContent: Boolean(selected.hasWrittenProposalContent),
+      appendableProposalMessage: selected.appendableProposalMessage || '',
+      attachProposal: selected.hasAppendableProposal ? prev.attachProposal : false,
+      lineItems: defaultLineItems.map((item) => {
+        const quantity = Number(item.quantity) || 1
+        const unitPrice = Number(item.unitPrice) || 0
+        return {
+          title: item.title || '',
+          description: item.description || '',
+          unit: item.unit || '',
+          quantity,
+          unitPrice,
+          amount: Number.isFinite(Number(item.amount))
+            ? Number(item.amount)
+            : Number((quantity * unitPrice).toFixed(2)),
+        }
+      }),
+    }))
+    onCreatedProposalTemplateConsumed?.()
+  }, [
+    createdProposalTemplate,
+    isEditMode,
+    onCreatedProposalTemplateConsumed,
+    proposalLanguage,
+    specialCategoryId,
+    setFormData,
+    templates,
+    templatesLoaded,
+  ])
 
   useEffect(() => {
     if (isEditMode || formData.specialId || templates.length === 0) {

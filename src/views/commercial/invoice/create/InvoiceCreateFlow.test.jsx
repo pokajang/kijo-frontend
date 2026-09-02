@@ -39,7 +39,7 @@ vi.mock('../../../../components/dialog/dialogService', () => ({
 
 vi.mock('../../../../shared/invoice/InvoiceFormShell', async () => {
   const ReactModule = await vi.importActual('react')
-  const MockInvoiceFormShell = ({ pricing, project, setPricing }) => {
+  const MockInvoiceFormShell = ({ pricing, project, setPricing, invoiceDetails }) => {
     ReactModule.useEffect(() => {
       if (Number(pricing.sub_total) === 100) return
       if (isSpecialType(project?.project_type)) {
@@ -82,6 +82,9 @@ vi.mock('../../../../shared/invoice/InvoiceFormShell', async () => {
       <div>
         <div>Invoice form shell</div>
         <div>Pricing: {pricing.sub_total}</div>
+        <div>
+          {invoiceDetails.serviceTypeLabel}: {invoiceDetails.serviceType}
+        </div>
       </div>
     )
   }
@@ -284,6 +287,21 @@ describe('InvoiceCreateFlow', () => {
     expect(await screen.findByText(/Review the invoice details below/i)).toBeInTheDocument()
     expect(screen.getByText('Special service')).toBeInTheDocument()
     expect(submitInvoicePayload).not.toHaveBeenCalled()
+  })
+
+  it('shows a resolved Special category while retaining the workflow type internally', () => {
+    renderFlow({
+      project: {
+        id: 47,
+        project_name: 'Environment Project',
+        project_type: 'Special Service',
+        serviceCategory: 'Environment',
+        quote_id: 38,
+        quote_value: 100,
+      },
+    })
+
+    expect(screen.getByText('Service Category: Environment')).toBeInTheDocument()
   })
 
   it('can continue to the invoice list after creation', async () => {

@@ -20,6 +20,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { formatNumber } from '../../utils/formatters/numberFormatters'
 import {
   buildStoredHygieneTotals,
   buildHygieneInvoicePricingSeed,
@@ -505,7 +506,9 @@ const HygieneInvoiceForm = ({
                   </CFormFeedback>
                 ) : null}
               </CTableDataCell>
-              <CTableDataCell className="text-end">{baseTotal.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(baseTotal, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
 
             <CTableRow>
@@ -549,7 +552,9 @@ const HygieneInvoiceForm = ({
                   </CFormFeedback>
                 ) : null}
               </CTableDataCell>
-              <CTableDataCell className="text-end">{travelCharge.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(travelCharge, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
 
             {items.map((item, idx) => {
@@ -659,7 +664,9 @@ const HygieneInvoiceForm = ({
                       </CFormFeedback>
                     ) : null}
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    {formatNumber(qty * price, { minimumFractionDigits: 2 })}
+                  </CTableDataCell>
                 </CTableRow>
               )
             })}
@@ -669,7 +676,7 @@ const HygieneInvoiceForm = ({
                 Gross Subtotal (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {totals.subtotalBeforeDiscount.toFixed(2)}
+                {formatNumber(totals.subtotalBeforeDiscount, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -714,7 +721,7 @@ const HygieneInvoiceForm = ({
                 ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-end">
-                {(-Math.abs(discountTotal)).toFixed(2)}
+                {formatNumber(-Math.abs(discountTotal), { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -737,7 +744,9 @@ const HygieneInvoiceForm = ({
                 ) : null}
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
+                {formatNumber(parseFloat(pricing.sst_amount) || 0, {
+                  minimumFractionDigits: 2,
+                })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -745,7 +754,9 @@ const HygieneInvoiceForm = ({
                 Grand Total (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle fw-bold">
-                {(parseFloat(pricing.grand_total) || 0).toFixed(2)}
+                {formatNumber(parseFloat(pricing.grand_total) || 0, {
+                  minimumFractionDigits: 2,
+                })}
               </CTableDataCell>
             </CTableRow>
           </CTableBody>

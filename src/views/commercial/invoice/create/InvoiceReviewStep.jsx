@@ -14,16 +14,12 @@ import {
   CTableHeaderCell,
   CTableRow,
 } from '@coreui/react'
+import {
+  formatMoney,
+  formatNumber as formatDisplayNumber,
+} from '../../../../utils/formatters/numberFormatters'
 
 const emptyValue = '-'
-
-const formatMoney = (value) => {
-  const amount = Number(value || 0)
-  return `RM ${amount.toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
 
 const formatOptionalMoney = (value) => (value === null ? emptyValue : formatMoney(value))
 
@@ -36,7 +32,7 @@ const displayRemainingMoney = (value) => {
 
 const formatNumber = (value) => {
   const number = Number(value || 0)
-  return Number.isInteger(number) ? String(number) : number.toFixed(2)
+  return Number.isInteger(number) ? String(number) : formatDisplayNumber(number)
 }
 
 const getLineTotal = (item = {}) => Number(item.quantity || 0) * Number(item.unit_price || 0)

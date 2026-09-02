@@ -12,6 +12,7 @@ import { countByPredicate, formatCount, getTopGroupByCount } from '../../../util
 import { downloadWordDocument } from '../../../utils/documents/downloadWordDocument'
 import AttachmentsModal from '../list-special/AttachmentsModal'
 import {
+  getPopulatedCategoryOptions,
   getTemplatePdfUrl,
   getTemplateWordUrl,
   normalizeTemplateRow,
@@ -68,6 +69,17 @@ const createColumns = (type) => [
   ...(type === 'special'
     ? [
         {
+          key: 'categoryName',
+          label: 'Category',
+          width: '170px',
+          sortable: true,
+          sortType: 'string',
+          textMode: 'expandable',
+          cellMaxWidth: '170px',
+          previewCharThreshold: 18,
+          getExportValue: (row) => row.categoryName || 'Special Service',
+        },
+        {
           key: 'attachmentsCount',
           label: 'Attachments',
           width: '140px',
@@ -107,7 +119,7 @@ const createDefaultVisibleColumns = (type) => ({
   serviceCode: true,
   proposalLanguage: true,
   description: true,
-  ...(type === 'special' ? { attachmentsCount: true } : {}),
+  ...(type === 'special' ? { categoryName: true, attachmentsCount: true } : {}),
   dateCreated: true,
   createdBy: false,
 })
@@ -191,7 +203,7 @@ const buildStatsItems = (type, rows) => {
   return [
     {
       key: 'templates',
-      label: 'Special Templates',
+      label: 'Other Service Templates',
       value: formatCount(rows.length),
       tone: 'primary',
     },
@@ -226,6 +238,7 @@ const TemplateProposalTable = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [createdByFilter, setCreatedByFilter] = useState('')
   const [yearFilter, setYearFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [showAttachModal, setShowAttachModal] = useState(false)
   const [currentAttachments, setCurrentAttachments] = useState([])
@@ -255,6 +268,7 @@ const TemplateProposalTable = ({
         .map((value) => ({ value, label: value })),
     [rows],
   )
+  const categoryOptions = useMemo(() => getPopulatedCategoryOptions(rows), [rows])
 
   const filteredRows = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
@@ -262,14 +276,15 @@ const TemplateProposalTable = ({
     return rows.filter((row) => {
       const matchesSearch =
         !term ||
-        [row.title, row.serviceCode, row.description, row.createdBy]
+        [row.title, row.serviceCode, row.description, row.createdBy, row.categoryName]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(term))
       const matchesCreator = !createdByFilter || row.createdBy === createdByFilter
       const matchesYear = !yearFilter || getYear(row) === yearFilter
-      return matchesSearch && matchesCreator && matchesYear
+      const matchesCategory = !categoryFilter || row.categoryName === categoryFilter
+      return matchesSearch && matchesCreator && matchesYear && matchesCategory
     })
-  }, [createdByFilter, rows, searchTerm, yearFilter])
+  }, [categoryFilter, createdByFilter, rows, searchTerm, yearFilter])
 
   const statsItems = useMemo(
     () =>
@@ -292,6 +307,7 @@ const TemplateProposalTable = ({
     setSearchTerm('')
     setCreatedByFilter('')
     setYearFilter('')
+    setCategoryFilter('')
   }
 
   const activeChips = useMemo(() => {
@@ -299,13 +315,15 @@ const TemplateProposalTable = ({
     if (searchTerm.trim()) chips.push({ key: 'search', label: `Search: ${searchTerm.trim()}` })
     if (createdByFilter) chips.push({ key: 'createdBy', label: `Created By: ${createdByFilter}` })
     if (yearFilter) chips.push({ key: 'year', label: `Year: ${yearFilter}` })
+    if (categoryFilter) chips.push({ key: 'category', label: `Category: ${categoryFilter}` })
     return chips
-  }, [createdByFilter, searchTerm, yearFilter])
+  }, [categoryFilter, createdByFilter, searchTerm, yearFilter])
 
   const clearChip = (key) => {
     if (key === 'search') setSearchTerm('')
     if (key === 'createdBy') setCreatedByFilter('')
     if (key === 'year') setYearFilter('')
+    if (key === 'category') setCategoryFilter('')
   }
 
   const openAttachments = (attachments) => {
@@ -375,12 +393,12 @@ const TemplateProposalTable = ({
   ]
 
   const renderCell = (row, column) => {
-    if (column.key === 'description') {
+    if (column.key === 'description' || column.key === 'categoryName') {
       return (
         <DataTableTextCell
-          value={row.description}
+          value={column.key === 'categoryName' ? row.categoryName : row.description}
           maxWidth={column.cellMaxWidth || column.width || '200px'}
-          title="Description"
+          title={column.key === 'categoryName' ? 'Category' : 'Description'}
           mode="expandable"
           previewCharThreshold={column.previewCharThreshold || 34}
           truncateCharThreshold={column.truncateCharThreshold || column.previewCharThreshold || 34}
@@ -421,7 +439,11 @@ const TemplateProposalTable = ({
         visible={controlsVisible}
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
-        searchPlaceholder="Search title, code, description, or creator"
+        searchPlaceholder={
+          type === 'special'
+            ? 'Search title, code, category, description, or creator'
+            : 'Search title, code, description, or creator'
+        }
         searchAriaLabel={`Search ${config.listTitle.toLowerCase()}`}
         showAdvancedFilters={showAdvancedFilters}
         setShowAdvancedFilters={setShowAdvancedFilters}
@@ -433,6 +455,23 @@ const TemplateProposalTable = ({
         desktopToolsId={desktopToolsId}
         mobileToolsId={mobileToolsId}
       >
+        {type === 'special' && (
+          <CCol xs={12} md={4} lg={3}>
+            <CFormLabel htmlFor={`${config.idPrefix}-category-filter`}>Category</CFormLabel>
+            <CFormSelect
+              id={`${config.idPrefix}-category-filter`}
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="">All categories</option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </CFormSelect>
+          </CCol>
+        )}
         <CCol xs={12} md={4} lg={3}>
           <CFormLabel htmlFor={`${config.idPrefix}-creator-filter`}>Created By</CFormLabel>
           <CFormSelect

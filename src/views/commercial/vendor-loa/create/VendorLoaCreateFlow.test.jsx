@@ -137,6 +137,7 @@ describe('VendorLoaCreateFlow', () => {
       'project',
       'list',
       'generate',
+      'generate-word',
       'view',
     ])
   })

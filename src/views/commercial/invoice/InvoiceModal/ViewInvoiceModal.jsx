@@ -25,6 +25,7 @@ import {
   formatInvoiceMoney,
   resolveStoredInvoiceTotals,
 } from '../../../../shared/invoice/invoiceStoredTotals'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
   if (!visible || !invoice) return null
@@ -329,9 +330,7 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
                   </CCol>
                   <CCol md={6}>
                     <CFormLabel>Paid Amount</CFormLabel>
-                    <div>
-                      {paid_amount != null ? `RM ${parseFloat(paid_amount).toFixed(2)}` : '-'}
-                    </div>
+                    <div>{paid_amount != null ? formatMoney(paid_amount) : '-'}</div>
                   </CCol>
                 </CRow>
                 <CRow className="mb-2">
@@ -383,10 +382,10 @@ const ViewInvoiceModal = ({ visible, onClose, invoice }) => {
                           <CTableDataCell className="text-center">{line.quantity}</CTableDataCell>
                           <CTableDataCell className="text-center">{line.unit}</CTableDataCell>
                           <CTableDataCell className="text-end">
-                            RM {Number.isFinite(unitPrice) ? unitPrice.toFixed(2) : '0.00'}
+                            {formatMoney(Number.isFinite(unitPrice) ? unitPrice : 0)}
                           </CTableDataCell>
                           <CTableDataCell className="text-end">
-                            RM {Number.isFinite(lineSubtotal) ? lineSubtotal.toFixed(2) : '0.00'}
+                            {formatMoney(Number.isFinite(lineSubtotal) ? lineSubtotal : 0)}
                           </CTableDataCell>
                         </>
                       )

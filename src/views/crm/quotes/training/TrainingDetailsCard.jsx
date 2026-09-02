@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Select from '../../../../components/forms/ThemedSelect'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CCard,
   CCardBody,
@@ -21,6 +21,7 @@ import {
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { getPricingDurationDefaults } from './trainingDuration'
 import { getTrainingUnitPriceForDurationUnit } from './trainingRates'
+import { buildQuoteTemplateCreateNavigation } from '../../../templates/shared/templateHandoff'
 
 const toInputDateValue = (value) => {
   if (!value) return ''
@@ -135,6 +136,7 @@ const TrainingDetailsCard = ({
   proposalLanguage = 'en',
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isRevision } = useQuoteRouteParams()
   const text = proposalLanguage === 'ms-MY' ? labels.bm : labels.en
   const selectedPaymentMethodOption = presetPaymentMethods.includes(formData.paymentMethod)
@@ -194,7 +196,14 @@ const TrainingDetailsCard = ({
                     <CButton
                       color="primary"
                       size="sm"
-                      onClick={() => navigate('/templates/create')}
+                      onClick={() => {
+                        const target = buildQuoteTemplateCreateNavigation({
+                          location,
+                          serviceKey: 'training',
+                          proposalLanguage,
+                        })
+                        if (target) navigate(target.to, { state: target.state })
+                      }}
                     >
                       {text.createOne}
                     </CButton>

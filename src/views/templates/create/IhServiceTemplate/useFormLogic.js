@@ -6,14 +6,20 @@ import dialog from '../../../../components/dialog/dialogService'
 import { createTemplate, getTemplate, isAbortError, updateTemplate } from '../../shared/templateApi'
 import {
   clearTemplateDraft,
-  readTemplateDraft,
+  readTemplateDraftRecord,
   writeTemplateDraft,
 } from '../../shared/templateDrafts'
 import { fromApiIhTemplate, toApiIhTemplate } from '../../shared/templateMappers'
 import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templateUtils'
-import { formatValidationErrors, validateIhTemplate } from '../../shared/templateValidation'
+import {
+  formatValidationErrors,
+  getValidationErrorMap,
+  validateIhTemplate,
+} from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
 import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
+import { buildTemplateCompletionState, getTemplateReturnState } from '../../shared/templateHandoff'
+import { scrollToTemplateField } from '../../shared/templateFormUi'
 // Key for saving drafts
 const DRAFT_KEY = 'ihProposalDraft'
 
@@ -40,6 +46,8 @@ export default function useFormLogic({ isEdit, editId }) {
   const [originalTitle, setOriginalTitle] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [validationErrors, setValidationErrors] = useState({})
+  const [draftRestored, setDraftRestored] = useState(false)
   const [loading, setLoading] = useState(Boolean(isEdit && editId))
   const [loadError, setLoadError] = useState('')
   const saveInFlightRef = useRef(false)
@@ -47,7 +55,8 @@ export default function useFormLogic({ isEdit, editId }) {
   // --- Load draft on mount (new proposals only) -----------------------------
   useEffect(() => {
     if (isEdit) return
-    const draft = readTemplateDraft('ih', DRAFT_KEY)
+    const draftRecord = readTemplateDraftRecord('ih', DRAFT_KEY)
+    const draft = draftRecord?.payload
     if (draft) {
       const draftTemplate =
         draft.templateDetails && typeof draft.templateDetails === 'object'
@@ -55,12 +64,19 @@ export default function useFormLogic({ isEdit, editId }) {
           : {}
       setTemplateDetails({ ...initialTemplate, ...draftTemplate })
       setRemarks(draft.remarks || '')
+      setDraftRestored(true)
     }
   }, [isEdit])
 
   // --- Auto-save to draft on every change (new proposals only) ---------------
   useEffect(() => {
     if (isEdit) return
+    const hasDraftContent =
+      JSON.stringify(templateDetails) !== JSON.stringify(initialTemplate) || Boolean(remarks)
+    if (!hasDraftContent) {
+      clearTemplateDraft('ih', DRAFT_KEY)
+      return
+    }
     writeTemplateDraft('ih', { templateDetails, remarks }, DRAFT_KEY)
   }, [isEdit, templateDetails, remarks])
 
@@ -106,6 +122,7 @@ export default function useFormLogic({ isEdit, editId }) {
   // --- Handle text-input changes ----------------------------------------
   const handleInputChange = (e) => {
     const { name, value } = e.target
+    setValidationErrors((current) => ({ ...current, [name]: undefined }))
 
     if (name === 'serviceTitle') {
       const cleaned = value
@@ -146,7 +163,12 @@ export default function useFormLogic({ isEdit, editId }) {
 
   // --- Handle rich-text editor changes ----------------------------------
   const handleEditorChange = (content, field) => {
+    setValidationErrors((current) => ({ ...current, [field]: undefined }))
     setTemplateDetails((prev) => ({ ...prev, [field]: content }))
+  }
+
+  const clearValidationError = (field) => {
+    setValidationErrors((current) => ({ ...current, [field]: undefined }))
   }
 
   const finalizingBmTranslation =
@@ -164,23 +186,23 @@ export default function useFormLogic({ isEdit, editId }) {
     const validationErrors = validateIhTemplate({ templateDetails, remarks })
     if (validationErrors.length > 0) {
       const message = formatValidationErrors(validationErrors)
+      setValidationErrors(getValidationErrorMap(validationErrors))
       setSaveError(message)
-      dialog.alert(message)
+      scrollToTemplateField(validationErrors[0]?.field)
       return
     }
+    setValidationErrors({})
     setSaveError('')
     saveInFlightRef.current = true
     setSaving(true)
 
     try {
-      const confirmed = await dialog.confirm(
-        finalizingBmTranslation
-          ? 'Save this BM proposal and make it available for BM quotations?'
-          : isEdit
-            ? 'Update this IH proposal?'
-            : 'Create new IH proposal?',
-      )
-      if (!confirmed) return
+      if (finalizingBmTranslation) {
+        const confirmed = await dialog.confirm(
+          'Save this BM proposal and make it available for BM quotations?',
+        )
+        if (!confirmed) return
+      }
 
       const payload = toApiIhTemplate({
         templateDetails,
@@ -204,6 +226,9 @@ export default function useFormLogic({ isEdit, editId }) {
         }
         navigate(returnTo, {
           replace: true,
+          state: !isEdit
+            ? buildTemplateCompletionState({ location, serviceKey: 'ih', response: data })
+            : undefined,
         })
       } else {
         const message = data?.message || 'Unable to save IH proposal.'
@@ -225,11 +250,14 @@ export default function useFormLogic({ isEdit, editId }) {
   const handleReset = () => {
     setTemplateDetails(initialTemplate)
     setRemarks('')
+    setValidationErrors({})
+    setSaveError('')
+    setDraftRestored(false)
     clearTemplateDraft('ih', DRAFT_KEY)
   }
 
   const handleCancel = () => {
-    navigate(returnTo)
+    navigate(returnTo, { state: getTemplateReturnState(location) })
   }
 
   return {
@@ -246,8 +274,11 @@ export default function useFormLogic({ isEdit, editId }) {
     saving,
     saveError,
     setSaveError,
+    validationErrors,
+    draftRestored,
     handleInputChange,
     handleEditorChange,
+    clearValidationError,
     handleSave,
     handleReset,
     handleCancel,

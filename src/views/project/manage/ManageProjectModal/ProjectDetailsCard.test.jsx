@@ -142,4 +142,25 @@ describe('ProjectDetailsCard', () => {
       state: { returnTo: '/project/manage/12' },
     })
   })
+
+  it('shows the historical category and does not expose workflow type editing for quote-backed projects', () => {
+    render(
+      <ProjectDetailsCard
+        project={{
+          ...baseProject,
+          quote_id: 88,
+          quote_type: 'special',
+          service_category: 'Environment',
+        }}
+      />,
+    )
+
+    expect(screen.getByText('Environment')).toBeInTheDocument()
+    expect(screen.getByText('Service Category')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(screen.queryByRole('textbox', { name: 'Service Category' })).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Special Service')).not.toBeInTheDocument()
+  })
 })

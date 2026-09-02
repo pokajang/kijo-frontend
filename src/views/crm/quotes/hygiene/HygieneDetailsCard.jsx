@@ -12,6 +12,8 @@ const HygieneDetailsCardMain = ({
   selectedClient,
   isEditMode = false,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
 }) => {
   const { isRevision } = useQuoteRouteParams()
 
@@ -37,6 +39,8 @@ const HygieneDetailsCardMain = ({
               setFormData={setFormData}
               isEditMode={isEditMode}
               proposalLanguage={proposalLanguage}
+              createdProposalTemplate={createdProposalTemplate}
+              onCreatedProposalTemplateConsumed={onCreatedProposalTemplateConsumed}
             />
             <ProjectDetailsCard
               formData={formData}

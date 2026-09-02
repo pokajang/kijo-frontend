@@ -168,10 +168,7 @@ const DoEditModalMain = ({ visible, onClose, data, onSave }) => {
             <CRow className="mb-2">
               <CCol md={6}>
                 <CFormLabel>Type</CFormLabel>
-                <CFormInput
-                  value={formData.project_type}
-                  onChange={(e) => handleChange('project_type', e.target.value)}
-                />
+                <CFormInput value={formData.service_category || formData.project_type} readOnly />
               </CCol>
               <CCol md={6}>
                 <CFormLabel>Award Date</CFormLabel>

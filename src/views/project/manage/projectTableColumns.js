@@ -1,9 +1,9 @@
-export const columnStorageKey = 'project.manage.visible-columns.v5'
+export const columnStorageKey = 'project.manage.visible-columns.v6'
 export const actionColumnWidth = '56px'
 
 export const defaultVisibleColumns = {
   client: true,
-  projectType: true,
+  serviceCategory: true,
   project: true,
   inquirySource: false,
   value: true,
@@ -21,7 +21,13 @@ export const requiredColumns = new Set(['client', 'project', 'status'])
 
 export const dataColumns = [
   { key: 'client', label: 'Client', width: '220px', sortable: true, sortType: 'string' },
-  { key: 'projectType', label: 'Project Type', width: '160px', sortable: true, sortType: 'string' },
+  {
+    key: 'serviceCategory',
+    label: 'Service Category',
+    width: '170px',
+    sortable: true,
+    sortType: 'string',
+  },
   {
     key: 'project',
     label: 'Project',

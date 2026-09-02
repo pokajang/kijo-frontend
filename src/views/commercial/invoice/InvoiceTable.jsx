@@ -210,17 +210,18 @@ const InvoiceTable = ({
       invoices.map((inv) => {
         const reqCompany = inv.requestor?.company || {}
         const reqPic = inv.requestor?.pic || {}
-        const serviceType = inv.serviceType || emptyValue
+        const workflowServiceType = inv.serviceType || emptyValue
+        const serviceType = inv.serviceCategory || workflowServiceType
         const isHrdTraining =
-          String(serviceType).toLowerCase() === 'training' &&
+          String(workflowServiceType).toLowerCase() === 'training' &&
           String(inv?.paymentMethod || '')
             .toLowerCase()
             .includes('hrd')
-        const isEquipment = inv.isEquipment ?? isEquipmentService(serviceType)
+        const isEquipment = inv.isEquipment ?? isEquipmentService(workflowServiceType)
         const isWordInvoiceSupported =
-          inv.isWordInvoiceSupported ?? isWordInvoiceService(serviceType)
+          inv.isWordInvoiceSupported ?? isWordInvoiceService(workflowServiceType)
         const isWordReceiptSupported =
-          inv.isWordReceiptSupported ?? isWordReceiptService(serviceType)
+          inv.isWordReceiptSupported ?? isWordReceiptService(workflowServiceType)
 
         return {
           ...inv,

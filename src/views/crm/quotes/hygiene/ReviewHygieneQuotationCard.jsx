@@ -23,6 +23,7 @@ import {
   QuoteReviewTable,
 } from '../shared/QuoteReviewComponents'
 import TrafficLightDecisionBadge from '../shared/TrafficLightDecisionBadge'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const toNumber = (value, fallback = 0) => {
   const n = Number(value)
@@ -123,9 +124,9 @@ const ReviewHygieneQuotationCard = ({
           <CTableRow>
             <CTableHeaderCell className="text-end">Service Cost (RM)</CTableHeaderCell>
             <CTableDataCell>
-              {totals.serviceTotal.toFixed(2)}{' '}
+              {formatMoney(totals.serviceTotal)}{' '}
               <small className="text-muted">
-                (Unit Price: {baseUnitPrice.toFixed(2)}
+                (Unit Price: {formatMoney(baseUnitPrice)}
                 {isLegacyPricing
                   ? ` x Complexity: ${totals.complexityRating} (${totals.complexityMultiplier.toFixed(1)}x)`
                   : ''}{' '}
@@ -136,7 +137,7 @@ const ReviewHygieneQuotationCard = ({
 
           <CTableRow>
             <CTableHeaderCell className="text-end">Mob & Accom (RM)</CTableHeaderCell>
-            <CTableDataCell>{toNumber(formData.travelCharge, 0).toFixed(2)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(toNumber(formData.travelCharge, 0))}</CTableDataCell>
           </CTableRow>
 
           {!isHistoricalPricing && hygieneItems.length > 0 && (
@@ -164,12 +165,12 @@ const ReviewHygieneQuotationCard = ({
                           <CTableDataCell className="fw-normal text-muted">
                             {index + 1}
                           </CTableDataCell>
-                          <CTableDataCell>{lineTotal.toFixed(2)}</CTableDataCell>
+                          <CTableDataCell>{formatMoney(lineTotal)}</CTableDataCell>
                           <CTableDataCell>
                             <div className="d-flex align-items-start gap-2 flex-wrap">
                               <strong>{item.item_description || '-'}</strong>
                               <small className="text-muted">
-                                ({quantity} {item.unit || 'Lot'} x {unitPrice.toFixed(2)})
+                                ({quantity} {item.unit || 'Lot'} x {formatMoney(unitPrice)})
                               </small>
                               {item.description ? (
                                 <small className="text-muted">Notes: {item.description}</small>
@@ -188,27 +189,27 @@ const ReviewHygieneQuotationCard = ({
           {!isHistoricalPricing && (
             <CTableRow>
               <CTableHeaderCell className="text-end">Gross Subtotal (RM)</CTableHeaderCell>
-              <CTableDataCell>{totals.subtotalBeforeDiscount.toFixed(2)}</CTableDataCell>
+              <CTableDataCell>{formatMoney(totals.subtotalBeforeDiscount)}</CTableDataCell>
             </CTableRow>
           )}
 
           <CTableRow>
             <CTableHeaderCell className="text-end">Discount (RM)</CTableHeaderCell>
-            <CTableDataCell>- {totals.discountTotal.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>- {formatMoney(totals.discountTotal)}</CTableDataCell>
           </CTableRow>
 
           <CTableRow>
             <CTableHeaderCell className="text-end">
               {isHistoricalPricing ? 'Subtotal (RM)' : 'Subtotal after Discount (RM)'}
             </CTableHeaderCell>
-            <CTableDataCell>{totals.taxableTotal.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(totals.taxableTotal)}</CTableDataCell>
           </CTableRow>
 
           <CTableRow>
             <CTableHeaderCell className="text-end">
               {formData.sstPercent || '0'}% SST (RM)
             </CTableHeaderCell>
-            <CTableDataCell>{totals.sstAmount.toFixed(2)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(totals.sstAmount)}</CTableDataCell>
           </CTableRow>
 
           <CTableRow>
@@ -217,7 +218,7 @@ const ReviewHygieneQuotationCard = ({
             </CTableHeaderCell>
             <CTableDataCell>
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                <strong>{totals.grandTotal.toFixed(2)}</strong>
+                <strong>{formatMoney(totals.grandTotal)}</strong>
                 <TrafficLightDecisionBadge
                   serviceKey="ih"
                   estimatedTotalCost={formData.estimatedTotalCost}

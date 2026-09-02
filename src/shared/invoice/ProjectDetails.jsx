@@ -10,6 +10,7 @@ import {
   CFormTextarea,
   CAlert,
 } from '@coreui/react'
+import { getProjectServiceCategory } from '../../views/project/manage/projectServiceCategory'
 
 // Helper: strip off any " hh:mm:ss" so date inputs receive "YYYY-MM-DD"
 const getDateOnly = (val) => val?.split(' ')[0] ?? ''
@@ -38,6 +39,7 @@ const ProjectDetails = ({ project, quoteDetails, onProjectChange }) => {
   const missingTrainingDates =
     localProject.project_type === 'Training' &&
     (!localProject.service_start_date || !localProject.service_end_date)
+  const serviceCategory = getProjectServiceCategory({ ...project, ...quoteDetails })
 
   useEffect(() => {
     setLocalProject({
@@ -89,13 +91,8 @@ const ProjectDetails = ({ project, quoteDetails, onProjectChange }) => {
             />
           </CCol>
           <CCol md={6}>
-            <CFormLabel>Project Type</CFormLabel>
-            <CFormInput
-              type="text"
-              value={localProject.project_type}
-              disabled
-              onChange={(e) => handleChange('project_type', e.target.value)}
-            />
+            <CFormLabel>Service Category</CFormLabel>
+            <CFormInput type="text" value={serviceCategory} disabled />
           </CCol>
         </CRow>
 

@@ -61,7 +61,7 @@ export const validateTrainingTemplate = ({ templateDetails = {}, agendaRows = []
   addRequiredText(errors, templateDetails.duration, 'duration', 'Training duration')
   addRequiredRichText(errors, templateDetails.introduction, 'introduction', 'Introduction')
   addRequiredRichText(errors, templateDetails.objectives, 'objectives', 'Objectives')
-  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, remarks, 'remarks', 'Internal change note')
 
   addMaxLength(errors, templateDetails.trainingTitle, 255, 'trainingTitle', 'Training title')
   addMaxLength(errors, templateDetails.trainingCode, 50, 'trainingCode', 'Training code')
@@ -115,7 +115,7 @@ export const validateIhTemplate = ({ templateDetails = {}, remarks }) => {
   addRequiredText(errors, templateDetails.serviceTitle, 'serviceTitle', 'Service title')
   addRequiredText(errors, templateDetails.serviceCode, 'serviceCode', 'Service code')
   addRequiredRichText(errors, templateDetails.introduction, 'introduction', 'Introduction')
-  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, remarks, 'remarks', 'Internal change note')
 
   const contentFields = [
     templateDetails.introduction,
@@ -147,7 +147,7 @@ export const validateManpowerTemplate = ({ templateDetails = {}, remarks }) => {
     'serviceDeliverables',
     'Service deliverables',
   )
-  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, remarks, 'remarks', 'Internal change note')
 
   if (
     ![
@@ -176,9 +176,10 @@ export const validateSpecialTemplate = ({
   const errors = []
   const proposalMode = template.proposalMode || 'upload'
 
+  addRequiredText(errors, template.categoryId, 'categoryId', 'Service category')
   addRequiredText(errors, template.serviceTitle, 'serviceTitle', 'Service title')
   addRequiredText(errors, template.serviceCode, 'serviceCode', 'Service code')
-  addRequiredRichText(errors, remarks, 'remarks', 'Remarks')
+  addRequiredRichText(errors, remarks, 'remarks', 'Internal change note')
 
   if (!['upload', 'write'].includes(proposalMode)) {
     errors.push({ field: 'proposalMode', message: 'Proposal mode is invalid.' })

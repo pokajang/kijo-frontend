@@ -711,6 +711,9 @@ export async function fetchSpecialQuotes() {
         // --- Service‐specific form data ---
         formData: {
           spId: row.sp_id ? parseInt(row.sp_id, 10) : null,
+          categoryId: row.category_id ? parseInt(row.category_id, 10) : null,
+          categoryName: row.category_name || 'Special Service',
+          categoryCode: row.category_code || 'SPECIAL',
           proposalId: row.sp_id ? parseInt(row.sp_id, 10) : null,
           serviceTitle: row.service_title || '',
           serviceCode: row.service_code || '',

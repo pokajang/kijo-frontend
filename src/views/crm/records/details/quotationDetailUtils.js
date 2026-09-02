@@ -14,16 +14,10 @@ export const toBoolean = (value) => {
   return false
 }
 
-export const formatMoney = (value) =>
-  `RM ${toFiniteNumber(value).toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+export const formatMoney = (value) => formatDisplayMoney(toFiniteNumber(value))
 
 export const formatNumber = (value) =>
-  toFiniteNumber(value).toLocaleString('en-MY', {
-    maximumFractionDigits: 2,
-  })
+  formatDisplayNumber(toFiniteNumber(value), { maximumFractionDigits: 2 })
 
 export const formatPercentage = (value) => `${formatNumber(value)}%`
 
@@ -37,3 +31,7 @@ export const getProposalLanguageLabel = (value) => {
   if (value === 'en') return 'English'
   return value || 'Not provided'
 }
+import {
+  formatMoney as formatDisplayMoney,
+  formatNumber as formatDisplayNumber,
+} from '../../../../utils/formatters/numberFormatters'

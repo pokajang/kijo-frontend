@@ -85,6 +85,36 @@ describe('CommercialProjectPickerModal', () => {
     expect(screen.queryByText('Equipment Beta for Client B')).not.toBeInTheDocument()
   })
 
+  it('shows and searches the specific category while retaining the Special workflow type', async () => {
+    const onContinue = vi.fn()
+    listActiveProjectOptions.mockResolvedValue([
+      {
+        id: 77,
+        projectName: 'Compliance Assessment',
+        clientName: 'Client E',
+        projectType: 'Special Service',
+        quoteType: 'special',
+        serviceCategory: 'Environment',
+        serviceCategoryCode: 'ENV',
+      },
+    ])
+
+    renderPicker({ onContinue })
+
+    expect(await screen.findByText('Environment')).toBeInTheDocument()
+    expect(screen.queryByText('Special Service')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Select Project'), { target: { value: 'env' } })
+    fireEvent.click(screen.getByRole('button', { name: /compliance assessment for client e/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }))
+
+    expect(onContinue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_type: 'Special Service',
+        serviceCategory: 'Environment',
+      }),
+    )
+  })
+
   it('disables continue until selection and returns normalized project data', async () => {
     const onContinue = vi.fn()
     listActiveProjectOptions.mockResolvedValue([

@@ -24,7 +24,7 @@ describe('templateValidation', () => {
         'Training duration is required.',
         'Introduction is required.',
         'Objectives is required.',
-        'Remarks is required.',
+        'Internal change note is required.',
         'Agenda Day 1, row 1 start time must be before end time.',
       ]),
     )
@@ -83,7 +83,7 @@ describe('templateValidation', () => {
         'Service title is required.',
         'Service code is required.',
         'Introduction is required.',
-        'Remarks is required.',
+        'Internal change note is required.',
         'At least one IH proposal content section is required.',
       ]),
     )
@@ -163,6 +163,20 @@ describe('templateValidation', () => {
         'Default line item 1 unit price cannot be negative.',
       ]),
     )
+  })
+
+  it('requires a category for special proposals', () => {
+    const errors = validateSpecialTemplate({
+      template: {
+        proposalMode: 'write',
+        serviceTitle: 'Engineering Service',
+        serviceCode: 'ENG-1',
+        proposalContent: '<p>Content</p>',
+      },
+      remarks: '<p>Created</p>',
+    })
+
+    expect(messages(errors)).toContain('Service category is required.')
   })
 
   it('maps validation errors by field for inline display', () => {

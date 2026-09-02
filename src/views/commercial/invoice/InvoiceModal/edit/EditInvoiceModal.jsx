@@ -22,6 +22,7 @@ import { buildBreakdownFromPricing } from './utils/pricingBreakdownBuilder'
 import { toNumber } from './utils/numberUtils'
 import { validateHygieneInvoicePricing } from '../../create/invoiceCreatePayload'
 import { mapInvoiceFieldErrors } from '../../create/invoiceCreateApi'
+import { formatMoney } from '../../../../../utils/formatters/numberFormatters'
 
 const focusFirstFieldError = (fieldErrors = {}) => {
   const firstPath = Object.keys(fieldErrors)[0]
@@ -456,7 +457,7 @@ const EditInvoiceModal = ({ visible, onClose, invoice, onSaved }) => {
           {deviationContext ? (
             <CAlert color="warning" className="mx-3 mb-3">
               <div className="fw-semibold mb-2">
-                This invoice is RM {toNumber(deviationContext.overage).toFixed(2)} above the
+                This invoice is {formatMoney(toNumber(deviationContext.overage))} above the
                 remaining project value.
               </div>
               <CFormInput

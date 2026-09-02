@@ -20,8 +20,9 @@ import {
 } from '@coreui/react'
 import Select from '../../../../components/forms/ThemedSelect'
 import DataTableActionMenu from '../../../../components/datatable/DataTableActionMenu'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useSpecialDetailsForm } from './formHandlers'
+import { buildQuoteTemplateCreateNavigation } from '../../../templates/shared/templateHandoff'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 
 const specialLineItemUnits = ['Per Item', 'Lump Sum', 'Hour', 'Day', 'Location']
@@ -52,14 +53,22 @@ export default function SpecialDetailsCard({
   setFormData,
   isEditMode = false,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
+  specialCategoryId = null,
+  specialCategoryName = 'Special Service',
 }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { isRevision } = useQuoteRouteParams()
   const { templates, handleTemplateSelect, handleRemove } = useSpecialDetailsForm(
     formData,
     setFormData,
     isEditMode,
     proposalLanguage,
+    createdProposalTemplate,
+    onCreatedProposalTemplateConsumed,
+    specialCategoryId,
   )
   const lineItems = Array.isArray(formData.lineItems) ? formData.lineItems : []
   const [isAddingLineItem, setIsAddingLineItem] = useState(false)
@@ -247,7 +256,16 @@ export default function SpecialDetailsCard({
                       color="primary"
                       size="sm"
                       className="p-1 m-0 align-baseline"
-                      onClick={() => navigate('/templates/create')}
+                      onClick={() => {
+                        const target = buildQuoteTemplateCreateNavigation({
+                          location,
+                          serviceKey: 'special',
+                          proposalLanguage,
+                          specialCategoryId,
+                          specialCategoryName,
+                        })
+                        if (target) navigate(target.to, { state: target.state })
+                      }}
                     >
                       Create one?
                     </CButton>
@@ -270,8 +288,9 @@ export default function SpecialDetailsCard({
         {/* 2) General Remarks */}
         <CRow className="mt-3">
           <CCol>
-            <CFormLabel>Quotation Remarks</CFormLabel>
+            <CFormLabel htmlFor="special-quotation-remarks">Quotation Remarks</CFormLabel>
             <CFormTextarea
+              id="special-quotation-remarks"
               rows={2}
               value={formData.generalRemarks || ''}
               onChange={(e) => setFormData((p) => ({ ...p, generalRemarks: e.target.value }))}
@@ -290,7 +309,7 @@ export default function SpecialDetailsCard({
             )}
           </div>
 
-          <div className="records-table-shell quote-line-items-table-shell overflow-hidden">
+          <div className="records-table-shell quote-line-items-table-shell overflow-auto">
             {/* datatable-exempt: compact embedded quotation line-item table */}
             <CTable hover className="align-middle mb-0 records-table-compact">
               <CTableHead>

@@ -10,6 +10,7 @@ describe('readQuoteRouteParams', () => {
       isRevision: false,
       priceExceptionRequestId: '',
       service: '',
+      categoryId: '',
     })
   })
 

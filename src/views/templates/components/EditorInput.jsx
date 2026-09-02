@@ -8,6 +8,8 @@ import Editor from '../../../components/forms/ThemedTinyMCEEditor'
  */
 const EditorInput = ({
   label,
+  required = false,
+  optional = false,
   field,
   value,
   onChange,
@@ -24,11 +26,21 @@ const EditorInput = ({
 }) => (
   <CRow className="mb-3">
     <CCol md={12}>
-      {label && <label className="form-label">{label}</label>}
+      {label && (
+        <label className="form-label">
+          {label}
+          {(required || optional) && (
+            <span className={optional ? 'text-muted fw-normal' : 'text-danger'}>
+              {optional ? ' — Optional' : ' *'}
+            </span>
+          )}
+        </label>
+      )}
       <div
         className={invalid ? 'border border-danger rounded p-1' : ''}
         data-template-field={field || undefined}
         tabIndex={invalid ? -1 : undefined}
+        aria-invalid={invalid || undefined}
       >
         <Editor
           tinymceScriptSrc="/tinymce/tinymce.min.js"

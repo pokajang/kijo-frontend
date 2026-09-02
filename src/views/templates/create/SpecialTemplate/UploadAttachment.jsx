@@ -23,6 +23,7 @@ export default function UploadAttachment({
   onRemoveNewAttachment,
   onPreviewFile,
   onClearRejected,
+  validationError = '',
 }) {
   return (
     <>
@@ -60,16 +61,22 @@ export default function UploadAttachment({
 
       <CRow className="mb-3">
         <CCol>
-          <CFormLabel>
+          <CFormLabel htmlFor="special-proposal-attachments">
             {isEdit ? 'Add More PDF Attachments' : 'Upload Full Proposal PDF'}
           </CFormLabel>
           <CFormInput
+            id="special-proposal-attachments"
             type="file"
             name="attachments[]"
             multiple
             accept={ACCEPTED_ATTACHMENT_INPUT}
             onChange={onNewFileChange}
+            invalid={Boolean(validationError)}
+            aria-invalid={Boolean(validationError) || undefined}
+            feedbackInvalid={validationError}
+            data-template-field="attachments"
           />
+          <small className="text-muted d-block mt-1">PDF only · Maximum 10 MB per file</small>
 
           {rejectedAttachments.length > 0 && (
             <CAlert color="warning" dismissible onClose={onClearRejected} className="mt-2 mb-0">

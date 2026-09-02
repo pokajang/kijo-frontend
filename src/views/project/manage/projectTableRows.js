@@ -1,5 +1,7 @@
 import { getDateOnly, getLatestProgressUpdate, getProjectLeaderCode } from './projectFilters'
 import { getCurrentProjectValue } from './projectApi'
+import { formatNumber } from '../../../utils/formatters/numberFormatters'
+import { getProjectServiceCategory } from './projectServiceCategory'
 
 export const emptyProjectTableValue = '-'
 
@@ -10,10 +12,7 @@ const getValueNumber = (project = {}) => {
 
 const formatProjectValue = (valueNumber) =>
   valueNumber !== null && Number.isFinite(valueNumber)
-    ? valueNumber.toLocaleString('en-MY', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })
+    ? formatNumber(valueNumber, { minimumFractionDigits: 2 })
     : emptyProjectTableValue
 
 const joinVendorField = (vendors = [], field) =>
@@ -40,7 +39,7 @@ export const normalizeProjectTableRows = (projects = []) =>
       ...project,
       client: project.client_name || emptyProjectTableValue,
       project: project.project_name || emptyProjectTableValue,
-      projectType: project.project_type || emptyProjectTableValue,
+      serviceCategory: getProjectServiceCategory(project),
       inquirySource: project.inquiry_source || project.inquirySource || '',
       inquirySourceRemarks:
         project.inquiry_source_remarks || project.inquirySourceRemarks || emptyProjectTableValue,

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import Select from '../../../../components/forms/ThemedSelect'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { CRow, CButton, CCol, CFormLabel, CFormInput } from '@coreui/react'
 import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
+import { buildQuoteTemplateCreateNavigation } from '../../../templates/shared/templateHandoff'
 
 /**
  * IH Service selector.
@@ -13,11 +14,18 @@ const ServiceTypeCard = ({
   setFormData,
   isEditMode = false,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
 }) => {
   const [options, setOptions] = useState([])
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
+    let cancelled = false
+    setOptionsLoaded(false)
+    setOptions([])
     const query = new URLSearchParams({ language: proposalLanguage })
     fetch(quoteApiUrl(`proposal-templates/ih/list?${query.toString()}`), {
       credentials: 'include',
@@ -26,7 +34,7 @@ const ServiceTypeCard = ({
       .then((result) => {
         const rows = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : []
         if (isQuoteResultSuccess(result)) {
-          setOptions(rows)
+          if (!cancelled) setOptions(rows)
         } else {
           console.error('Failed to load IH services', result)
         }
@@ -34,7 +42,51 @@ const ServiceTypeCard = ({
       .catch((err) => {
         console.error('API error loading IH services:', err)
       })
+      .finally(() => {
+        if (!cancelled) setOptionsLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [proposalLanguage])
+
+  useEffect(() => {
+    if (!createdProposalTemplate || isEditMode) return
+    if (
+      createdProposalTemplate.serviceKey !== 'ih' ||
+      createdProposalTemplate.proposalLanguage !== proposalLanguage
+    ) {
+      onCreatedProposalTemplateConsumed?.()
+      return
+    }
+    if (!optionsLoaded) return
+
+    const selected = options.find(
+      (option) => Number(option.id) === Number(createdProposalTemplate.templateId),
+    )
+    if (!selected) {
+      onCreatedProposalTemplateConsumed?.(
+        'The new Industrial Hygiene proposal template could not be loaded. Refresh the list or select it manually.',
+      )
+      return
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      serviceId: selected.id,
+      serviceCode: selected.serviceCode,
+      serviceTitle: selected.serviceTitle,
+    }))
+    onCreatedProposalTemplateConsumed?.()
+  }, [
+    createdProposalTemplate,
+    isEditMode,
+    onCreatedProposalTemplateConsumed,
+    options,
+    optionsLoaded,
+    proposalLanguage,
+    setFormData,
+  ])
 
   const reactSelectOptions = options.map((opt) => ({
     value: opt.serviceCode,
@@ -132,7 +184,14 @@ const ServiceTypeCard = ({
                     size="sm"
                     color="primary"
                     className="p-1 m-0 align-baseline"
-                    onClick={() => navigate('/templates/create')}
+                    onClick={() => {
+                      const target = buildQuoteTemplateCreateNavigation({
+                        location,
+                        serviceKey: 'ih',
+                        proposalLanguage,
+                      })
+                      if (target) navigate(target.to, { state: target.state })
+                    }}
                   >
                     Create one?
                   </CButton>

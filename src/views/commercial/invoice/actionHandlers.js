@@ -132,6 +132,7 @@ export const fetchAllInvoices = async (setInvoices, setLoading, { showLoader = t
           rawId,
           projectId: row.project_id,
           serviceType: service_type,
+          serviceCategory: row.service_category || service_type,
           purpose: invoice_purpose,
           serviceStartDate: service_start_date || '',
           serviceEndDate: service_end_date || '',

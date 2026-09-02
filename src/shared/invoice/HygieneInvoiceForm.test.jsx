@@ -70,7 +70,7 @@ describe('HygieneInvoiceForm historical pricing', () => {
     })
 
     expect(screen.getByRole('button', { name: 'Add New Item' })).toBeInTheDocument()
-    expect(screen.getAllByText('9500.00')).toHaveLength(2)
+    expect(screen.getAllByText('9,500.00')).toHaveLength(2)
   })
 
   it('does not add the discount back to a legacy gross subtotal', async () => {
@@ -105,8 +105,8 @@ describe('HygieneInvoiceForm historical pricing', () => {
       expect(pricing.grand_total).toBe(2950)
     })
 
-    expect(screen.getAllByText('3000.00').length).toBeGreaterThan(0)
-    expect(screen.queryByText('3050.00')).not.toBeInTheDocument()
+    expect(screen.getAllByText('3,000.00').length).toBeGreaterThan(0)
+    expect(screen.queryByText('3,050.00')).not.toBeInTheDocument()
   })
 
   it('shows a field error directly on the invalid discount input', () => {

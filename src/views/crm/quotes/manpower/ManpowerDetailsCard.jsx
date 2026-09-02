@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import Select from '../../../../components/forms/ThemedSelect'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CCol,
   CCard,
@@ -18,6 +18,7 @@ import PricingCard from './PricingCard'
 import { isQuoteResultSuccess, quoteApiUrl } from '../quoteApi'
 import { getManpowerRate, inferManpowerRateType } from './manpowerRates'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
+import { buildQuoteTemplateCreateNavigation } from '../../../templates/shared/templateHandoff'
 
 export default function ManpowerDetailsCard({
   formData,
@@ -27,13 +28,20 @@ export default function ManpowerDetailsCard({
   onRequestOverride,
   appliedPriceException = null,
   showPricingSection = false,
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
 }) {
   const [templates, setTemplates] = useState([])
+  const [templatesLoaded, setTemplatesLoaded] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { isRevision } = useQuoteRouteParams()
 
   // load manpower‐template list
   useEffect(() => {
+    let cancelled = false
+    setTemplatesLoaded(false)
+    setTemplates([])
     const query = new URLSearchParams({ language: proposalLanguage })
     fetch(quoteApiUrl(`proposal-templates/manpower/list?${query.toString()}`), {
       credentials: 'include',
@@ -42,7 +50,7 @@ export default function ManpowerDetailsCard({
       .then((json) => {
         const rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
         if (isQuoteResultSuccess(json)) {
-          setTemplates(rows)
+          if (!cancelled) setTemplates(rows)
         } else {
           console.error('Unexpected response format', json)
         }
@@ -50,7 +58,63 @@ export default function ManpowerDetailsCard({
       .catch((err) => {
         console.error('Failed to load manpower templates', err)
       })
+      .finally(() => {
+        if (!cancelled) setTemplatesLoaded(true)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [proposalLanguage])
+
+  useEffect(() => {
+    if (!createdProposalTemplate || isEditMode) return
+    if (
+      createdProposalTemplate.serviceKey !== 'manpower' ||
+      createdProposalTemplate.proposalLanguage !== proposalLanguage
+    ) {
+      onCreatedProposalTemplateConsumed?.()
+      return
+    }
+    if (!templatesLoaded) return
+
+    const selected = templates.find(
+      (template) => Number(template.id) === Number(createdProposalTemplate.templateId),
+    )
+    if (!selected) {
+      onCreatedProposalTemplateConsumed?.(
+        'The new Manpower Supply proposal template could not be loaded. Refresh the list or select it manually.',
+      )
+      return
+    }
+
+    const manpowerRateType = inferManpowerRateType(selected)
+    const rate = getManpowerRate({
+      rateType: manpowerRateType,
+      durationMonths: formData.durationMonths,
+    })
+    setFormData((prev) => ({
+      ...prev,
+      mpId: selected.id,
+      serviceCode: selected.serviceCode,
+      serviceTitle: selected.serviceTitle,
+      manpowerRateType,
+      billingUnit: rate.billingUnit,
+      unitCost: rate.unitCost,
+      requiresManagementApproval: !!rate.requiresManagementApproval,
+      durationMonths: rate.billingUnit === 'hour' ? 0 : prev.durationMonths,
+      durationHours: rate.billingUnit === 'hour' ? prev.durationHours : 0,
+    }))
+    onCreatedProposalTemplateConsumed?.()
+  }, [
+    createdProposalTemplate,
+    formData.durationMonths,
+    isEditMode,
+    onCreatedProposalTemplateConsumed,
+    proposalLanguage,
+    setFormData,
+    templates,
+    templatesLoaded,
+  ])
 
   const reactSelectOptions = templates.map((t) => ({
     value: t.id,
@@ -210,7 +274,14 @@ export default function ManpowerDetailsCard({
                           color="primary"
                           size="sm"
                           className="p-1 m-0 align-baseline"
-                          onClick={() => navigate('/templates/create')}
+                          onClick={() => {
+                            const target = buildQuoteTemplateCreateNavigation({
+                              location,
+                              serviceKey: 'manpower',
+                              proposalLanguage,
+                            })
+                            if (target) navigate(target.to, { state: target.state })
+                          }}
                         >
                           Create one?
                         </CButton>

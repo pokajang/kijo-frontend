@@ -9,6 +9,7 @@ import { reloadProjectPoNumber, updateProjectDetails } from '../projectApi'
 import { formatProjectDate } from '../projectDetailFormatters'
 import { getProjectStatusTone } from '../projectStatus'
 import ProjectValueUpdateModal from './ProjectValueUpdateModal'
+import { getProjectServiceCategory, isQuoteBackedProject } from '../projectServiceCategory'
 
 const quoteServiceFromProject = (project = {}) => {
   const quoteType = String(project.quote_type || project.quoteType || '')
@@ -57,6 +58,7 @@ const ProjectDetailsCard = ({ project, onSave, onValueUpdated }) => {
   const canReloadPo = !String(draft.po_loa_number || '').trim() && Boolean(project?.quote_id)
   const quoteService = quoteServiceFromProject(project)
   const canOpenSourceQuotation = Boolean(project?.quote_id && quoteService)
+  const quoteBacked = isQuoteBackedProject(project)
 
   const handleReloadPoNumber = async () => {
     if (!project?.id) return
@@ -193,8 +195,10 @@ const ProjectDetailsCard = ({ project, onSave, onValueUpdated }) => {
           </CCol>
 
           <CCol md={4} className={!isEditing ? 'project-detail-kv' : undefined}>
-            <CFormLabel htmlFor="projectType">Type</CFormLabel>
-            {isEditing ? (
+            <CFormLabel htmlFor="projectType">
+              {quoteBacked ? 'Service Category' : 'Project Type'}
+            </CFormLabel>
+            {isEditing && !quoteBacked ? (
               <CFormInput
                 type="text"
                 id="projectType"
@@ -203,7 +207,9 @@ const ProjectDetailsCard = ({ project, onSave, onValueUpdated }) => {
                 onChange={handleChange}
               />
             ) : (
-              <p className="form-control-plaintext">{project.project_type || '-'}</p>
+              <p className="form-control-plaintext">
+                {quoteBacked ? getProjectServiceCategory(project) : project.project_type || '-'}
+              </p>
             )}
           </CCol>
 

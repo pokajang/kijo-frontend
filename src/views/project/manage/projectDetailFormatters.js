@@ -1,4 +1,5 @@
 import { getLatestProgressUpdate } from './projectFilters'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const emptyValue = '-'
 
@@ -58,10 +59,7 @@ export const formatProjectMoney = (value) => {
   const amount = Number(normalizedValue)
   if (!Number.isFinite(amount)) return emptyValue
 
-  return `RM ${amount.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+  return formatMoney(amount, { fallback: emptyValue })
 }
 
 export const formatProjectDeltaDays = (value) => {

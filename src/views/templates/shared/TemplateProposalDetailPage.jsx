@@ -322,6 +322,7 @@ const TemplateProposalDetailPage = ({ type }) => {
         <CRow className="g-3">
           <DetailField label="Title" value={record?.title} />
           <DetailField label="Code" value={record?.serviceCode} />
+          {type === 'special' && <DetailField label="Category" value={record?.categoryName} />}
           <DetailField label="Date Created" value={record?.dateCreated} />
           <DetailField label="Created By" value={record?.createdBy} />
           {type === 'special' && (

@@ -77,4 +77,20 @@ describe('deliveryOrderCreatePayload', () => {
       unit: 'unit',
     })
   })
+
+  it('submits the internal workflow type instead of the displayed Special category', () => {
+    const payload = buildDeliveryOrderCreatePayload({
+      clientDetails: { contact: {} },
+      companyDetails: { contact: {} },
+      projectDetails: {
+        project_id: 8,
+        name: 'Environmental Assessment',
+        type: 'Environment',
+        workflowType: 'Special Service',
+      },
+      items: [],
+    })
+
+    expect(payload.details.project_type).toBe('Special Service')
+  })
 })

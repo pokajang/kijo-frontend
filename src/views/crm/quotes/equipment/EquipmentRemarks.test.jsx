@@ -134,8 +134,6 @@ describe('equipment quotation remarks', () => {
         sstAmount={0}
         grandTotal={150}
         estimatedTotalCost={100}
-        attachProposal={false}
-        onAttachProposalChange={vi.fn()}
         onCancel={vi.fn()}
         onSave={vi.fn()}
       />,
@@ -146,6 +144,7 @@ describe('equipment quotation remarks', () => {
     const mobileSummary = screen.getByLabelText('Equipment quotation summary')
     expect(within(mobileSummary).getByText('Gas detector')).toBeInTheDocument()
     expect(within(mobileSummary).getAllByText('RM 150.00')).toHaveLength(3)
+    expect(screen.queryByText(/attach proposal/i)).not.toBeInTheDocument()
   })
 
   it('carries item specifications separately from downstream invoice descriptions', () => {

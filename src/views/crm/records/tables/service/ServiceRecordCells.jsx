@@ -5,12 +5,10 @@ import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 import RecordActionMenu from '../shared/RecordActionMenu'
 import QuoteApprovalBadge from '../shared/QuoteApprovalBadge'
 import { getProjectOutcomeLabel, getStatusLabel } from '../../utils/allRecordsTableUtils'
+import { formatNumber } from '../../../../../utils/formatters/numberFormatters'
 
 export const formatServiceRecordAmount = (value) =>
-  Number(value).toLocaleString('en-MY', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+  formatNumber(value, { minimumFractionDigits: 2 })
 
 const getStatusTone = (status) => {
   if (status === 'Awarded') return 'success'

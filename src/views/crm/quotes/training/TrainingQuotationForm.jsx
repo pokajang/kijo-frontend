@@ -14,7 +14,7 @@ import {
   writeQuoteServiceDraft,
 } from '../quoteMainDrafts'
 import TrafficLightCard from '../shared/TrafficLightCard'
-import { formatTrainingDurationLabel } from './trainingDuration'
+import { formatTrainingDurationLabel, getPricingDurationDefaults } from './trainingDuration'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import dialog from '../../../../components/dialog/dialogService'
 import { fetchPriceException } from '../priceException'
@@ -55,6 +55,8 @@ const TrainingQuotationForm = ({
   isEditMode,
   quoteId,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
 }) => {
   const { priceExceptionRequestId } = useQuoteRouteParams()
   const draftContext = useMemo(
@@ -228,8 +230,12 @@ const TrainingQuotationForm = ({
   }, [draftContext, isEditMode, priceExceptionRequestId])
 
   const [trainingOptions, setTrainingOptions] = useState([])
+  const [trainingOptionsLoaded, setTrainingOptionsLoaded] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+    setTrainingOptionsLoaded(false)
+    setTrainingOptions([])
     const fetchTrainingTopics = async () => {
       try {
         const query = new URLSearchParams({ language: proposalLanguage })
@@ -246,14 +252,59 @@ const TrainingQuotationForm = ({
             duration: item.duration,
             trainingTitle: item.training_title,
           }))
-          setTrainingOptions(options)
+          if (!cancelled) setTrainingOptions(options)
         }
       } catch (err) {
         console.error('Error fetching training topics:', err)
+      } finally {
+        if (!cancelled) setTrainingOptionsLoaded(true)
       }
     }
     fetchTrainingTopics()
+    return () => {
+      cancelled = true
+    }
   }, [proposalLanguage])
+
+  useEffect(() => {
+    if (!createdProposalTemplate || isEditMode || priceExceptionRequestId) return
+    if (
+      createdProposalTemplate.serviceKey !== 'training' ||
+      createdProposalTemplate.proposalLanguage !== proposalLanguage
+    ) {
+      onCreatedProposalTemplateConsumed?.()
+      return
+    }
+    if (!trainingOptionsLoaded) return
+
+    const selected = trainingOptions.find(
+      (option) => Number(option.value) === Number(createdProposalTemplate.templateId),
+    )
+    if (!selected) {
+      onCreatedProposalTemplateConsumed?.(
+        'The new Training proposal template could not be loaded. Refresh the list or select it manually.',
+      )
+      return
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      trainingId: selected.value,
+      trainingTitle: selected.trainingTitle,
+      proposal_id: selected.proposal_id || selected.value,
+      template: selected.template || null,
+      ...getPricingDurationDefaults(selected.duration),
+    }))
+    onCreatedProposalTemplateConsumed?.()
+  }, [
+    createdProposalTemplate,
+    isEditMode,
+    onCreatedProposalTemplateConsumed,
+    priceExceptionRequestId,
+    proposalLanguage,
+    trainingOptions,
+    trainingOptionsLoaded,
+  ])
 
   useEffect(() => {
     if (isEditMode) return

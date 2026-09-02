@@ -113,6 +113,9 @@ export const fromApiSpecialTemplate = (row = {}) => {
 
   return {
     proposalMode,
+    categoryId: row.categoryId || row.category_id || '',
+    categoryName: row.categoryName || row.category_name || '',
+    categoryIsActive: row.categoryIsActive ?? row.category_is_active ?? true,
     serviceTitle: row.serviceTitle || row.service_title || '',
     serviceCode: (row.serviceCode || row.service_code || '').toUpperCase(),
     serviceSummary:
@@ -147,6 +150,7 @@ export const appendSpecialTemplateFormData = ({
   const proposalContent = proposalMode === 'write' ? template.proposalContent || '' : ''
 
   formData.append('serviceTitle', template.serviceTitle || '')
+  formData.append('categoryId', template.categoryId || '')
   formData.append('serviceCode', template.serviceCode || '')
   formData.append('content', selectedContent)
   formData.append('proposalMode', proposalMode)

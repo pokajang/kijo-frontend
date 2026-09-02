@@ -11,12 +11,7 @@ import {
   QuoteReviewCard,
   QuoteReviewTable,
 } from '../shared/QuoteReviewComponents'
-
-const money = (value) =>
-  Number(value || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 export default function ReviewManpowerQuoteCard({
   selectedClient,
@@ -101,7 +96,7 @@ export default function ReviewManpowerQuoteCard({
           <CTableRow>
             <CTableHeaderCell className="text-end">Unit Rate (RM)</CTableHeaderCell>
             <CTableDataCell>
-              {money(formData.unitCost)} {unitRateLabel}
+              {formatMoney(formData.unitCost)} {unitRateLabel}
               {appliedPriceException && (
                 <small className="d-block text-muted">
                   Base rate remains locked; approved negotiation is applied through discount.
@@ -114,7 +109,7 @@ export default function ReviewManpowerQuoteCard({
             <CTableRow>
               <CTableHeaderCell className="text-end">Negotiation</CTableHeaderCell>
               <CTableDataCell>
-                Approved discount RM {money(formData.discount)} from request #
+                Approved discount {formatMoney(formData.discount)} from request #
                 {appliedPriceException.id}. This replaces any existing discount when saved.
               </CTableDataCell>
             </CTableRow>
@@ -123,13 +118,13 @@ export default function ReviewManpowerQuoteCard({
           {/* Discount */}
           <CTableRow>
             <CTableHeaderCell className="text-end">Discount (RM)</CTableHeaderCell>
-            <CTableDataCell>- {money(formData.discount)}</CTableDataCell>
+            <CTableDataCell>- {formatMoney(formData.discount)}</CTableDataCell>
           </CTableRow>
 
           {/* Subtotal */}
           <CTableRow>
             <CTableHeaderCell className="text-end">Subtotal (RM)</CTableHeaderCell>
-            <CTableDataCell>{money(formData.subTotal)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(formData.subTotal)}</CTableDataCell>
           </CTableRow>
 
           {/* SST */}
@@ -137,7 +132,7 @@ export default function ReviewManpowerQuoteCard({
             <CTableHeaderCell className="text-end">
               {formData.sstPercent ?? 0}% SST (RM)
             </CTableHeaderCell>
-            <CTableDataCell>{money(formData.sstAmount)}</CTableDataCell>
+            <CTableDataCell>{formatMoney(formData.sstAmount)}</CTableDataCell>
           </CTableRow>
 
           {/* Grand Total */}
@@ -146,7 +141,7 @@ export default function ReviewManpowerQuoteCard({
               <strong>Grand Total (RM)</strong>
             </CTableHeaderCell>
             <CTableDataCell>
-              <strong>{money(formData.grandTotal)}</strong>
+              <strong>{formatMoney(formData.grandTotal)}</strong>
             </CTableDataCell>
           </CTableRow>
         </CTableBody>

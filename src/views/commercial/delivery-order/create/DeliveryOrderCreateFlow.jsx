@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { getProjectServiceCategory } from '../../../project/manage/projectServiceCategory'
 import { CButton, CCard, CCardBody, CCardFooter, CCardHeader } from '@coreui/react'
 
 import DeliveryDetails from './DeliveryOrderDeliveryDetailsStep'
@@ -59,6 +60,7 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
     code: '',
     date: '',
     type: '',
+    workflowType: '',
     description: '',
     servicePeriod: '',
     quotationRemarks: '',
@@ -94,7 +96,8 @@ const DeliveryOrderCreateFlow = ({ project, origin = 'project', onBack }) => {
       name: project.project_name || '',
       code: getProjectCode(project),
       date: project.award_date || '',
-      type: project.project_type || '',
+      type: getProjectServiceCategory(project),
+      workflowType: project.project_type || '',
       description: project.description || '',
       servicePeriod:
         project.service_start_date && project.service_end_date

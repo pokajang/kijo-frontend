@@ -45,7 +45,7 @@ import { projectRecordTabs } from '../../../components/navigation/moduleNavConfi
 import {
   applyProjectFilters,
   getOwnerOptions,
-  getProjectTypeOptions,
+  getServiceCategoryOptions,
   getInquirySourceOptions,
   isProjectOwnedByUser,
 } from './projectFilters'
@@ -269,7 +269,7 @@ export default function ProjectTable({
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [projectTypeFilter, setProjectTypeFilter] = useState('all')
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('all')
   const [ownerFilter, setOwnerFilter] = useState('all')
   const [inquirySourceFilter, setInquirySourceFilter] = useState('all')
   const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
@@ -293,14 +293,14 @@ export default function ProjectTable({
     return Array.from(statuses).sort((a, b) => a.localeCompare(b))
   }, [projects])
 
-  const projectTypeOptions = useMemo(() => getProjectTypeOptions(projects), [projects])
+  const serviceCategoryOptions = useMemo(() => getServiceCategoryOptions(projects), [projects])
   const ownerOptions = useMemo(() => getOwnerOptions(projects), [projects])
   const inquirySourceOptions = useMemo(() => getInquirySourceOptions(projects), [projects])
 
   const resetFilters = () => {
     setSearchTerm('')
     setStatusFilter('all')
-    setProjectTypeFilter('all')
+    setServiceCategoryFilter('all')
     setOwnerFilter('all')
     setInquirySourceFilter('all')
     handlePeriodRangeChange(getPeriodRangePreset('ytd'))
@@ -313,7 +313,7 @@ export default function ProjectTable({
   const clearChip = (key) => {
     if (key === 'search') setSearchTerm('')
     if (key === 'period') handlePeriodRangeChange(getPeriodRangePreset('ytd'))
-    if (key === 'type') setProjectTypeFilter('all')
+    if (key === 'category') setServiceCategoryFilter('all')
     if (key === 'owner') setOwnerFilter('all')
     if (key === 'status') setStatusFilter('all')
     if (key === 'inquirySource') setInquirySourceFilter('all')
@@ -328,8 +328,8 @@ export default function ProjectTable({
     selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
       ? { key: 'period', label: `Period: ${getPeriodRangeLabel(selectedPeriodRange)}` }
       : null,
-    projectTypeFilter !== 'all'
-      ? { key: 'type', label: `Project Type: ${projectTypeFilter}` }
+    serviceCategoryFilter !== 'all'
+      ? { key: 'category', label: `Service Category: ${serviceCategoryFilter}` }
       : null,
     ownerFilter !== 'all' ? { key: 'owner', label: `Project Leader: ${ownerFilter}` } : null,
     statusFilter !== 'all' ? { key: 'status', label: `Status: ${statusFilter}` } : null,
@@ -354,7 +354,7 @@ export default function ProjectTable({
       filters: {
         searchTerm,
         statusFilter,
-        projectTypeFilter,
+        serviceCategoryFilter,
         ownerFilter,
         yearFilter: 'all',
         hasUpdateFilter,
@@ -378,7 +378,7 @@ export default function ProjectTable({
     projects,
     searchTerm,
     statusFilter,
-    projectTypeFilter,
+    serviceCategoryFilter,
     ownerFilter,
     inquirySourceFilter,
     selectedPeriodRange,
@@ -462,7 +462,7 @@ export default function ProjectTable({
   const renderCell = (project, column) => {
     if (column.key === 'client') return renderTextCell(project.client)
     if (column.key === 'project') return renderTextCell(project.project)
-    if (column.key === 'projectType') return renderTextCell(project.projectType)
+    if (column.key === 'serviceCategory') return renderTextCell(project.serviceCategory)
     if (column.key === 'value') return project.valueDisplay
     if (column.key === 'update') {
       return <ProjectUpdateCell text={project.updateFullText} />
@@ -554,16 +554,16 @@ export default function ProjectTable({
               mobileToolsId="project-manage-mobile-table-tools"
             >
               <CCol xs={12} md={4} lg={2}>
-                <CFormLabel htmlFor="projectTypeFilter">Project Type</CFormLabel>
+                <CFormLabel htmlFor="serviceCategoryFilter">Service Category</CFormLabel>
                 <CFormSelect
-                  id="projectTypeFilter"
-                  value={projectTypeFilter}
-                  onChange={(e) => setProjectTypeFilter(e.target.value)}
+                  id="serviceCategoryFilter"
+                  value={serviceCategoryFilter}
+                  onChange={(e) => setServiceCategoryFilter(e.target.value)}
                 >
-                  <option value="all">All</option>
-                  {projectTypeOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
+                  <option value="all">All categories</option>
+                  {serviceCategoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
                     </option>
                   ))}
                 </CFormSelect>
@@ -696,21 +696,21 @@ export default function ProjectTable({
               getMobileTitle={(project) => project.project}
               getMobileSubtitle={(project) => project.client}
               getMobileMeta={(project) =>
-                `${project.projectType} | ${project.awardDisplay} | RM ${project.valueDisplay}`
+                `${project.serviceCategory} | ${project.awardDisplay} | RM ${project.valueDisplay}`
               }
               getMobileStatus={(project) => project.status}
               getMobileStatusTone={(project) => getProjectStatusTone(project.status)}
               mobileFieldKeys={{
                 title: 'project',
                 subtitle: 'client',
-                meta: ['projectType', 'award', 'value'],
+                meta: ['serviceCategory', 'award', 'value'],
                 status: 'status',
               }}
               mobileRecord={{
                 title: (project) => project.project,
                 subtitle: (project) => project.client,
                 meta: (project) =>
-                  `${project.projectType} | ${project.awardDisplay} | RM ${project.valueDisplay}`,
+                  `${project.serviceCategory} | ${project.awardDisplay} | RM ${project.valueDisplay}`,
                 badges: (project) => [
                   {
                     key: 'status',
@@ -736,7 +736,7 @@ export default function ProjectTable({
                 activeTab,
                 searchTerm,
                 statusFilter,
-                projectTypeFilter,
+                serviceCategoryFilter,
                 ownerFilter,
                 inquirySourceFilter,
                 selectedPeriodRange,

@@ -15,6 +15,7 @@ describe('ProjectSummaryStrip', () => {
         project={{
           status: 'Active',
           project_type: 'Training',
+          service_category: 'Training',
           quote_value: 4500,
           award_date: '2026-03-13',
           assigned_staff: [
@@ -27,6 +28,7 @@ describe('ProjectSummaryStrip', () => {
 
     expect(screen.getByText('Active')).toBeInTheDocument()
     expect(screen.getByText('Training')).toBeInTheDocument()
+    expect(screen.getByText('Service Category')).toBeInTheDocument()
     expect(screen.getByText('Awarded Value')).toBeInTheDocument()
     expect(screen.getByText('Current Value')).toBeInTheDocument()
     expect(screen.getByText('Variation')).toBeInTheDocument()

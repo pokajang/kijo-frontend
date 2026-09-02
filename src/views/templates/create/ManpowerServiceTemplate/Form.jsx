@@ -1,10 +1,15 @@
 // src/templates/create/ManpowerServiceTemplate/Form.jsx
 import React from 'react'
-import { CForm, CRow, CCol, CButton, CFormLabel, CFormInput } from '@coreui/react'
+import { CForm, CRow, CCol, CFormInput } from '@coreui/react'
 import EditorInput from '../../components/EditorInput'
 import BmDraftReviewNotice from '../../shared/BmDraftReviewNotice'
 import TemplateFormStatus from '../../shared/TemplateFormStatus'
 import RemarksSection from './RemarksSection'
+import TemplateDraftNotice from '../../shared/TemplateDraftNotice'
+import TemplateFieldLabel from '../../shared/TemplateFieldLabel'
+import TemplateFormActions from '../../shared/TemplateFormActions'
+import TemplateSectionHeader from '../../shared/TemplateSectionHeader'
+import TemplateOptionalEditors from '../../shared/TemplateOptionalEditors'
 
 /**
  * The actual form UI for creating/updating a Manpower Template.
@@ -22,7 +27,10 @@ export default function Form({
   saving,
   saveError,
   setSaveError,
+  validationErrors,
+  draftRestored,
   handleSave,
+  clearValidationError,
   handleReset,
   handleCancel,
 }) {
@@ -32,86 +40,109 @@ export default function Form({
     <CForm>
       <TemplateFormStatus saveError={saveError} onClearSaveError={() => setSaveError('')} />
       <BmDraftReviewNotice record={templateMeta} />
+      <TemplateDraftNotice restored={draftRestored} />
+      <TemplateSectionHeader
+        title="Basic details"
+        description="Name the reusable manpower service and provide its internal code."
+      />
       {/* Service Title & Service Code */}
       <CRow className="mb-3">
-        <CCol xs={9}>
-          <CFormLabel>Service Title</CFormLabel>
+        <CCol md={9}>
+          <TemplateFieldLabel htmlFor="manpower-template-title">Service title</TemplateFieldLabel>
           <CFormInput
+            id="manpower-template-title"
             type="text"
             value={templateDetails.serviceTitle || ''}
             onChange={(e) => handleEditorChange(e.target.value, 'serviceTitle')}
             placeholder="E.g., Safety and Health Officer"
+            invalid={Boolean(validationErrors.serviceTitle)}
+            aria-invalid={Boolean(validationErrors.serviceTitle) || undefined}
+            feedbackInvalid={validationErrors.serviceTitle}
+            data-template-field="serviceTitle"
           />
         </CCol>
-        <CCol xs={3}>
-          <CFormLabel>Service Code</CFormLabel>
+        <CCol md={3}>
+          <TemplateFieldLabel htmlFor="manpower-template-code">Service code</TemplateFieldLabel>
           <CFormInput
+            id="manpower-template-code"
             type="text"
             value={templateDetails.serviceCode || ''}
             onChange={(e) => handleEditorChange(e.target.value, 'serviceCode')}
             placeholder="E.g., SHO"
+            invalid={Boolean(validationErrors.serviceCode)}
+            aria-invalid={Boolean(validationErrors.serviceCode) || undefined}
+            feedbackInvalid={validationErrors.serviceCode}
+            data-template-field="serviceCode"
           />
         </CCol>
       </CRow>
 
+      <TemplateSectionHeader
+        title="Proposal content"
+        description="Complete the required service narrative and add optional supporting sections when needed."
+      />
       {/* Introduction */}
       <EditorInput
         label="Introduction"
+        required
         value={templateDetails.introduction}
         onChange={(content) => handleEditorChange(content, 'introduction')}
+        field="introduction"
+        invalid={Boolean(validationErrors.introduction)}
+        feedbackInvalid={validationErrors.introduction}
       />
 
       {/* Service Deliverables */}
       <EditorInput
         label="Service Deliverables"
+        required
         value={templateDetails.serviceDeliverables}
         onChange={(content) => handleEditorChange(content, 'serviceDeliverables')}
+        field="serviceDeliverables"
+        invalid={Boolean(validationErrors.serviceDeliverables)}
+        feedbackInvalid={validationErrors.serviceDeliverables}
       />
 
-      {/* Supplied Manpower Deliverables */}
-      <EditorInput
-        label="Supplied Manpower Deliverables"
-        value={templateDetails.suppliedManpowerDeliverables}
-        onChange={(content) => handleEditorChange(content, 'suppliedManpowerDeliverables')}
-      />
-
-      {/* Custom Section */}
-      <EditorInput
-        label="Custom Section"
-        value={templateDetails.customSection || ''}
-        onChange={(content) => handleEditorChange(content, 'customSection')}
+      <TemplateOptionalEditors
+        onChange={(content, field) => handleEditorChange(content, field)}
+        items={[
+          {
+            label: 'Supplied manpower deliverables',
+            field: 'suppliedManpowerDeliverables',
+            value: templateDetails.suppliedManpowerDeliverables,
+          },
+          {
+            label: 'Custom section',
+            field: 'customSection',
+            value: templateDetails.customSection || '',
+          },
+        ]}
       />
 
       {/* Remarks Section */}
-      <RemarksSection isEdit={isEdit} history={history} remarks={remarks} setRemarks={setRemarks} />
+      <RemarksSection
+        isEdit={isEdit}
+        history={history}
+        remarks={remarks}
+        setRemarks={setRemarks}
+        invalid={Boolean(validationErrors.remarks)}
+        feedbackInvalid={validationErrors.remarks}
+        onChange={() => clearValidationError('remarks')}
+      />
 
       {/* Action buttons */}
-      <CRow className="mt-4">
-        <CCol className="d-flex justify-content-end gap-2">
-          <CButton
-            variant="outline"
-            color="secondary"
-            size="sm"
-            onClick={handleSecondaryAction}
-            disabled={saving}
-          >
-            {isEdit ? 'Cancel' : 'Reset'}
-          </CButton>
-          <CButton color="primary" size="sm" onClick={handleSave} disabled={saving}>
-            {saving
-              ? finalizingBmTranslation
-                ? 'Saving BM Proposal...'
-                : isEdit
-                  ? 'Updating...'
-                  : 'Saving...'
-              : finalizingBmTranslation
-                ? 'Save BM Proposal'
-                : isEdit
-                  ? 'Update Changes'
-                  : 'Save Template'}
-          </CButton>
-        </CCol>
-      </CRow>
+      <TemplateFormActions
+        isEdit={isEdit}
+        saving={saving}
+        finalizingBmTranslation={finalizingBmTranslation}
+        onSecondary={handleSecondaryAction}
+        onSave={handleSave}
+        draftMessage={
+          isEdit
+            ? 'A new internal change note is required.'
+            : 'Draft changes are saved locally on this device.'
+        }
+      />
     </CForm>
   )
 }

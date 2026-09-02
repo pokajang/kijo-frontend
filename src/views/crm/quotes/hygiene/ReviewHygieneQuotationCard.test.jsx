@@ -66,16 +66,16 @@ describe('ReviewHygieneQuotationCard', () => {
     const additionalFeesRow = screen.getByText('Additional Fees (RM)').closest('tr')
 
     expect(within(additionalFeesRow).getByText('Blank sample')).toBeInTheDocument()
-    expect(within(additionalFeesRow).getByText('(1 Lot x 200.00)')).toBeInTheDocument()
+    expect(within(additionalFeesRow).getByText('(1 Lot x RM 200.00)')).toBeInTheDocument()
     expect(within(additionalFeesRow).getByText('Notes: Lab blank')).toBeInTheDocument()
     expect(within(additionalFeesRow).getByText('Report writing')).toBeInTheDocument()
-    expect(within(additionalFeesRow).getByText('(2 Hour x 150.00)')).toBeInTheDocument()
+    expect(within(additionalFeesRow).getByText('(2 Hour x RM 150.00)')).toBeInTheDocument()
 
     expect(screen.getByText('Gross Subtotal (RM)')).toBeInTheDocument()
     expect(screen.getByText('Subtotal after Discount (RM)')).toBeInTheDocument()
     expect(screen.getByText('Grand Total (RM)')).toBeInTheDocument()
-    expect(screen.getByText('5500.00')).toBeInTheDocument()
-    expect(screen.getAllByText('5200.00').length).toBeGreaterThan(0)
+    expect(screen.getByText('RM 5,500.00')).toBeInTheDocument()
+    expect(screen.getAllByText('RM 5,200.00').length).toBeGreaterThan(0)
   })
 
   it('preserves the archived complexity presentation for legacy quotations', () => {
@@ -99,7 +99,7 @@ describe('ReviewHygieneQuotationCard', () => {
     expect(screen.queryByText('Additional Fees (RM)')).not.toBeInTheDocument()
     expect(screen.queryByText('Gross Subtotal (RM)')).not.toBeInTheDocument()
     expect(screen.getByText('Subtotal (RM)')).toBeInTheDocument()
-    expect(screen.getByText('6500.00')).toBeInTheDocument()
-    expect(screen.getAllByText('6200.00').length).toBeGreaterThan(0)
+    expect(screen.getByText('RM 6,500.00')).toBeInTheDocument()
+    expect(screen.getAllByText('RM 6,200.00').length).toBeGreaterThan(0)
   })
 })

@@ -21,6 +21,8 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { formatNumber } from '../../utils/formatters/numberFormatters'
+import { getProjectServiceCategory } from '../../views/project/manage/projectServiceCategory'
 import { isSpecialProjectType } from '../project/projectTypeUtils'
 
 /**
@@ -57,6 +59,7 @@ const isManualSpecialProject = (project = {}, quoteDetails) =>
 const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode = 'create' }) => {
   const seededProjectLineRef = useRef('')
   const showManualProjectNotice = mode === 'create' && isManualSpecialProject(project, quoteDetails)
+  const serviceCategory = getProjectServiceCategory(project)
   const items = useMemo(
     () => (Array.isArray(pricing.special_items) ? pricing.special_items : []),
     [pricing.special_items],
@@ -227,7 +230,7 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
   return (
     <>
       <CCardHeader>
-        <strong>Invoice Breakdown (Special Service)</strong>
+        <strong>Invoice Breakdown ({serviceCategory})</strong>
       </CCardHeader>
       <CCardBody>
         {showManualProjectNotice && (
@@ -333,7 +336,7 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
                         />
                       </CTableDataCell>
                       <CTableDataCell className="text-end">
-                        {(qty * price).toFixed(2)}
+                        {formatNumber(qty * price, { minimumFractionDigits: 2 })}
                       </CTableDataCell>
                     </CTableRow>
                   )
@@ -366,7 +369,9 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
                     />
                   </CTableDataCell>
                   <CTableDataCell className="text-end">
-                    {(-Math.abs(discountQty * discountUnitPrice)).toFixed(2)}
+                    {formatNumber(-Math.abs(discountQty * discountUnitPrice), {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
               </CTableBody>
@@ -377,7 +382,9 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
                     Subtotal (RM)
                   </CTableDataCell>
                   <CTableDataCell className="text-end align-middle">
-                    {(parseFloat(pricing.sub_total) || 0).toFixed(2)}
+                    {formatNumber(parseFloat(pricing.sub_total) || 0, {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
                 <CTableRow>
@@ -394,7 +401,9 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
                     </div>
                   </CTableDataCell>
                   <CTableDataCell className="text-end align-middle">
-                    {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
+                    {formatNumber(parseFloat(pricing.sst_amount) || 0, {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
                 <CTableRow>
@@ -403,7 +412,9 @@ const SpecialInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode =
                     Grand Total (RM)
                   </CTableDataCell>
                   <CTableDataCell className="text-end align-middle fw-bold">
-                    {(parseFloat(pricing.grand_total) || 0).toFixed(2)}
+                    {formatNumber(parseFloat(pricing.grand_total) || 0, {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
               </CTableFoot>

@@ -7,6 +7,7 @@ import { getProjectOutcomeLabel, truncateFront } from '../../utils/allRecordsTab
 import RecordActionMenu from '../shared/RecordActionMenu'
 import QuoteApprovalBadge from '../shared/QuoteApprovalBadge'
 import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
+import { formatMoney } from '../../../../../utils/formatters/numberFormatters'
 
 const ServiceRecordsMobileList = ({
   desktopBreakpoint,
@@ -39,16 +40,6 @@ const ServiceRecordsMobileList = ({
   renderMobileSubjectExtra,
   renderMobileAmountSecondary,
 }) => {
-  const formatMoney = (value) => {
-    const amount = Number(value)
-    return Number.isFinite(amount)
-      ? `RM ${amount.toLocaleString('en-MY', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`
-      : '-'
-  }
-
   return (
     <div className={`d-${desktopBreakpoint}-none records-mobile-wrap`}>
       <div className="records-mobile-top-pager">

@@ -1,10 +1,17 @@
 import React, { useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CRow, CCol, CFormInput, CButton } from '@coreui/react'
+import { CRow, CCol, CFormInput } from '@coreui/react'
 import BmDraftReviewNotice from '../../shared/BmDraftReviewNotice'
 import TemplateFormStatus from '../../shared/TemplateFormStatus'
 import { getProposalListPath } from '../../proposals/proposalTabs'
 import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
+import { getTemplateReturnState } from '../../shared/templateHandoff'
+import dialog from '../../../../components/dialog/dialogService'
+import TemplateDraftNotice from '../../shared/TemplateDraftNotice'
+import TemplateFieldLabel from '../../shared/TemplateFieldLabel'
+import TemplateFormActions from '../../shared/TemplateFormActions'
+import TemplateSectionHeader from '../../shared/TemplateSectionHeader'
+import { useTemplateDirtyState } from '../../shared/templateFormUi'
 
 import MainBody from './MainBody'
 import TrainingRequirementsSection from './TrainingRequirementsSection'
@@ -24,19 +31,11 @@ import {
 // ------ Base template for "Create"
 const initialTemplateDetails = {
   trainingTitle: '',
-  introduction: `e.g. This training is designed for...`,
+  introduction: '',
   trainingCode: '',
   hrdNo: '',
-  objectives: `Upon completion of the training, participants should be able to:
-  <ol>
-    <li>e.g. Identify, explain, describe, or demonstrate key safety principles effectively.</li>
-    <li>etc.</li>
-  </ol>`,
-  modules: `Topics covered by this training include:
-  <ol>
-    <li>e.g. Introduction to OSHA 1994, Risk Matrix, Hazard Identification Techniques, Control Measures.</li>
-    <li>etc.</li>
-  </ol>`,
+  objectives: '',
+  modules: '',
   trainingRequirements: 'Training room, projector, and whiteboard',
   additionalTrainingRequirements: '',
   trainingMaterials: 'Hardcopy lecture slides',
@@ -50,7 +49,7 @@ const initialTemplateDetails = {
   duration: '',
 }
 
-const TrainingServiceTemplate = ({ isEdit, editId }) => {
+const TrainingServiceTemplate = ({ isEdit, editId, onDirtyChange }) => {
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -64,11 +63,23 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
   const [validationErrors, setValidationErrors] = useState({})
   const [loading, setLoading] = useState(Boolean(isEdit && editId))
   const [loadError, setLoadError] = useState('')
+  const [draftRestored, setDraftRestored] = useState(false)
   const saveInFlightRef = useRef(false)
 
   // ------ wire up hooks
-  useLoadDraft(isEdit, initialTemplateDetails, setTemplateDetails, setAgendaRows, setRemarks)
-  useAutoSaveDraft(isEdit, templateDetails, agendaRows, remarks)
+  useLoadDraft(
+    isEdit,
+    initialTemplateDetails,
+    setTemplateDetails,
+    setAgendaRows,
+    setRemarks,
+    setDraftRestored,
+  )
+  const hasDraftContent =
+    JSON.stringify(templateDetails) !== JSON.stringify(initialTemplateDetails) ||
+    agendaRows.length > 0 ||
+    Boolean(remarks)
+  useAutoSaveDraft(isEdit, templateDetails, agendaRows, remarks, hasDraftContent)
   useLoadEditData(
     isEdit,
     editId,
@@ -118,6 +129,19 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
   const isBmProposal = templateMeta?.proposalLanguage === 'ms-MY'
   const returnPath = getProposalListPath('training', isBmProposal ? 'ms-MY' : 'en')
   const returnTo = getDetailReturnTo(location, returnPath)
+  const isDirty = useTemplateDirtyState(
+    { templateDetails, agendaRows, remarks },
+    onDirtyChange,
+    !loading,
+  )
+
+  const onCancel = async () => {
+    if (isDirty) {
+      const confirmed = await dialog.confirm('Discard these unsaved template changes?')
+      if (!confirmed) return
+    }
+    navigate(returnTo, { state: getTemplateReturnState(location) })
+  }
 
   const onSave = () =>
     handleSave({
@@ -135,11 +159,19 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
       finalizingBmTranslation,
       isBmProposal,
       returnTo,
+      location,
     })
 
-  const onReset = () => {
+  const onReset = async () => {
+    if (isDirty) {
+      const confirmed = await dialog.confirm(
+        'Reset this proposal form and permanently clear its local draft?',
+      )
+      if (!confirmed) return
+    }
     setValidationErrors({})
     setSaveError('')
+    setDraftRestored(false)
     handleReset(initialTemplateDetails, setTemplateDetails, setAgendaRows, setRemarks)
   }
 
@@ -154,23 +186,35 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
       {!loading && !loadError && (
         <>
           <BmDraftReviewNotice record={templateMeta} />
+          <TemplateDraftNotice restored={draftRestored} />
+          <TemplateSectionHeader
+            title="Basic details"
+            description="Name the reusable training template and provide its internal reference details."
+          />
           <CRow className="mb-3">
             <CCol md={7}>
-              <label className="form-label">Training Title</label>
+              <TemplateFieldLabel htmlFor="training-template-title">
+                Training title
+              </TemplateFieldLabel>
               <CFormInput
+                id="training-template-title"
                 type="text"
                 name="trainingTitle"
                 value={templateDetails.trainingTitle}
                 onChange={onInputChange}
                 placeholder="e.g., Safety and Health Awareness"
                 invalid={Boolean(validationErrors.trainingTitle)}
+                aria-invalid={Boolean(validationErrors.trainingTitle) || undefined}
                 feedbackInvalid={validationErrors.trainingTitle}
                 data-template-field="trainingTitle"
               />
             </CCol>
             <CCol md={2}>
-              <label className="form-label">Training Code</label>
+              <TemplateFieldLabel htmlFor="training-template-code">
+                Training code
+              </TemplateFieldLabel>
               <CFormInput
+                id="training-template-code"
                 type="text"
                 name="trainingCode"
                 value={templateDetails.trainingCode}
@@ -183,26 +227,35 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
                 autoCapitalize="characters"
                 style={{ textTransform: 'uppercase' }} // visual cue while typing
                 invalid={Boolean(validationErrors.trainingCode)}
+                aria-invalid={Boolean(validationErrors.trainingCode) || undefined}
                 feedbackInvalid={validationErrors.trainingCode}
                 data-template-field="trainingCode"
               />
             </CCol>
 
             <CCol md={3}>
-              <label className="form-label">HRD Program No.</label>
+              <TemplateFieldLabel htmlFor="training-template-hrd" optional>
+                HRD program no.
+              </TemplateFieldLabel>
               <CFormInput
+                id="training-template-hrd"
                 type="text"
                 name="hrdNo"
                 value={templateDetails.hrdNo}
                 onChange={onInputChange}
                 placeholder="e.g., 1000000... (Not the grant number)"
                 invalid={Boolean(validationErrors.hrdNo)}
+                aria-invalid={Boolean(validationErrors.hrdNo) || undefined}
                 feedbackInvalid={validationErrors.hrdNo}
                 data-template-field="hrdNo"
               />
             </CCol>
           </CRow>
 
+          <TemplateSectionHeader
+            title="Proposal content"
+            description="Write the customer-facing introduction, outcomes, modules, and delivery method."
+          />
           <MainBody
             templateDetails={templateDetails}
             setTemplateDetails={setTemplateDetails}
@@ -210,6 +263,10 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
             validationErrors={validationErrors}
           />
 
+          <TemplateSectionHeader
+            title="Training arrangements"
+            description="Set the venue requirements, materials, language, duration, and tentative programme."
+          />
           <TrainingRequirementsSection
             templateDetails={templateDetails}
             setTemplateDetails={setTemplateDetails}
@@ -235,50 +292,23 @@ const TrainingServiceTemplate = ({ isEdit, editId }) => {
             setRemarks={setRemarks}
             isEdit={isEdit}
             history={history}
-            validationErrors={validationErrors}
-            clearValidationError={clearValidationError}
+            invalid={Boolean(validationErrors.remarks)}
+            feedbackInvalid={validationErrors.remarks}
+            onChange={() => clearValidationError('remarks')}
           />
 
-          <CRow className="mt-4">
-            <CCol>
-              <div className="d-flex justify-content-end gap-2">
-                {isEdit ? (
-                  <CButton
-                    color="secondary"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(returnTo)}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </CButton>
-                ) : (
-                  <CButton
-                    color="secondary"
-                    variant="outline"
-                    size="sm"
-                    onClick={onReset}
-                    disabled={saving}
-                  >
-                    Reset
-                  </CButton>
-                )}
-                <CButton color="primary" size="sm" onClick={onSave} disabled={saving}>
-                  {saving
-                    ? finalizingBmTranslation
-                      ? 'Saving BM Proposal...'
-                      : isEdit
-                        ? 'Updating...'
-                        : 'Saving...'
-                    : finalizingBmTranslation
-                      ? 'Save BM Proposal'
-                      : isEdit
-                        ? 'Update Changes'
-                        : 'Save Template'}
-                </CButton>
-              </div>
-            </CCol>
-          </CRow>
+          <TemplateFormActions
+            isEdit={isEdit}
+            saving={saving}
+            finalizingBmTranslation={finalizingBmTranslation}
+            onSecondary={isEdit ? onCancel : onReset}
+            onSave={onSave}
+            draftMessage={
+              isEdit
+                ? 'A new internal change note is required.'
+                : 'Draft changes are saved locally on this device.'
+            }
+          />
         </>
       )}
     </>

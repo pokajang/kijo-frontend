@@ -38,7 +38,7 @@ export const buildDeliveryOrderCreatePayload = ({
       project_name: projectDetails.name,
       project_code: projectDetails.code,
       project_award_date: projectDetails.date,
-      project_type: projectDetails.type,
+      project_type: projectDetails.workflowType || projectDetails.type,
       project_description: projectDetails.description,
       project_service_period: projectDetails.servicePeriod,
       quotation_remarks: projectDetails.quotationRemarks || '',

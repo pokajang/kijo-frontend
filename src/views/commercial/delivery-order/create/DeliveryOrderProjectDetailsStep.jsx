@@ -49,8 +49,8 @@ const ProjectDetails = ({ project, setProject }) => {
           </CCol>
           <CCol md={4}>
             <div className="mb-3">
-              <CFormLabel>Project Type</CFormLabel>
-              <CFormInput type="text" value={project.type} onChange={handleChange('type')} />
+              <CFormLabel>Service Category</CFormLabel>
+              <CFormInput type="text" value={project.type} readOnly />
             </div>
           </CCol>
           <CCol md={4}>

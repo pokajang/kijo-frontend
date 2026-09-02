@@ -1,5 +1,6 @@
 import React from 'react'
 import { CButton, CCardBody, CCardFooter, CCol, CRow } from '@coreui/react'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const emptyValue = '-'
 
@@ -25,10 +26,7 @@ const VendorLoaReviewStep = ({
         <DetailItem label="Project" value={project?.project_name} />
         <DetailItem label="Client" value={project?.client_name} />
         <DetailItem label="Vendor" value={selectedVendor?.vendor_name} />
-        <DetailItem
-          label="Award Value"
-          value={`RM ${Number(payload.award_value || 0).toFixed(2)}`}
-        />
+        <DetailItem label="Award Value" value={formatMoney(payload.award_value)} />
         <DetailItem label="Payment Terms" value={payload.payment_terms} />
         <DetailItem label="Position" value={payload.position} />
         <DetailItem label="Services Description" value={payload.services_description} />

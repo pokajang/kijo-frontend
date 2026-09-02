@@ -192,6 +192,11 @@ export const useProposalsController = () => {
     return () => controller.abort()
   }, [loadData])
 
+  const refreshData = useCallback(() => {
+    const controller = new AbortController()
+    return loadData(controller.signal)
+  }, [loadData])
+
   const handleDelete = useCallback(async (type, id) => {
     if (
       !(await dialog.confirm('Are you sure you want to delete this proposal?', {
@@ -279,5 +284,6 @@ export const useProposalsController = () => {
     loading,
     proposalTabOptions,
     proposalTypeMeta,
+    refreshData,
   }
 }

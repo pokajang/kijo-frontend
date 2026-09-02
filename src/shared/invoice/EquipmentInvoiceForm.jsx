@@ -20,6 +20,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { formatNumber } from '../../utils/formatters/numberFormatters'
 import {
   getEquipmentInvoiceUnitPrice,
   getEquipmentInvoiceUnitPriceValue,
@@ -363,7 +364,9 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                       onChange={handleItemChange(idx, 'marked_up_price')}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">{(qty * price).toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    {formatNumber(qty * price, { minimumFractionDigits: 2 })}
+                  </CTableDataCell>
                 </CTableRow>
               )
             })}
@@ -393,7 +396,9 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                   onChange={handleChargeUnitPriceChange('delivery')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{deliveryCharge.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(deliveryCharge, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
             <CTableRow>
               <CTableDataCell className="text-center">{items.length + 2}</CTableDataCell>
@@ -420,7 +425,9 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                   onChange={handleChargeUnitPriceChange('misc')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{miscCharge.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(miscCharge, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
             <CTableRow>
               <CTableDataCell className="text-center">{items.length + 3}</CTableDataCell>
@@ -448,7 +455,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                 />
               </CTableDataCell>
               <CTableDataCell className="text-end">
-                {(-Math.abs(discount)).toFixed(2)}
+                {formatNumber(-Math.abs(discount), { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -456,7 +463,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                 Subtotal (Before SST) (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {totalBeforeSst.toFixed(2)}
+                {formatNumber(totalBeforeSst, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -472,7 +479,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                 </div>
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {sstAmount.toFixed(2)}
+                {formatNumber(sstAmount, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -480,7 +487,7 @@ const EquipmentInvoiceForm = ({ quoteDetails, pricing, setPricing, mode = 'creat
                 Grand Total (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle fw-bold">
-                {grandTotal.toFixed(2)}
+                {formatNumber(grandTotal, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
           </CTableBody>

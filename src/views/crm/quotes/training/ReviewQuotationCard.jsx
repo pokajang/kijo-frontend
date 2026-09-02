@@ -27,12 +27,7 @@ import {
 } from './calculations'
 import { normalizeTrainingHrdCharge } from './trainingHrd'
 import dialog from '../../../../components/dialog/dialogService'
-
-const money = (value) =>
-  Number(value || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const toYesNo = (value) => {
   if (typeof value === 'string') {
@@ -261,11 +256,11 @@ const ReviewQuotationCard = ({
           <CTableRow>
             <CTableHeaderCell className="text-end">Training Cost</CTableHeaderCell>
             <CTableDataCell>
-              RM {trainingTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {formatMoney(trainingTotal)}
               <small className="text-body-secondary ms-2">
                 {isPerPaxMode
-                  ? `${safePax} pax x RM ${safeUnitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })} per pax`
-                  : `${trainingQty} session(s) x ${trainingDuration} ${durationLabel} x RM ${safeUnitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}{' '}
+                  ? `${safePax} pax x ${formatMoney(safeUnitPrice)} per pax`
+                  : `${trainingQty} session(s) x ${trainingDuration} ${durationLabel} x ${formatMoney(safeUnitPrice)}`}{' '}
                 - Topic: {trainingTitle}
               </small>
               {appliedPriceException && (
@@ -281,7 +276,7 @@ const ReviewQuotationCard = ({
           <CTableRow>
             <CTableHeaderCell className="text-end">Mobilization Costs</CTableHeaderCell>
             <CTableDataCell>
-              RM {mobilizationCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {formatMoney(mobilizationCost)}
               <small className="text-body-secondary ms-2">
                 Travel & accommodation to {trainingVenue}
               </small>
@@ -292,7 +287,7 @@ const ReviewQuotationCard = ({
             <CTableRow>
               <CTableHeaderCell className="text-end">Negotiation</CTableHeaderCell>
               <CTableDataCell>
-                Approved discount RM {money(discountAmount)} from request #
+                Approved discount {formatMoney(discountAmount)} from request #
                 {appliedPriceException.id}. This replaces any existing discount when saved.
               </CTableDataCell>
             </CTableRow>
@@ -304,13 +299,10 @@ const ReviewQuotationCard = ({
             <CTableDataCell>
               {mealTotal > 0 ? (
                 <>
-                  RM {mealTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {formatMoney(mealTotal)}
                   <small className="text-body-secondary ms-2">
-                    {safePax} pax x RM{' '}
-                    {Number(mealPrice || 0).toLocaleString('en-US', {
-                      minimumFractionDigits: 2,
-                    })}{' '}
-                    x {trainingDuration} day(s) x {trainingQty} session(s)
+                    {safePax} pax x {formatMoney(mealPrice)} x {trainingDuration} day(s) x{' '}
+                    {trainingQty} session(s)
                   </small>
                 </>
               ) : (
@@ -325,7 +317,7 @@ const ReviewQuotationCard = ({
             <CTableDataCell>
               {discountAmount > 0 ? (
                 <>
-                  - RM {discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  - {formatMoney(discountAmount)}
                   <small className="text-body-secondary ms-2">{discountType} Discount</small>
                 </>
               ) : (
@@ -337,16 +329,14 @@ const ReviewQuotationCard = ({
           {/* Subtotal */}
           <CTableRow>
             <CTableHeaderCell className="text-end">Subtotal</CTableHeaderCell>
-            <CTableDataCell>
-              RM {subtotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </CTableDataCell>
+            <CTableDataCell>{formatMoney(subtotal)}</CTableDataCell>
           </CTableRow>
 
           {/* SST */}
           <CTableRow>
             <CTableHeaderCell className="text-end">SST</CTableHeaderCell>
             <CTableDataCell>
-              RM {sstAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {formatMoney(sstAmount)}
               <small className="text-body-secondary ms-2">({sstRate}%)</small>
             </CTableDataCell>
           </CTableRow>
@@ -355,7 +345,7 @@ const ReviewQuotationCard = ({
           <CTableRow>
             <CTableHeaderCell className="text-end">HRD Charge</CTableHeaderCell>
             <CTableDataCell>
-              RM {hrdAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              {formatMoney(hrdAmount)}
               <small className="text-body-secondary ms-2">
                 ({effectiveHrdCharge}% of net training cost)
               </small>
@@ -367,9 +357,7 @@ const ReviewQuotationCard = ({
             <CTableHeaderCell className="text-end">Grand Total</CTableHeaderCell>
             <CTableDataCell>
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                <strong>
-                  RM {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </strong>
+                <strong>{formatMoney(grandTotal)}</strong>
                 <TrafficLightDecisionBadge
                   serviceKey="training"
                   estimatedTotalCost={formData.estimatedTotalCost}

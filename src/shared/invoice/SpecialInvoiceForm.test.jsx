@@ -54,6 +54,17 @@ describe('SpecialInvoiceForm', () => {
     cleanup()
   })
 
+  it('uses the resolved category in the visible breakdown heading', () => {
+    renderForm({
+      project: {
+        project_type: 'Special Service',
+        serviceCategory: 'Environment',
+      },
+    })
+
+    expect(screen.getByText('Invoice Breakdown (Environment)')).toBeInTheDocument()
+  })
+
   it('shows manual project context and seeds a default line item before Discount', async () => {
     const { container } = renderForm({
       project: {
@@ -75,7 +86,7 @@ describe('SpecialInvoiceForm', () => {
     expect(screen.getByDisplayValue('Manual project scope')).toBeInTheDocument()
     expect(screen.getAllByDisplayValue('Lot').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByDisplayValue('5000')).toBeInTheDocument()
-    expect(screen.getAllByText('5000.00').length).toBeGreaterThanOrEqual(3)
+    expect(screen.getAllByText('5,000.00').length).toBeGreaterThanOrEqual(3)
 
     const bodyRows = container.querySelectorAll('tbody tr')
     expect(within(bodyRows[0]).getByDisplayValue('Manual Special Project')).toBeInTheDocument()
@@ -125,7 +136,7 @@ describe('SpecialInvoiceForm', () => {
     })
 
     expect(screen.getByDisplayValue('7500')).toBeInTheDocument()
-    expect(screen.getAllByText('7500.00').length).toBeGreaterThanOrEqual(3)
+    expect(screen.getAllByText('7,500.00').length).toBeGreaterThanOrEqual(3)
 
     const bodyRows = container.querySelectorAll('tbody tr')
     expect(within(bodyRows[0]).getByDisplayValue('List Field Special Project')).toBeInTheDocument()

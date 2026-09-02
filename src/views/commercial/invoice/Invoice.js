@@ -85,7 +85,7 @@ const Invoice = () => {
   const serviceTypeOptions = useMemo(() => {
     const types = new Set()
     invoices.forEach((invoice) => {
-      const type = String(invoice?.serviceType || '').trim()
+      const type = String(invoice?.serviceCategory || invoice?.serviceType || '').trim()
       if (type) types.add(type)
     })
     return Array.from(types).sort((a, b) => a.localeCompare(b))
@@ -188,7 +188,9 @@ const Invoice = () => {
 
     if (serviceTypeFilter !== 'all') {
       const chosenType = String(serviceTypeFilter).toLowerCase()
-      const invoiceServiceType = String(inv?.serviceType || '').toLowerCase()
+      const invoiceServiceType = String(
+        inv?.serviceCategory || inv?.serviceType || '',
+      ).toLowerCase()
       if (chosenType !== invoiceServiceType) return false
     }
 
@@ -212,7 +214,7 @@ const Invoice = () => {
       reqCompany.toLowerCase().includes(term) ||
       reqPic.toLowerCase().includes(term) ||
       internalPic.toLowerCase().includes(term) ||
-      String(inv?.serviceType || '')
+      String(inv?.serviceCategory || inv?.serviceType || '')
         .toLowerCase()
         .includes(term) ||
       inv.purpose?.toLowerCase().includes(term)

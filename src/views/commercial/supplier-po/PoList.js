@@ -25,7 +25,8 @@ import {
 } from '../../../components/filters'
 import { StatsStrip } from '../../../components/stats'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
-import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatCount, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatMoney, formatNumber } from '../../../utils/formatters/numberFormatters'
 import { fetchAllPagedRecords } from '../../../utils/detailPages'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import { downloadCommercialWord } from '../shared/commercialWordDownload'
@@ -394,7 +395,10 @@ export default function SupplierPoRecords() {
           issued: po.created_at || '',
           issuedDisplay: toDateOnly(po.created_at),
           total: Number.parseFloat(po.grand_total || 0),
-          totalDisplay: Number.parseFloat(po.grand_total || 0).toFixed(2),
+          totalDisplay: formatNumber(po.grand_total, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }),
           status: po.status || 'Unknown',
         }
       }),
@@ -469,6 +473,17 @@ export default function SupplierPoRecords() {
           setSelectedPo(record)
           setViewModalVisible(true)
         },
+      },
+      {
+        key: 'edit',
+        label: 'Edit',
+        disabled: alreadyPaid,
+        tooltip: alreadyPaid ? 'Paid Supplier POs cannot be edited.' : undefined,
+        onClick: (record) =>
+          !alreadyPaid &&
+          navigate(`/commercial/supplier-po/${record.po_id}`, {
+            state: { record, edit: true, returnTo: getCurrentReturnTo(location) },
+          }),
       },
       {
         key: 'export-pdf',

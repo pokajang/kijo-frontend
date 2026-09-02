@@ -20,6 +20,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { formatNumber } from '../../utils/formatters/numberFormatters'
 
 /**
  * Manpower invoice form.
@@ -396,7 +397,9 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
                       onChange={handleChange('unit_cost')}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">{lineTotal.toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    {formatNumber(lineTotal, { minimumFractionDigits: 2 })}
+                  </CTableDataCell>
                 </CTableRow>
                 {items.map((item, idx) => {
                   const itemQty = parseFloat(item.quantity) || 0
@@ -475,7 +478,7 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
                         />
                       </CTableDataCell>
                       <CTableDataCell className="text-end">
-                        {(itemQty * itemPrice).toFixed(2)}
+                        {formatNumber(itemQty * itemPrice, { minimumFractionDigits: 2 })}
                       </CTableDataCell>
                     </CTableRow>
                   )
@@ -505,7 +508,9 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
                       onChange={handleChange('discount')}
                     />
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">{discountTotal.toFixed(2)}</CTableDataCell>
+                  <CTableDataCell className="text-end">
+                    {formatNumber(discountTotal, { minimumFractionDigits: 2 })}
+                  </CTableDataCell>
                 </CTableRow>
                 <CTableRow>
                   <CTableDataCell colSpan={4} />
@@ -513,7 +518,9 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
                     Subtotal (RM)
                   </CTableDataCell>
                   <CTableDataCell className="text-end align-middle">
-                    {(parseFloat(pricing.sub_total) || 0).toFixed(2)}
+                    {formatNumber(parseFloat(pricing.sub_total) || 0, {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
                 <CTableRow>
@@ -530,7 +537,9 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
                     </div>
                   </CTableDataCell>
                   <CTableDataCell className="text-end align-middle">
-                    {(parseFloat(pricing.sst_amount) || 0).toFixed(2)}
+                    {formatNumber(parseFloat(pricing.sst_amount) || 0, {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
                 <CTableRow>
@@ -539,7 +548,9 @@ const ManpowerInvoiceForm = ({ project, quoteDetails, pricing, setPricing, mode 
                     Grand Total (RM)
                   </CTableDataCell>
                   <CTableDataCell className="text-end align-middle fw-bold">
-                    {(parseFloat(pricing.grand_total) || 0).toFixed(2)}
+                    {formatNumber(parseFloat(pricing.grand_total) || 0, {
+                      minimumFractionDigits: 2,
+                    })}
                   </CTableDataCell>
                 </CTableRow>
               </CTableBody>

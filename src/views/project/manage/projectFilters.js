@@ -1,5 +1,6 @@
 import { normalizeProjectStatus } from './projectStatus'
 import { getCurrentProjectValue } from './projectApi'
+import { getProjectServiceCategory } from './projectServiceCategory'
 
 const toDateOnly = (value) => {
   if (!value) return ''
@@ -82,16 +83,18 @@ const getProgressText = (project = {}) => {
     .join(' ')
 }
 
-export const getProjectTypeOptions = (projects = []) => {
-  const types = new Set()
+export const getServiceCategoryOptions = (projects = []) => {
+  const categories = new Set()
 
   projects.forEach((project) => {
-    const type = String(project?.project_type || '').trim()
-    if (!type) return
-    types.add(type)
+    const category = getProjectServiceCategory(project)
+    if (!category || category === '-') return
+    categories.add(category)
   })
 
-  return Array.from(types).sort((a, b) => a.localeCompare(b))
+  return Array.from(categories).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' }),
+  )
 }
 
 export const getOwnerOptions = (projects = []) => {
@@ -148,8 +151,8 @@ export const applyProjectFilters = ({ projects = [], filters = {} }) => {
       return false
     }
     if (
-      filters?.projectTypeFilter !== 'all' &&
-      project?.project_type !== filters?.projectTypeFilter
+      filters?.serviceCategoryFilter !== 'all' &&
+      getProjectServiceCategory(project) !== filters?.serviceCategoryFilter
     ) {
       return false
     }
@@ -184,6 +187,8 @@ export const applyProjectFilters = ({ projects = [], filters = {} }) => {
       project?.client_name,
       project?.project_name,
       project?.project_type,
+      getProjectServiceCategory(project),
+      project?.service_category_code || project?.serviceCategoryCode,
       project?.status,
       project?.po_loa_number,
       ownerCode,

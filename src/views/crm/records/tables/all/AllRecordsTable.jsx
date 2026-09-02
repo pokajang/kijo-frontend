@@ -28,6 +28,7 @@ import { useColumnPreferences } from '../../../../../hooks/datatable'
 import { DataTableRecordList } from '../../../../../components/datatable'
 import { getPeriodRangeScopeLabel } from '../../../../../components/filters'
 import { StatsStrip } from '../../../../../components/stats'
+import { formatMoney } from '../../../../../utils/formatters/numberFormatters'
 import { buildQuoteRecordStatsItems } from '../../utils/quoteRecordStats'
 import AllRecordsFilterPanel from './AllRecordsFilterPanel'
 import RemarksCell from '../shared/RemarksCell'
@@ -37,21 +38,11 @@ import { actionMenuPopperConfig } from '../shared/actionMenuPopperConfig'
 
 const formatRecordAmount = (record) => {
   const amount = Number(record?.__tableMeta?.amountValue ?? 0)
-  return Number.isFinite(amount)
-    ? `RM ${amount.toLocaleString('en-MY', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
-    : '-'
+  return Number.isFinite(amount) ? formatMoney(amount, { fallback: '-' }) : '-'
 }
 
 const formatRecordMoneyValue = (value) =>
-  Number.isFinite(value)
-    ? `RM ${value.toLocaleString('en-MY', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
-    : '-'
+  Number.isFinite(value) ? formatMoney(value, { fallback: '-' }) : '-'
 
 const getEstimatedCostValue = (record) =>
   Number(

@@ -39,6 +39,8 @@ export default function HygieneQuotationForm({
   isEditMode = false,
   quoteId = null,
   proposalLanguage = 'en',
+  createdProposalTemplate = null,
+  onCreatedProposalTemplateConsumed,
 }) {
   const { isRevision, priceExceptionRequestId } = useQuoteRouteParams()
   const hasPriceExceptionRequestId = Boolean(priceExceptionRequestId)
@@ -488,6 +490,8 @@ export default function HygieneQuotationForm({
         selectedClient={selectedClient}
         isEditMode={isEditMode}
         proposalLanguage={proposalLanguage}
+        createdProposalTemplate={createdProposalTemplate}
+        onCreatedProposalTemplateConsumed={onCreatedProposalTemplateConsumed}
       />
 
       {toInteger(formData.sampleCounts, 0) > 0 && (

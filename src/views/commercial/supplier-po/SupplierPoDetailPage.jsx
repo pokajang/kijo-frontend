@@ -9,8 +9,10 @@ import dialog from '../../../components/dialog/dialogService'
 import { showToast } from '../../../components/toast/toastService'
 import { findRecordByPagedEndpoint, sameId } from '../../../utils/detailPages'
 import { downloadCommercialWord } from '../shared/commercialWordDownload'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
+import SupplierPoEditModal from './SupplierPoEditModal'
 
-const money = (value) => `RM ${Number.parseFloat(value || 0).toFixed(2)}`
+const money = (value) => formatMoney(Number.parseFloat(value) || 0)
 
 const SupplierPoDetailPage = () => {
   const { id } = useParams()
@@ -22,6 +24,8 @@ const SupplierPoDetailPage = () => {
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
   const [markPaidVisible, setMarkPaidVisible] = useState(false)
+  const [editVisible, setEditVisible] = useState(Boolean(location.state?.edit))
+  const [savingEdit, setSavingEdit] = useState(false)
 
   useEffect(() => {
     recordRef.current = record
@@ -128,6 +132,34 @@ const SupplierPoDetailPage = () => {
       })
   }
 
+  const handleSaveEdit = async (payload) => {
+    setSavingEdit(true)
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE}catalog/purchase-orders/${record.po_id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      )
+      const result = await response.json()
+      if (!response.ok || result.status !== 'success') {
+        dialog.alert(result.message || 'Failed to update Supplier PO.')
+        return
+      }
+      showToast('Supplier PO updated.')
+      setEditVisible(false)
+      await fetchRecords()
+    } catch (error) {
+      console.error('Supplier PO update error:', error)
+      dialog.alert('Network or server error while updating Supplier PO.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
   return (
     <>
       <DataTableDetailShell
@@ -145,6 +177,9 @@ const SupplierPoDetailPage = () => {
                 buttonColor: 'secondary',
                 onClick: () => navigate(returnContext.listPath),
               }
+            : null,
+          String(record?.status || '').toLowerCase() !== 'paid'
+            ? { key: 'edit', label: 'Edit', onClick: () => setEditVisible(true) }
             : null,
           { key: 'pdf', label: 'Export PDF', onClick: handleGeneratePdf },
           { key: 'word', label: 'Export Word', onClick: handleGenerateWord },
@@ -167,6 +202,10 @@ const SupplierPoDetailPage = () => {
 
         <DetailSection title="PO">
           <DetailField label="Reference Number" value={record?.po_ref_no} />
+          <DetailField
+            label="Service Category"
+            value={record?.service_category || record?.project_type}
+          />
           <DetailField label="Issued" value={record?.created_at} />
           <DetailField
             label="Status"
@@ -210,6 +249,13 @@ const SupplierPoDetailPage = () => {
         onClose={() => setMarkPaidVisible(false)}
         onConfirm={handleConfirmMarkPaid}
         record={record}
+      />
+      <SupplierPoEditModal
+        visible={editVisible}
+        record={record}
+        submitting={savingEdit}
+        onClose={() => setEditVisible(false)}
+        onSave={handleSaveEdit}
       />
     </>
   )

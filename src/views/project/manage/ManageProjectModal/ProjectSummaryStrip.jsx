@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { getProjectServiceCategory } from '../projectServiceCategory'
 import { CCardBody, CCol, CFormLabel, CRow } from '@coreui/react'
 
 import { DataTableStatusBadge } from '../../../../components/datatable'
@@ -39,7 +40,7 @@ const ProjectSummaryStrip = ({ project = {} }) => {
             {project.status || '-'}
           </DataTableStatusBadge>
         </SummaryItem>
-        <SummaryItem label="Project Type">{project.project_type || '-'}</SummaryItem>
+        <SummaryItem label="Service Category">{getProjectServiceCategory(project)}</SummaryItem>
         <SummaryItem label="Awarded Value">
           {formatProjectMoney(getAwardedProjectValue(project))}
         </SummaryItem>

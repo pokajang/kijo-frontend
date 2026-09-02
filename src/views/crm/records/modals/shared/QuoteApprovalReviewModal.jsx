@@ -14,16 +14,12 @@ import {
   CModalTitle,
 } from '@coreui/react'
 import { quoteApiUrl } from '../../../quotes/quoteApi'
+import { formatMoney } from '../../../../../utils/formatters/numberFormatters'
 
 const money = (value) => {
   if (value == null || String(value).trim() === '') return 'Not available'
   const amount = Number(value)
-  return Number.isFinite(amount)
-    ? `RM ${amount.toLocaleString('en-MY', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
-    : 'Not available'
+  return Number.isFinite(amount) ? formatMoney(amount) : 'Not available'
 }
 
 const percent = (value) => {

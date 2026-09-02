@@ -51,7 +51,7 @@ describe('projectTableRows', () => {
         id: 1,
         client: 'Client A',
         project: 'Project Alpha',
-        projectType: 'Training',
+        serviceCategory: 'Training',
         value: 1234.5,
         valueDisplay: '1,234.50',
         update: '2026-05-20T08:00:00Z',
@@ -79,7 +79,7 @@ describe('projectTableRows', () => {
       expect.objectContaining({
         client: emptyProjectTableValue,
         project: emptyProjectTableValue,
-        projectType: emptyProjectTableValue,
+        serviceCategory: emptyProjectTableValue,
         value: null,
         valueDisplay: emptyProjectTableValue,
         update: '',
@@ -115,5 +115,18 @@ describe('projectTableRows', () => {
 
     expect(row.value).toBe(1250)
     expect(row.valueDisplay).toBe('1,250.00')
+  })
+
+  it('uses the specific Special category without replacing the source workflow type', () => {
+    const [row] = normalizeProjectTableRows([
+      {
+        id: 5,
+        project_type: 'Special Service',
+        service_category: 'Engineering',
+      },
+    ])
+
+    expect(row.serviceCategory).toBe('Engineering')
+    expect(row.project_type).toBe('Special Service')
   })
 })

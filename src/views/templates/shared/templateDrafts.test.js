@@ -5,6 +5,7 @@ import {
   clearTemplateDraft,
   createTemplateDraftRecord,
   readTemplateDraft,
+  readTemplateDraftRecord,
   writeTemplateDraft,
 } from './templateDrafts'
 
@@ -28,6 +29,11 @@ describe('templateDrafts', () => {
     writeTemplateDraft('training', { title: 'Draft' }, key)
 
     expect(readTemplateDraft('training', key)).toEqual({ title: 'Draft' })
+    expect(readTemplateDraftRecord('training', key)).toMatchObject({
+      version: TEMPLATE_DRAFT_VERSION,
+      type: 'training',
+      payload: { title: 'Draft' },
+    })
 
     clearTemplateDraft('training', key)
     expect(readTemplateDraft('training', key)).toBeNull()

@@ -28,6 +28,7 @@ import {
   catalogModuleTabs,
   commercialModuleTabs,
 } from '../../../components/navigation/moduleNavConfigs'
+import { formatNumber } from '../../../utils/formatters/numberFormatters'
 
 export default function SupplierPo({
   module = 'catalog',
@@ -287,7 +288,10 @@ export default function SupplierPo({
                           />
                         </CTableDataCell>
                         <CTableDataCell className="text-end">
-                          {(qty * price).toFixed(2)}
+                          {formatNumber(qty * price, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
                         </CTableDataCell>
                       </CTableRow>
                     )
@@ -343,7 +347,12 @@ export default function SupplierPo({
                     <CTableHeaderCell colSpan={5} className="text-end">
                       SST Amount (RM)
                     </CTableHeaderCell>
-                    <CTableDataCell className="text-end">{sstAmount.toFixed(2)}</CTableDataCell>
+                    <CTableDataCell className="text-end">
+                      {formatNumber(sstAmount, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </CTableDataCell>
                   </CTableRow>
 
                   <CTableRow>
@@ -351,7 +360,12 @@ export default function SupplierPo({
                       <strong>Grand Total</strong>
                     </CTableHeaderCell>
                     <CTableDataCell className="text-end">
-                      <strong>{grandTotal.toFixed(2)}</strong>
+                      <strong>
+                        {formatNumber(grandTotal, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
                     </CTableDataCell>
                   </CTableRow>
                 </CTableBody>

@@ -19,6 +19,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilTrash } from '@coreui/icons'
+import { formatNumber } from '../../utils/formatters/numberFormatters'
 import { normalizeTrainingHrdCharge } from '../../views/crm/quotes/training/trainingHrd'
 
 const toNumber = (value, fallback = 0) => {
@@ -308,7 +309,9 @@ const TrainingInvoiceForm = ({
                   onChange={handleChange('training_total')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{trainingLineTotal.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(trainingLineTotal, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
 
             <CTableRow>
@@ -345,7 +348,9 @@ const TrainingInvoiceForm = ({
                   onChange={handleChange('meal_total')}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{mealLineTotal.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(mealLineTotal, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
 
             <CTableRow>
@@ -385,7 +390,7 @@ const TrainingInvoiceForm = ({
                 />
               </CTableDataCell>
               <CTableDataCell className="text-end">
-                {mobilizationLineTotal.toFixed(2)}
+                {formatNumber(mobilizationLineTotal, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
 
@@ -465,7 +470,7 @@ const TrainingInvoiceForm = ({
                     />
                   </CTableDataCell>
                   <CTableDataCell className="text-end">
-                    {(itemQty * itemPrice).toFixed(2)}
+                    {formatNumber(itemQty * itemPrice, { minimumFractionDigits: 2 })}
                   </CTableDataCell>
                 </CTableRow>
               )
@@ -493,7 +498,9 @@ const TrainingInvoiceForm = ({
                   onChange={handleDiscountValueChange}
                 />
               </CTableDataCell>
-              <CTableDataCell className="text-end">{discountTotal.toFixed(2)}</CTableDataCell>
+              <CTableDataCell className="text-end">
+                {formatNumber(discountTotal, { minimumFractionDigits: 2 })}
+              </CTableDataCell>
             </CTableRow>
 
             {isHrdPayment && (
@@ -538,7 +545,9 @@ const TrainingInvoiceForm = ({
                     }}
                   />
                 </CTableDataCell>
-                <CTableDataCell className="text-end">{hrdLineTotal.toFixed(2)}</CTableDataCell>
+                <CTableDataCell className="text-end">
+                  {formatNumber(hrdLineTotal, { minimumFractionDigits: 2 })}
+                </CTableDataCell>
               </CTableRow>
             )}
 
@@ -547,7 +556,7 @@ const TrainingInvoiceForm = ({
                 Subtotal (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {subtotal.toFixed(2)}
+                {formatNumber(subtotal, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -563,7 +572,7 @@ const TrainingInvoiceForm = ({
                 </div>
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle">
-                {sstAmount.toFixed(2)}
+                {formatNumber(sstAmount, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
             <CTableRow>
@@ -571,7 +580,7 @@ const TrainingInvoiceForm = ({
                 Grand Total (RM)
               </CTableDataCell>
               <CTableDataCell className="text-end align-middle fw-bold">
-                {grandTotal.toFixed(2)}
+                {formatNumber(grandTotal, { minimumFractionDigits: 2 })}
               </CTableDataCell>
             </CTableRow>
           </CTableBody>

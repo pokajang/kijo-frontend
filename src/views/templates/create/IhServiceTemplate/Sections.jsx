@@ -1,11 +1,12 @@
 // src/views/template/Sections.jsx
 import React from 'react'
 import EditorInput from '../../components/EditorInput'
+import TemplateOptionalEditors from '../../shared/TemplateOptionalEditors'
 
 /**
  * Renders all proposal sections with TinyMCE editor inputs.
  */
-const Sections = ({ templateDetails, handleEditorChange }) => {
+const Sections = ({ templateDetails, handleEditorChange, validationErrors = {} }) => {
   // basic list plugin + heading dropdown for common fields
   const commonPlugins = 'lists'
   const commonToolbar =
@@ -15,45 +16,23 @@ const Sections = ({ templateDetails, handleEditorChange }) => {
     <>
       <EditorInput
         label="Introduction"
+        required
         field="introduction"
         value={templateDetails.introduction}
         onChange={handleEditorChange}
+        invalid={Boolean(validationErrors.introduction)}
+        feedbackInvalid={validationErrors.introduction}
       />
 
-      <EditorInput
-        label="Objectives"
-        field="objectives"
-        value={templateDetails.objectives}
+      <TemplateOptionalEditors
         onChange={handleEditorChange}
-      />
-
-      <EditorInput
-        label="Scope of Work"
-        field="workScope"
-        value={templateDetails.workScope}
-        onChange={handleEditorChange}
-      />
-
-      <EditorInput
-        label="Project Schedule"
-        field="schedule"
-        value={templateDetails.schedule}
-        onChange={handleEditorChange}
-      />
-
-      <EditorInput
-        label="References"
-        field="reference"
-        value={templateDetails.reference}
-        onChange={handleEditorChange}
-      />
-
-      {/* uses default plugins & toolbar (includes headings, tables, code view) */}
-      <EditorInput
-        label="Custom Sections"
-        field="otherFields"
-        value={templateDetails.otherFields}
-        onChange={handleEditorChange}
+        items={[
+          { label: 'Objectives', field: 'objectives', value: templateDetails.objectives },
+          { label: 'Scope of work', field: 'workScope', value: templateDetails.workScope },
+          { label: 'Project schedule', field: 'schedule', value: templateDetails.schedule },
+          { label: 'References', field: 'reference', value: templateDetails.reference },
+          { label: 'Custom sections', field: 'otherFields', value: templateDetails.otherFields },
+        ]}
       />
     </>
   )

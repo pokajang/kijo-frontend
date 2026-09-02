@@ -187,7 +187,7 @@ const InvoiceDetailPage = () => {
           />
           <DetailField label="Client" value={invoice?.requestor?.company?.name} />
           <DetailField label="PIC" value={invoice?.requestor?.pic?.name} />
-          <DetailField label="Service" value={invoice?.serviceType} />
+          <DetailField label="Service" value={invoice?.serviceCategory || invoice?.serviceType} />
           <DetailField label="Service Period" value={invoice?.servicePeriod} />
           <DetailField label="Purpose" value={invoice?.purpose} />
           <DetailField label="Issued" value={invoice?.dateIssued} />

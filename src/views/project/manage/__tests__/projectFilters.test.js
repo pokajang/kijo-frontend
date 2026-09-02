@@ -5,7 +5,7 @@ import {
   getLatestProgressUpdate,
   getInquirySourceOptions,
   getOwnerOptions,
-  getProjectTypeOptions,
+  getServiceCategoryOptions,
   getYearOptions,
   isProjectOwnedByUser,
 } from '../projectFilters'
@@ -13,7 +13,7 @@ import {
 const defaultFilters = {
   yearFilter: 'all',
   statusFilter: 'all',
-  projectTypeFilter: 'all',
+  serviceCategoryFilter: 'all',
   ownerFilter: 'all',
   hasUpdateFilter: 'all',
   hasVendorFilter: 'all',
@@ -91,7 +91,7 @@ describe('projectFilters', () => {
     expect(
       applyProjectFilters({
         projects,
-        filters: { ...defaultFilters, projectTypeFilter: 'Training' },
+        filters: { ...defaultFilters, serviceCategoryFilter: 'Training' },
       }),
     ).toEqual([projects[0]])
 
@@ -132,6 +132,35 @@ describe('projectFilters', () => {
     ).toEqual([{ ...projects[0], current_project_value: 3000 }])
   })
 
+  it('filters and searches Special projects by their customer-facing category', () => {
+    const environmentProject = {
+      ...projects[0],
+      id: 3,
+      project_name: 'Compliance Assessment',
+      project_type: 'Special Service',
+      service_category: 'Environment',
+      service_category_code: 'ENV',
+    }
+
+    expect(
+      applyProjectFilters({
+        projects: [...projects, environmentProject],
+        filters: { ...defaultFilters, serviceCategoryFilter: 'Environment' },
+      }),
+    ).toEqual([environmentProject])
+    expect(
+      applyProjectFilters({
+        projects: [...projects, environmentProject],
+        filters: { ...defaultFilters, searchTerm: 'env' },
+      }),
+    ).toEqual([environmentProject])
+    expect(getServiceCategoryOptions([...projects, environmentProject])).toEqual([
+      'Environment',
+      'Equipment Supply',
+      'Training',
+    ])
+  })
+
   it('detects current user ownership by staff id or name code', () => {
     expect(isProjectOwnedByUser(projects[0], { staff_id: 10 })).toBe(true)
     expect(isProjectOwnedByUser(projects[0], { name_code: 'al' })).toBe(true)
@@ -139,7 +168,7 @@ describe('projectFilters', () => {
   })
 
   it('builds stable filter option lists and latest update values', () => {
-    expect(getProjectTypeOptions(projects)).toEqual(['Equipment Supply', 'Training'])
+    expect(getServiceCategoryOptions(projects)).toEqual(['Equipment Supply', 'Training'])
     expect(getOwnerOptions(projects)).toEqual(['AL', 'BY'])
     expect(getInquirySourceOptions(projects)).toEqual(['Referral', 'Website'])
     expect(getYearOptions(projects, 2026)).toEqual(['2026', '2025'])

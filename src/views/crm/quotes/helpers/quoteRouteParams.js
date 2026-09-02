@@ -23,6 +23,7 @@ export const readQuoteRouteParams = (search = '') => {
     isRevision: toBoolean(params.get('isRevision')),
     priceExceptionRequestId: params.get('priceExceptionRequestId') || '',
     service: params.get('service') || '',
+    categoryId: params.get('categoryId') || '',
   }
 }
 

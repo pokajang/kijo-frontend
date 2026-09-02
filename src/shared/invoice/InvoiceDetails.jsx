@@ -64,7 +64,7 @@ const InvoiceDetails = ({ form, handleChange, mode = 'create', financialLocked =
             />
           </CCol>
           <CCol md={4}>
-            <CFormLabel>Service Type</CFormLabel>
+            <CFormLabel>{form.serviceTypeLabel || 'Service Type'}</CFormLabel>
             <CFormInput value={form.serviceType || ''} disabled />
           </CCol>
         </CRow>

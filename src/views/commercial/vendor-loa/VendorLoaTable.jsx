@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { DataTableRecordList, DataTableStatusBadge } from '../../../components/datatable'
 import { StatsStrip } from '../../../components/stats'
 import { formatCount, formatMoney, getTopGroupBySum, sumBy } from '../../../utils/stats/formatStats'
+import { formatNumber } from '../../../utils/formatters/numberFormatters'
 import MarkPaidModal from './MarkPaidModal'
 import VendorLoaEditModal from './VendorLoaEditModal'
 import dialog from '../../../components/dialog/dialogService'
@@ -346,7 +347,7 @@ const VendorLoaTable = ({
         project: rec.project_name || emptyValue,
         service: rec.services_description || emptyValue,
         value: Number(rec.award_value || 0),
-        valueDisplay: Number(rec.award_value || 0).toFixed(2),
+        valueDisplay: formatNumber(rec.award_value, { minimumFractionDigits: 2 }),
         award: rec.award_date || '',
         awardDisplay: rec.award_date || emptyValue,
         awardBy: rec.award_by || emptyValue,

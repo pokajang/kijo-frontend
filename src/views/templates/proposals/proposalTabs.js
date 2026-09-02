@@ -5,7 +5,7 @@ export const proposalTabOptions = [
   { key: 'training-tab', label: 'Training', type: 'training', slug: 'training' },
   { key: 'ih-tab', label: 'Industrial Hygiene', type: 'ih', slug: 'industrial-hygiene' },
   { key: 'manpower-tab', label: 'Manpower Supply', type: 'manpower', slug: 'manpower-supply' },
-  { key: 'special-tab', label: 'Special', type: 'special', slug: 'special' },
+  { key: 'special-tab', label: 'Other Services', type: 'special', slug: 'special' },
 ]
 
 export const proposalTypeMeta = {
@@ -28,7 +28,7 @@ export const proposalTypeMeta = {
     legacyListPath: '/templates/list-manpower',
   },
   special: {
-    label: 'Special',
+    label: 'Other Services',
     tabKey: 'special-tab',
     slug: 'special',
     legacyListPath: '/templates/list-special',

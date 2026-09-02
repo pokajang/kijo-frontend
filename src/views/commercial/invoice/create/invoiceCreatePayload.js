@@ -6,6 +6,7 @@ import {
   STANDARD_HYGIENE_PRICING_RULE,
 } from '../../../../shared/invoice/hygienePricing'
 import { normalizeTrainingHrdCharge } from '../../../crm/quotes/training/trainingHrd'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const toNumber = (value) => parseFloat(value) || 0
 const toNegative = (value) => -Math.abs(toNumber(value))
@@ -49,7 +50,7 @@ export const validateHygieneInvoicePricing = (pricing = {}) => {
   if (discount > grossSubtotal + 0.01) {
     add(
       'pricing.discount_unit_price',
-      `Discount cannot exceed the gross subtotal of RM ${grossSubtotal.toFixed(2)}.`,
+      `Discount cannot exceed the gross subtotal of ${formatMoney(grossSubtotal)}.`,
     )
   }
   ;(Array.isArray(pricing.hygiene_items) ? pricing.hygiene_items : []).forEach((item, index) => {

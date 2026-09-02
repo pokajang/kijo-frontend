@@ -22,6 +22,7 @@ import {
   getEquipmentDeliveryRemarks,
 } from './equipmentDeliveryUtils'
 import dialog from '../../../../components/dialog/dialogService'
+import { getProjectServiceCategory } from '../projectServiceCategory'
 import {
   confirmExistingCommercialDocs,
   hasProjectCommercialDocGroups,
@@ -60,6 +61,7 @@ export default function DeliveryOrderModal({
     code: '',
     date: '',
     type: '',
+    workflowType: '',
     description: '',
     servicePeriod: '',
   })
@@ -114,7 +116,8 @@ export default function DeliveryOrderModal({
           ).padStart(4, '0')}`
         : '',
       date: project.award_date || '',
-      type: project.project_type || '',
+      type: getProjectServiceCategory(project),
+      workflowType: project.project_type || '',
       description: project.description || '',
       servicePeriod:
         project.service_start_date && project.service_end_date
@@ -200,7 +203,7 @@ export default function DeliveryOrderModal({
         project_name: projectDetails.name,
         project_code: projectDetails.code,
         project_award_date: projectDetails.date,
-        project_type: projectDetails.type,
+        project_type: projectDetails.workflowType,
         project_description: projectDetails.description,
         project_service_period: projectDetails.servicePeriod,
         quotation_remarks: projectDetails.quotationRemarks || '',

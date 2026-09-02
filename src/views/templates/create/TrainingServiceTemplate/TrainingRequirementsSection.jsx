@@ -17,7 +17,9 @@ const TrainingRequirementsSection = ({
   return (
     <CRow>
       <CCol md={6} className="mb-3">
-        <CFormLabel>Training Requirements</CFormLabel>
+        <CFormLabel>
+          Training requirements <span className="text-muted">— Optional</span>
+        </CFormLabel>
         <CFormTextarea
           rows={2}
           name="trainingRequirements"
@@ -29,7 +31,9 @@ const TrainingRequirementsSection = ({
         />
       </CCol>
       <CCol md={6} className="mb-3">
-        <CFormLabel>Additional Training Requirements (If any)</CFormLabel>
+        <CFormLabel>
+          Additional training requirements <span className="text-muted">— Optional</span>
+        </CFormLabel>
         <CFormTextarea
           rows={2}
           name="additionalTrainingRequirements"
@@ -42,7 +46,9 @@ const TrainingRequirementsSection = ({
         />
       </CCol>
       <CCol md={6} className="mb-3">
-        <CFormLabel>Training Materials</CFormLabel>
+        <CFormLabel>
+          Training materials <span className="text-muted">— Optional</span>
+        </CFormLabel>
         <CFormTextarea
           rows={2}
           name="trainingMaterials"
@@ -54,7 +60,9 @@ const TrainingRequirementsSection = ({
         />
       </CCol>
       <CCol md={6} className="mb-3">
-        <CFormLabel>Lecture Medium</CFormLabel>
+        <CFormLabel>
+          Lecture medium <span className="text-muted">— Optional</span>
+        </CFormLabel>
         <CFormTextarea
           rows={2}
           name="lectureMedium"

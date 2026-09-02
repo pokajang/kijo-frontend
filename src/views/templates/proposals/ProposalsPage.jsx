@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CAlert, CButton, CCard, CCardBody, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
@@ -11,10 +11,16 @@ import TemplateProposalTable from '../shared/TemplateProposalTable'
 import TrainingTemplateTable from '../list-training/TemplateTable'
 import AllProposalsTable from './AllProposalsTable'
 import { useProposalsController } from './useProposalsController'
+import SpecialCategoryManager from '../shared/SpecialCategoryManager'
+import { useAuth } from '../../../auth/AuthProvider'
+import { hasAnyAllowedRole } from '../../../utils/roles'
 
 const ProposalsPage = () => {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const canManageCategories = hasAnyAllowedRole(user?.roles, ['Manager', 'System Admin'])
   const {
     activeTab,
     activeType,
@@ -27,6 +33,7 @@ const ProposalsPage = () => {
     language,
     loading,
     proposalTabOptions,
+    refreshData,
   } = useProposalsController()
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('templates.proposals')
@@ -93,14 +100,31 @@ const ProposalsPage = () => {
               controlsVisible={controlsVisible}
               onControlsToggle={toggleControlsVisible}
             />
+            {activeType === 'special' && canManageCategories && (
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCategoryManager(true)}
+              >
+                Manage Categories
+              </CButton>
+            )}
             <CButton
               color="primary"
               size="sm"
               className="d-inline-flex align-items-center gap-1"
-              onClick={() => navigate('/templates/create', { state: { returnTo } })}
+              onClick={() =>
+                navigate(
+                  activeType
+                    ? `/templates/create?type=${encodeURIComponent(activeType)}`
+                    : '/templates/create',
+                  { state: { returnTo } },
+                )
+              }
             >
               <CIcon icon={cilPlus} />
-              Create Proposal
+              Create Proposal Template
             </CButton>
           </DataTableCardHeader>
           <CCardBody className="records-page-card-body">
@@ -112,6 +136,11 @@ const ProposalsPage = () => {
             {renderTable()}
           </CCardBody>
         </CCard>
+        <SpecialCategoryManager
+          visible={showCategoryManager}
+          onClose={() => setShowCategoryManager(false)}
+          onChanged={refreshData}
+        />
       </CCol>
     </CRow>
   )

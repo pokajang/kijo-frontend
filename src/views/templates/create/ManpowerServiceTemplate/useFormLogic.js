@@ -4,14 +4,20 @@ import dialog from '../../../../components/dialog/dialogService'
 import { createTemplate, getTemplate, isAbortError, updateTemplate } from '../../shared/templateApi'
 import {
   clearTemplateDraft,
-  readTemplateDraft,
+  readTemplateDraftRecord,
   writeTemplateDraft,
 } from '../../shared/templateDrafts'
 import { fromApiManpowerTemplate, toApiManpowerTemplate } from '../../shared/templateMappers'
 import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templateUtils'
-import { formatValidationErrors, validateManpowerTemplate } from '../../shared/templateValidation'
+import {
+  formatValidationErrors,
+  getValidationErrorMap,
+  validateManpowerTemplate,
+} from '../../shared/templateValidation'
 import { getProposalListPath } from '../../proposals/proposalTabs'
 import { getDetailReturnTo } from '../../../../utils/navigation/returnTo'
+import { buildTemplateCompletionState, getTemplateReturnState } from '../../shared/templateHandoff'
+import { scrollToTemplateField } from '../../shared/templateFormUi'
 // Key for localStorage draft
 const DRAFT_KEY = 'manpowerProposalDraft'
 
@@ -38,6 +44,8 @@ export default function useFormLogic({ isEdit, editId }) {
   const [templateMeta, setTemplateMeta] = useState({ proposalLanguage: 'en' })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [validationErrors, setValidationErrors] = useState({})
+  const [draftRestored, setDraftRestored] = useState(false)
   const [loading, setLoading] = useState(Boolean(isEdit && editId))
   const [loadError, setLoadError] = useState('')
   const saveInFlightRef = useRef(false)
@@ -45,7 +53,8 @@ export default function useFormLogic({ isEdit, editId }) {
   // --- Load draft on mount (create only) ---------------------------------
   useEffect(() => {
     if (isEdit) return
-    const draft = readTemplateDraft('manpower', DRAFT_KEY)
+    const draftRecord = readTemplateDraftRecord('manpower', DRAFT_KEY)
+    const draft = draftRecord?.payload
     if (draft) {
       const draftTemplate =
         draft.templateDetails && typeof draft.templateDetails === 'object'
@@ -53,12 +62,19 @@ export default function useFormLogic({ isEdit, editId }) {
           : {}
       setTemplateDetails({ ...INITIAL_TEMPLATE, ...draftTemplate })
       setRemarks(draft.remarks || '')
+      setDraftRestored(true)
     }
   }, [isEdit])
 
   // --- Auto-save draft on changes (create only) --------------------------
   useEffect(() => {
     if (isEdit) return
+    const hasDraftContent =
+      JSON.stringify(templateDetails) !== JSON.stringify(INITIAL_TEMPLATE) || Boolean(remarks)
+    if (!hasDraftContent) {
+      clearTemplateDraft('manpower', DRAFT_KEY)
+      return
+    }
     writeTemplateDraft('manpower', { templateDetails, remarks }, DRAFT_KEY)
   }, [isEdit, templateDetails, remarks])
 
@@ -110,7 +126,12 @@ export default function useFormLogic({ isEdit, editId }) {
     if (field === 'serviceCode' && newValue) {
       newValue = newValue.toUpperCase()
     }
+    setValidationErrors((current) => ({ ...current, [field]: undefined }))
     setTemplateDetails((prev) => ({ ...prev, [field]: newValue }))
+  }
+
+  const clearValidationError = (field) => {
+    setValidationErrors((current) => ({ ...current, [field]: undefined }))
   }
 
   const finalizingBmTranslation =
@@ -128,11 +149,13 @@ export default function useFormLogic({ isEdit, editId }) {
     const validationErrors = validateManpowerTemplate({ templateDetails, remarks })
     if (validationErrors.length > 0) {
       const message = formatValidationErrors(validationErrors)
+      setValidationErrors(getValidationErrorMap(validationErrors))
       setSaveError(message)
-      dialog.alert(message)
+      scrollToTemplateField(validationErrors[0]?.field)
       return
     }
 
+    setValidationErrors({})
     setSaveError('')
     saveInFlightRef.current = true
     setSaving(true)
@@ -167,7 +190,12 @@ export default function useFormLogic({ isEdit, editId }) {
       if (!isEdit) {
         clearTemplateDraft('manpower', DRAFT_KEY)
       }
-      navigate(returnTo, { replace: true })
+      navigate(returnTo, {
+        replace: true,
+        state: !isEdit
+          ? buildTemplateCompletionState({ location, serviceKey: 'manpower', response: result })
+          : undefined,
+      })
     } catch (err) {
       const message = err?.message || 'Failed to save manpower template.'
       console.error('Failed to save manpower template:', err)
@@ -183,11 +211,14 @@ export default function useFormLogic({ isEdit, editId }) {
   const handleReset = () => {
     setTemplateDetails(INITIAL_TEMPLATE)
     setRemarks('')
+    setValidationErrors({})
+    setSaveError('')
+    setDraftRestored(false)
     clearTemplateDraft('manpower', DRAFT_KEY)
   }
 
   const handleCancel = () => {
-    navigate(returnTo)
+    navigate(returnTo, { state: getTemplateReturnState(location) })
   }
 
   return {
@@ -203,7 +234,10 @@ export default function useFormLogic({ isEdit, editId }) {
     saving,
     saveError,
     setSaveError,
+    validationErrors,
+    draftRestored,
     handleEditorChange,
+    clearValidationError,
     handleSave,
     handleReset,
     handleCancel,

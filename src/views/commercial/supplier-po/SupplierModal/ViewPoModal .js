@@ -20,6 +20,7 @@ import {
   CTableBody,
   CTableDataCell,
 } from '@coreui/react'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const ViewPoModal = ({ visible, onClose, po }) => {
   if (!visible || !po) return null
@@ -141,10 +142,10 @@ const ViewPoModal = ({ visible, onClose, po }) => {
                     <CTableDataCell className="text-center">{item.quantity}</CTableDataCell>
                     <CTableDataCell className="text-center">{item.unit}</CTableDataCell>
                     <CTableDataCell className="text-end">
-                      RM {parseFloat(item.unit_price).toFixed(2)}
+                      {formatMoney(item.unit_price)}
                     </CTableDataCell>
                     <CTableDataCell className="text-end">
-                      RM {parseFloat(item.line_total).toFixed(2)}
+                      {formatMoney(item.line_total)}
                     </CTableDataCell>
                   </CTableRow>
                 ))}
@@ -152,32 +153,28 @@ const ViewPoModal = ({ visible, onClose, po }) => {
                   <CTableDataCell colSpan={6} className="text-end">
                     Discount (RM)
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">
-                    RM {parseFloat(discount).toFixed(2)}
-                  </CTableDataCell>
+                  <CTableDataCell className="text-end">{formatMoney(discount)}</CTableDataCell>
                 </CTableRow>
                 <CTableRow>
                   <CTableDataCell colSpan={6} className="text-end">
                     Delivery Charge (RM)
                   </CTableDataCell>
                   <CTableDataCell className="text-end">
-                    RM {parseFloat(delivery_charge).toFixed(2)}
+                    {formatMoney(delivery_charge)}
                   </CTableDataCell>
                 </CTableRow>
                 <CTableRow>
                   <CTableDataCell colSpan={6} className="text-end">
                     SST ({sst_percent}%)
                   </CTableDataCell>
-                  <CTableDataCell className="text-end">
-                    RM {parseFloat(sst_amount).toFixed(2)}
-                  </CTableDataCell>
+                  <CTableDataCell className="text-end">{formatMoney(sst_amount)}</CTableDataCell>
                 </CTableRow>
                 <CTableRow>
                   <CTableDataCell colSpan={6} className="text-end">
                     <strong>Grand Total (RM)</strong>
                   </CTableDataCell>
                   <CTableDataCell className="text-end">
-                    <strong>RM {parseFloat(grand_total).toFixed(2)}</strong>
+                    <strong>{formatMoney(grand_total)}</strong>
                   </CTableDataCell>
                 </CTableRow>
               </CTableBody>

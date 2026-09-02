@@ -15,6 +15,7 @@ import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
 import { getRecordListPath } from '../../records/config/recordTabs'
 import dialog from '../../../../components/dialog/dialogService'
+import { formatMoney } from '../../../../utils/formatters/numberFormatters'
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -66,7 +67,7 @@ export function useEquipmentForm(
     priceExceptionRequestId: '',
     sstPercent: 0,
     estimatedTotalCost: '',
-    attachProposal: true,
+    attachProposal: false,
     proposalLanguage,
   }
 
@@ -114,7 +115,7 @@ export function useEquipmentForm(
   }, [])
 
   const selectOptions = catalogItems.map((item) => ({
-    label: `${item.item_name} - RM ${item.supplier_price}/${item.unit} by ${item.supplier_name}`,
+    label: `${item.item_name} - ${formatMoney(item.supplier_price)}/${item.unit} by ${item.supplier_name}`,
     value: item,
   }))
 
@@ -124,7 +125,9 @@ export function useEquipmentForm(
       // selections
       const items = Array.isArray(initialFormData.items) ? initialFormData.items : []
       const sel = items.map((it) => ({
-        label: `${pick(it, 'item_name', 'itemName') || '-'} - RM ${pick(it, 'unit_price', 'unitPrice') || 0}`,
+        label: `${pick(it, 'item_name', 'itemName') || '-'} - ${formatMoney(
+          pick(it, 'unit_price', 'unitPrice') || 0,
+        )}`,
         value: {
           id: parseInt(pick(it, 'item_id', 'itemId', 'catalog_item_id', 'catalogItemId'), 10) || 0,
           item_name: pick(it, 'item_name', 'itemName') || '',
@@ -184,7 +187,7 @@ export function useEquipmentForm(
         priceExceptionRequestId: '',
         sstPercent: getNumber('sstPercent', 'sst_percent'),
         estimatedTotalCost: getNullableNumber('estimatedTotalCost', 'estimated_total_cost'),
-        attachProposal: initialFormData.attachProposal ?? defaultForm.attachProposal,
+        attachProposal: false,
         proposalLanguage: initialFormData.proposalLanguage || proposalLanguage,
       })
     }
@@ -333,7 +336,7 @@ export function useEquipmentForm(
         formData.estimatedTotalCost === '' || formData.estimatedTotalCost == null
           ? null
           : Number(formData.estimatedTotalCost),
-      attach_proposal: formData.attachProposal ? 1 : 0,
+      attach_proposal: 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
     await saveQuote(payload, {
@@ -380,8 +383,6 @@ export function useEquipmentForm(
     setDiscount: (v) => setFormData((f) => ({ ...f, discount: v })),
     sstPercent: formData.sstPercent,
     setSstPercent: (v) => setFormData((f) => ({ ...f, sstPercent: v })),
-    attachProposal: formData.attachProposal,
-    setAttachProposal: (v) => setFormData((f) => ({ ...f, attachProposal: v })),
     estimatedTotalCost: formData.estimatedTotalCost,
     setEstimatedTotalCost: (value) => setFormData((f) => ({ ...f, estimatedTotalCost: value })),
 

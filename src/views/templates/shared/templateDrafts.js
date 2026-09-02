@@ -17,7 +17,7 @@ export const createTemplateDraftRecord = (type, payload, savedAt = new Date().to
   payload,
 })
 
-export const readTemplateDraft = (type, key = getTemplateDraftKey(type)) => {
+export const readTemplateDraftRecord = (type, key = getTemplateDraftKey(type)) => {
   if (!canUseLocalStorage()) return null
 
   try {
@@ -33,19 +33,32 @@ export const readTemplateDraft = (type, key = getTemplateDraftKey(type)) => {
     if (Number.isNaN(savedAt.getTime())) return null
     if (Date.now() - savedAt.getTime() > TEMPLATE_DRAFT_TTL_MS) return null
 
-    return parsed.payload || null
+    return parsed
   } catch {
     return null
   }
 }
 
-export const writeTemplateDraft = (type, payload, key = getTemplateDraftKey(type)) => {
-  if (!canUseLocalStorage()) return
+export const readTemplateDraft = (type, key = getTemplateDraftKey(type)) =>
+  readTemplateDraftRecord(type, key)?.payload || null
 
-  window.localStorage.setItem(key, JSON.stringify(createTemplateDraftRecord(type, payload)))
+export const writeTemplateDraft = (type, payload, key = getTemplateDraftKey(type)) => {
+  if (!canUseLocalStorage()) return null
+
+  try {
+    const record = createTemplateDraftRecord(type, payload)
+    window.localStorage.setItem(key, JSON.stringify(record))
+    return record
+  } catch {
+    return null
+  }
 }
 
 export const clearTemplateDraft = (type, key = getTemplateDraftKey(type)) => {
   if (!canUseLocalStorage()) return
-  window.localStorage.removeItem(key)
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // A blocked storage API should not prevent users from resetting the form.
+  }
 }

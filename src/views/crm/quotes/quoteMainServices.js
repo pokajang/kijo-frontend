@@ -329,6 +329,9 @@ export const serviceConfig = {
 
       return {
         specialId: toInt(pick(row, 'spId', 'sp_id', 'specialId'), 0) || null,
+        categoryId: toInt(pick(row, 'categoryId', 'category_id'), 0) || null,
+        categoryName: pick(row, 'categoryName', 'category_name') || 'Special Service',
+        categoryCode: pick(row, 'categoryCode', 'category_code') || 'SPECIAL',
         serviceTitle: pick(row, 'serviceTitle', 'service_title') || '',
         serviceCode: pick(row, 'serviceCode', 'service_code') || '',
         generalRemarks: pick(row, 'generalRemarks', 'general_remarks') || '',

@@ -38,6 +38,17 @@ import {
 import { isQuoteResultSuccess, readQuoteResultRow } from './quoteApi'
 import { useQuoteRouteParams } from './helpers/quoteRouteParams'
 import { getDetailReturnTo } from '../../../utils/navigation/returnTo'
+import { listSpecialCategories } from '../../templates/shared/specialCategoryApi'
+import {
+  buildQuoteServiceOptions,
+  findSpecialCategory,
+  parseQuoteServiceOption,
+  specialCategoryOptionValue,
+} from './quoteServiceOptions'
+import {
+  getCreatedProposalTemplate,
+  withoutCreatedProposalTemplate,
+} from '../../templates/shared/templateHandoff'
 
 const pick = (obj, ...keys) => {
   for (const key of keys) {
@@ -91,6 +102,7 @@ const QuoteMain = () => {
     isEditMode,
     priceExceptionRequestId,
     service: serviceQueryParam,
+    categoryId: categoryQueryParam,
   } = useQuoteRouteParams()
   const isNegotiationApply = Boolean(priceExceptionRequestId)
   const serviceParam = normalizeQuoteServiceKey(serviceQueryParam)
@@ -98,6 +110,7 @@ const QuoteMain = () => {
   const initialServiceParam = serviceQueryParam || location.state?.initialService || ''
   const quoteResetToken = location.state?.quoteResetToken
   const returnTo = getDetailReturnTo(location, '/crm/records')
+  const createdProposalTemplate = getCreatedProposalTemplate(location)
   const explicitServiceKey = normalizeQuoteServiceKey(initialServiceParam)
   const [editFormData, setEditFormData] = useState(null)
   const [editLoadError, setEditLoadError] = useState('')
@@ -119,10 +132,17 @@ const QuoteMain = () => {
             inquirySource?.serviceKey || inquirySource?.service || draftMain?.selectedService,
           ),
   )
+  const [specialCategories, setSpecialCategories] = useState([])
+  const [specialCategoriesLoaded, setSpecialCategoriesLoaded] = useState(false)
+  const [specialCategoryError, setSpecialCategoryError] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    Number(categoryQueryParam || draftMain?.specialCategoryId) || null,
+  )
   const [inquiryData, setInquiryData] = useState(() =>
     getInitialInquiryData(inquirySource, draftMain, explicitServiceKey),
   )
   const [proposalLanguage, setProposalLanguage] = useState(draftMain?.proposalLanguage || 'en')
+  const [templateHandoffError, setTemplateHandoffError] = useState('')
   const text = proposalLanguage === 'ms-MY' ? quoteMainLabels.bm : quoteMainLabels.en
   const inquirySourcePendingRef = useRef(Boolean(inquirySource))
 
@@ -135,12 +155,45 @@ const QuoteMain = () => {
     inquirySourcePendingRef.current = false
     setSelectedClient(null)
     setSelectedService('')
+    setSelectedCategoryId(null)
     setInquiryData({ source: '', remarks: '' })
     setProposalLanguage('en')
     setEditFormData(null)
     setEditLoadError('')
     setIsEditLoading(false)
   }, [isEditMode, isNegotiationApply, quoteResetToken])
+
+  useEffect(() => {
+    if (isEditMode) return undefined
+    const controller = new AbortController()
+    setSpecialCategoriesLoaded(false)
+    setSpecialCategoryError('')
+    listSpecialCategories({ signal: controller.signal })
+      .then((payload) =>
+        setSpecialCategories(
+          Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [],
+        ),
+      )
+      .catch((error) => {
+        if (error.name !== 'AbortError')
+          setSpecialCategoryError('Service categories could not be loaded.')
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSpecialCategoriesLoaded(true)
+      })
+    return () => controller.abort()
+  }, [isEditMode])
+
+  useEffect(() => {
+    if (isEditMode || !specialCategoriesLoaded || selectedService !== 'special') return
+    if (findSpecialCategory(specialCategories, selectedCategoryId)) return
+    const fallback = specialCategories.find(
+      (category) =>
+        String(category.code || '').toUpperCase() === 'SPECIAL' &&
+        Number(category.templateCount) > 0,
+    )
+    if (fallback) setSelectedCategoryId(Number(fallback.id))
+  }, [isEditMode, selectedCategoryId, selectedService, specialCategories, specialCategoriesLoaded])
 
   // Create-mode handlers
   const handleClientChange = useCallback((client) => {
@@ -159,6 +212,7 @@ const QuoteMain = () => {
           inquirySourcePendingRef.current = false
         } else {
           setSelectedService('')
+          setSelectedCategoryId(null)
           setInquiryData({ source: '', remarks: '' })
         }
       }
@@ -168,8 +222,10 @@ const QuoteMain = () => {
   }, [])
 
   const handleServiceChange = (e) => {
-    const nextService = normalizeQuoteServiceKey(e.target.value)
+    const selection = parseQuoteServiceOption(e.target.value)
+    const nextService = normalizeQuoteServiceKey(selection.serviceKey)
     setSelectedService(nextService)
+    setSelectedCategoryId(selection.categoryId)
 
     if (!isEditMode && !isNegotiationApply) {
       const params = new URLSearchParams(location.search)
@@ -178,6 +234,8 @@ const QuoteMain = () => {
       } else {
         params.delete('service')
       }
+      if (selection.categoryId) params.set('categoryId', String(selection.categoryId))
+      else params.delete('categoryId')
 
       const search = params.toString()
       navigate(
@@ -190,6 +248,7 @@ const QuoteMain = () => {
           state: {
             ...(location.state || {}),
             initialService: nextService || undefined,
+            specialCategoryId: selection.categoryId || undefined,
           },
         },
       )
@@ -213,6 +272,20 @@ const QuoteMain = () => {
     setInquiryData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const handleCreatedProposalTemplateConsumed = useCallback(
+    (message = '') => {
+      setTemplateHandoffError(message)
+      navigate(
+        { pathname: location.pathname, search: location.search },
+        {
+          replace: true,
+          state: withoutCreatedProposalTemplate(location.state),
+        },
+      )
+    },
+    [location.pathname, location.search, location.state, navigate],
+  )
+
   // Save the main quote draft on every change.
   useEffect(() => {
     if (!isEditMode && !isNegotiationApply) {
@@ -222,6 +295,7 @@ const QuoteMain = () => {
           selectedService,
           inquiryData,
           proposalLanguage,
+          specialCategoryId: selectedCategoryId,
         })
       } catch (err) {
         console.warn('Unable to save quote main draft.', err)
@@ -232,6 +306,7 @@ const QuoteMain = () => {
     selectedService,
     inquiryData,
     proposalLanguage,
+    selectedCategoryId,
     isEditMode,
     isNegotiationApply,
   ])
@@ -330,9 +405,21 @@ const QuoteMain = () => {
   const renderCreateForm = () => {
     if (!selectedService || !inquiryData.source) return null
     const key = normalizeQuoteServiceKey(selectedService)
+    if (key === 'special' && !selectedCategoryId) return null
     const Form = getQuoteService(key)?.formComponent
     return Form ? (
-      <Form selectedClient={selectedClient} proposalLanguage={proposalLanguage} />
+      <Form
+        selectedClient={selectedClient}
+        proposalLanguage={proposalLanguage}
+        createdProposalTemplate={createdProposalTemplate}
+        onCreatedProposalTemplateConsumed={handleCreatedProposalTemplateConsumed}
+        specialCategoryId={key === 'special' ? selectedCategoryId : null}
+        specialCategoryName={
+          key === 'special'
+            ? findSpecialCategory(specialCategories, selectedCategoryId)?.name || 'Special Service'
+            : ''
+        }
+      />
     ) : null
   }
 
@@ -381,13 +468,38 @@ const QuoteMain = () => {
   const routeError = hasInvalidServiceParam
     ? `Unsupported quote service "${serviceQueryParam}". Select a valid service to continue.`
     : ''
+  const serviceOptions = buildQuoteServiceOptions(getServiceList(), specialCategories)
+  const selectedServiceOption =
+    selectedService === 'special' && selectedCategoryId
+      ? specialCategoryOptionValue(selectedCategoryId)
+      : selectedService
 
   return (
-    <CRow>
+    <CRow className="quote-main-page">
       {routeError && (
         <CCol xs={12}>
           <CAlert color="warning" className="mb-4">
             {routeError}
+          </CAlert>
+        </CCol>
+      )}
+
+      {templateHandoffError && (
+        <CCol xs={12}>
+          <CAlert
+            color="warning"
+            dismissible
+            onClose={() => setTemplateHandoffError('')}
+            className="mb-4"
+          >
+            {templateHandoffError}
+          </CAlert>
+        </CCol>
+      )}
+      {specialCategoryError && !isEditMode && (
+        <CCol xs={12}>
+          <CAlert color="warning" className="mb-4">
+            {specialCategoryError}
           </CAlert>
         </CCol>
       )}
@@ -450,11 +562,11 @@ const QuoteMain = () => {
                     <CFormLabel htmlFor="serviceType">{text.serviceType}</CFormLabel>
                     <CFormSelect
                       id="serviceType"
-                      value={selectedService}
+                      value={selectedServiceOption}
                       onChange={handleServiceChange}
                     >
                       <option value="">{text.selectService}</option>
-                      {getServiceList().map(({ key, label }) => (
+                      {serviceOptions.map(({ key, label }) => (
                         <option key={key} value={key}>
                           {label}
                         </option>

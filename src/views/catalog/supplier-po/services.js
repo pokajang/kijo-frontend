@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import dialog from '../../../components/dialog/dialogService'
+import { formatMoney } from '../../../utils/formatters/numberFormatters'
 
 const getProjectId = (project = {}) => project.id ?? project.project_id
 const getOptionProjectId = (option = {}) => getProjectId(option.value || {})
@@ -218,7 +219,7 @@ export function useSupplierPoServices({
         if (json.status === 'success') {
           setCatalogItems(
             json.data.map((item) => ({
-              label: `${item.item_name} - RM ${item.supplier_price}/${item.unit}`,
+              label: `${item.item_name} - ${formatMoney(item.supplier_price)}/${item.unit}`,
               value: item,
             })),
           )
