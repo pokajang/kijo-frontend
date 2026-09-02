@@ -16,19 +16,13 @@ vi.mock('./usePaymentData', () => ({
 }))
 
 vi.mock('./PaymentTable', () => ({
-  default: ({ onCheck, onApprove, onMarkPaid }) => (
+  default: ({ onCheck, onApprove }) => (
     <>
       <button type="button" onClick={() => onCheck(123)}>
         review
       </button>
       <button type="button" onClick={() => onApprove(123)}>
         approve
-      </button>
-      <button
-        type="button"
-        onClick={() => onMarkPaid({ id: 456, amount: 125, status: 'Approved' })}
-      >
-        mark paid
       </button>
     </>
   ),
@@ -102,29 +96,5 @@ describe('PaymentRecords', () => {
     renderPaymentRecords()
 
     expect(screen.getByRole('button', { name: /request vendor payment/i })).toBeInTheDocument()
-  })
-
-  it('prompts finance for the final paid amount before marking paid', async () => {
-    dialog.prompt
-      .mockResolvedValueOnce('2026-05-29')
-      .mockResolvedValueOnce('121.50')
-      .mockResolvedValueOnce('Online Transfer')
-      .mockResolvedValueOnce('TXN-123')
-      .mockResolvedValueOnce('Bank keyed')
-
-    renderPaymentRecords()
-
-    fireEvent.click(screen.getByRole('button', { name: 'mark paid' }))
-
-    await waitFor(() => expect(findFetchCall('vendor-payments/456/transactions')).toBeTruthy())
-    const markPaidCall = findFetchCall('vendor-payments/456/transactions')
-    expect(JSON.parse(markPaidCall[1].body)).toMatchObject({
-      paid_date: '2026-05-29',
-      amount: 121.5,
-      method: 'Online Transfer',
-      reference_number: 'TXN-123',
-      remarks: 'Bank keyed',
-      version: 1,
-    })
   })
 })

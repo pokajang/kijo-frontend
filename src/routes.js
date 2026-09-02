@@ -110,6 +110,9 @@ const PaymentHistoryDetailPage = React.lazy(
   () => import('./views/vendor/pay/PaymentHistoryDetailPage'),
 )
 const PaymentRecords = React.lazy(() => import('./views/vendor/payment-records/PaymentRecords'))
+const PaymentVoucherRecordsPage = React.lazy(
+  () => import('./views/vendor/payment-vouchers/PaymentVoucherRecordsPage'),
+)
 const PaidByVendorPage = React.lazy(() => import('./views/vendor/paid/PaidByVendorPage'))
 const PaidVendorDetailPage = React.lazy(() => import('./views/vendor/paid/PaidVendorDetailPage'))
 
@@ -1021,6 +1024,11 @@ const routes = [
     element: <LegacyRouteRedirect to="/workflows/vendor-payment" />,
   },
   { path: '/vendor/payment-records', name: 'Payment Queue', element: PaymentRecords },
+  {
+    path: '/vendor/payment-vouchers',
+    name: 'Payment Voucher Records',
+    element: PaymentVoucherRecordsPage,
+  },
 
   // Project paths
   {

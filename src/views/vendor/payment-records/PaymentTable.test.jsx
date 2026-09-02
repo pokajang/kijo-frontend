@@ -59,29 +59,29 @@ const basePayment = {
 }
 
 describe('PaymentTable', () => {
-  it('uses backend permission metadata for mark paid action visibility', () => {
-    const onMarkPaid = vi.fn()
+  it('routes settlement through the payment request instead of a queue shortcut', () => {
+    const onView = vi.fn()
 
     render(
       <PaymentTable
         payments={[{ ...basePayment, can_mark_paid: true }]}
         staffRoles={['Staff']}
-        onView={vi.fn()}
+        onView={onView}
         onCheck={vi.fn()}
         onApprove={vi.fn()}
         onReject={vi.fn()}
         onReturn={vi.fn()}
-        onMarkPaid={onMarkPaid}
         onDelete={vi.fn()}
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /^mark paid$/i }))
+    expect(screen.queryByRole('button', { name: /^record payment$/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open Payment Request' }))
 
-    expect(onMarkPaid).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
+    expect(onView).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }))
   })
 
-  it('hides mark paid when backend permission metadata denies it', () => {
+  it('hides record payment when backend permission metadata denies it', () => {
     render(
       <PaymentTable
         payments={[{ ...basePayment, can_mark_paid: false }]}
@@ -91,12 +91,12 @@ describe('PaymentTable', () => {
         onApprove={vi.fn()}
         onReject={vi.fn()}
         onReturn={vi.fn()}
-        onMarkPaid={vi.fn()}
+        onRecordPayment={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
 
-    expect(screen.queryByRole('button', { name: 'Mark Paid' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Record Payment' })).not.toBeInTheDocument()
   })
 
   it('uses backend permission metadata for review actions', () => {
@@ -122,7 +122,7 @@ describe('PaymentTable', () => {
         onApprove={vi.fn()}
         onReject={onReject}
         onReturn={onReturn}
-        onMarkPaid={vi.fn()}
+        onRecordPayment={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
@@ -169,7 +169,7 @@ describe('PaymentTable', () => {
         onApprove={onApprove}
         onReject={vi.fn()}
         onReturn={vi.fn()}
-        onMarkPaid={vi.fn()}
+        onRecordPayment={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
@@ -237,7 +237,7 @@ describe('PaymentTable', () => {
         onApprove={vi.fn()}
         onReject={vi.fn()}
         onReturn={vi.fn()}
-        onMarkPaid={vi.fn()}
+        onRecordPayment={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
@@ -263,7 +263,7 @@ describe('PaymentTable', () => {
         onApprove={vi.fn()}
         onReject={vi.fn()}
         onReturn={vi.fn()}
-        onMarkPaid={vi.fn()}
+        onRecordPayment={vi.fn()}
         onDelete={vi.fn()}
       />,
     )
