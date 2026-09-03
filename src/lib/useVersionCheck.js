@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { applyAppUpdate, getAppServiceWorkerRegistration } from './serviceWorkerRegistration'
 import { normalizeMetaPayload, parsePollMs, shouldForceUpdate } from './versionCheckUtils'
+import { runSingleFlight } from '../utils/runSingleFlight'
 
 const VERSION_URL = import.meta.env.VITE_VERSION_URL || '/meta.json'
 const CURRENT_VERSION =
@@ -28,6 +29,7 @@ const useVersionCheck = () => {
   const [message, setMessage] = useState(null)
   const [isReloading, setIsReloading] = useState(false)
   const latestVersionRef = useRef(null)
+  const checkInFlightRef = useRef(null)
   const pollMs = parsePollMs(import.meta.env.VITE_VERSION_POLL_MS)
 
   useEffect(() => {
@@ -57,58 +59,62 @@ const useVersionCheck = () => {
   useEffect(() => {
     let cancelled = false
 
-    const check = async () => {
-      try {
-        const registration = await getAppServiceWorkerRegistration()
-        if (registration?.waiting && !cancelled) {
-          setUpdateAvailable(true)
-        }
-
-        const res = await fetch(VERSION_URL, { cache: 'no-store' })
-        if (!res.ok) return
-
-        const data = normalizeMetaPayload(await res.json())
-        const remoteVersion = data.version
-
-        if (!remoteVersion || cancelled) return
-
-        if (!currentVersion) {
-          setCurrentVersion(remoteVersion)
-          try {
-            localStorage.setItem(STORAGE_KEY, remoteVersion)
-          } catch {
-            // ignore storage failures
+    const check = () =>
+      runSingleFlight(checkInFlightRef, async () => {
+        try {
+          const registration = await getAppServiceWorkerRegistration()
+          if (registration?.waiting && !cancelled) {
+            setUpdateAvailable(true)
           }
-          return
+
+          const res = await fetch(VERSION_URL, { cache: 'no-store' })
+          if (!res.ok) return
+
+          const data = normalizeMetaPayload(await res.json())
+          const remoteVersion = data.version
+
+          if (!remoteVersion || cancelled) return
+
+          if (!currentVersion) {
+            setCurrentVersion(remoteVersion)
+            try {
+              localStorage.setItem(STORAGE_KEY, remoteVersion)
+            } catch {
+              // ignore storage failures
+            }
+            return
+          }
+
+          const nextForceUpdate = shouldForceUpdate({
+            currentVersion,
+            latestVersion: remoteVersion,
+            minimumSupportedVersion: data.minimumSupportedVersion,
+            forceReload: data.forceReload,
+          })
+
+          setForceUpdate(nextForceUpdate)
+          setMessage(data.message)
+
+          if (remoteVersion !== currentVersion || nextForceUpdate || registration?.waiting) {
+            setLatestVersion(remoteVersion)
+            setUpdateAvailable(true)
+            return
+          }
+
+          setLatestVersion(null)
+          if (!registration?.waiting) {
+            setUpdateAvailable(false)
+          }
+        } catch (err) {
+          console.error('Version check failed:', err)
         }
-
-        const nextForceUpdate = shouldForceUpdate({
-          currentVersion,
-          latestVersion: remoteVersion,
-          minimumSupportedVersion: data.minimumSupportedVersion,
-          forceReload: data.forceReload,
-        })
-
-        setForceUpdate(nextForceUpdate)
-        setMessage(data.message)
-
-        if (remoteVersion !== currentVersion || nextForceUpdate || registration?.waiting) {
-          setLatestVersion(remoteVersion)
-          setUpdateAvailable(true)
-          return
-        }
-
-        setLatestVersion(null)
-        if (!registration?.waiting) {
-          setUpdateAvailable(false)
-        }
-      } catch (err) {
-        console.error('Version check failed:', err)
-      }
-    }
+      })
 
     check()
-    const intervalId = window.setInterval(check, pollMs)
+    const checkWhenActive = () => {
+      if (document.visibilityState !== 'hidden') check()
+    }
+    const intervalId = window.setInterval(checkWhenActive, pollMs)
     const checkWhenVisible = () => {
       if (document.visibilityState === 'visible') {
         check()
@@ -116,13 +122,13 @@ const useVersionCheck = () => {
     }
 
     document.addEventListener('visibilitychange', checkWhenVisible)
-    window.addEventListener('focus', check)
+    window.addEventListener('focus', checkWhenActive)
 
     return () => {
       cancelled = true
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', checkWhenVisible)
-      window.removeEventListener('focus', check)
+      window.removeEventListener('focus', checkWhenActive)
     }
   }, [pollMs, currentVersion])
 

@@ -1,5 +1,5 @@
 import React from 'react'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import AppNotificationProvider, { useAppNotifications } from './AppNotificationProvider'
@@ -125,5 +125,58 @@ describe('AppNotificationProvider', () => {
     expect(screen.getByTestId('route')).toHaveTextContent('2')
     expect(screen.getByTestId('tab')).toHaveTextContent('2')
     expect(screen.getByTestId('module')).toHaveTextContent('2')
+  })
+
+  it('coalesces focus refreshes while a summary request is already running', async () => {
+    let resolveRequest
+    const fetchMock = vi.spyOn(global, 'fetch').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRequest = resolve
+        }),
+    )
+
+    render(
+      <AppNotificationProvider>
+        <Consumer />
+      </AppNotificationProvider>,
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    fireEvent.focus(window)
+    fireEvent.focus(window)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveRequest({
+        ok: true,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ status: 'success', data: { total: 0 } }),
+      })
+    })
+  })
+
+  it('does not poll while the document is hidden', async () => {
+    let intervalCallback
+    vi.spyOn(window, 'setInterval').mockImplementation((callback) => {
+      intervalCallback = callback
+      return 101
+    })
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ status: 'success', data: { total: 0 } }),
+    })
+
+    render(
+      <AppNotificationProvider>
+        <Consumer />
+      </AppNotificationProvider>,
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    act(() => intervalCallback())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

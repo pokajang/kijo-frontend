@@ -99,4 +99,20 @@ describe('useMaintenanceStatus', () => {
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 60000)
     expect(clearIntervalSpy).toHaveBeenCalledWith(intervalId)
   })
+
+  it('does not poll while the document is hidden', async () => {
+    fetch.mockResolvedValue(statusResponse(false))
+    let intervalCallback
+    vi.spyOn(window, 'setInterval').mockImplementation((callback) => {
+      intervalCallback = callback
+      return 5678
+    })
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+
+    renderHook(() => useMaintenanceStatus({ pollMs: 60000 }))
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+
+    act(() => intervalCallback())
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
 })

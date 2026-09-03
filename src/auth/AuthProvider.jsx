@@ -1,6 +1,7 @@
 ﻿import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { installApiClient, setCsrfToken } from '../api/apiClient'
+import { runSingleFlight } from '../utils/runSingleFlight'
 
 export const AuthContext = createContext(undefined)
 const API_BASE = import.meta.env.VITE_API_BASE || '/' // ensure trailing path segments resolve
@@ -49,38 +50,42 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [status, setStatus] = useState('loading') // loading | authenticated | unauthenticated
   const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
   const location = useLocation()
   const logoutInFlightRef = useRef(false)
+  const sessionCheckInFlightRef = useRef(null)
+  const publicRoute = location.pathname === '/login' || isPublicPath(location.pathname)
 
-  const logout = useCallback(
-    async ({ skipBackend = false, silent = false, reason = '' } = {}) => {
-      if (logoutInFlightRef.current) return
-      logoutInFlightRef.current = true
+  useEffect(() => {
+    navigateRef.current = navigate
+  }, [navigate])
 
-      try {
-        if (!skipBackend) {
-          await fetch(`${API_BASE}auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-          })
-        }
-      } catch (err) {
-        console.error('Logout error (ignored):', err)
-      } finally {
-        setCsrfToken(null)
-        setUser(null)
-        setStatus('unauthenticated')
-        logoutInFlightRef.current = false
-        if (!silent) {
-          navigate('/login', {
-            replace: true,
-            state: reason ? { reason } : undefined,
-          })
-        }
+  const logout = useCallback(async ({ skipBackend = false, silent = false, reason = '' } = {}) => {
+    if (logoutInFlightRef.current) return
+    logoutInFlightRef.current = true
+
+    try {
+      if (!skipBackend) {
+        await fetch(`${API_BASE}auth/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        })
       }
-    },
-    [navigate],
-  )
+    } catch (err) {
+      console.error('Logout error (ignored):', err)
+    } finally {
+      setCsrfToken(null)
+      setUser(null)
+      setStatus('unauthenticated')
+      logoutInFlightRef.current = false
+      if (!silent) {
+        navigateRef.current('/login', {
+          replace: true,
+          state: reason ? { reason } : undefined,
+        })
+      }
+    }
+  }, [])
 
   const handleUnauthorized = useCallback(() => {
     logout({ skipBackend: true, reason: 'session-expired' })
@@ -112,7 +117,7 @@ const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  const checkSession = useCallback(
+  const performSessionCheck = useCallback(
     async ({ signal, suppressAbortLog = false, silentUnauthenticated = false } = {}) => {
       setStatus((prev) => (prev === 'authenticated' ? prev : 'loading'))
       try {
@@ -167,6 +172,11 @@ const AuthProvider = ({ children }) => {
       }
     },
     [handleUnauthorized],
+  )
+
+  const checkSession = useCallback(
+    (options = {}) => runSingleFlight(sessionCheckInFlightRef, () => performSessionCheck(options)),
+    [performSessionCheck],
   )
 
   const login = useCallback(async (credentials) => {
@@ -249,7 +259,7 @@ const AuthProvider = ({ children }) => {
   }, [])
 
   useEffect(() => {
-    if (location.pathname === '/login' || isPublicPath(location.pathname)) {
+    if (publicRoute) {
       setStatus((prev) => (prev === 'authenticated' ? prev : 'unauthenticated'))
       return undefined
     }
@@ -263,7 +273,10 @@ const AuthProvider = ({ children }) => {
       }
     }
 
-    const intervalId = window.setInterval(checkSession, SESSION_CHECK_INTERVAL_MS)
+    const checkWhenActive = () => {
+      if (document.visibilityState !== 'hidden') checkSession()
+    }
+    const intervalId = window.setInterval(checkWhenActive, SESSION_CHECK_INTERVAL_MS)
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
@@ -271,18 +284,18 @@ const AuthProvider = ({ children }) => {
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [checkSession, location.pathname])
+  }, [checkSession, publicRoute])
 
   useEffect(() => {
     return installApiClient({
       onUnauthorized: async (response) => {
-        if (isPublicPath(location.pathname)) return
+        if (publicRoute) return
         if (logoutInFlightRef.current) return
         const shouldLogout = await shouldLogoutForResponse(response)
         if (shouldLogout) handleUnauthorized()
       },
     })
-  }, [handleUnauthorized, location.pathname, shouldLogoutForResponse])
+  }, [handleUnauthorized, publicRoute, shouldLogoutForResponse])
 
   const value = {
     user,

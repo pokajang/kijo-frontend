@@ -54,18 +54,21 @@ const useMaintenanceStatus = ({
     mountedRef.current = true
     checkStatus()
 
-    const intervalId = window.setInterval(checkStatus, pollMs)
+    const checkWhenActive = () => {
+      if (document.visibilityState !== 'hidden') checkStatus()
+    }
+    const intervalId = window.setInterval(checkWhenActive, pollMs)
     const checkWhenVisible = () => {
       if (document.visibilityState === 'visible') checkStatus()
     }
 
-    window.addEventListener('focus', checkStatus)
+    window.addEventListener('focus', checkWhenActive)
     document.addEventListener('visibilitychange', checkWhenVisible)
 
     return () => {
       mountedRef.current = false
       window.clearInterval(intervalId)
-      window.removeEventListener('focus', checkStatus)
+      window.removeEventListener('focus', checkWhenActive)
       document.removeEventListener('visibilitychange', checkWhenVisible)
     }
   }, [checkStatus, pollMs])

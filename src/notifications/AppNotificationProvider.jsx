@@ -1,6 +1,15 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import PropTypes from 'prop-types'
 import { APP_NOTIFICATIONS_CHANGED_EVENT } from './appNotificationEvents'
+import { runSingleFlight } from '../utils/runSingleFlight'
 
 const EMPTY_SUMMARY = {
   total: 0,
@@ -35,6 +44,23 @@ const normalizeSummary = (payload) => {
   }
 }
 
+const countMapEquals = (left = {}, right = {}) => {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) => Number(left[key] || 0) === Number(right[key] || 0))
+  )
+}
+
+const summariesEqual = (left, right) =>
+  left.total === right.total &&
+  left.listable_total === right.listable_total &&
+  countMapEquals(left.by_module, right.by_module) &&
+  countMapEquals(left.by_route_group, right.by_route_group) &&
+  countMapEquals(left.by_tab, right.by_tab)
+
 const readJsonResponse = async (response) => {
   const contentType = response.headers.get('content-type') || ''
   if (contentType.includes('application/json')) {
@@ -50,23 +76,38 @@ const readJsonResponse = async (response) => {
 const AppNotificationProvider = ({ children }) => {
   const [summary, setSummary] = useState(EMPTY_SUMMARY)
   const [isStale, setIsStale] = useState(false)
+  const refreshInFlightRef = useRef(null)
+  const mountedRef = useRef(false)
 
-  const refresh = useCallback(async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE}notifications/summary`, {
-        credentials: 'include',
-      })
-      const result = await readJsonResponse(response)
-      if (!response.ok || result.status !== 'success') {
-        throw new Error(result.message || 'Failed to fetch notification summary.')
-      }
-      setSummary(normalizeSummary(result))
-      setIsStale(false)
-    } catch {
-      // Keep the last-known summary so badges do not flicker to zero on a
-      // transient fetch failure; flag the data as stale for observability.
-      // (Internal only this phase — must not drive any rendering.)
-      setIsStale(true)
+  const refresh = useCallback(
+    () =>
+      runSingleFlight(refreshInFlightRef, async () => {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE}notifications/summary`, {
+            credentials: 'include',
+          })
+          const result = await readJsonResponse(response)
+          if (!response.ok || result.status !== 'success') {
+            throw new Error(result.message || 'Failed to fetch notification summary.')
+          }
+
+          const nextSummary = normalizeSummary(result)
+          if (!mountedRef.current) return
+          setSummary((current) => (summariesEqual(current, nextSummary) ? current : nextSummary))
+          setIsStale(false)
+        } catch {
+          // Keep the last-known summary so badges do not flicker to zero on a
+          // transient fetch failure; flag the data as stale for observability.
+          if (mountedRef.current) setIsStale(true)
+        }
+      }),
+    [],
+  )
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
     }
   }, [])
 
@@ -130,17 +171,20 @@ const AppNotificationProvider = ({ children }) => {
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
 
+    const refreshWhenVisible = () => {
+      if (document.visibilityState !== 'hidden') refresh()
+    }
     const refreshFromEvent = () => refresh()
-    const intervalId = window.setInterval(refreshFromEvent, 60000)
+    const intervalId = window.setInterval(refreshWhenVisible, 60000)
 
-    window.addEventListener('focus', refreshFromEvent)
+    window.addEventListener('focus', refreshWhenVisible)
     window.addEventListener(APP_NOTIFICATIONS_CHANGED_EVENT, refreshFromEvent)
     window.addEventListener('quote-price-exceptions:changed', refreshFromEvent)
     window.addEventListener('client-vendor-registrations:changed', refreshFromEvent)
 
     return () => {
       window.clearInterval(intervalId)
-      window.removeEventListener('focus', refreshFromEvent)
+      window.removeEventListener('focus', refreshWhenVisible)
       window.removeEventListener(APP_NOTIFICATIONS_CHANGED_EVENT, refreshFromEvent)
       window.removeEventListener('quote-price-exceptions:changed', refreshFromEvent)
       window.removeEventListener('client-vendor-registrations:changed', refreshFromEvent)
