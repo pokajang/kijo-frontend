@@ -4,8 +4,7 @@ import { CAlert, CButton, CCloseButton } from '@coreui/react'
 
 import { useAuth } from '../auth/AuthProvider'
 import { useGlobalPrompt } from './global-prompts/GlobalPromptCoordinator'
-
-const API_BASE = import.meta.env.VITE_API_BASE || '/'
+import { loadLatestWhatsNew } from './whatsNewLatest'
 
 const getDismissalKey = (staffId, noticeId) =>
   staffId && noticeId ? `kijo:whats-new:dismissed:${staffId}:${noticeId}` : null
@@ -50,18 +49,13 @@ const WhatsNewNotifier = () => {
     if (!isAuthenticated || !user?.staff_id) return
 
     let cancelled = false
-    const controller = new AbortController()
 
     const loadNotice = async () => {
       try {
-        const res = await fetch(`${API_BASE}whats-new/latest`, {
-          credentials: 'include',
-          silentError: true,
-          signal: controller.signal,
-        })
-        const data = await res.json()
+        const result = await loadLatestWhatsNew()
+        const data = result.data
 
-        if (cancelled || data?.status !== 'success' || !data.data) return
+        if (cancelled || !result.ok || data?.status !== 'success' || !data.data) return
 
         const latestNotice = data.data
         const nextUnreadCount = resolveUnreadCount(data)
@@ -82,7 +76,6 @@ const WhatsNewNotifier = () => {
 
     return () => {
       cancelled = true
-      controller.abort()
     }
   }, [isAuthenticated, user?.staff_id])
 

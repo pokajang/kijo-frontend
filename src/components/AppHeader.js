@@ -38,7 +38,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
 import { useKnowledgePanel } from '../views/knowledge/KnowledgePanelContext'
-import { runSingleFlight } from '../utils/runSingleFlight'
+import { loadLatestWhatsNew } from './whatsNewLatest'
 
 const getSignatureDismissalKey = (staffId) =>
   staffId ? `kijo:signature-warning:dismissed:${staffId}` : null
@@ -84,7 +84,6 @@ const AppHeader = () => {
     openKnowledgeSearch,
   } = useKnowledgePanel()
   const lastKnowledgePointerOpenRef = useRef(0)
-  const whatsNewRefreshInFlightRef = useRef(null)
 
   useEffect(() => {
     const onScroll = () => {
@@ -156,26 +155,18 @@ const AppHeader = () => {
     }
   }, [loadSignatureStatus, sessionUser?.staff_id])
 
-  const loadWhatsNewStatus = React.useCallback(
-    () =>
-      runSingleFlight(whatsNewRefreshInFlightRef, async () => {
-        try {
-          const res = await fetch(`${import.meta.env.VITE_API_BASE}whats-new/latest`, {
-            credentials: 'include',
-            silentError: true,
-          })
-          if (!res.ok) {
-            setUnreadWhatsNewCount(0)
-            return
-          }
-          const data = await res.json()
-          setUnreadWhatsNewCount(Number(data?.meta?.unread_count) || (data?.data ? 1 : 0))
-        } catch {
-          setUnreadWhatsNewCount(0)
-        }
-      }),
-    [],
-  )
+  const loadWhatsNewStatus = React.useCallback(async () => {
+    try {
+      const result = await loadLatestWhatsNew()
+      if (!result.ok) {
+        setUnreadWhatsNewCount(0)
+        return
+      }
+      setUnreadWhatsNewCount(Number(result.data?.meta?.unread_count) || (result.data?.data ? 1 : 0))
+    } catch {
+      setUnreadWhatsNewCount(0)
+    }
+  }, [])
 
   useEffect(() => {
     if (!sessionUser?.staff_id) return undefined

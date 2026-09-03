@@ -37,6 +37,8 @@
     "uat:pdf-filenames": "node scripts/pdf-download-filename-uat.mjs",
     "smoke:training-hrd": "node scripts/training-hrd-flow-smoke.mjs",
     "smoke:vendor-payment-workflow": "node scripts/vendor-payment-workflow-ui-smoke.mjs",
+    "uat:special-document-export": "node scripts/special-document-export-uat.mjs",
+    "uat:responsiveness-soak": "node scripts/responsiveness-soak-uat.mjs",
     "release:ih-readiness": "node scripts/ih-release-readiness.mjs",
     "datatable:audit": "node scripts/datatable-audit.mjs",
     "qa:tables": "node scripts/table-unification-qa.mjs",

@@ -93,7 +93,9 @@ npm ci
 npm run lint
 npm run test:run
 npm run guard:api-routes
+$env:VITE_API_BASE = 'https://api.amiosh.com/'
 npm run build
+Remove-Item Env:VITE_API_BASE
 npm run guard:api-routes
 git status --short
 git add README.md docs src scripts build public/meta.json package.json package-lock.json vite.config.mjs
@@ -1170,8 +1172,17 @@ Remove-Item Env:SMOKE_EMAIL, Env:SMOKE_PASSWORD, Env:FRONTEND_URL
 ```
 
 The `/proxy/` build above is only for isolated local smoke testing. After the
-smoke passes, clear `VITE_API_BASE` and `VITE_PROXY_TARGET`, then run the normal
-production build again so committed assets target `https://api.amiosh.com/`.
+smoke passes, clear `VITE_PROXY_TARGET` and explicitly override `VITE_API_BASE`
+while rebuilding the production assets. Vite also loads an ignored `.env.local`,
+so merely removing the shell variable is not enough when that file contains the
+local proxy base.
+
+```powershell
+$env:VITE_API_BASE = 'https://api.amiosh.com/'
+npm run build
+Remove-Item Env:VITE_API_BASE, Env:VITE_PROXY_TARGET -ErrorAction SilentlyContinue
+npm run guard:api-routes
+```
 
 Local `.env` can keep:
 

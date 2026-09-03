@@ -8,7 +8,7 @@ const projectRoot = path.resolve(scriptDir, '..')
 const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '')
 const outputDir = path.join(projectRoot, 'test-results', `vendor-payment-workflow-${stamp}`)
 const baseUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '')
-const email = process.env.SMOKE_EMAIL || 'azam@amiosh.com'
+const email = process.env.SMOKE_EMAIL
 const password = process.env.SMOKE_PASSWORD
 const headless = process.env.SMOKE_HEADLESS !== '0'
 const results = []
@@ -24,10 +24,19 @@ const formatPerson = (person = {}) => {
   return name || code || ''
 }
 
+const displayStageStatus = (payment, stage = {}) => {
+  const stageType = stage.stageType || stage.stage_type
+  if (stageType === 'finance' && stage.state === 'current' && payment.status === 'Approved') {
+    return payment.voucher || payment.voucher_issued ? 'Awaiting payment' : 'Voucher required'
+  }
+
+  return stage.status || ''
+}
+
 const run = async () => {
-  if (!password) {
+  if (!email || !password) {
     throw new Error(
-      'SMOKE_PASSWORD is required. The smoke test is read-only and never submits a workflow action.',
+      'SMOKE_EMAIL and SMOKE_PASSWORD are required. The smoke test is read-only and never submits a workflow action.',
     )
   }
 
@@ -76,7 +85,7 @@ const run = async () => {
         page.waitForURL((url) => !url.pathname.startsWith('/login')),
         page.click('button[type="submit"]'),
       ])
-      return email
+      return 'authenticated session established'
     })
 
     await step('select a real payment with workflow data', async () => {
@@ -133,7 +142,8 @@ const run = async () => {
 
       if (focusStage) {
         assert(text.includes(focusStage.label), `Table cell does not identify ${focusStage.label}`)
-        assert(text.includes(focusStage.status), `Table cell does not show ${focusStage.status}`)
+        const expectedStatus = displayStageStatus(selectedPayment, focusStage)
+        assert(text.includes(expectedStatus), `Table cell does not show ${expectedStatus}`)
       } else {
         assert(text.includes('Workflow complete'), 'Completed workflow summary is missing')
       }
@@ -183,7 +193,8 @@ const run = async () => {
 
       for (const stage of selectedPayment.workflow_flow.stages) {
         assert(dialogText.includes(stage.label), `Dialog is missing ${stage.label}`)
-        assert(dialogText.includes(stage.status), `Dialog is missing ${stage.status}`)
+        const expectedStatus = displayStageStatus(selectedPayment, stage)
+        assert(dialogText.includes(expectedStatus), `Dialog is missing ${expectedStatus}`)
         const firstRecipient = formatPerson(stage.recipients?.[0])
         if (firstRecipient) {
           assert(dialogText.includes(firstRecipient), `Dialog is missing ${firstRecipient}`)
