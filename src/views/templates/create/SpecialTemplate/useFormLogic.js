@@ -8,7 +8,13 @@ import {
   writeTemplateDraft,
 } from '../../shared/templateDrafts'
 import { appendSpecialTemplateFormData, fromApiSpecialTemplate } from '../../shared/templateMappers'
-import { isSuccess, normalizeTemplateMeta, unwrapRows } from '../../shared/templateUtils'
+import {
+  isSuccess,
+  normalizeTemplateMeta,
+  richTextToPlainText,
+  stripHtml,
+  unwrapRows,
+} from '../../shared/templateUtils'
 import {
   formatValidationErrors,
   getValidationErrorMap,
@@ -23,7 +29,7 @@ import { scrollToTemplateField } from '../../shared/templateFormUi'
 const DRAFT_KEY = 'specialProposalDraft'
 const INITIAL_TEMPLATE_STATE = {
   categoryId: '',
-  proposalMode: 'upload',
+  proposalMode: 'write',
   serviceTitle: '',
   serviceCode: '',
   serviceSummary: '',
@@ -74,10 +80,11 @@ export default function useFormLogic({ isEdit, editId, initialCategoryId = null 
         ...INITIAL_TEMPLATE_STATE,
         ...nextTemplate,
         categoryId: initialCategoryId || nextTemplate.categoryId || '',
+        serviceSummary: richTextToPlainText(nextTemplate.serviceSummary || ''),
         proposalMode:
           nextTemplate.proposalMode === 'write' || nextTemplate.proposalMode === 'upload'
             ? nextTemplate.proposalMode
-            : 'upload',
+            : 'write',
       })
       setRemarks(draft.remarks || '')
       setDraftRestored(true)
@@ -141,19 +148,23 @@ export default function useFormLogic({ isEdit, editId, initialCategoryId = null 
       const attachmentCount = newAttachments.length + existingAttachments.length
       if (value === 'write' && attachmentCount > 0) {
         const confirmed = await dialog.confirm(
-          `Switch to writing the proposal? ${attachmentCount} selected or existing attachment${attachmentCount === 1 ? '' : 's'} will not be included when you save.`,
+          `Switch to Write full proposal? When you save, ${attachmentCount} uploaded proposal file${attachmentCount === 1 ? '' : 's'} will be removed from this template.`,
+        )
+        if (!confirmed) return
+      }
+      if (value === 'upload' && stripHtml(template.proposalContent || '').trim()) {
+        const confirmed = await dialog.confirm(
+          'Switch to Upload a completed proposal PDF? When you save, the written proposal content will be removed and the uploaded PDF will become the customer-facing proposal.',
         )
         if (!confirmed) return
       }
       setTemplate((prev) => ({ ...prev, proposalMode: value }))
-      if (value === 'write') {
-        setNewAttachments([])
-      }
       setValidationErrors((current) => ({
         ...current,
         proposalMode: undefined,
         attachments: undefined,
         proposalContent: undefined,
+        serviceSummary: undefined,
       }))
       return
     }

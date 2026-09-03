@@ -98,7 +98,7 @@ export const templateConfigs = {
     titleFallback: 'Special Proposal',
     hasAttachments: true,
     sections: [
-      ['Internal Service Summary', 'serviceSummary'],
+      ['Internal Reference Note', 'serviceSummary'],
       ['Written Proposal Content', 'proposalContent'],
     ],
   },

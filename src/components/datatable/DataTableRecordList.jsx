@@ -186,6 +186,7 @@ const DataTableRecordList = ({
   mobileLoadMoreLabel = 'Load more records',
   mobileLoadMoreSummaryLabel = 'records',
   showFooter = true,
+  hideFooterWhenEmpty = false,
   className = '',
   scrollStorageKey,
 }) => {
@@ -396,6 +397,7 @@ const DataTableRecordList = ({
   )
   const mobileShownRows = Math.min(mobileVisibleRows, totalRows)
   const canLoadMoreMobileRows = mobileLoadMoreEnabled && mobileShownRows < totalRows
+  const shouldShowFooter = showFooter && (!hideFooterWhenEmpty || totalRows > 0)
   useDataTableScrollMemory(tableViewportRef, scrollMemoryKey, [
     showInitialLoading,
     totalRows,
@@ -691,7 +693,7 @@ const DataTableRecordList = ({
           </div>
         )}
 
-        {showMobileTopFooter && !mobileLoadMoreEnabled && (
+        {showMobileTopFooter && shouldShowFooter && !mobileLoadMoreEnabled && (
           <div className={`d-${desktopBreakpoint}-none mb-2`}>
             <DataTableFooter
               desktopBreakpoint={desktopBreakpoint}
@@ -771,7 +773,7 @@ const DataTableRecordList = ({
           </div>
         )}
 
-        {showFooter && (
+        {shouldShowFooter && (
           <DataTableFooter
             desktopBreakpoint={desktopBreakpoint}
             tableFooterRef={tableFooterRef}

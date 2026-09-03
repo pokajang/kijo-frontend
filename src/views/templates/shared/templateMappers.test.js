@@ -121,9 +121,19 @@ describe('templateMappers', () => {
     expect(
       fromApiSpecialTemplate({ service_title: 'Special', service_code: 'sp01' }),
     ).toMatchObject({
+      proposalMode: 'write',
       serviceTitle: 'Special',
       serviceCode: 'SP01',
     })
+  })
+
+  it('normalizes a legacy rich-text service summary for the plain internal note', () => {
+    expect(
+      fromApiSpecialTemplate({
+        proposal_mode: 'upload',
+        service_summary: '<p>First &amp; second</p><p>Next line</p>',
+      }).serviceSummary,
+    ).toBe('First & second\nNext line')
   })
 
   it('omits inactive special rich-text fields from FormData', () => {
@@ -148,5 +158,36 @@ describe('templateMappers', () => {
     expect(JSON.parse(formData.get('defaultLineItems'))).toEqual([
       { title: 'Audit', quantity: 2, unitPrice: 100 },
     ])
+  })
+
+  it('submits only the plain internal note and PDFs in upload mode', () => {
+    const file = new File(['proposal'], 'proposal.pdf', { type: 'application/pdf' })
+    const formData = appendSpecialTemplateFormData({
+      formData: new FormData(),
+      template: {
+        proposalMode: 'upload',
+        categoryId: 3,
+        serviceTitle: 'Special',
+        serviceCode: 'SP01',
+        serviceSummary: 'Staff-only context',
+        proposalContent: '<p>Inactive written content</p>',
+      },
+      newAttachments: [{ file, customName: 'Completed proposal.pdf' }],
+    })
+
+    expect(formData.get('content')).toBe('Staff-only context')
+    expect(formData.get('serviceSummary')).toBe('Staff-only context')
+    expect(formData.get('proposalContent')).toBe('')
+    expect(formData.getAll('attachments[]')).toEqual([file])
+  })
+
+  it('defaults missing form mode to write when building FormData', () => {
+    const formData = appendSpecialTemplateFormData({
+      formData: new FormData(),
+      template: { proposalContent: '<p>Full proposal</p>' },
+    })
+
+    expect(formData.get('proposalMode')).toBe('write')
+    expect(formData.get('proposalContent')).toBe('<p>Full proposal</p>')
   })
 })

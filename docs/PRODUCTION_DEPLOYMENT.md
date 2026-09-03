@@ -489,6 +489,61 @@ commits, running Composer install for the restored lock file, rebuilding the
 frontend, and clearing/rebuilding Laravel caches. No database rollback is
 required.
 
+### Special Proposal and Quotation Merged PDF Export
+
+This coordinated backend and frontend release replaces Special proposal ZIP
+packages with one PDF. A proposal export contains the KIJO-rendered proposal
+followed by every available PDF attachment. When a Special quotation includes
+a proposal, its export contains the quotation, the rendered proposal page, and
+the uploaded proposal PDFs in that order. A required PDF that is missing or
+cannot be imported stops the export with an explicit error instead of silently
+omitting pages.
+
+It adds no migration, Composer or npm dependency, route, queue, scheduler, or
+backfill. The existing FPDI/TCPDF merger handles normal PDFs. If FPDI cannot
+import a supplied PDF, the backend can invoke qpdf to normalize it before one
+retry. The executable and timeout are controlled by these server-only values:
+
+```ini
+QPDF_BINARY=qpdf
+QPDF_TIMEOUT_SECONDS=30
+```
+
+The defaults do not require a production `.env` replacement when `qpdf` is on
+the PHP process PATH. Before deployment, verify qpdf and `proc_open` using the
+same PHP runtime and account that serve the API:
+
+```bash
+cd ~/kijo-laravel
+command -v qpdf
+qpdf --version
+php -r "echo 'proc_open: '.(function_exists('proc_open') ? 'yes' : 'NO').PHP_EOL;"
+```
+
+If qpdf is installed outside PATH, set `QPDF_BINARY` to its absolute executable
+path in the server `.env`. If qpdf or `proc_open` is unavailable, ordinary
+FPDI-compatible PDFs can still merge, but normalization is unavailable. Treat
+that as a release stop unless an authorized smoke confirms the production
+users' representative uploaded PDFs merge successfully.
+
+After deploying the backend first and then the fresh frontend build, verify:
+
+- Exporting an upload-mode Special proposal returns one non-empty `.pdf`, not a
+  ZIP, with the rendered proposal first and every uploaded PDF appended in the
+  saved order.
+- Exporting a Special quotation with that proposal returns one non-empty PDF
+  containing the quotation, rendered proposal, and every uploaded proposal PDF.
+- Write-mode proposal and quotation exports still include the complete written
+  proposal.
+- A deliberately unavailable required attachment produces one clear error and
+  never returns a partial document.
+- Attachment previews load only through the application or configured API
+  origin while the user is authenticated.
+
+Rollback requires reverting the coordinated application commits, rebuilding
+the frontend, and clearing/rebuilding Laravel caches. No database rollback is
+required.
+
 ### Legacy Quotation Estimated-Cost Compatibility (2026-08-14)
 
 This coordinated backend and frontend release prevents the current cost policy

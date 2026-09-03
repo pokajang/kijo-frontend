@@ -130,6 +130,23 @@ describe('FinancialSalaryRecordsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Unable to reach salary API.')).toBeInTheDocument()
     })
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.queryByText('No submitted salary records found.')).not.toBeInTheDocument()
+  })
+
+  it('shows the salary empty state without zero-result pagination after loading', async () => {
+    records = []
+
+    render(
+      <MemoryRouter>
+        <FinancialSalaryRecordsPage />
+      </MemoryRouter>,
+    )
+
+    expect(
+      (await screen.findAllByText('No submitted salary records found.')).length,
+    ).toBeGreaterThan(0)
+    expect(screen.queryByText('Page 1/1')).not.toBeInTheDocument()
   })
 
   it('directs an assigned reviewer to inspect record details before deciding', async () => {

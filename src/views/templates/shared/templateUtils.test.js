@@ -6,6 +6,7 @@ import {
   normalizeTemplateLanguage,
   sanitizeDisplayHtml,
   stripHtml,
+  richTextToPlainText,
   unwrapRows,
 } from './templateUtils'
 
@@ -69,6 +70,16 @@ describe('templateUtils', () => {
       expect(stripHtml('<p>Hello&nbsp;<strong>World</strong></p><script>x()</script>')).toBe(
         'Hello World',
       )
+    })
+  })
+
+  describe('richTextToPlainText', () => {
+    it('preserves useful block breaks while removing markup and unsafe blocks', () => {
+      expect(
+        richTextToPlainText(
+          '<p>First &amp; second</p><ul><li>Item one</li><li>Item two</li></ul><script>x()</script>',
+        ),
+      ).toBe('First & second\n• Item one\n• Item two')
     })
   })
 

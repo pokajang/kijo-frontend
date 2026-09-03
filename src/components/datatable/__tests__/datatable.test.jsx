@@ -241,6 +241,52 @@ describe('datatable shared components', () => {
     expect(screen.getAllByText('Alpha').length).toBeGreaterThan(0)
   })
 
+  it('renders semantic empty states on desktop and mobile and can hide zero-result pagination', () => {
+    render(
+      <DataTableRecordList
+        rows={[]}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        emptyMessage="No matching records."
+        exportFilename="records.csv"
+        hideFooterWhenEmpty
+      />,
+    )
+
+    expect(screen.getAllByRole('status')).toHaveLength(2)
+    expect(screen.getAllByText('No matching records.')).toHaveLength(2)
+    expect(document.querySelectorAll('.data-table-empty-state')).toHaveLength(2)
+    expect(screen.queryByLabelText('Rows per page')).not.toBeInTheDocument()
+    expect(screen.queryByText('Page 1/1')).not.toBeInTheDocument()
+  })
+
+  it('retains pagination for populated tables and does not show an empty state while loading', () => {
+    const { rerender } = render(
+      <DataTableRecordList
+        rows={rows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        hideFooterWhenEmpty
+      />,
+    )
+
+    expect(screen.getAllByLabelText('Rows per page').length).toBeGreaterThan(0)
+
+    rerender(
+      <DataTableRecordList
+        rows={[]}
+        loading
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+      />,
+    )
+
+    expect(screen.getByText('Loading records...')).toBeInTheDocument()
+    expect(document.querySelector('.data-table-empty-state')).not.toBeInTheDocument()
+  })
+
   it('restores desktop viewport scroll after remount', async () => {
     const scrollRows = Array.from({ length: 12 }, (_, index) => ({
       id: index + 1,

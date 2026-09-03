@@ -42,10 +42,12 @@ export default function SupplierPo({
 } = {}) {
   const {
     supplierList,
+    supplierLoading = false,
     selectedSupplier,
     selectedProject,
     handleSupplierChange,
     catalogItems,
+    catalogItemsLoading = false,
     selectedItems,
     handleItemsChange,
     quantities,
@@ -63,6 +65,9 @@ export default function SupplierPo({
     grandTotal,
     projectList,
     handleProjectChange,
+    projectLoading,
+    projectError,
+    reloadProjects,
     handleReset,
     handleSave,
     submitting,
@@ -134,10 +139,34 @@ export default function SupplierPo({
         <CCardBody>
           <CRow>
             <CCol md={12}>
-              <CAlert color="warning" dismissible>
-                <strong>If no entries found.</strong> Please add a supplier or equipment item before
-                proceeding.
-              </CAlert>
+              {projectError && (
+                <CAlert
+                  color="danger"
+                  className="d-flex align-items-center justify-content-between gap-2"
+                >
+                  <span>{projectError}</span>
+                  <CButton color="danger" size="sm" variant="outline" onClick={reloadProjects}>
+                    Retry
+                  </CButton>
+                </CAlert>
+              )}
+              {!projectLoading &&
+                !projectError &&
+                !supplierLoading &&
+                supplierList.length === 0 && (
+                  <CAlert color="info">
+                    No active suppliers are available. Create or activate a supplier before
+                    continuing.
+                  </CAlert>
+                )}
+              {!projectLoading &&
+                !projectError &&
+                !catalogItemsLoading &&
+                catalogItems.length === 0 && (
+                  <CAlert color="info">
+                    No equipment items are available. Add a catalog item before continuing.
+                  </CAlert>
+                )}
             </CCol>
             <CCol xs={12} md={8}>
               <CFormLabel htmlFor="supplier-select">Select Supplier</CFormLabel>
@@ -186,7 +215,7 @@ export default function SupplierPo({
                 }
                 value={selectedProject}
                 onChange={handleProjectChange}
-                isDisabled={lockProject}
+                isDisabled={lockProject || projectLoading}
                 placeholder="Select project..."
               />
               {selectedProject && (

@@ -1,3 +1,5 @@
+import { richTextToPlainText } from './templateUtils'
+
 const getIdPatch = (isEdit, id) => (isEdit ? { id, template_id: id, proposal_id: id } : {})
 
 const toBooleanFlag = (value) => value === true || value === 1 || value === '1'
@@ -111,6 +113,11 @@ export const fromApiSpecialTemplate = (row = {}) => {
           ? 'upload'
           : 'write'
 
+  const serviceSummary =
+    row.serviceSummary ||
+    row.service_summary ||
+    (proposalMode === 'upload' ? row.content || '' : '')
+
   return {
     proposalMode,
     categoryId: row.categoryId || row.category_id || '',
@@ -118,10 +125,7 @@ export const fromApiSpecialTemplate = (row = {}) => {
     categoryIsActive: row.categoryIsActive ?? row.category_is_active ?? true,
     serviceTitle: row.serviceTitle || row.service_title || '',
     serviceCode: (row.serviceCode || row.service_code || '').toUpperCase(),
-    serviceSummary:
-      row.serviceSummary ||
-      row.service_summary ||
-      (proposalMode === 'upload' ? row.content || '' : ''),
+    serviceSummary: richTextToPlainText(serviceSummary),
     proposalContent:
       row.proposalContent ||
       row.proposal_content ||
@@ -143,7 +147,7 @@ export const appendSpecialTemplateFormData = ({
   removedAttachments = [],
   newAttachments = [],
 }) => {
-  const proposalMode = template.proposalMode || 'upload'
+  const proposalMode = template.proposalMode || 'write'
   const selectedContent =
     proposalMode === 'write' ? template.proposalContent || '' : template.serviceSummary || ''
   const serviceSummary = proposalMode === 'upload' ? template.serviceSummary || '' : ''

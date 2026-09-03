@@ -42,8 +42,10 @@ export const downloadWordDocument = async (url, fallbackFilename, { errorSuffix 
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
   } catch (error) {
-    await dialog.alert(
-      `${error?.message || 'The Word document could not be downloaded.'}${errorSuffix}`,
-    )
+    const message =
+      error?.message === 'Failed to fetch'
+        ? 'Unable to reach the document service. Please retry. If the problem continues, contact support.'
+        : error?.message || 'The Word document could not be downloaded.'
+    await dialog.alert(`${message}${errorSuffix}`)
   }
 }

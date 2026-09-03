@@ -84,3 +84,17 @@ export const resolveAssetUrl = (value) => {
         : `storage/${cleanPath}`
   return toApiAssetUrl(storagePath)
 }
+
+export const isTrustedAssetUrl = (value) => {
+  try {
+    const url = new URL(value, window.location.origin)
+    if (!['http:', 'https:'].includes(url.protocol)) return false
+
+    const apiBase = String(import.meta.env.VITE_API_BASE || '/').trim()
+    const apiOrigin = new URL(apiBase || '/', window.location.origin).origin
+
+    return url.origin === window.location.origin || url.origin === apiOrigin
+  } catch {
+    return false
+  }
+}

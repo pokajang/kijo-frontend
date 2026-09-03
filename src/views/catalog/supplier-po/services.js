@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import dialog from '../../../components/dialog/dialogService'
 import { formatMoney } from '../../../utils/formatters/numberFormatters'
+import { normalizeProjectList, requestJson } from '../../project/manage/projectApi'
 
-const getProjectId = (project = {}) => project.id ?? project.project_id
-const getOptionProjectId = (option = {}) => getProjectId(option.value || {})
+const getProjectId = (project = {}) => project?.id ?? project?.project_id
+export const getOptionProjectId = (option) => getProjectId(option?.value ?? {})
 
 const getProjectName = (project = {}) =>
   project.project_name || project.projectName || project.name || ''
 
-const toProjectOption = (project = {}) => {
+export const toProjectOption = (project = {}) => {
   const projectId = getProjectId(project)
   if (!projectId) return null
 
@@ -24,11 +25,12 @@ const toProjectOption = (project = {}) => {
 }
 
 export const mergeProjectOption = (options, option) => {
-  if (!option?.value?.project_id) return options
-  const exists = options.some(
+  const safeOptions = Array.isArray(options) ? options.filter(Boolean) : []
+  if (!getOptionProjectId(option)) return safeOptions
+  const exists = safeOptions.some(
     (item) => String(item?.value?.project_id) === String(option.value.project_id),
   )
-  return exists ? options : [option, ...options]
+  return exists ? safeOptions : [option, ...safeOptions]
 }
 
 export const resolveHydratedProjectOption = (options, initialOption) => {
@@ -36,9 +38,25 @@ export const resolveHydratedProjectOption = (options, initialOption) => {
   if (!initialId) return initialOption || null
 
   return (
-    options.find((option) => String(getOptionProjectId(option)) === String(initialId)) ||
-    initialOption
+    (Array.isArray(options) ? options : []).find(
+      (option) => String(getOptionProjectId(option)) === String(initialId),
+    ) || initialOption
   )
+}
+
+const isSupportedProjectListPayload = (payload) =>
+  Array.isArray(payload) ||
+  Array.isArray(payload?.data) ||
+  Array.isArray(payload?.projects) ||
+  Array.isArray(payload?.records) ||
+  Array.isArray(payload?.data?.data)
+
+export const normalizeSupplierPoProjectOptions = (payload) => {
+  if (!isSupportedProjectListPayload(payload)) {
+    throw new Error('The project service returned an unsupported response.')
+  }
+
+  return normalizeProjectList(payload).map(toProjectOption).filter(Boolean)
 }
 
 export const findEquipmentSnapshotItem = (project = {}, item = {}) => {
@@ -99,6 +117,8 @@ export function useSupplierPoServices({
 
   const [supplierList, setSupplierList] = useState([])
   const [catalogItems, setCatalogItems] = useState([])
+  const [supplierLoading, setSupplierLoading] = useState(true)
+  const [catalogItemsLoading, setCatalogItemsLoading] = useState(true)
   const [selectedSupplier, setSelectedSupplier] = useState(null)
   const [selectedItems, setSelectedItems] = useState([])
 
@@ -116,6 +136,10 @@ export function useSupplierPoServices({
     initialProjectOption ? [initialProjectOption] : [],
   )
   const [selectedProject, setSelectedProject] = useState(initialProjectOption)
+  const [projectLoading, setProjectLoading] = useState(true)
+  const [projectError, setProjectError] = useState('')
+  const [projectReloadVersion, setProjectReloadVersion] = useState(0)
+  const reloadProjects = useCallback(() => setProjectReloadVersion((version) => version + 1), [])
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_BASE}vendors?status=${encodeURIComponent('active')}`, {
@@ -153,6 +177,7 @@ export function useSupplierPoServices({
         }
       })
       .catch((err) => console.error('Supplier fetch error', err))
+      .finally(() => setSupplierLoading(false))
   }, [])
 
   useEffect(() => {
@@ -169,42 +194,26 @@ export function useSupplierPoServices({
       })
     }
 
+    const controller = new AbortController()
     const loadProjects = async () => {
+      setProjectLoading(true)
+      setProjectError('')
       try {
-        const legacyRes = await fetch(`${import.meta.env.VITE_API_BASE}projects`, {
-          credentials: 'include',
-        })
-        if (legacyRes.ok) {
-          const projects = await legacyRes.json()
-          if (Array.isArray(projects)) {
-            const options = projects
-              .map((project) =>
-                toProjectOption({ ...project, project_id: project.project_id ?? project.id }),
-              )
-              .filter(Boolean)
-            applyProjectOptions(options)
-            return
-          }
+        const payload = await requestJson('projects', { signal: controller.signal })
+        applyProjectOptions(normalizeSupplierPoProjectOptions(payload))
+      } catch (err) {
+        if (err?.name !== 'AbortError') {
+          console.error('Project list fetch error:', err)
+          setProjectError('Unable to load projects. Retry.')
         }
-      } catch (err) {
-        // Ignore and try fallback below.
-      }
-
-      try {
-        const res = await fetch(`${import.meta.env.VITE_API_BASE}vendor-projects`, {
-          credentials: 'include',
-        })
-        const json = await res.json()
-        const rows = Array.isArray(json?.data) ? json.data : []
-        const options = rows.map((project) => toProjectOption(project)).filter(Boolean)
-        applyProjectOptions(options)
-      } catch (err) {
-        console.error('Project list fetch error:', err)
+      } finally {
+        if (!controller.signal.aborted) setProjectLoading(false)
       }
     }
 
     loadProjects()
-  }, [initialProjectOption])
+    return () => controller.abort()
+  }, [initialProjectOption, projectReloadVersion])
 
   useEffect(() => {
     if (!initialProjectOption?.value?.project_id) return
@@ -228,6 +237,7 @@ export function useSupplierPoServices({
         }
       })
       .catch((err) => console.error('Catalog fetch error', err))
+      .finally(() => setCatalogItemsLoading(false))
   }, [])
 
   const handleSupplierChange = (option) => {
@@ -359,13 +369,18 @@ export function useSupplierPoServices({
 
   return {
     supplierList,
+    supplierLoading,
     selectedSupplier,
     handleSupplierChange,
     projectList,
     selectedProject,
     handleProjectChange,
     lockProject,
+    projectLoading,
+    projectError,
+    reloadProjects,
     catalogItems,
+    catalogItemsLoading,
     selectedItems,
     handleItemsChange,
     quantities,

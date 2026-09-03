@@ -99,6 +99,38 @@ export const stripHtml = (value = '') =>
     .replace(/&nbsp;/g, ' ')
     .trim()
 
+const decodeHtmlEntities = (value) => {
+  if (typeof document === 'undefined') {
+    return value
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#0?39;/gi, "'")
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = value
+  return textarea.value
+}
+
+export const richTextToPlainText = (value = '') => {
+  const textWithLineBreaks = String(value || '')
+    .replace(/<\s*(script|style)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\s*li(?:\s[^>]*)?>/gi, '• ')
+    .replace(/<\s*\/\s*(p|div|li|h[1-6]|tr)\s*>/gi, '\n')
+    .replace(/<\/?[^>]+>/g, '')
+
+  return decodeHtmlEntities(textWithLineBreaks)
+    .replace(/\u00a0/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 export const sanitizeDisplayHtml = (raw) => {
   if (!raw) return ''
 

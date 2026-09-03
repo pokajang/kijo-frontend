@@ -107,4 +107,26 @@ describe('quotationPdfService', () => {
       data: { approval: { id: 91, can_issue: false } },
     })
   })
+
+  it('shows the backend attachment error instead of accepting an incomplete PDF', async () => {
+    mocks.apiFetch.mockResolvedValue(
+      response({
+        ok: false,
+        status: 422,
+        contentType: 'application/json',
+        payload: {
+          message:
+            'The quotation and Special proposal could not be combined into one PDF. Verify the proposal attachment and try again.',
+        },
+      }),
+    )
+
+    await expect(
+      loadQuotationPdf({ url: '/api/quote-records/special/68/pdf', record: { id: 68 } }),
+    ).rejects.toMatchObject({
+      message:
+        'The quotation and Special proposal could not be combined into one PDF. Verify the proposal attachment and try again.',
+      status: 422,
+    })
+  })
 })

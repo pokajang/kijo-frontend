@@ -486,8 +486,14 @@ const FinancialOtherClaimRecordsPage = () => {
             </DataTableCardHeader>
             <CCardBody className="records-page-card-body">
               {error && (
-                <CAlert color="danger" className="py-2">
-                  {error}
+                <CAlert
+                  color="danger"
+                  className="py-2 d-flex align-items-center justify-content-between gap-2"
+                >
+                  <span>{error}</span>
+                  <CButton color="danger" size="sm" variant="outline" onClick={loadRecords}>
+                    Retry
+                  </CButton>
                 </CAlert>
               )}
               {exportingRecordId && (
@@ -582,72 +588,79 @@ const FinancialOtherClaimRecordsPage = () => {
                   </CFormSelect>
                 </CCol>
               </DataTableRecordControls>
-              <SalaryRecordTable
-                rows={filteredRecords}
-                loading={loading}
-                loadingMessage="Loading other claim records..."
-                dataColumns={dataColumns}
-                defaultVisibleColumns={defaultVisibleColumns}
-                requiredColumns={requiredColumns}
-                storageKey="financial.other-claim-records.visible-columns.v1"
-                scrollStorageKey="financial.other-claim-records.scroll"
-                idPrefix="financial-other-claim-record"
-                emptyMessage="No submitted other claim records found."
-                exportFilename={`other-claim-records-${new Date().toISOString().slice(0, 10)}.csv`}
-                desktopUtilityPortalId="financial-other-claim-records-table-tools"
-                mobileUtilityPortalId="financial-other-claim-records-mobile-table-tools"
-                getRowKey={(record, index) => record.id || index}
-                renderCell={renderCell}
-                getSortValue={(record, field) => {
-                  if (field === 'status')
-                    return statusSortPriority[displayStatus(record.status)] ?? 5
-                  if (field === 'claimMonth') return record.claimMonthValue || record.claimMonth
-                  if (field === 'submittedAt') return record.submittedAt || ''
-                  if (field === 'staff') return record.staffLabel
-                  if (field === 'workflow') return record.workflowText
-                  return record[field]
-                }}
-                getActions={getActions}
-                onRowOpen={openDetail}
-                renderMobileItem={(record, index) => (
-                  <div className="data-table-mobile-item records-mobile-item salary-record-mobile-card">
-                    <div className="records-mobile-item-head">
-                      <div className="records-mobile-item-main text-start">
-                        <div className="records-mobile-quote-id text-truncate">
-                          {record.claimReference || '-'} rev {record.revisionNo || 1}
+              {!error && (
+                <SalaryRecordTable
+                  rows={filteredRecords}
+                  loading={loading}
+                  loadingMessage="Loading other claim records..."
+                  dataColumns={dataColumns}
+                  defaultVisibleColumns={defaultVisibleColumns}
+                  requiredColumns={requiredColumns}
+                  storageKey="financial.other-claim-records.visible-columns.v1"
+                  scrollStorageKey="financial.other-claim-records.scroll"
+                  idPrefix="financial-other-claim-record"
+                  emptyMessage={
+                    activeChips.length > 0
+                      ? 'No other claim records match the current filters.'
+                      : 'No submitted other claim records found.'
+                  }
+                  hideFooterWhenEmpty
+                  exportFilename={`other-claim-records-${new Date().toISOString().slice(0, 10)}.csv`}
+                  desktopUtilityPortalId="financial-other-claim-records-table-tools"
+                  mobileUtilityPortalId="financial-other-claim-records-mobile-table-tools"
+                  getRowKey={(record, index) => record.id || index}
+                  renderCell={renderCell}
+                  getSortValue={(record, field) => {
+                    if (field === 'status')
+                      return statusSortPriority[displayStatus(record.status)] ?? 5
+                    if (field === 'claimMonth') return record.claimMonthValue || record.claimMonth
+                    if (field === 'submittedAt') return record.submittedAt || ''
+                    if (field === 'staff') return record.staffLabel
+                    if (field === 'workflow') return record.workflowText
+                    return record[field]
+                  }}
+                  getActions={getActions}
+                  onRowOpen={openDetail}
+                  renderMobileItem={(record, index) => (
+                    <div className="data-table-mobile-item records-mobile-item salary-record-mobile-card">
+                      <div className="records-mobile-item-head">
+                        <div className="records-mobile-item-main text-start">
+                          <div className="records-mobile-quote-id text-truncate">
+                            {record.claimReference || '-'} rev {record.revisionNo || 1}
+                          </div>
+                          <div className="records-mobile-client mt-1">
+                            {record.staffLabel} · {record.claimMonth} · Claims{' '}
+                            {claimsTotalText(record)}
+                          </div>
                         </div>
-                        <div className="records-mobile-client mt-1">
-                          {record.staffLabel} · {record.claimMonth} · Claims{' '}
-                          {claimsTotalText(record)}
+                        <div className="salary-record-mobile-card-actions">
+                          <DataTableStatusBadge tone={getStatusTone(record.status)}>
+                            {displayStatus(record.status)}
+                          </DataTableStatusBadge>
+                          {getActions(record).length > 0 && (
+                            <DataTableActionMenu
+                              record={record}
+                              actions={getActions(record)}
+                              actionKey={`financial-other-claim-${record.id || index}`}
+                              ariaLabel="Other claim actions"
+                            />
+                          )}
                         </div>
                       </div>
-                      <div className="salary-record-mobile-card-actions">
-                        <DataTableStatusBadge tone={getStatusTone(record.status)}>
-                          {displayStatus(record.status)}
-                        </DataTableStatusBadge>
-                        {getActions(record).length > 0 && (
-                          <DataTableActionMenu
-                            record={record}
-                            actions={getActions(record)}
-                            actionKey={`financial-other-claim-${record.id || index}`}
-                            ariaLabel="Other claim actions"
-                          />
-                        )}
-                      </div>
+                      {renderWorkflow(record)}
                     </div>
-                    {renderWorkflow(record)}
-                  </div>
-                )}
-                initialSortField="status"
-                initialSortDir="asc"
-                initialSortDirByField={{
-                  status: 'asc',
-                  claimMonth: 'desc',
-                  submittedAt: 'desc',
-                  claimsTotal: 'desc',
-                }}
-                resetDeps={[searchText, statusFilter, recordsScope, reviewScope]}
-              />
+                  )}
+                  initialSortField="status"
+                  initialSortDir="asc"
+                  initialSortDirByField={{
+                    status: 'asc',
+                    claimMonth: 'desc',
+                    submittedAt: 'desc',
+                    claimsTotal: 'desc',
+                  }}
+                  resetDeps={[searchText, statusFilter, recordsScope, reviewScope]}
+                />
+              )}
             </CCardBody>
           </CCard>
         </CCol>

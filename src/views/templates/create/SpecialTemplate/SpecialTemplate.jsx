@@ -7,7 +7,6 @@ import {
   CFormLabel,
   CFormInput,
   CFormSelect,
-  CFormCheck,
   CButton,
   CAlert,
   CTable,
@@ -37,6 +36,8 @@ import TemplateFieldLabel from '../../shared/TemplateFieldLabel'
 import TemplateFormActions from '../../shared/TemplateFormActions'
 import TemplateSectionHeader from '../../shared/TemplateSectionHeader'
 import { useTemplateDirtyState } from '../../shared/templateFormUi'
+import ProposalModeSelector from './ProposalModeSelector'
+import InternalReferenceNote from './InternalReferenceNote'
 
 export default function SpecialTemplate({
   isEdit,
@@ -109,7 +110,7 @@ export default function SpecialTemplate({
     }
     return options
   }, [categories, template.categoryId, template.categoryName])
-  const proposalMode = template.proposalMode || 'upload'
+  const proposalMode = template.proposalMode || 'write'
   const isUploadMode = proposalMode === 'upload'
   const defaultLineItems = Array.isArray(template.defaultLineItems) ? template.defaultLineItems : []
 
@@ -228,40 +229,6 @@ export default function SpecialTemplate({
 
         {/* Title & Code */}
         <CRow className="mb-3">
-          <CCol md={12}>
-            <TemplateFieldLabel>Customer-facing proposal</TemplateFieldLabel>
-            <div className="small text-muted mb-2">
-              Choose how this proposal will be included when staff prepare a quotation.
-            </div>
-            <div className="d-flex gap-4 mt-1">
-              <CFormCheck
-                type="radio"
-                name="proposalMode"
-                id="special-proposal-mode-upload"
-                value="upload"
-                label="Upload proposal PDF"
-                checked={proposalMode === 'upload'}
-                onChange={handleInputChange}
-              />
-              <CFormCheck
-                type="radio"
-                name="proposalMode"
-                id="special-proposal-mode-write"
-                value="write"
-                label="Write proposal here"
-                checked={proposalMode === 'write'}
-                onChange={handleInputChange}
-              />
-            </div>
-            <small className="text-muted d-block mt-2">
-              {isUploadMode
-                ? 'The uploaded PDF will be appended to the generated quotation PDF.'
-                : 'The written proposal content will be rendered and appended to the generated quotation PDF.'}
-            </small>
-          </CCol>
-        </CRow>
-
-        <CRow className="mb-3">
           <CCol md={9}>
             <TemplateFieldLabel htmlFor="special-service-title">Service title</TemplateFieldLabel>
             <CFormInput
@@ -292,49 +259,83 @@ export default function SpecialTemplate({
           </CCol>
         </CRow>
 
-        <TemplateSectionHeader
-          title="Proposal content"
-          description={
-            isUploadMode
-              ? 'Add an internal summary and upload the customer-facing PDF below.'
-              : 'Write the customer-facing proposal that will be included with the quotation.'
-          }
+        <ProposalModeSelector
+          value={proposalMode}
+          onChange={handleInputChange}
+          validationError={validationErrors.proposalMode}
         />
-        {/* Rich Content Editor */}
-        <CRow className="mb-3">
-          <CFormLabel className="fw-semibold">
-            {isUploadMode ? 'Internal Service Summary' : 'Proposal Contents'}
-            <span className={isUploadMode ? 'text-muted fw-normal' : 'text-danger'}>
-              {isUploadMode ? ' — Optional' : ' *'}
-            </span>
-            {!isUploadMode && (
-              <>
-                &nbsp;
-                <CIcon
-                  icon={cilInfo}
-                  size="lg"
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setShowHelp(true)}
-                />
-              </>
+
+        {isUploadMode ? (
+          <>
+            <TemplateSectionHeader
+              title="Completed proposal PDF"
+              description="Upload the complete customer-facing proposal. These PDF pages will be included in quotation and proposal exports."
+            />
+            {finalizingBmTranslation && existingAttachments.length > 0 && (
+              <CAlert color="warning" className="mb-3">
+                <strong>Review copied attachments before finalizing this BM proposal.</strong>
+                <div className="mt-1">
+                  These files were copied from the English proposal. Open each attachment and
+                  replace or remove anything that is not suitable for the BM version.
+                </div>
+              </CAlert>
             )}
-          </CFormLabel>
-          <EditorInput
-            key={proposalMode}
-            label={null}
-            field={isUploadMode ? 'serviceSummary' : 'proposalContent'}
-            value={isUploadMode ? template.serviceSummary || '' : template.proposalContent || ''}
-            onChange={handleEditorChange}
-            invalid={Boolean(validationErrors.proposalContent)}
-            feedbackInvalid={validationErrors.proposalContent}
-            height={isUploadMode ? 260 : 600}
-            init={{
-              placeholder: isUploadMode
-                ? 'Internal summary only: describe scope/context for staff reference. This text is not included in the final proposal PDF.'
-                : 'Write the full customer-facing proposal content here. This content will be rendered in the final proposal PDF.',
-            }}
-          />
-        </CRow>
+            <UploadAttachment
+              isEdit={isEdit}
+              existingAttachments={existingAttachments}
+              newAttachments={newAttachments}
+              rejectedAttachments={rejectedAttachments}
+              onNewFileChange={handleNewFileChange}
+              onRenameFile={handleRenameFile}
+              onRemoveNewAttachment={handleRemoveNewAttachment}
+              onRemoveExistingAttachment={removeExistingAttachment}
+              onPreviewFile={handlePreview}
+              onClearRejected={() => setRejectedAttachments([])}
+              validationError={validationErrors.attachments}
+            />
+            <InternalReferenceNote
+              value={template.serviceSummary || ''}
+              onChange={handleInputChange}
+              validationError={validationErrors.serviceSummary}
+            />
+          </>
+        ) : (
+          <>
+            <TemplateSectionHeader
+              title="Proposal content"
+              description="Write the complete customer-facing proposal that will be included with the quotation."
+            />
+            <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <CFormLabel className="fw-semibold mb-0">
+                Proposal contents <span className="text-danger">*</span>
+              </CFormLabel>
+              <CButton
+                type="button"
+                color="link"
+                size="sm"
+                className="p-0"
+                onClick={() => setShowHelp(true)}
+              >
+                <CIcon icon={cilInfo} aria-hidden="true" className="me-1" />
+                How to write
+              </CButton>
+            </div>
+            <EditorInput
+              key={proposalMode}
+              label={null}
+              field="proposalContent"
+              value={template.proposalContent || ''}
+              onChange={handleEditorChange}
+              invalid={Boolean(validationErrors.proposalContent)}
+              feedbackInvalid={validationErrors.proposalContent}
+              height={600}
+              init={{
+                placeholder:
+                  'Write the full customer-facing proposal content here. This content will be rendered in the final proposal PDF.',
+              }}
+            />
+          </>
+        )}
 
         <TemplateSectionHeader
           title="Quote defaults"
@@ -468,38 +469,6 @@ export default function SpecialTemplate({
             )}
           </CCol>
         </CRow>
-
-        {/* Attachments */}
-        {isUploadMode && (
-          <>
-            <TemplateSectionHeader
-              title="Supporting proposal"
-              description="Upload at least one customer-facing PDF. Each file can be up to 10 MB."
-            />
-            {finalizingBmTranslation && existingAttachments.length > 0 && (
-              <CAlert color="warning" className="mb-3">
-                <strong>Review copied attachments before finalizing this BM proposal.</strong>
-                <div className="mt-1">
-                  These files were copied from the English proposal. Open each attachment and
-                  replace or remove anything that is not suitable for the BM version.
-                </div>
-              </CAlert>
-            )}
-            <UploadAttachment
-              isEdit={isEdit}
-              existingAttachments={existingAttachments}
-              newAttachments={newAttachments}
-              rejectedAttachments={rejectedAttachments}
-              onNewFileChange={handleNewFileChange}
-              onRenameFile={handleRenameFile}
-              onRemoveNewAttachment={handleRemoveNewAttachment}
-              onRemoveExistingAttachment={removeExistingAttachment}
-              onPreviewFile={handlePreview}
-              onClearRejected={() => setRejectedAttachments([])}
-              validationError={validationErrors.attachments}
-            />
-          </>
-        )}
 
         {/* Remarks */}
         <RemarksSection

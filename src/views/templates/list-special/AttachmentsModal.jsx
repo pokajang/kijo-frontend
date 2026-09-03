@@ -11,26 +11,14 @@ import {
   CFormLabel,
   CFormSelect,
 } from '@coreui/react'
-import { resolveAssetUrl } from '../../../utils/assetUrls'
+import { isTrustedAssetUrl, resolveAssetUrl } from '../../../utils/assetUrls'
 
 const getExtension = (value = '') => String(value).split('.').pop()?.toLowerCase() || ''
-
-const canPreviewSameOriginUrl = (value) => {
-  try {
-    const url = new URL(value, window.location.origin)
-    return (
-      url.origin === window.location.origin &&
-      !['data:', 'blob:', 'javascript:'].includes(url.protocol)
-    )
-  } catch {
-    return false
-  }
-}
 
 const getPreviewInfo = (attachment) => {
   const rawUrl = resolveAssetUrl(attachment?.fileUrl)
   const extension = getExtension(attachment?.fileName || attachment?.fileUrl)
-  const isSafeUrl = canPreviewSameOriginUrl(rawUrl)
+  const isSafeUrl = isTrustedAssetUrl(rawUrl)
 
   if (!isSafeUrl) {
     return { type: 'blocked', url: '' }

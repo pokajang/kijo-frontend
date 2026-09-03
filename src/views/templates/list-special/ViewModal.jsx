@@ -18,14 +18,14 @@ import {
   CTableDataCell,
 } from '@coreui/react'
 import AttachmentsModal from './AttachmentsModal'
-import { sanitizeDisplayHtml } from '../shared/templateUtils'
+import { richTextToPlainText, sanitizeDisplayHtml } from '../shared/templateUtils'
 
 export default function ViewModal({ record, onClose }) {
   const [showAttachModal, setShowAttachModal] = useState(false)
   const [attachList, setAttachList] = useState([])
   const proposalMode = record?.proposalMode || record?.proposal_mode || 'upload'
   const contentLabel =
-    proposalMode === 'write' ? 'Written Proposal Content' : 'Internal Service Summary'
+    proposalMode === 'write' ? 'Written Proposal Content' : 'Internal Reference Note'
   const contentHtml =
     proposalMode === 'write'
       ? record?.proposalContent || record?.proposal_content || record?.content
@@ -38,18 +38,24 @@ export default function ViewModal({ record, onClose }) {
     }
   }, [showAttachModal, record])
 
-  const renderHtmlSection = (label, html) => (
+  const renderContentSection = (label, content, plainText = false) => (
     <>
       <CCardHeader>
         <strong>{label}</strong>
       </CCardHeader>
       <CCardBody>
-        <div
-          className="records-detail-rich-text"
-          dangerouslySetInnerHTML={{
-            __html: sanitizeDisplayHtml(html) || '<em>No content provided.</em>',
-          }}
-        />
+        {plainText ? (
+          <div className="records-detail-rich-text" style={{ whiteSpace: 'pre-wrap' }}>
+            {richTextToPlainText(content) || <em>No content provided.</em>}
+          </div>
+        ) : (
+          <div
+            className="records-detail-rich-text"
+            dangerouslySetInnerHTML={{
+              __html: sanitizeDisplayHtml(content) || '<em>No content provided.</em>',
+            }}
+          />
+        )}
       </CCardBody>
     </>
   )
@@ -99,7 +105,7 @@ export default function ViewModal({ record, onClose }) {
               </CCardBody>
 
               {/* Content Section */}
-              {renderHtmlSection(contentLabel, contentHtml)}
+              {renderContentSection(contentLabel, contentHtml, proposalMode === 'upload')}
 
               {/* Attachments Section */}
               {Array.isArray(record.attachments) && record.attachments.length > 0 && (

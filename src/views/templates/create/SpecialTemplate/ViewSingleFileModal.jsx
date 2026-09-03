@@ -10,21 +10,9 @@ import {
   CRow,
   CCol,
 } from '@coreui/react'
-import { resolveAssetUrl } from '../../../../utils/assetUrls'
+import { isTrustedAssetUrl, resolveAssetUrl } from '../../../../utils/assetUrls'
 
 const getExtension = (value = '') => String(value).split('.').pop()?.toLowerCase() || ''
-
-const isSafeExistingUrl = (value) => {
-  try {
-    const url = new URL(value, window.location.origin)
-    return (
-      url.origin === window.location.origin &&
-      !['data:', 'blob:', 'javascript:'].includes(url.protocol)
-    )
-  } catch {
-    return false
-  }
-}
 
 /**
  * Preview a single file (existing or newly selected) in a modal.
@@ -63,7 +51,7 @@ export default function ViewSingleFileModal({ visible, file, onClose }) {
   const isImage =
     ['jpg', 'jpeg', 'png'].includes(extension) ||
     ['image/jpeg', 'image/png'].includes(file.mimeType || file.file?.type)
-  const canPreview = file.file || isSafeExistingUrl(src)
+  const canPreview = file.file || isTrustedAssetUrl(src)
 
   return (
     <CModal visible={visible} onClose={onClose} size="xl" alignment="center" scrollable>

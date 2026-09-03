@@ -76,7 +76,7 @@ const DataTableDesktop = ({
       {rows.length === 0 ? (
         <CTableRow>
           <CTableDataCell colSpan={columns.length} className="text-center text-muted">
-            <EmptyTableState message={emptyMessage} />
+            <EmptyTableState message={emptyMessage} compact />
           </CTableDataCell>
         </CTableRow>
       ) : (

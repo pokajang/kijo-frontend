@@ -1,5 +1,6 @@
 import React from 'react'
 import DataTableActionMenu from './DataTableActionMenu'
+import EmptyTableState from './EmptyTableState'
 import DataTableStatusBadge from './DataTableStatusBadge'
 
 const isGroupRow = (row) => row?.__dataTableGroupRow === true
@@ -28,7 +29,7 @@ const DataTableMobileList = ({
 }) => (
   <div className={`d-${desktopBreakpoint}-none data-table-mobile-list records-mobile-list`}>
     {rows.length === 0 ? (
-      <div className="text-center text-muted py-3">{emptyMessage}</div>
+      <EmptyTableState message={emptyMessage} />
     ) : (
       (() => {
         let recordIndex = -1

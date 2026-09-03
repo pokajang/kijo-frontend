@@ -1,4 +1,5 @@
 import { stripHtml } from './templateUtils'
+import { SPECIAL_INTERNAL_NOTE_MAX_LENGTH } from './specialTemplateConstants'
 
 export const hasText = (value) => String(value || '').trim().length > 0
 
@@ -174,7 +175,7 @@ export const validateSpecialTemplate = ({
   existingAttachments = [],
 }) => {
   const errors = []
-  const proposalMode = template.proposalMode || 'upload'
+  const proposalMode = template.proposalMode || 'write'
 
   addRequiredText(errors, template.categoryId, 'categoryId', 'Service category')
   addRequiredText(errors, template.serviceTitle, 'serviceTitle', 'Service title')
@@ -190,6 +191,13 @@ export const validateSpecialTemplate = ({
   }
 
   if (proposalMode === 'upload') {
+    addMaxLength(
+      errors,
+      template.serviceSummary,
+      SPECIAL_INTERNAL_NOTE_MAX_LENGTH,
+      'serviceSummary',
+      'Internal reference note',
+    )
     const hasAttachments =
       newAttachments.length > 0 || (isEdit && existingAttachments.some(isPdfAttachment))
     if (!hasAttachments) {

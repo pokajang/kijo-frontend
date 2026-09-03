@@ -144,6 +144,50 @@ describe('templateValidation', () => {
     ).toContain('Proposal content is required.')
   })
 
+  it('limits the upload-mode internal reference note to 300 characters', () => {
+    const common = {
+      categoryId: 1,
+      proposalMode: 'upload',
+      serviceTitle: 'A',
+      serviceCode: 'B',
+    }
+    const attachment = { fileName: 'proposal.pdf', mimeType: 'application/pdf' }
+
+    expect(
+      messages(
+        validateSpecialTemplate({
+          template: { ...common, serviceSummary: 'A'.repeat(300) },
+          remarks: '<p>remark</p>',
+          isEdit: true,
+          existingAttachments: [attachment],
+        }),
+      ),
+    ).not.toContain('Internal reference note must be 300 characters or fewer.')
+
+    expect(
+      messages(
+        validateSpecialTemplate({
+          template: { ...common, serviceSummary: 'A'.repeat(301) },
+          remarks: '<p>remark</p>',
+          isEdit: true,
+          existingAttachments: [attachment],
+        }),
+      ),
+    ).toContain('Internal reference note must be 300 characters or fewer.')
+  })
+
+  it('treats a missing special proposal mode as write mode', () => {
+    const errors = validateSpecialTemplate({
+      template: { categoryId: 1, serviceTitle: 'A', serviceCode: 'B' },
+      remarks: '<p>remark</p>',
+    })
+
+    expect(messages(errors)).toContain('Proposal content is required.')
+    expect(messages(errors)).not.toContain(
+      'At least one PDF proposal attachment is required in upload mode.',
+    )
+  })
+
   it('validates special default line items', () => {
     const errors = validateSpecialTemplate({
       template: {

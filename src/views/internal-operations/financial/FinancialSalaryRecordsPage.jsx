@@ -780,8 +780,14 @@ const FinancialSalaryRecordsPage = () => {
             </DataTableCardHeader>
             <CCardBody className="records-page-card-body">
               {error && (
-                <CAlert color="danger" className="py-2">
-                  {error}
+                <CAlert
+                  color="danger"
+                  className="py-2 d-flex align-items-center justify-content-between gap-2"
+                >
+                  <span>{error}</span>
+                  <CButton color="danger" size="sm" variant="outline" onClick={loadRecords}>
+                    Retry
+                  </CButton>
                 </CAlert>
               )}
               {exportingRecordId && (
@@ -876,107 +882,117 @@ const FinancialSalaryRecordsPage = () => {
                   </CFormSelect>
                 </CCol>
               </DataTableRecordControls>
-              <SalaryRecordTable
-                rows={filteredRecords}
-                loading={loading}
-                loadingMessage="Loading salary records..."
-                dataColumns={dataColumns}
-                defaultVisibleColumns={defaultVisibleColumns}
-                requiredColumns={requiredColumns}
-                storageKey="financial.salary-records.visible-columns.v2"
-                scrollStorageKey="financial.salary-records.scroll"
-                idPrefix="financial-salary-record"
-                emptyMessage="No submitted salary records found."
-                exportFilename={`salary-records-${new Date().toISOString().slice(0, 10)}.csv`}
-                desktopUtilityPortalId="financial-salary-records-table-tools"
-                mobileUtilityPortalId="financial-salary-records-mobile-table-tools"
-                getRowKey={(record, index) => record.id || index}
-                renderCell={renderCell}
-                getActions={getActions}
-                onRowOpen={openDetail}
-                renderActions={renderActions}
-                renderMobileItem={renderMobileRecordItem}
-                getSortValue={(record, field) => {
-                  if (field === 'status') return getStatusSortPriority(record.status)
-                  if (field === 'staff') return record.staffLabel
-                  if (field === 'salaryMonth') return record.salaryMonthValue
-                  if (field === 'submittedAt') return record.submittedAt
-                  if (field === 'workflow') return record.workflow
-                  if (
-                    ['basicSalary', 'claimsTotal', 'employeeDeductions', 'payableSalary'].includes(
-                      field,
-                    )
-                  ) {
-                    return numericSalaryValue(record, record[field])
+              {!error && (
+                <SalaryRecordTable
+                  rows={filteredRecords}
+                  loading={loading}
+                  loadingMessage="Loading salary records..."
+                  dataColumns={dataColumns}
+                  defaultVisibleColumns={defaultVisibleColumns}
+                  requiredColumns={requiredColumns}
+                  storageKey="financial.salary-records.visible-columns.v2"
+                  scrollStorageKey="financial.salary-records.scroll"
+                  idPrefix="financial-salary-record"
+                  emptyMessage={
+                    activeChips.length > 0
+                      ? 'No salary records match the current filters.'
+                      : 'No submitted salary records found.'
                   }
+                  hideFooterWhenEmpty
+                  exportFilename={`salary-records-${new Date().toISOString().slice(0, 10)}.csv`}
+                  desktopUtilityPortalId="financial-salary-records-table-tools"
+                  mobileUtilityPortalId="financial-salary-records-mobile-table-tools"
+                  getRowKey={(record, index) => record.id || index}
+                  renderCell={renderCell}
+                  getActions={getActions}
+                  onRowOpen={openDetail}
+                  renderActions={renderActions}
+                  renderMobileItem={renderMobileRecordItem}
+                  getSortValue={(record, field) => {
+                    if (field === 'status') return getStatusSortPriority(record.status)
+                    if (field === 'staff') return record.staffLabel
+                    if (field === 'salaryMonth') return record.salaryMonthValue
+                    if (field === 'submittedAt') return record.submittedAt
+                    if (field === 'workflow') return record.workflow
+                    if (
+                      [
+                        'basicSalary',
+                        'claimsTotal',
+                        'employeeDeductions',
+                        'payableSalary',
+                      ].includes(field)
+                    ) {
+                      return numericSalaryValue(record, record[field])
+                    }
 
-                  return record[field]
-                }}
-                getMobileTitle={(record) => record.staffLabel}
-                getMobileSubtitle={(record) => record.salaryMonth}
-                getMobileMeta={(record) =>
-                  `${formatSalaryMoney(record, record.payableSalary)} | Claims ${formatSalaryMoney(
-                    record,
-                    record.claimsTotal,
-                  )}`
-                }
-                getMobileStatus={(record) => displayStatus(record.status)}
-                getMobileStatusTone={(record) => getStatusTone(record.status)}
-                mobileFieldKeys={{
-                  title: 'staff',
-                  subtitle: 'salaryMonth',
-                  meta: ['payableSalary', 'claimsTotal'],
-                  status: 'status',
-                }}
-                mobileRecord={{
-                  title: (record) => record.staffLabel,
-                  subtitle: (record) => record.salaryMonth,
-                  meta: (record) =>
-                    `Payable ${formatSalaryMoney(record, record.payableSalary)} | ${
-                      record.submittedDisplay
-                    }`,
-                  badges: (record) => [
-                    {
-                      key: 'status',
-                      label: displayStatus(record.status),
-                      tone: getStatusTone(record.status),
-                    },
-                  ],
-                  kv: (record) => [
-                    {
-                      key: 'workflow',
-                      label: 'Workflow',
-                      value: record.workflow || '-',
-                    },
-                    {
-                      key: 'claimsTotal',
-                      label: 'Claims',
-                      value: formatSalaryMoney(record, record.claimsTotal),
-                    },
-                    {
-                      key: 'deductions',
-                      label: 'Deductions',
-                      value: canViewSalaryAmount(record)
-                        ? `-${formatMoney(record.employeeDeductions || 0)}`
-                        : restrictedMoneyLabel,
-                    },
-                    {
-                      key: 'basicSalary',
-                      label: 'Basic Salary',
-                      value: formatSalaryMoney(record, record.basicSalary),
-                    },
-                  ],
-                }}
-                initialSortField="status"
-                initialSortDir="asc"
-                initialSortDirByField={{
-                  status: 'asc',
-                  salaryMonth: 'desc',
-                  submittedAt: 'desc',
-                  payableSalary: 'desc',
-                }}
-                resetDeps={[searchText, statusFilter, salaryMonthFilter, reviewScope]}
-              />
+                    return record[field]
+                  }}
+                  getMobileTitle={(record) => record.staffLabel}
+                  getMobileSubtitle={(record) => record.salaryMonth}
+                  getMobileMeta={(record) =>
+                    `${formatSalaryMoney(record, record.payableSalary)} | Claims ${formatSalaryMoney(
+                      record,
+                      record.claimsTotal,
+                    )}`
+                  }
+                  getMobileStatus={(record) => displayStatus(record.status)}
+                  getMobileStatusTone={(record) => getStatusTone(record.status)}
+                  mobileFieldKeys={{
+                    title: 'staff',
+                    subtitle: 'salaryMonth',
+                    meta: ['payableSalary', 'claimsTotal'],
+                    status: 'status',
+                  }}
+                  mobileRecord={{
+                    title: (record) => record.staffLabel,
+                    subtitle: (record) => record.salaryMonth,
+                    meta: (record) =>
+                      `Payable ${formatSalaryMoney(record, record.payableSalary)} | ${
+                        record.submittedDisplay
+                      }`,
+                    badges: (record) => [
+                      {
+                        key: 'status',
+                        label: displayStatus(record.status),
+                        tone: getStatusTone(record.status),
+                      },
+                    ],
+                    kv: (record) => [
+                      {
+                        key: 'workflow',
+                        label: 'Workflow',
+                        value: record.workflow || '-',
+                      },
+                      {
+                        key: 'claimsTotal',
+                        label: 'Claims',
+                        value: formatSalaryMoney(record, record.claimsTotal),
+                      },
+                      {
+                        key: 'deductions',
+                        label: 'Deductions',
+                        value: canViewSalaryAmount(record)
+                          ? `-${formatMoney(record.employeeDeductions || 0)}`
+                          : restrictedMoneyLabel,
+                      },
+                      {
+                        key: 'basicSalary',
+                        label: 'Basic Salary',
+                        value: formatSalaryMoney(record, record.basicSalary),
+                      },
+                    ],
+                  }}
+                  initialSortField="status"
+                  initialSortDir="asc"
+                  initialSortDirByField={{
+                    status: 'asc',
+                    salaryMonth: 'desc',
+                    submittedAt: 'desc',
+                    payableSalary: 'desc',
+                  }}
+                  resetDeps={[searchText, statusFilter, salaryMonthFilter, reviewScope]}
+                />
+              )}
             </CCardBody>
           </CCard>
         </CCol>

@@ -30,7 +30,7 @@ export default function UploadAttachment({
       {isEdit && existingAttachments.length > 0 && (
         <CRow className="mb-3">
           <CCol>
-            <CFormLabel>Current Attachments</CFormLabel>
+            <CFormLabel>Current proposal PDFs</CFormLabel>
             <CListGroup flush>
               {existingAttachments.map((att) => (
                 <CListGroupItem
@@ -62,7 +62,7 @@ export default function UploadAttachment({
       <CRow className="mb-3">
         <CCol>
           <CFormLabel htmlFor="special-proposal-attachments">
-            {isEdit ? 'Add More PDF Attachments' : 'Upload Full Proposal PDF'}
+            {isEdit ? 'Add completed proposal PDFs' : 'Upload completed proposal PDFs'}
           </CFormLabel>
           <CFormInput
             id="special-proposal-attachments"
