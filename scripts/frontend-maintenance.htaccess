@@ -1,0 +1,12 @@
+ErrorDocument 503 /maintenance.html
+
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store, no-cache, must-revalidate"
+  Header always set Retry-After "120"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^maintenance\.html$ - [L]
+  RewriteRule ^ - [R=503,L]
+</IfModule>

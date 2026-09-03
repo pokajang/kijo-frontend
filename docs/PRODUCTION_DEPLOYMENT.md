@@ -110,12 +110,15 @@ cd ~/kijo-frontend
 git pull --ff-only origin main
 
 FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com
-rm -rf "$FRONTEND_DOCROOT"/*
-cp -a ~/kijo-frontend/build/. "$FRONTEND_DOCROOT"/
+bash scripts/deploy-frontend.sh
 ```
 
-Confirm `FRONTEND_DOCROOT` is exactly the intended cPanel document root before
-running the removal command.
+The script refuses any document root other than
+`~/public_html/kijo.amiosh.com`. It enables a self-contained maintenance page,
+replaces the live frontend files, and restores the production `.htaccess` only
+after the copy succeeds. A failed copy leaves maintenance mode enabled so users
+do not receive a partial application. After correcting the failure, rerun the
+deployment command.
 
 If the server builds the frontend instead of using committed build artifacts:
 
@@ -124,8 +127,7 @@ cd ~/kijo-frontend
 npm ci
 npm run build
 FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com
-rm -rf "$FRONTEND_DOCROOT"/*
-cp -a ~/kijo-frontend/build/. "$FRONTEND_DOCROOT"/
+bash scripts/deploy-frontend.sh
 ```
 
 Confirm:
@@ -137,6 +139,21 @@ Confirm:
 ## Backend Release Workflow
 
 The Laravel app lives in `~/kijo-laravel` and is served through `https://api.amiosh.com`.
+
+For a backend-only or coordinated release, enable the frontend maintenance page
+before changing the backend. Keep it enabled through dependency installation,
+migrations, backfills, cache rebuilding, queue restart, and any matching
+frontend deployment:
+
+```bash
+cd ~/kijo-frontend
+FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com \
+  bash scripts/deploy-frontend.sh maintenance-on
+```
+
+If a deployment step fails, leave maintenance mode enabled while recovering or
+rolling back. Disable it only when the application is ready for post-deploy
+smoke testing.
 
 The production `.env` is server-only. Never overwrite it from local. Never commit secrets, database credentials, SMTP credentials, API keys, or production `.env` values.
 
@@ -975,6 +992,18 @@ guarded rollback cannot complete and after checking for quotations created
 since the backup.
 
 ## Backend Post-Deploy Checks
+
+After all required backend and frontend deployment steps have succeeded,
+restore normal frontend routing:
+
+```bash
+cd ~/kijo-frontend
+FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com \
+  bash scripts/deploy-frontend.sh maintenance-off
+```
+
+The `maintenance-off` command restores the production `.htaccess` from the
+current committed build and removes the temporary maintenance page.
 
 Select checks based on the release impact. For a comprehensive backend release,
 confirm at minimum:

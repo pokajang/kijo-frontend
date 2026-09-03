@@ -76,13 +76,14 @@ git rev-parse HEAD
 git pull --ff-only origin main
 
 FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com
-rm -rf "$FRONTEND_DOCROOT"/*
-cp -a ~/kijo-frontend/build/. "$FRONTEND_DOCROOT"/
+bash scripts/deploy-frontend.sh
 ```
 
-Before running the removal command, confirm `FRONTEND_DOCROOT` contains exactly
-`~/public_html/kijo.amiosh.com`. If production later adopts atomic or versioned
-publishing, replace this block in both runbooks with that mechanism.
+The deployment script validates that `FRONTEND_DOCROOT` is exactly
+`~/public_html/kijo.amiosh.com`, enables the standalone maintenance page,
+replaces the live files, and restores the production routing rules only after
+the copy succeeds. If deployment stops after maintenance mode is enabled, the
+maintenance page remains active; fix the error and rerun the command.
 
 ### Focused smoke test
 
@@ -120,6 +121,10 @@ test exists, run the relevant test file or the full `php artisan test` suite.
 ### Simple production pull + deploy
 
 ```bash
+cd ~/kijo-frontend
+FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com \
+  bash scripts/deploy-frontend.sh maintenance-on
+
 cd ~/kijo-laravel
 git rev-parse HEAD
 git pull --ff-only origin main
@@ -128,7 +133,14 @@ php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+
+cd ~/kijo-frontend
+FRONTEND_DOCROOT=~/public_html/kijo.amiosh.com \
+  bash scripts/deploy-frontend.sh maintenance-off
 ```
+
+If any backend step fails, do not run `maintenance-off`; leave the maintenance
+page active until the failure is corrected or the release is rolled back.
 
 Do not run Composer, migrations, or a backfill through this fast path. Their
 presence means the release must use the comprehensive production runbook.
