@@ -5,7 +5,7 @@ export const recordTabOptions = [
   { key: 'ih-tab', label: 'Industrial Hygiene', slug: 'industrial-hygiene' },
   { key: 'manpower-tab', label: 'Manpower Supply', slug: 'manpower-supply' },
   { key: 'equipment-tab', label: 'Equipment Supply', slug: 'equipment-supply' },
-  { key: 'special-tab', label: 'Special', slug: 'special' },
+  { key: 'special-tab', label: 'Special Service', slug: 'special' },
 ]
 
 const aggregateRecordTabs = new Set(['all-tab', 'my-tab'])

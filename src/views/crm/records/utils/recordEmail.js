@@ -2,6 +2,7 @@ import { recordTabOptions } from '../config/recordTabs'
 import { endpointsByService } from '../services/recordsActions'
 import { apiJson } from '../../../../api/apiClient'
 import { apiUrl } from '../../../../api/apiUrl'
+import { getSpecialRecordServiceLabel } from './specialRecordCategories'
 
 const serviceLabelByTab = Object.fromEntries(recordTabOptions.map((tab) => [tab.key, tab.label]))
 const serviceApiPathByTab = {
@@ -26,6 +27,7 @@ export const getRecordSubjectText = (record) =>
 export const getRecordServiceLabel = (record) =>
   record?.__tableMeta?.serviceLabel ||
   record?.serviceLabel ||
+  (record?.serviceTab === 'special-tab' ? getSpecialRecordServiceLabel(record) : '') ||
   serviceLabelByTab[record?.serviceTab] ||
   ''
 

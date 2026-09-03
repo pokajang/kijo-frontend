@@ -4,7 +4,7 @@ import { COLUMN_LABELS, TOGGLABLE_COLUMN_ORDER } from '../../config/allRecordsTa
 import RecordsFilterPanelShared from '../shared/RecordsFilterPanelShared'
 
 const AllRecordsFilterPanel = (props) => {
-  const { serviceFilter, setServiceFilter } = props
+  const { serviceFilter, setServiceFilter, serviceOptions = [] } = props
 
   return (
     <RecordsFilterPanelShared
@@ -17,11 +17,11 @@ const AllRecordsFilterPanel = (props) => {
           <CFormLabel>Service</CFormLabel>
           <CFormSelect value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
             <option value="all">All</option>
-            <option value="training-tab">Training</option>
-            <option value="ih-tab">Industrial Hygiene</option>
-            <option value="manpower-tab">Manpower Supply</option>
-            <option value="equipment-tab">Equipment Supply</option>
-            <option value="special-tab">Special</option>
+            {serviceOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </CFormSelect>
         </CCol>
       )}

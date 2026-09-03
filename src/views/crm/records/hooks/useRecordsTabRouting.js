@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { recordTablesByTab } from '../config/recordTables'
 import { getRecordListPath, normalizeRecordTab, recordTabBySlug } from '../config/recordTabs'
+import {
+  getSpecialCategoryIdFromTabKey,
+  getSpecialCategoryTabKey,
+} from '../utils/specialRecordCategories'
 
 // Everyone defaults to (and can reach) the All tab regardless of role.
 // My Quotes remains available as a manual filter.
@@ -30,6 +34,15 @@ export const useRecordsTabRouting = () => {
   const [activeTab, setActiveTab] = useState(() =>
     resolveActiveTab(serviceSlug, location.search, defaultTab),
   )
+  const categoryParam = new URLSearchParams(location.search).get('categoryId')
+  const parsedCategoryId = Number(categoryParam)
+  const activeCategoryId =
+    activeTab === 'special-tab' && Number.isInteger(parsedCategoryId) && parsedCategoryId > 0
+      ? parsedCategoryId
+      : null
+  const activeNavigationTab = activeCategoryId
+    ? getSpecialCategoryTabKey(activeCategoryId)
+    : activeTab
 
   useEffect(() => {
     if (location.search.includes('tab=')) {
@@ -46,12 +59,24 @@ export const useRecordsTabRouting = () => {
     setActiveTab((prev) => (prev === nextTab ? prev : nextTab))
   }, [defaultTab, location.search, navigate, serviceSlug])
 
-  const handleTabChange = (tabKey) => {
-    navigate(getRecordListPath(tabKey), { replace: true })
-  }
+  const handleTabChange = useCallback(
+    (tabKey) => {
+      const categoryId = getSpecialCategoryIdFromTabKey(tabKey)
+      if (categoryId) {
+        navigate(`/crm/records/special?categoryId=${encodeURIComponent(categoryId)}`, {
+          replace: true,
+        })
+        return
+      }
+      navigate(getRecordListPath(tabKey), { replace: true })
+    },
+    [navigate],
+  )
 
   return {
     activeTab,
+    activeCategoryId,
+    activeNavigationTab,
     handleTabChange,
   }
 }

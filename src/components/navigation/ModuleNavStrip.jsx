@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useInRouterContext, useLocation, useNavigate } from 'react-router-dom'
 import { CBadge, CButton } from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import { cilChevronLeft, cilChevronRight } from '@coreui/icons'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { getTabNotificationBadge } from '../../notifications/notificationRegistry'
 import { useWorkflowSetupStatus } from '../../workflows/WorkflowSetupStatusProvider'
@@ -54,12 +56,13 @@ const ModuleNavStripShell = ({
   className = '',
   pathname = '',
   navigate = null,
+  showScrollButtons = false,
 }) => {
   const stickyGap = 8
   const tabsRef = useRef(null)
   const [stickyTop, setStickyTop] = useState(0)
   const [hasScrolled, setHasScrolled] = useState(false)
-  const [tabScrollHint, setTabScrollHint] = useState(false)
+  const [tabScrollState, setTabScrollState] = useState({ start: false, end: false })
   const { getTabCount } = useAppNotifications()
   const { getWorkflowSetupCount } = useWorkflowSetupStatus()
   const auth = useContext(AuthContext)
@@ -140,9 +143,13 @@ const ModuleNavStripShell = ({
 
     const updateScrollHint = () => {
       const maxScrollLeft = Math.max(0, tabsNode.scrollWidth - tabsNode.clientWidth)
-      const hasHiddenEnd = tabsNode.scrollLeft < maxScrollLeft - 1
-
-      setTabScrollHint((current) => (current === hasHiddenEnd ? current : hasHiddenEnd))
+      const nextState = {
+        start: tabsNode.scrollLeft > 1,
+        end: tabsNode.scrollLeft < maxScrollLeft - 1,
+      }
+      setTabScrollState((current) =>
+        current.start === nextState.start && current.end === nextState.end ? current : nextState,
+      )
     }
 
     const scheduleScrollHintUpdate = () => {
@@ -207,6 +214,18 @@ const ModuleNavStripShell = ({
     }
   }
 
+  const scrollTabs = (direction) => {
+    const tabsNode = tabsRef.current
+    if (!tabsNode) return
+    const distance = Math.max(160, Math.round(tabsNode.clientWidth * 0.75))
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    tabsNode.scrollBy({ left: direction * distance, behavior: reduceMotion ? 'auto' : 'smooth' })
+  }
+
+  const hasTabOverflow = tabScrollState.start || tabScrollState.end
+
   return (
     <Container
       className={`module-nav-strip records-service-strip ${
@@ -216,77 +235,109 @@ const ModuleNavStripShell = ({
       aria-label={asNavigation ? ariaLabel : undefined}
     >
       <div className="module-nav-strip__inner records-service-strip__inner">
-        <div
-          className={`module-nav-strip__tabs-viewport records-service-strip__tabs-viewport ${
-            tabScrollHint ? 'has-scroll-hint-end' : ''
-          }`.trim()}
-        >
+        <div className="module-nav-strip__tab-row">
+          {showScrollButtons && hasTabOverflow ? (
+            <CButton
+              type="button"
+              color="light"
+              variant="ghost"
+              className="module-nav-strip__scroll-button module-nav-strip__scroll-button--start"
+              aria-label="Scroll tabs left"
+              title="Previous categories"
+              disabled={!tabScrollState.start}
+              onClick={() => scrollTabs(-1)}
+            >
+              <CIcon icon={cilChevronLeft} />
+            </CButton>
+          ) : null}
           <div
-            ref={tabsRef}
-            className="module-nav-strip__tabs records-service-strip__tabs"
-            role={asNavigation ? undefined : 'tablist'}
-            aria-label={ariaLabel}
+            className={`module-nav-strip__tabs-viewport records-service-strip__tabs-viewport ${
+              tabScrollState.start ? 'has-scroll-hint-start' : ''
+            } ${tabScrollState.end ? 'has-scroll-hint-end' : ''}`.trim()}
           >
-            {visibleTabs.map((tab) => {
-              const isActive = inferredActiveTab === tab.key
-              const notificationCount = tab.notificationTabKey
-                ? getTabCount(tab.notificationTabKey)
-                : 0
-              const notificationBadgeConfig = tab.notificationTabKey
-                ? getTabNotificationBadge(tab.notificationTabKey)
-                : null
-              const workflowSetupCount = tab.workflowSetupKey
-                ? getWorkflowSetupCount(tab.workflowSetupKey)
-                : 0
-              const badge =
-                tab.badge ||
-                (notificationCount > 0 && notificationBadgeConfig
-                  ? {
-                      ...notificationBadgeConfig,
-                      text: String(notificationCount),
-                    }
-                  : null) ||
-                (workflowSetupCount > 0
-                  ? {
-                      color: 'warning',
-                      text: String(workflowSetupCount),
-                      title: 'Workflow recipients not configured',
-                    }
-                  : null)
+            <div
+              ref={tabsRef}
+              className="module-nav-strip__tabs records-service-strip__tabs"
+              role={asNavigation ? undefined : 'tablist'}
+              aria-label={ariaLabel}
+            >
+              {visibleTabs.map((tab) => {
+                const isActive = inferredActiveTab === tab.key
+                const notificationCount = tab.notificationTabKey
+                  ? getTabCount(tab.notificationTabKey)
+                  : 0
+                const notificationBadgeConfig = tab.notificationTabKey
+                  ? getTabNotificationBadge(tab.notificationTabKey)
+                  : null
+                const workflowSetupCount = tab.workflowSetupKey
+                  ? getWorkflowSetupCount(tab.workflowSetupKey)
+                  : 0
+                const badge =
+                  tab.badge ||
+                  (notificationCount > 0 && notificationBadgeConfig
+                    ? {
+                        ...notificationBadgeConfig,
+                        text: String(notificationCount),
+                      }
+                    : null) ||
+                  (workflowSetupCount > 0
+                    ? {
+                        color: 'warning',
+                        text: String(workflowSetupCount),
+                        title: 'Workflow recipients not configured',
+                      }
+                    : null)
 
-              return (
-                <CButton
-                  key={tab.key}
-                  component={asNavigation ? 'a' : undefined}
-                  href={asNavigation ? tab.to : undefined}
-                  type={asNavigation ? undefined : 'button'}
-                  color="light"
-                  variant="ghost"
-                  data-api-busy-allow="true"
-                  className={`module-nav-strip__tab records-service-strip__tab border-0 ${
-                    isActive ? 'is-active fw-semibold' : 'text-muted fw-normal'
-                  }`}
-                  aria-current={isActive ? 'page' : undefined}
-                  aria-selected={asNavigation ? undefined : isActive}
-                  role={asNavigation ? undefined : 'tab'}
-                  onClick={(event) => handleTabClick(event, tab)}
-                >
-                  <span className="d-inline-flex align-items-center gap-2">
-                    <span>{tab.label}</span>
-                    {badge ? (
-                      <CBadge
-                        color={badge.color || 'primary'}
-                        className="rounded-pill"
-                        title={badge.title || undefined}
-                      >
-                        {badge.text}
-                      </CBadge>
-                    ) : null}
-                  </span>
-                </CButton>
-              )
-            })}
+                return (
+                  <CButton
+                    key={tab.key}
+                    component={asNavigation ? 'a' : undefined}
+                    href={asNavigation ? tab.to : undefined}
+                    type={asNavigation ? undefined : 'button'}
+                    color="light"
+                    variant="ghost"
+                    data-api-busy-allow="true"
+                    className={`module-nav-strip__tab records-service-strip__tab border-0 ${
+                      isActive ? 'is-active fw-semibold' : 'text-muted fw-normal'
+                    }`}
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-selected={asNavigation ? undefined : isActive}
+                    role={asNavigation ? undefined : 'tab'}
+                    onClick={(event) => handleTabClick(event, tab)}
+                  >
+                    <span className="d-inline-flex align-items-center gap-2">
+                      <span className="module-nav-strip__tab-label" title={tab.title || tab.label}>
+                        {tab.label}
+                      </span>
+                      {badge ? (
+                        <CBadge
+                          color={badge.color || 'primary'}
+                          className="rounded-pill"
+                          title={badge.title || undefined}
+                        >
+                          {badge.text}
+                        </CBadge>
+                      ) : null}
+                    </span>
+                  </CButton>
+                )
+              })}
+            </div>
           </div>
+          {showScrollButtons && hasTabOverflow ? (
+            <CButton
+              type="button"
+              color="light"
+              variant="ghost"
+              className="module-nav-strip__scroll-button module-nav-strip__scroll-button--end"
+              aria-label="Scroll tabs right"
+              title="Next categories"
+              disabled={!tabScrollState.end}
+              onClick={() => scrollTabs(1)}
+            >
+              <CIcon icon={cilChevronRight} />
+            </CButton>
+          ) : null}
         </div>
         {rightControls && (
           <div className="module-nav-strip__controls records-service-strip__controls">
@@ -309,6 +360,7 @@ ModuleNavStripShell.propTypes = {
   onTabChange: PropTypes.func,
   pathname: PropTypes.string,
   rightControls: PropTypes.node,
+  showScrollButtons: PropTypes.bool,
   tabs: PropTypes.arrayOf(
     PropTypes.shape({
       activePaths: PropTypes.arrayOf(PropTypes.string),
@@ -319,6 +371,7 @@ ModuleNavStripShell.propTypes = {
       }),
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
+      title: PropTypes.string,
       notificationTabKey: PropTypes.string,
       to: PropTypes.string,
       allowedRoles: PropTypes.arrayOf(PropTypes.string),

@@ -3,6 +3,7 @@ import {
   REQUIRED_COLUMNS,
   SERVICE_LABELS,
 } from '../config/allRecordsTableConfig'
+import { getSpecialRecordServiceLabel } from './specialRecordCategories'
 
 const BOOLEAN_FALSE_VALUES = new Set(['false', '0', 'no', 'off'])
 const BOOLEAN_TRUE_VALUES = new Set(['true', '1', 'yes', 'on'])
@@ -16,7 +17,10 @@ export const decodeHtmlEntities = (value = '') =>
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ')
 
-export const getServiceLabel = (record) => SERVICE_LABELS[record?.serviceTab] || 'Unknown'
+export const getServiceLabel = (record) =>
+  record?.serviceTab === 'special-tab'
+    ? getSpecialRecordServiceLabel(record)
+    : SERVICE_LABELS[record?.serviceTab] || 'Unknown'
 
 export const getAmountValue = (record) => Number(record?.amount ?? record?.grandTotal ?? 0)
 export const getCreatedTime = (record) => Date.parse(record?.dateCreated || 0)

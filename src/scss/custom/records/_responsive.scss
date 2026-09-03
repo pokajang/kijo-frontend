@@ -41,19 +41,22 @@
     background: linear-gradient(to right, transparent, var(--app-surface-raised) 72%);
   }
 
-  .records-service-strip__tabs-viewport.has-scroll-hint-end::before,
-  .module-nav-strip__tabs-viewport.has-scroll-hint-end::before {
+  .records-service-strip__tabs-viewport.has-scroll-hint-start::before,
+  .module-nav-strip__tabs-viewport.has-scroll-hint-start::before {
     content: '';
     position: absolute;
-    top: 50%;
-    right: 0.8rem;
+    inset: 0 auto 0 0;
     z-index: 1;
-    width: 0.45rem;
-    height: 0.45rem;
-    border-top: 2px solid var(--app-text-muted);
-    border-right: 2px solid var(--app-text-muted);
+    width: 42px;
     pointer-events: none;
-    transform: translateY(-50%) rotate(45deg);
+    border-radius: 14px 0 0 14px;
+    background: linear-gradient(to left, transparent, var(--app-surface-raised) 72%);
+  }
+
+  .module-nav-strip__scroll-button {
+    flex-basis: var(--app-mobile-touch-target);
+    height: var(--app-mobile-touch-target);
+    min-width: var(--app-mobile-touch-target) !important;
   }
 
   .records-service-strip__tab,

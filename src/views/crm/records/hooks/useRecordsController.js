@@ -10,7 +10,7 @@ import {
   getRecordListPath,
   getQuoteServiceFromRecordTab,
   isAggregateRecordTab,
-  recordTabOptions,
+  recordTabOptions as baseRecordTabOptions,
 } from '../config/recordTabs'
 import { recordTablesByTab } from '../config/recordTables'
 import { getMessage, isSuccess, postJsonCompat } from '../services/compatApi'
@@ -31,6 +31,12 @@ import { useAllTabRecordActions } from './useAllTabRecordActions'
 import { useRecordsFetch } from './useRecordsFetch'
 import { useRecordsModalWorkflow } from './useRecordsModalWorkflow'
 import { useRecordsTabRouting } from './useRecordsTabRouting'
+import { useSpecialRecordCategories } from './useSpecialRecordCategories'
+import {
+  buildRecordNavigationTabs,
+  getDefaultSpecialCategoryId,
+  matchesSpecialCategory,
+} from '../utils/specialRecordCategories'
 import { quoteApiUrl } from '../../quotes/quoteApi'
 import { fetchQuoteApprovals } from '../services/quoteApprovalService'
 import { dispatchAppNotificationsChanged } from '../../../../notifications/appNotificationEvents'
@@ -253,7 +259,22 @@ export const useRecordsController = () => {
   const currentUser = user
   const currentUserName = user?.full_name || user?.name || ''
   const currentUserEmail = user?.email || ''
-  const { activeTab, handleTabChange } = useRecordsTabRouting()
+  const { activeTab, activeCategoryId, activeNavigationTab, handleTabChange } =
+    useRecordsTabRouting()
+  const {
+    categories: specialCategoryFacets,
+    isLoading: specialCategoriesLoading,
+    error: specialCategoriesError,
+    reload: reloadSpecialCategories,
+  } = useSpecialRecordCategories()
+  const recordTabOptions = useMemo(
+    () => buildRecordNavigationTabs(baseRecordTabOptions, specialCategoryFacets),
+    [specialCategoryFacets],
+  )
+  const defaultSpecialCategoryId = useMemo(
+    () => getDefaultSpecialCategoryId(specialCategoryFacets),
+    [specialCategoryFacets],
+  )
   const isAggregateTab = isAggregateRecordTab(activeTab)
   const [emailConfirmRecord, setEmailConfirmRecord] = useState(null)
   const [emailDraftSubject, setEmailDraftSubject] = useState('')
@@ -284,8 +305,14 @@ export const useRecordsController = () => {
   const { quotes, setQuotes, quotesLoading, fetchQuotes } = useRecordsFetch(activeTab)
   const quoteLookupByServiceAndIdRef = useRef(new Map())
   const refreshQuotesInPlace = useCallback(
-    (tabKey = activeTab) => fetchQuotes(tabKey, { showLoader: false }),
-    [activeTab, fetchQuotes],
+    async (tabKey = activeTab) => {
+      const nextQuotes = await fetchQuotes(tabKey, { showLoader: false })
+      if (tabKey === 'special-tab' || isAggregateRecordTab(tabKey)) {
+        await reloadSpecialCategories()
+      }
+      return nextQuotes
+    },
+    [activeTab, fetchQuotes, reloadSpecialCategories],
   )
   const quoteLookupByServiceAndId = useMemo(() => {
     return buildQuoteLookupByServiceAndIdFromRows(quotes, activeTab, isAggregateTab)
@@ -412,19 +439,48 @@ export const useRecordsController = () => {
       activeTab === 'my-tab'
         ? enriched.filter((quote) => isQuoteOwnedByUser(quote, user))
         : enriched
+    const categoryScoped =
+      activeTab === 'special-tab'
+        ? owned.filter((quote) =>
+            matchesSpecialCategory(quote, activeCategoryId, defaultSpecialCategoryId),
+          )
+        : owned
     const approvalScope = new URLSearchParams(location.search).get('approval_scope')
     return approvalScope === 'mine'
-      ? owned.filter((quote) => quote.approval?.status === 'pending' && quote.approval?.can_decide)
-      : owned
+      ? categoryScoped.filter(
+          (quote) => quote.approval?.status === 'pending' && quote.approval?.can_decide,
+        )
+      : categoryScoped
   }, [
     activeTab,
+    activeCategoryId,
     approvalItems,
     approvalStatusUnavailable,
     enrichApprovalRecord,
     isAggregateTab,
     location.search,
     quotes,
+    defaultSpecialCategoryId,
     user,
+  ])
+
+  useEffect(() => {
+    if (
+      activeCategoryId &&
+      !specialCategoriesLoading &&
+      !specialCategoriesError &&
+      !specialCategoryFacets.some(
+        (category) => Number(category.categoryId) === Number(activeCategoryId),
+      )
+    ) {
+      handleTabChange('special-tab')
+    }
+  }, [
+    activeCategoryId,
+    handleTabChange,
+    specialCategoriesError,
+    specialCategoriesLoading,
+    specialCategoryFacets,
   ])
 
   const pendingApprovals = useMemo(
@@ -1344,6 +1400,8 @@ export const useRecordsController = () => {
     currentUserEmail,
     currentUser,
     activeTab,
+    activeCategoryId,
+    activeNavigationTab,
     handleTabChange,
     recordTabOptions,
     ActiveTableComponent,

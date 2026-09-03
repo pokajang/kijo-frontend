@@ -12,6 +12,7 @@ import {
   getStatusTone,
   getSubject,
 } from '../utils/allRecordsTableUtils'
+import { matchesRecordServiceFilter } from '../utils/specialRecordCategories'
 
 export const useDerivedRecords = ({
   records,
@@ -82,7 +83,7 @@ export const useDerivedRecords = ({
     })
 
     if (filters.serviceFilter === 'all') return base
-    return base.filter((record) => record?.serviceTab === filters.serviceFilter)
+    return base.filter((record) => matchesRecordServiceFilter(record, filters.serviceFilter))
   }, [enrichedRecords, filters])
 
   const sortedRecords = useMemo(() => {
@@ -165,9 +166,12 @@ export const useDerivedRecords = ({
   if (filters.statusFilter !== 'all')
     activeChips.push({ key: 'status', label: `Status: ${filters.statusFilter}` })
   if (filters.serviceFilter !== 'all') {
+    const matchingRecord = enrichedRecords.find((record) =>
+      matchesRecordServiceFilter(record, filters.serviceFilter),
+    )
     activeChips.push({
       key: 'service',
-      label: `Service: ${getServiceLabel({ serviceTab: filters.serviceFilter })}`,
+      label: `Service: ${matchingRecord ? getServiceLabel(matchingRecord) : 'Unknown'}`,
     })
   }
   if (filters.createdByFilter !== 'all')

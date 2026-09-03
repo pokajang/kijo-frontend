@@ -3,7 +3,7 @@ export const SERVICE_LABELS = {
   'ih-tab': 'Industrial Hygiene',
   'manpower-tab': 'Manpower Supply',
   'equipment-tab': 'Equipment Supply',
-  'special-tab': 'Special',
+  'special-tab': 'Special Service',
 }
 
 export const COLUMN_STORAGE_KEY = 'crm.records.all.visible-columns.v3'

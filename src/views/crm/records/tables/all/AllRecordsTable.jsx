@@ -14,14 +14,21 @@ import {
   LARGE_DATASET_THRESHOLD,
   PAGE_SIZE_OPTIONS,
   REQUIRED_COLUMNS,
+  SERVICE_LABELS,
   columnWidths,
 } from '../../config/allRecordsTableConfig'
 import { recordsDesktopBreakpoint, recordsTruncateStyle } from '../../config/recordsTableUiShared'
 import {
   escapeCsvValue,
+  getServiceLabel,
   getProjectOutcomeLabel,
   truncateFront,
 } from '../../utils/allRecordsTableUtils'
+import {
+  getRecordSpecialCategoryId,
+  getSpecialCategoryTabKey,
+  isDefaultSpecialRecord,
+} from '../../utils/specialRecordCategories'
 import { useRecordTableState } from '../../hooks/useRecordTableState'
 import { useDerivedRecords } from '../../hooks/useDerivedRecords'
 import { useColumnPreferences } from '../../../../../hooks/datatable'
@@ -250,6 +257,22 @@ const AllRecordsTable = ({
   const creatorOptions = useMemo(() => getIssuerCodeOptions(records), [records])
   const inquirySourceOptions = useMemo(() => getInquirySourceOptions(records), [records])
   const yearOptions = useMemo(() => getYearOptions(records, currentYear), [records, currentYear])
+  const serviceFilterOptions = useMemo(() => {
+    const baseOptions = Object.entries(SERVICE_LABELS).map(([value, label]) => ({ value, label }))
+    const customOptions = new Map()
+    records.forEach((record) => {
+      if (record?.serviceTab !== 'special-tab' || isDefaultSpecialRecord(record)) return
+      const categoryId = getRecordSpecialCategoryId(record)
+      if (!categoryId) return
+      customOptions.set(getSpecialCategoryTabKey(categoryId), getServiceLabel(record))
+    })
+    return [
+      ...baseOptions,
+      ...[...customOptions.entries()]
+        .map(([value, label]) => ({ value, label }))
+        .sort((left, right) => left.label.localeCompare(right.label)),
+    ]
+  }, [records])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -728,6 +751,7 @@ const AllRecordsTable = ({
         setYearFilter={setYearFilter}
         serviceFilter={serviceFilter}
         setServiceFilter={setServiceFilter}
+        serviceOptions={serviceFilterOptions}
         followUpFilter={followUpFilter}
         setFollowUpFilter={setFollowUpFilter}
         followUpRecency={followUpRecency}

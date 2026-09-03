@@ -19,6 +19,8 @@ const RecordsPage = () => {
   const navigate = useNavigate()
   const {
     activeTab,
+    activeCategoryId,
+    activeNavigationTab,
     handleTabChange,
     recordTabOptions,
     ActiveTableComponent,
@@ -87,7 +89,11 @@ const RecordsPage = () => {
   const returnTo = `${location.pathname}${location.search}`
   const initialQuoteService = getQuoteServiceFromRecordTab(activeTab)
   const createQuotePath = initialQuoteService
-    ? `/crm/quotes?service=${encodeURIComponent(initialQuoteService)}`
+    ? `/crm/quotes?service=${encodeURIComponent(initialQuoteService)}${
+        initialQuoteService === 'special' && activeCategoryId
+          ? `&categoryId=${encodeURIComponent(activeCategoryId)}`
+          : ''
+      }`
     : '/crm/quotes'
 
   const handleRecordsTabChange = (...args) => {
@@ -101,9 +107,10 @@ const RecordsPage = () => {
         <CCol xs={12}>
           <RecordsServiceStrip
             tabs={recordTabOptions}
-            activeTab={activeTab}
+            activeTab={activeNavigationTab || activeTab}
             onTabChange={handleRecordsTabChange}
             ariaLabel="Quotation record groups"
+            showScrollButtons
           />
           {pendingApprovals.length > 0 && (
             <CAlert

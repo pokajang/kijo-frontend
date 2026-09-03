@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import RecordsPage from './RecordsPage'
@@ -117,10 +117,16 @@ const mockController = (overrides = {}) => ({
   ...overrides,
 })
 
+const LocationProbe = () => {
+  const location = useLocation()
+  return <div data-testid="location-probe">{`${location.pathname}${location.search}`}</div>
+}
+
 const renderPage = () =>
   render(
     <MemoryRouter>
       <RecordsPage />
+      <LocationProbe />
     </MemoryRouter>,
   )
 
@@ -223,5 +229,30 @@ describe('RecordsPage', () => {
     expect(screen.queryByTestId('crm-search-row')).not.toBeInTheDocument()
     expect(screen.getByTestId('crm-stats-row')).toBeInTheDocument()
     expect(screen.getByText('Records table')).toBeInTheDocument()
+  })
+
+  it('carries the selected custom category into quotation creation', () => {
+    useRecordsController.mockReturnValue(
+      mockController({
+        activeTab: 'special-tab',
+        activeCategoryId: 34,
+        activeNavigationTab: 'special-category:34',
+        recordTabOptions: [
+          { key: 'special-tab', label: 'Special Service' },
+          { key: 'special-category:34', label: 'Environment' },
+        ],
+      }),
+    )
+
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Environment' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Quotation' }))
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(
+      '/crm/quotes?service=special&categoryId=34',
+    )
   })
 })

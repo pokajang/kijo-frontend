@@ -1,5 +1,5 @@
 import React from 'react'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -276,5 +276,41 @@ describe('ModuleNavStrip', () => {
 
     expect(isModuleTabNestedRoute(tab, '/pipeline/call-records')).toBe(false)
     expect(isModuleTabNestedRoute(tab, '/pipeline/call-records/42')).toBe(true)
+  })
+
+  it('provides accessible buttons for overflowing tab lists', async () => {
+    render(
+      <ModuleNavStrip
+        ariaLabel="Quotation categories"
+        showScrollButtons
+        tabs={[
+          { key: 'all', label: 'All' },
+          { key: 'environment', label: 'Environment' },
+          { key: 'engineering', label: 'Engineering' },
+        ]}
+      />,
+    )
+
+    const tabs = screen.getByRole('tablist', { name: 'Quotation categories' })
+    Object.defineProperties(tabs, {
+      clientWidth: { configurable: true, value: 240 },
+      scrollWidth: { configurable: true, value: 720 },
+      scrollLeft: { configurable: true, writable: true, value: 0 },
+    })
+    tabs.scrollBy = vi.fn()
+    fireEvent(window, new Event('resize'))
+
+    const nextButton = await screen.findByRole('button', {
+      name: 'Scroll tabs right',
+    })
+    expect(nextButton).toBeEnabled()
+    fireEvent.click(nextButton)
+    expect(tabs.scrollBy).toHaveBeenCalledWith({ left: 180, behavior: 'smooth' })
+
+    tabs.scrollLeft = 200
+    fireEvent.scroll(tabs)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Scroll tabs left' })).toBeEnabled(),
+    )
   })
 })
