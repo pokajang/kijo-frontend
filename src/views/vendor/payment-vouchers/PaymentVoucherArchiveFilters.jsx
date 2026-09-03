@@ -13,7 +13,7 @@ const formatMonth = (value) => {
 const PaymentVoucherArchiveFilters = ({ filters, onChange, onClear, loading }) => (
   <section aria-label="Payment voucher filters">
     <div className="row g-3 align-items-end">
-      <div className="col-12 col-lg-6">
+      <div className="col-12 col-lg-5">
         <CFormLabel htmlFor="voucher-search">Search vouchers</CFormLabel>
         <CFormInput
           id="voucher-search"
@@ -23,7 +23,7 @@ const PaymentVoucherArchiveFilters = ({ filters, onChange, onClear, loading }) =
           onChange={(event) => onChange('search', event.target.value)}
         />
       </div>
-      <div className="col-12 col-sm-6 col-lg-3">
+      <div className="col-12 col-sm-6 col-lg-2">
         <CFormLabel htmlFor="voucher-month">Issuance month</CFormLabel>
         <CFormInput
           id="voucher-month"
@@ -46,11 +46,25 @@ const PaymentVoucherArchiveFilters = ({ filters, onChange, onClear, loading }) =
           <option value="voided">Voided</option>
         </CFormSelect>
       </div>
+      <div className="col-12 col-sm-6 col-lg-2">
+        <CFormLabel htmlFor="voucher-evidence-status">Evidence</CFormLabel>
+        <CFormSelect
+          id="voucher-evidence-status"
+          value={filters.evidenceStatus}
+          onChange={(event) => onChange('evidenceStatus', event.target.value)}
+        >
+          <option value="all">All evidence</option>
+          <option value="complete">Complete</option>
+          <option value="missing">Missing</option>
+          <option value="not_required">Not yet required</option>
+        </CFormSelect>
+      </div>
     </div>
     <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
       <div className="small text-body-secondary" aria-live="polite">
         {formatMonth(filters.month)}
         {filters.status !== 'all' ? ` · ${filters.status.replaceAll('_', ' ')}` : ''}
+        {filters.evidenceStatus !== 'all' ? ` · evidence ${filters.evidenceStatus}` : ''}
       </div>
       <CButton
         type="button"
@@ -58,7 +72,13 @@ const PaymentVoucherArchiveFilters = ({ filters, onChange, onClear, loading }) =
         color="secondary"
         variant="outline"
         onClick={onClear}
-        disabled={loading || (!filters.search && !filters.month && filters.status === 'all')}
+        disabled={
+          loading ||
+          (!filters.search &&
+            !filters.month &&
+            filters.status === 'all' &&
+            filters.evidenceStatus === 'all')
+        }
       >
         Clear filters
       </CButton>
@@ -71,6 +91,7 @@ PaymentVoucherArchiveFilters.propTypes = {
     month: PropTypes.string.isRequired,
     search: PropTypes.string.isRequired,
     status: PropTypes.string.isRequired,
+    evidenceStatus: PropTypes.string.isRequired,
   }).isRequired,
   loading: PropTypes.bool,
   onChange: PropTypes.func.isRequired,

@@ -331,13 +331,14 @@ const AppDialogProvider = ({ children }) => {
         focus={currentType !== 'choice'}
         keyboard={false}
         size={resolvedSize}
+        aria-labelledby="app-dialog-title"
       >
         <CModalHeader
           closeButton={
             !asyncActionActive && (currentType !== 'choice' || Boolean(choiceDismissAction))
           }
         >
-          <CModalTitle>{title}</CModalTitle>
+          <CModalTitle id="app-dialog-title">{title}</CModalTitle>
         </CModalHeader>
         <CModalBody>
           <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>

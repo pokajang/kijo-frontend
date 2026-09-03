@@ -17,6 +17,8 @@ export const getVendorPaymentPermissions = (payment = {}) => ({
   canViewVoucher: capability(payment, 'can_view_voucher'),
   canDownloadVoucher: capability(payment, 'can_download_voucher'),
   canRecordPayment: capability(payment, 'can_record_payment', 'can_mark_paid'),
+  canViewPaymentEvidence: capability(payment, 'can_view_payment_evidence'),
+  canManagePaymentEvidence: capability(payment, 'can_manage_payment_evidence'),
 })
 
 export const getVendorPaymentStage = (payment = {}) => {

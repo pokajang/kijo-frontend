@@ -44,6 +44,12 @@ describe('RecordVendorPaymentModal', () => {
     fireEvent.change(screen.getByLabelText(/Payment remarks/), {
       target: { value: 'Bank keyed' },
     })
+    fireEvent.paste(document.body, {
+      clipboardData: {
+        files: [new File(['image'], 'clipboard.png', { type: 'image/png' })],
+      },
+    })
+    expect(screen.getByText(/Pasted screenshot/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Record Payment' }))
 
     await waitFor(() =>
@@ -54,6 +60,7 @@ describe('RecordVendorPaymentModal', () => {
           method: 'Online Transfer',
           referenceNumber: 'TXN-123',
           remarks: 'Bank keyed',
+          proofs: [expect.objectContaining({ captureMethod: 'paste' })],
         }),
         'payment-key',
       ),

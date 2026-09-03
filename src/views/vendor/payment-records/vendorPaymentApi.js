@@ -47,13 +47,55 @@ export const recordVendorPayment = async (payment, values, requestKey) => {
   body.append('remarks', values.remarks || '')
   body.append('version', String(Number(payment.version || 1)))
   body.append('idempotency_key', requestKey)
-  if (values.proof) body.append('proof', values.proof)
+  const proofs =
+    values.proofs || (values.proof ? [{ file: values.proof, captureMethod: 'upload' }] : [])
+  proofs.forEach(({ file, captureMethod }) => {
+    body.append('proofs[]', file)
+    body.append('proof_capture_methods[]', captureMethod || 'upload')
+  })
 
   return apiJson(`${API_BASE}vendor-payments/${paymentId}/transactions`, {
     method: 'POST',
     credentials: 'include',
     body,
   })
+}
+
+export const appendVendorPaymentProofs = (paymentId, transactionId, proofs, requestKey) => {
+  const body = new FormData()
+  proofs.forEach(({ file, captureMethod }) => {
+    body.append('proofs[]', file)
+    body.append('proof_capture_methods[]', captureMethod || 'upload')
+  })
+  body.append('idempotency_key', requestKey)
+  return apiJson(`${API_BASE}vendor-payments/${paymentId}/transactions/${transactionId}/proofs`, {
+    method: 'POST',
+    credentials: 'include',
+    body,
+  })
+}
+
+export const supersedeVendorPaymentProof = (
+  paymentId,
+  transactionId,
+  proofId,
+  proof,
+  reason,
+  requestKey,
+) => {
+  const body = new FormData()
+  body.append('proofs[]', proof.file)
+  body.append('proof_capture_methods[]', proof.captureMethod || 'upload')
+  body.append('reason', reason)
+  body.append('idempotency_key', requestKey)
+  return apiJson(
+    `${API_BASE}vendor-payments/${paymentId}/transactions/${transactionId}/proofs/${proofId}/supersede`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body,
+    },
+  )
 }
 
 export const fetchVendorPaymentVouchers = (params = {}) =>

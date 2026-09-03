@@ -22,9 +22,14 @@ import {
   newVendorPaymentRequestKey,
   recordVendorPayment,
 } from '../payment-records/vendorPaymentApi'
+import dialog from '../../../components/dialog/dialogService'
+import PaymentProofCapture, {
+  MAX_PAYMENT_PROOF_SIZE,
+  MAX_PAYMENT_PROOF_TOTAL,
+  PAYMENT_PROOF_TYPES,
+} from './payment-proof/PaymentProofCapture'
 
 const today = () => toLocalDateInputValue()
-const ALLOWED_PROOF_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png'])
 
 const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => {
   const balance = useMemo(() => getVendorPaymentBalance(payment), [payment])
@@ -33,13 +38,14 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
   const methodInputRef = useRef(null)
   const referenceInputRef = useRef(null)
   const proofInputRef = useRef(null)
+  const remarksInputRef = useRef(null)
   const [values, setValues] = useState({
     amount: '',
     paidDate: today(),
     method: '',
     referenceNumber: '',
     remarks: '',
-    proof: null,
+    proofs: [],
   })
   const [requestKey, setRequestKey] = useState(() => newVendorPaymentRequestKey('vendor-payment'))
   const [submitting, setSubmitting] = useState(false)
@@ -54,7 +60,7 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
       method: payment?.method || 'Online Transfer',
       referenceNumber: '',
       remarks: '',
-      proof: null,
+      proofs: [],
     })
     setRequestKey(newVendorPaymentRequestKey('vendor-payment'))
     setError('')
@@ -66,7 +72,7 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
   const update = (key) => (event) => {
     setValues((current) => ({
       ...current,
-      [key]: key === 'proof' ? event.target.files?.[0] || null : event.target.value,
+      [key]: event.target.value,
     }))
     setFieldErrors((current) => ({ ...current, [key]: '' }))
     setError('')
@@ -88,11 +94,20 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
     if (!values.referenceNumber.trim()) {
       return { field: 'referenceNumber', message: 'Transaction reference is required.' }
     }
-    if (values.proof && !ALLOWED_PROOF_TYPES.has(values.proof.type)) {
-      return { field: 'proof', message: 'Transfer proof must be a PDF, JPG, or PNG file.' }
+    if (values.method !== 'Cash' && values.proofs.length === 0) {
+      return { field: 'proofs', message: 'Attach payment evidence for this payment method.' }
     }
-    if (values.proof && values.proof.size > 5 * 1024 * 1024) {
-      return { field: 'proof', message: 'Transfer proof must not exceed 5 MB.' }
+    if (values.method === 'Cash' && values.proofs.length === 0 && !values.remarks.trim()) {
+      return { field: 'remarks', message: 'Add a cash payment note when no evidence is attached.' }
+    }
+    if (values.proofs.some(({ file }) => !PAYMENT_PROOF_TYPES.has(file.type))) {
+      return { field: 'proofs', message: 'Evidence must be a PDF, JPG, or PNG file.' }
+    }
+    if (values.proofs.some(({ file }) => file.size > MAX_PAYMENT_PROOF_SIZE)) {
+      return { field: 'proofs', message: 'Each evidence file must not exceed 5 MB.' }
+    }
+    if (values.proofs.reduce((total, { file }) => total + file.size, 0) > MAX_PAYMENT_PROOF_TOTAL) {
+      return { field: 'proofs', message: 'Payment evidence cannot exceed 20 MB in total.' }
     }
     return null
   }
@@ -106,7 +121,8 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
         paidDate: dateInputRef,
         method: methodInputRef,
         referenceNumber: referenceInputRef,
-        proof: proofInputRef,
+        proofs: proofInputRef,
+        remarks: remarksInputRef,
       }
       refs[validationError.field]?.current?.focus()
       return
@@ -127,10 +143,21 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
     }
   }
 
+  const handleClose = async () => {
+    if (submitting) return
+    if (
+      values.proofs.length > 0 &&
+      !(await dialog.confirm('Discard the payment evidence currently attached to this form?'))
+    ) {
+      return
+    }
+    onClose()
+  }
+
   return (
     <CModal
       visible={visible}
-      onClose={submitting ? undefined : onClose}
+      onClose={submitting ? undefined : handleClose}
       backdrop="static"
       size="lg"
       scrollable
@@ -255,40 +282,43 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
             )}
           </div>
           <div className="col-12">
-            <CFormLabel htmlFor="vendor-payment-proof">
-              Transfer proof <span className="text-body-secondary">(optional)</span>
+            <CFormLabel>
+              Payment evidence{' '}
+              {values.method === 'Cash' && <span className="text-body-secondary">(optional)</span>}
             </CFormLabel>
-            <CFormInput
-              ref={proofInputRef}
-              id="vendor-payment-proof"
-              type="file"
-              accept="application/pdf,image/jpeg,image/png"
-              onChange={update('proof')}
+            <PaymentProofCapture
+              inputRef={proofInputRef}
+              files={values.proofs}
               disabled={submitting}
-              invalid={Boolean(fieldErrors.proof)}
-              aria-describedby={`vendor-payment-proof-help${fieldErrors.proof ? ' vendor-payment-proof-error' : ''}`}
+              enabled={visible}
+              error={fieldErrors.proofs}
+              onChange={(proofs) => {
+                setValues((current) => ({ ...current, proofs }))
+                setFieldErrors((current) => ({ ...current, proofs: '' }))
+                setError('')
+              }}
             />
-            <div id="vendor-payment-proof-help" className="form-text">
-              PDF, JPG, or PNG up to 5 MB.
-            </div>
-            {fieldErrors.proof && (
-              <CFormFeedback id="vendor-payment-proof-error" invalid>
-                {fieldErrors.proof}
-              </CFormFeedback>
-            )}
           </div>
           <div className="col-12">
             <CFormLabel htmlFor="vendor-payment-remarks">
               Payment remarks <span className="text-body-secondary">(optional)</span>
             </CFormLabel>
             <CFormTextarea
+              ref={remarksInputRef}
               id="vendor-payment-remarks"
               rows={3}
               maxLength={2000}
               value={values.remarks}
               onChange={update('remarks')}
               disabled={submitting}
+              invalid={Boolean(fieldErrors.remarks)}
+              aria-describedby={fieldErrors.remarks ? 'vendor-payment-remarks-error' : undefined}
             />
+            {fieldErrors.remarks && (
+              <CFormFeedback id="vendor-payment-remarks-error" invalid>
+                {fieldErrors.remarks}
+              </CFormFeedback>
+            )}
           </div>
         </div>
       </CModalBody>
@@ -297,7 +327,7 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
           size="sm"
           color="secondary"
           variant="outline"
-          onClick={onClose}
+          onClick={handleClose}
           disabled={submitting}
         >
           Cancel

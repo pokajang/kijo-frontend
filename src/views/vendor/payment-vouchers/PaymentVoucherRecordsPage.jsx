@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { CAlert, CButton, CCard, CCardBody, CCardHeader, CSpinner } from '@coreui/react'
+import { CAlert, CButton, CCard, CCardBody, CCardHeader, CFormCheck, CSpinner } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import ModuleNavStrip from '../../../components/navigation/ModuleNavStrip'
 import { vendorModuleTabs } from '../../../components/navigation/moduleNavConfigs'
@@ -18,7 +18,12 @@ import {
 } from './paymentVoucherArchiveModel'
 
 const API_BASE = import.meta.env.VITE_API_BASE
-const initialFilters = () => ({ search: '', month: toLocalMonthInputValue(), status: 'all' })
+const initialFilters = () => ({
+  search: '',
+  month: toLocalMonthInputValue(),
+  status: 'all',
+  evidenceStatus: 'all',
+})
 
 const PaymentVoucherRecordsPage = () => {
   const navigate = useNavigate()
@@ -31,6 +36,7 @@ const PaymentVoucherRecordsPage = () => {
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
   const [downloadingId, setDownloadingId] = useState(null)
+  const [includeEvidence, setIncludeEvidence] = useState(false)
   const [error, setError] = useState('')
 
   const loadRecords = useCallback(async () => {
@@ -43,6 +49,7 @@ const PaymentVoucherRecordsPage = () => {
         ...(filters.search.trim() ? { search: filters.search.trim() } : {}),
         ...(filters.month ? { month: filters.month } : {}),
         status: filters.status,
+        evidence_status: filters.evidenceStatus,
       })
       setRecords(Array.isArray(payload?.data) ? payload.data : [])
       setPagination(payload?.pagination || { current_page: 1, last_page: 1, total: 0 })
@@ -52,7 +59,7 @@ const PaymentVoucherRecordsPage = () => {
     } finally {
       setLoading(false)
     }
-  }, [filters.month, filters.search, filters.status, page])
+  }, [filters.evidenceStatus, filters.month, filters.search, filters.status, page])
 
   useEffect(() => {
     const timer = setTimeout(loadRecords, filters.search ? 250 : 0)
@@ -62,11 +69,13 @@ const PaymentVoucherRecordsPage = () => {
   useEffect(() => {
     setPage(1)
     setSelected(new Set())
-  }, [filters.month, filters.search, filters.status])
+  }, [filters.evidenceStatus, filters.month, filters.search, filters.status])
 
   const pageIds = useMemo(() => records.map((record) => Number(record.id)), [records])
   const allSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
-  const hasFilters = Boolean(filters.search || filters.month || filters.status !== 'all')
+  const hasFilters = Boolean(
+    filters.search || filters.month || filters.status !== 'all' || filters.evidenceStatus !== 'all',
+  )
 
   const toggleOne = (voucherId) => {
     const id = Number(voucherId)
@@ -109,7 +118,10 @@ const PaymentVoucherRecordsPage = () => {
         init: {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/zip' },
-          body: JSON.stringify({ voucher_ids: Array.from(selected) }),
+          body: JSON.stringify({
+            voucher_ids: Array.from(selected),
+            include_evidence: includeEvidence,
+          }),
         },
         expectedType: 'zip',
         fallbackFilename: `payment-vouchers-${filters.month || toLocalMonthInputValue()}.zip`,
@@ -141,7 +153,8 @@ const PaymentVoucherRecordsPage = () => {
   }
 
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
-  const clearFilters = () => setFilters({ search: '', month: '', status: 'all' })
+  const clearFilters = () =>
+    setFilters({ search: '', month: '', status: 'all', evidenceStatus: 'all' })
 
   return (
     <>
@@ -179,9 +192,18 @@ const PaymentVoucherRecordsPage = () => {
           />
 
           {selected.size > 0 && (
-            <div className="vendor-payment-voucher-selection mt-3" role="status">
-              {selected.size} selected across viewed pages (maximum 100). Bulk downloads use the
-              paid copy when available and retain void markings.
+            <div className="vendor-payment-voucher-selection mt-3">
+              <div role="status">
+                {selected.size} selected across viewed pages (maximum 100). Bulk downloads use the
+                paid copy when available and retain void markings.
+              </div>
+              <CFormCheck
+                className="mt-2"
+                id="voucher-include-evidence"
+                label="Include payment evidence and audit manifest"
+                checked={includeEvidence}
+                onChange={(event) => setIncludeEvidence(event.target.checked)}
+              />
             </div>
           )}
           {error && (

@@ -15,6 +15,7 @@ import { getVendorPaymentCurrentStageLabel } from '../payment-records/vendorPaym
 import VendorPaymentInvoicePreview from './VendorPaymentInvoicePreview'
 import GeneratePaymentVoucherDialog from './GeneratePaymentVoucherDialog'
 import RecordVendorPaymentModal from './RecordVendorPaymentModal'
+import PaymentTransactionHistory from './payment-proof/PaymentTransactionHistory'
 import VendorPaymentNextActionPanel from './VendorPaymentNextActionPanel'
 import VendorPaymentVoucherPanel from './VendorPaymentVoucherPanel'
 import VendorPaymentVoucherPreview from './VendorPaymentVoucherPreview'
@@ -224,7 +225,7 @@ const PaymentHistoryDetailPage = () => {
         actions={actions}
         emptyMessage="Payment record not found."
       >
-        <VendorPaymentNextActionPanel payment={payment} onAction={handleNextAction} />
+        {payment && <VendorPaymentNextActionPanel payment={payment} onAction={handleNextAction} />}
         {(permissions.canViewVoucher || permissions.canGenerateVoucher) && (
           <VendorPaymentVoucherPanel
             payment={payment}
@@ -273,15 +274,16 @@ const PaymentHistoryDetailPage = () => {
             {
               key: 'transactions',
               label: 'Payment Transactions',
-              value:
-                payment?.transactions?.length > 0
-                  ? payment.transactions
-                      .map(
-                        (transaction) =>
-                          `${transaction.paid_date}: ${formatMoney(transaction.amount)} · ${transaction.reference_number}${transaction.reversed_at ? ' (reversed)' : ''}`,
-                      )
-                      .join('\n')
-                  : 'No transactions recorded',
+              value: payment ? (
+                <PaymentTransactionHistory
+                  payment={payment}
+                  canView={permissions.canViewPaymentEvidence}
+                  canManage={permissions.canManagePaymentEvidence}
+                  onChanged={loadPayment}
+                />
+              ) : (
+                '-'
+              ),
               xs: 12,
             },
             {

@@ -14,6 +14,13 @@ import { DataTableStatusBadge } from '../../../components/datatable'
 import { formatMoney } from '../../../utils/formatters/numberFormatters'
 import { formatVoucherIssuedDate, getVoucherStatusPresentation } from './paymentVoucherArchiveModel'
 
+const evidencePresentation = (record) => {
+  if (record.evidence_status === 'complete') return { label: 'Complete', tone: 'success' }
+  if (record.evidence_status === 'not_required')
+    return { label: 'Not yet required', tone: 'secondary' }
+  return { label: 'Missing', tone: 'warning' }
+}
+
 const VoucherActions = ({
   record,
   onPreview,
@@ -74,6 +81,7 @@ const PaymentVoucherArchiveList = ({
               Amount
             </CTableHeaderCell>
             <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+            <CTableHeaderCell scope="col">Evidence</CTableHeaderCell>
             <CTableHeaderCell scope="col" className="text-end">
               Actions
             </CTableHeaderCell>
@@ -82,6 +90,7 @@ const PaymentVoucherArchiveList = ({
         <CTableBody>
           {records.map((record) => {
             const status = getVoucherStatusPresentation(record)
+            const evidence = evidencePresentation(record)
             return (
               <CTableRow key={record.id}>
                 <CTableDataCell>
@@ -105,6 +114,13 @@ const PaymentVoucherArchiveList = ({
                 <CTableDataCell>
                   <DataTableStatusBadge tone={status.tone}>{status.label}</DataTableStatusBadge>
                 </CTableDataCell>
+                <CTableDataCell>
+                  <DataTableStatusBadge tone={evidence.tone}>{evidence.label}</DataTableStatusBadge>
+                  <div className="small text-body-secondary mt-1">
+                    {record.evidence_transaction_count || 0}/{record.transaction_count || 0}{' '}
+                    transactions
+                  </div>
+                </CTableDataCell>
                 <CTableDataCell className="text-end">
                   <VoucherActions
                     record={record}
@@ -123,6 +139,7 @@ const PaymentVoucherArchiveList = ({
     <div className="d-lg-none vendor-payment-voucher-mobile-list">
       {records.map((record) => {
         const status = getVoucherStatusPresentation(record)
+        const evidence = evidencePresentation(record)
         return (
           <article key={record.id} className="vendor-payment-voucher-mobile-card">
             <div className="d-flex align-items-start gap-3">
@@ -150,6 +167,13 @@ const PaymentVoucherArchiveList = ({
               <div>
                 <dt>Amount</dt>
                 <dd>{formatMoney(record.amount)}</dd>
+              </div>
+              <div>
+                <dt>Evidence</dt>
+                <dd>
+                  {evidence.label} ({record.evidence_transaction_count || 0}/
+                  {record.transaction_count || 0})
+                </dd>
               </div>
               <div className="vendor-payment-voucher-mobile-card__wide">
                 <dt>Project / purpose</dt>
