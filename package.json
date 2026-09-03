@@ -29,6 +29,7 @@
     "e2e:client-first-touch-notifications": "node scripts/client-first-touch-notification-workflow-e2e.mjs",
     "uat:equipment-word": "node scripts/equipment-word-uat.mjs",
     "uat:commercial-word": "node scripts/commercial-word-uat.mjs",
+    "uat:dashboard-custom-category": "node scripts/dashboard-custom-category-uat.mjs",
     "smoke:ih-pricing": "node scripts/ih-pricing-flow-smoke.mjs",
     "smoke:ih-commercial": "node scripts/ih-commercial-lifecycle-smoke.mjs",
     "smoke:equipment-remarks": "node scripts/equipment-quotation-remarks-smoke.mjs",
