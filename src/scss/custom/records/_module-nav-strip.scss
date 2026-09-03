@@ -33,14 +33,7 @@
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
   width: 100%;
-}
-
-.records-service-strip__tabs::-webkit-scrollbar,
-.module-nav-strip__tabs::-webkit-scrollbar {
-  display: none;
 }
 
 .records-service-strip__tab,
@@ -117,4 +110,3 @@
     padding-right: 0;
   }
 }
-

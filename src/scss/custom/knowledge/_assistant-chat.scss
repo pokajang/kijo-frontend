@@ -58,38 +58,6 @@
   overflow-y: auto;
   padding-right: 0.1rem;
   position: relative;
-  scrollbar-color: var(--cui-gray-300) transparent;
-  scrollbar-width: thin;
-}
-
-.knowledge-assistant-history,
-.knowledge-assistant-thread-list,
-.knowledge-assistant-messages,
-.knowledge-assistant-composer textarea {
-  scrollbar-color: var(--cui-gray-300) transparent;
-  scrollbar-width: thin;
-}
-
-.knowledge-assistant-history::-webkit-scrollbar,
-.knowledge-assistant-thread-list::-webkit-scrollbar,
-.knowledge-assistant-messages::-webkit-scrollbar,
-.knowledge-assistant-composer textarea::-webkit-scrollbar {
-  width: 0.32rem;
-}
-
-.knowledge-assistant-history::-webkit-scrollbar-track,
-.knowledge-assistant-thread-list::-webkit-scrollbar-track,
-.knowledge-assistant-messages::-webkit-scrollbar-track,
-.knowledge-assistant-composer textarea::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.knowledge-assistant-history::-webkit-scrollbar-thumb,
-.knowledge-assistant-thread-list::-webkit-scrollbar-thumb,
-.knowledge-assistant-messages::-webkit-scrollbar-thumb,
-.knowledge-assistant-composer textarea::-webkit-scrollbar-thumb {
-  background: var(--cui-gray-300);
-  border-radius: 999px;
 }
 
 .knowledge-assistant-empty {
@@ -320,4 +288,3 @@
   background: var(--cui-warning-bg-subtle);
   color: var(--cui-warning-text-emphasis);
 }
-

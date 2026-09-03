@@ -5,12 +5,6 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   padding-bottom: 0.25rem;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.records-tab-nav-scroll::-webkit-scrollbar {
-  display: none;
 }
 
 .records-tab-btn {
@@ -92,4 +86,3 @@
   gap: 0.625rem;
   justify-content: flex-end;
 }
-

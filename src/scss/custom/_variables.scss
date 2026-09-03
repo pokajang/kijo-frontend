@@ -1,12 +1,9 @@
 :root {
   // ── Scrollbars ────────────────────────────────────────────────────────────
-  --app-scrollbar-size: 8px;
-  --app-sidebar-scrollbar-size: 4px;
-  --app-table-scrollbar-size: 6px;
-  --app-table-scrollbar-thumb: #c7ced8;
-  --app-table-scrollbar-thumb-hover: #b8c0cb;
-  --app-scrollbar-chrome: #d1d5db;
-  --app-scrollbar-chrome-hover: #c4cad3;
+  --app-scrollbar-size: 6px;
+  --app-scrollbar-compact-size: 4px;
+  --app-scrollbar-thumb: #c7ced8;
+  --app-scrollbar-thumb-hover: #b8c0cb;
 
   // ── Surface ───────────────────────────────────────────────────────────────
   --app-surface-page: #ffffff;      // page bg, card bg, white fills

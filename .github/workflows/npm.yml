@@ -37,6 +37,9 @@ jobs:
       - name: Run pre-build route guard
         run: npm run guard:api-routes
 
+      - name: Enforce scrollbar contract
+        run: npm run guard:scrollbars
+
       - name: Run build
         run: npm run build
 

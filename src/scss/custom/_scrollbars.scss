@@ -1,118 +1,70 @@
-/* Global page-level scrollbars: thin + light grey */
-html,
-body,
-.wrapper,
-.body {
+/*
+ * Native scrollbar contract
+ *
+ * Every native scroll container inherits this thin, theme-aware treatment.
+ * Use .app-scrollbar-compact only for deliberately dense surfaces and
+ * .app-scrollbar-hidden only when another visible control communicates overflow.
+ * SimpleBar-powered components are separate and may style their rendered tracks.
+ */
+:where(*) {
+  scrollbar-color: var(--app-scrollbar-thumb) transparent;
   scrollbar-width: thin;
-  scrollbar-color: var(--app-table-scrollbar-thumb) transparent;
 }
 
-html::-webkit-scrollbar,
-body::-webkit-scrollbar,
-.wrapper::-webkit-scrollbar,
-.body::-webkit-scrollbar {
+:where(*)::-webkit-scrollbar {
   width: var(--app-scrollbar-size);
   height: var(--app-scrollbar-size);
 }
 
-html::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track,
-.wrapper::-webkit-scrollbar-track,
-.body::-webkit-scrollbar-track {
+:where(*)::-webkit-scrollbar-track,
+:where(*)::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb,
-.wrapper::-webkit-scrollbar-thumb,
-.body::-webkit-scrollbar-thumb {
-  background-color: var(--app-table-scrollbar-thumb);
-  border-radius: 999px;
+:where(*)::-webkit-scrollbar-thumb {
+  min-width: var(--app-scrollbar-size);
+  min-height: var(--app-scrollbar-size);
   border: 1px solid transparent;
+  border-radius: var(--app-radius-pill);
+  background-color: var(--app-scrollbar-thumb);
   background-clip: content-box;
 }
 
-html::-webkit-scrollbar-thumb:hover,
-body::-webkit-scrollbar-thumb:hover,
-.wrapper::-webkit-scrollbar-thumb:hover,
-.body::-webkit-scrollbar-thumb:hover {
-  background-color: var(--app-table-scrollbar-thumb-hover);
+:where(*)::-webkit-scrollbar-thumb:hover {
+  background-color: var(--app-scrollbar-thumb-hover);
 }
 
-/* Global table scrollbars: thin + light grey */
-.table-responsive,
-.table-responsive-sm,
-.table-responsive-md,
-.table-responsive-lg,
-.table-responsive-xl,
-.table-responsive-xxl,
-.table-scroll-viewport {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-table-scrollbar-thumb) transparent;
+:where(*)::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-.table-responsive::-webkit-scrollbar,
-.table-responsive-sm::-webkit-scrollbar,
-.table-responsive-md::-webkit-scrollbar,
-.table-responsive-lg::-webkit-scrollbar,
-.table-responsive-xl::-webkit-scrollbar,
-.table-responsive-xxl::-webkit-scrollbar,
-.table-scroll-viewport::-webkit-scrollbar {
-  width: var(--app-table-scrollbar-size);
-  height: var(--app-table-scrollbar-size);
+.app-scrollbar-compact::-webkit-scrollbar {
+  width: var(--app-scrollbar-compact-size);
+  height: var(--app-scrollbar-compact-size);
 }
 
-.table-responsive::-webkit-scrollbar-track,
-.table-responsive-sm::-webkit-scrollbar-track,
-.table-responsive-md::-webkit-scrollbar-track,
-.table-responsive-lg::-webkit-scrollbar-track,
-.table-responsive-xl::-webkit-scrollbar-track,
-.table-responsive-xxl::-webkit-scrollbar-track,
-.table-scroll-viewport::-webkit-scrollbar-track {
-  background: transparent;
+/* Navigation rails remain scrollable by touch, wheel, keyboard, and drag. */
+:where(
+  .app-scrollbar-hidden,
+  .records-tab-nav-scroll,
+  .records-service-strip__tabs,
+  .module-nav-strip__tabs,
+  .records-service-strip__controls,
+  .module-nav-strip__controls
+) {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.table-responsive::-webkit-scrollbar-thumb,
-.table-responsive-sm::-webkit-scrollbar-thumb,
-.table-responsive-md::-webkit-scrollbar-thumb,
-.table-responsive-lg::-webkit-scrollbar-thumb,
-.table-responsive-xl::-webkit-scrollbar-thumb,
-.table-responsive-xxl::-webkit-scrollbar-thumb,
-.table-scroll-viewport::-webkit-scrollbar-thumb {
-  background-color: var(--app-table-scrollbar-thumb);
-  border-radius: 999px;
-  border: 1px solid transparent;
-  background-clip: content-box;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover,
-.table-responsive-sm::-webkit-scrollbar-thumb:hover,
-.table-responsive-md::-webkit-scrollbar-thumb:hover,
-.table-responsive-lg::-webkit-scrollbar-thumb:hover,
-.table-responsive-xl::-webkit-scrollbar-thumb:hover,
-.table-responsive-xxl::-webkit-scrollbar-thumb:hover,
-.table-scroll-viewport::-webkit-scrollbar-thumb:hover {
-  background-color: var(--app-table-scrollbar-thumb-hover);
-}
-
-.records-email-draft-textarea {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-table-scrollbar-thumb) transparent;
-}
-
-.records-email-draft-textarea::-webkit-scrollbar {
-  width: var(--app-table-scrollbar-size);
-}
-
-.records-email-draft-textarea::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.records-email-draft-textarea::-webkit-scrollbar-thumb {
-  background-color: var(--app-table-scrollbar-thumb);
-  border-radius: 999px;
-}
-
-.records-email-draft-textarea::-webkit-scrollbar-thumb:hover {
-  background-color: var(--app-table-scrollbar-thumb-hover);
+:where(
+    .app-scrollbar-hidden,
+    .records-tab-nav-scroll,
+    .records-service-strip__tabs,
+    .module-nav-strip__tabs,
+    .records-service-strip__controls,
+    .module-nav-strip__controls
+  )::-webkit-scrollbar {
+  display: none;
 }

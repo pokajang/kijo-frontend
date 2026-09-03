@@ -1,10 +1,8 @@
 /* Dark mode: override all --app-* tokens */
 [data-coreui-theme='dark'] {
   // ── Scrollbars ────────────────────────────────────────────────────────────
-  --app-scrollbar-chrome: #444c56;
-  --app-scrollbar-chrome-hover: #545d6a;
-  --app-table-scrollbar-thumb: #444c56;
-  --app-table-scrollbar-thumb-hover: #545d6a;
+  --app-scrollbar-thumb: #444c56;
+  --app-scrollbar-thumb-hover: #545d6a;
 
   // ── Surface ───────────────────────────────────────────────────────────────
   --app-surface-page: #1c1f23;

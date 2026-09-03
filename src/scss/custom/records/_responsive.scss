@@ -79,12 +79,6 @@
     align-self: flex-end;
     max-width: 100%;
     overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .records-service-strip__controls::-webkit-scrollbar,
-  .module-nav-strip__controls::-webkit-scrollbar {
-    display: none;
   }
 }
 

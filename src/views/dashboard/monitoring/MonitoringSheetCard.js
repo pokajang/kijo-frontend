@@ -30,21 +30,6 @@ const MonitoringSheetCard = ({ title, scopeLabel, headerActions, children, tourT
         .monitoring-cell-details-popover .popover-body {
           max-height: 320px;
           overflow-y: auto;
-          scrollbar-color: var(--app-scrollbar-chrome) transparent;
-          scrollbar-width: thin;
-        }
-
-        .monitoring-cell-details-popover .popover-body::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .monitoring-cell-details-popover .popover-body::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .monitoring-cell-details-popover .popover-body::-webkit-scrollbar-thumb {
-          background-color: var(--app-scrollbar-chrome);
-          border-radius: 999px;
         }
 
         .monitoring-cell-details-row {

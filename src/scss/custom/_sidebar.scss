@@ -149,7 +149,7 @@
 
 /* Main sidebar: mini, light-gray vertical scrollbar */
 .sidebar .sidebar-nav .simplebar-track.simplebar-vertical {
-  width: var(--app-sidebar-scrollbar-size);
+  width: var(--app-scrollbar-compact-size);
   right: 2px;
   opacity: 0;
   visibility: visible;
@@ -157,7 +157,7 @@
 }
 
 .sidebar .sidebar-nav .simplebar-track.simplebar-vertical .simplebar-scrollbar {
-  width: var(--app-sidebar-scrollbar-size);
+  width: var(--app-scrollbar-compact-size);
 }
 
 .sidebar:hover .sidebar-nav .simplebar-track.simplebar-vertical,
@@ -170,7 +170,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: var(--app-scrollbar-chrome);
+  background-color: var(--app-scrollbar-thumb);
   opacity: 1 !important;
 }
 
@@ -183,5 +183,5 @@
   .sidebar-nav
   .simplebar-track.simplebar-vertical
   .simplebar-scrollbar.simplebar-visible:before {
-  background-color: var(--app-scrollbar-chrome-hover);
+  background-color: var(--app-scrollbar-thumb-hover);
 }
