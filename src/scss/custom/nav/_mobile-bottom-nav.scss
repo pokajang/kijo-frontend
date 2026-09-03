@@ -1,5 +1,13 @@
 /* Mobile: move global top header menu to bottom bar */
 @media (max-width: 767.98px) {
+  :root,
+  .app-main-header,
+  .header.header-sticky {
+    --app-mobile-floating-action-bottom: calc(
+      var(--app-mobile-fixed-header-height, var(--app-mobile-fixed-bottom-inset)) + 0.75rem
+    );
+  }
+
   .app-main-header.app-main-header--sidebar-open {
     display: none !important;
   }
@@ -29,6 +37,33 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
     column-gap: 0;
+  }
+
+  .header.header-sticky .app-global-prompt > .container-fluid {
+    flex-wrap: nowrap !important;
+    min-height: 3rem;
+    padding: 0.45rem max(0.75rem, env(safe-area-inset-right)) 0.45rem
+      max(0.75rem, env(safe-area-inset-left)) !important;
+  }
+
+  .header.header-sticky .app-global-prompt {
+    order: -1;
+  }
+
+  .header.header-sticky .app-global-prompt strong {
+    min-width: 0;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+  }
+
+  .header.header-sticky .app-global-prompt .btn {
+    flex: 0 0 auto;
+    margin-left: auto !important;
+    white-space: nowrap;
+  }
+
+  .header.header-sticky .app-global-prompt .btn-close {
+    flex: 0 0 auto;
   }
 
   .app-bottom-nav-menu {
@@ -163,7 +198,9 @@
   .body {
     --app-page-mobile-inline-inset: max(0.75rem, env(safe-area-inset-left));
     padding-top: 0.75rem;
-    padding-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 1.25rem);
+    padding-bottom: calc(
+      var(--app-mobile-fixed-header-height, var(--app-mobile-fixed-bottom-inset)) + 1.25rem
+    );
   }
 
   /* Global modules: reduce mobile side margins to match top spacing */

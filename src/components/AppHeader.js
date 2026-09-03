@@ -92,6 +92,27 @@ const AppHeader = () => {
     return () => document.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    const header = headerRef.current
+    if (!header || typeof ResizeObserver === 'undefined') return undefined
+
+    const updateMobileHeaderHeight = () => {
+      document.documentElement.style.setProperty(
+        '--app-mobile-fixed-header-height',
+        `${Math.ceil(header.getBoundingClientRect().height)}px`,
+      )
+    }
+    const observer = new ResizeObserver(updateMobileHeaderHeight)
+
+    observer.observe(header)
+    updateMobileHeaderHeight()
+
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.removeProperty('--app-mobile-fixed-header-height')
+    }
+  }, [])
+
   const loadSignatureStatus = React.useCallback(
     async (staffId = sessionUser?.staff_id) => {
       try {

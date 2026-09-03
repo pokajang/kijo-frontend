@@ -142,10 +142,13 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
   }
 
   const acknowledgementBanner = (
-    <CAlert color="warning" className="mb-0 rounded-0 border-0">
+    <CAlert
+      color="warning"
+      className="mb-0 rounded-0 border-0 app-global-prompt app-global-prompt--handbook"
+    >
       <CContainer fluid className="px-4 d-flex flex-wrap align-items-center gap-2">
         <strong>Handbook acknowledgement required.</strong>
-        <span className="text-muted">
+        <span className="text-muted d-none d-md-inline">
           Review and sign {versionLabel || 'the current handbook version'} to complete your
           acknowledgement.
         </span>
@@ -154,9 +157,15 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
           color="warning"
           variant="outline"
           className="ms-auto"
+          aria-label="Review & Acknowledge"
           onClick={reviewHandbook}
         >
-          Review &amp; Acknowledge
+          <span className="d-none d-md-inline" aria-hidden="true">
+            Review &amp; Acknowledge
+          </span>
+          <span className="d-md-none" aria-hidden="true">
+            Review
+          </span>
         </CButton>
         <CCloseButton
           aria-label="Dismiss handbook acknowledgement reminder"
