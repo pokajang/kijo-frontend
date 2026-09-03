@@ -7,6 +7,6 @@ ErrorDocument 503 /maintenance.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^maintenance\.html$ - [L]
+  RewriteRule ^(?:maintenance\.html|maintenance-status\.json)$ - [L]
   RewriteRule ^ - [R=503,L]
 </IfModule>

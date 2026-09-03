@@ -104,5 +104,36 @@
       </p>
       <div class="status" role="status">Maintenance in progress</div>
     </main>
+    <script>
+      (() => {
+        let redirecting = false
+
+        const checkMaintenanceStatus = async () => {
+          if (redirecting) return
+
+          try {
+            const response = await fetch('/maintenance-status.json', { cache: 'no-store' })
+            if (!response.ok) return
+
+            const status = await response.json()
+            if (status?.maintenance !== false) return
+
+            redirecting = true
+            const target = new URL('/', window.location.origin)
+            target.searchParams.set('v', String(Date.now()))
+            window.location.replace(target.toString())
+          } catch {
+            // Keep showing maintenance until a valid inactive status is available.
+          }
+        }
+
+        checkMaintenanceStatus()
+        window.setInterval(checkMaintenanceStatus, 10000)
+        window.addEventListener('focus', checkMaintenanceStatus)
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkMaintenanceStatus()
+        })
+      })()
+    </script>
   </body>
 </html>

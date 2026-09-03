@@ -32,6 +32,16 @@ validate_maintenance_assets() {
 validate_build() {
   [[ -f "$BUILD_DIR/index.html" ]] || fail "missing frontend build: $BUILD_DIR/index.html"
   [[ -f "$BUILD_DIR/.htaccess" ]] || fail "missing production rules: $BUILD_DIR/.htaccess"
+  [[ -f "$BUILD_DIR/maintenance-status.json" ]] ||
+    fail "missing maintenance status: $BUILD_DIR/maintenance-status.json"
+}
+
+write_maintenance_status() {
+  local active="$1"
+  local status_tmp="$DOCUMENT_ROOT/.maintenance-status.json.tmp"
+
+  printf '{\n  "maintenance": %s\n}\n' "$active" > "$status_tmp"
+  mv -f -- "$status_tmp" "$DOCUMENT_ROOT/maintenance-status.json"
 }
 
 enable_maintenance() {
@@ -40,6 +50,7 @@ enable_maintenance() {
 
   cp -- "$MAINTENANCE_PAGE" "$page_tmp"
   mv -f -- "$page_tmp" "$DOCUMENT_ROOT/maintenance.html"
+  write_maintenance_status true
   cp -- "$MAINTENANCE_RULES" "$rules_tmp"
   mv -f -- "$rules_tmp" "$DOCUMENT_ROOT/.htaccess"
   maintenance_enabled=true
@@ -48,11 +59,14 @@ enable_maintenance() {
 
 disable_maintenance() {
   local rules_tmp="$DOCUMENT_ROOT/.production.htaccess.tmp"
+  local status_tmp="$DOCUMENT_ROOT/.maintenance-status.json.tmp"
 
   [[ -f "$DOCUMENT_ROOT/index.html" ]] ||
     fail "refusing to disable maintenance without a live index: $DOCUMENT_ROOT/index.html"
+  printf '{\n  "maintenance": false\n}\n' > "$status_tmp"
   cp -- "$BUILD_DIR/.htaccess" "$rules_tmp"
   mv -f -- "$rules_tmp" "$DOCUMENT_ROOT/.htaccess"
+  mv -f -- "$status_tmp" "$DOCUMENT_ROOT/maintenance-status.json"
   maintenance_enabled=false
   rm -f -- "$DOCUMENT_ROOT/maintenance.html"
   printf 'Maintenance mode disabled at https://kijo.amiosh.com\n'
@@ -65,11 +79,14 @@ replace_live_files() {
   shopt -s nullglob
 
   for live_path in "$DOCUMENT_ROOT"/*; do
-    [[ "$(basename -- "$live_path")" == 'maintenance.html' ]] && continue
+    case "$(basename -- "$live_path")" in
+      maintenance.html | maintenance-status.json) continue ;;
+    esac
     rm -rf -- "$live_path"
   done
 
   for build_path in "$BUILD_DIR"/*; do
+    [[ "$(basename -- "$build_path")" == 'maintenance-status.json' ]] && continue
     cp -a -- "$build_path" "$DOCUMENT_ROOT/"
   done
 

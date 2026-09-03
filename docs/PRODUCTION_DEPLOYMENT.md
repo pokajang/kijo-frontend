@@ -120,6 +120,16 @@ after the copy succeeds. A failed copy leaves maintenance mode enabled so users
 do not receive a partial application. After correcting the failure, rerun the
 deployment command.
 
+For every deployment, verify the complete maintenance transition: new requests
+must receive the HTTP 503 maintenance page, already-open tabs must enter the
+maintenance state automatically, and both must load the new application without
+a hard refresh after maintenance ends. Treat a failed transition or reload loop
+as a deployment stop. During the first rollout of automatic open-tab handling,
+tabs still running an earlier build cannot observe the new maintenance status;
+notify those users that the existing `Reload now` action or a normal browser
+refresh may be required once. Subsequent deployments must satisfy the automatic
+transition checks above.
+
 If the server builds the frontend instead of using committed build artifacts:
 
 ```bash

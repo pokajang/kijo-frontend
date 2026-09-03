@@ -11,6 +11,7 @@ import { getStyle } from '@coreui/utils'
 import AuthProvider from './auth/AuthProvider'
 import RequireAuth from './auth/RequireAuth'
 import VersionNotifier from './components/VersionNotifier'
+import MaintenanceOverlay from './components/MaintenanceOverlay'
 import LazyChunkErrorBoundary from './components/LazyChunkErrorBoundary'
 import AppDialogProvider from './components/dialog/AppDialogProvider'
 import AppToastProvider from './components/toast/AppToastProvider'
@@ -49,6 +50,7 @@ const App = () => {
           <AuthProvider>
             <AppDialogProvider>
               <VersionNotifier />
+              <MaintenanceOverlay />
               <LazyChunkErrorBoundary>
                 <Suspense
                   fallback={
