@@ -16,6 +16,20 @@
   color: var(--cui-body-color) !important;
 }
 
+.client-pic-selection-list--scrollable {
+  max-height: 11.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: 0.25rem;
+  scrollbar-gutter: stable;
+
+  &:focus-visible {
+    border-radius: var(--cui-border-radius);
+    outline: 0.25rem solid rgba(var(--cui-primary-rgb), 0.25);
+    outline-offset: 0.125rem;
+  }
+}
+
 .vendor-payment-context-card.app-selectable-card--selected {
   background: rgba(var(--cui-primary-rgb), 0.12) !important;
   border-color: rgba(var(--cui-primary-rgb), 0.32) !important;

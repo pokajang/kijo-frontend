@@ -9,6 +9,10 @@ export const normalizeContact = (pic = {}) => ({
 
 export const contactKey = (pic = {}, index = 0) => {
   const normalized = normalizeContact(pic)
+  if (normalized.pic_id !== null && normalized.pic_id !== undefined && normalized.pic_id !== '') {
+    return `pic-${normalized.pic_id}`
+  }
+
   const baseKey = [
     normalized.email || 'no-email',
     normalized.full_name || 'no-name',

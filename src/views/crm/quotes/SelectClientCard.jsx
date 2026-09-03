@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Select from '../../../components/forms/ThemedSelect'
 import {
+  CAlert,
   CCard,
   CCardBody,
   CCardHeader,
@@ -12,7 +13,7 @@ import {
   CFormCheck,
 } from '@coreui/react'
 import { contactKey, getSelectedContacts } from './quoteContactUtils'
-import { fetchAllPagedRecords } from '../../../utils/detailPages'
+import { fetchAllPagedRecords, fetchJson } from '../../../utils/detailPages'
 import { quoteApiUrl } from './quoteApi'
 import {
   clearPendingCreatedClient,
@@ -41,6 +42,9 @@ const SelectClientCard = ({
   const [autoSelectingCreatedClient, setAutoSelectingCreatedClient] =
     useState(hasPendingCreatedClient)
   const [loadingBranches, setLoadingBranches] = useState(false)
+  const [loadingPics, setLoadingPics] = useState(false)
+  const [picLoadError, setPicLoadError] = useState('')
+  const clientDetailsControllerRef = useRef(null)
 
   useEffect(() => {
     selectedClientRef.current = selectedClient
@@ -162,67 +166,114 @@ const SelectClientCard = ({
   )
 
   const fetchCompanyBranches = useCallback(
-    async (companyId) => {
+    async (companyId, signal) => {
       const response = await fetch(quoteApiUrl(`client-companies/${companyId}/branches`), {
         credentials: 'include',
+        signal,
       })
       const result = await response.json()
       if (result.status !== 'success' || !Array.isArray(result.data)) {
-        return []
+        throw new Error(result.message || 'Unable to load client branches.')
       }
       return result.data.map(normalizeBranch)
     },
     [normalizeBranch],
   )
 
-  const withBranches = useCallback(
-    async (client, preferredBranch = null) => {
-      if (!client?.company_id) return client
-      setLoadingBranches(true)
-      try {
-        const branches = await fetchCompanyBranches(client.company_id)
-        const matchedBranch = preferredBranch?.branch_id
-          ? branches.find((b) => String(b.branch_id) === String(preferredBranch.branch_id))
-          : null
-        const nextClient = {
-          ...client,
-          all_branches: branches,
-          selected_branch: matchedBranch || null,
-        }
-        return withQuoteAddress(nextClient, matchedBranch || null)
-      } catch (err) {
-        console.error('Error fetching branches:', err)
-        const nextClient = {
-          ...client,
-          all_branches: [],
-          selected_branch: null,
-        }
-        return withQuoteAddress(nextClient, null)
-      } finally {
-        setLoadingBranches(false)
+  const fetchCompanyPics = useCallback(
+    async (companyId, signal) => {
+      const result = await fetchJson(
+        quoteApiUrl(`client-companies/${encodeURIComponent(companyId)}/pics`),
+        { signal },
+      )
+      if (result?.status !== 'success' || !Array.isArray(result.data)) {
+        throw new Error(result?.message || 'Unable to load client contacts.')
       }
+      return result.data.map(normalizePic).filter(hasPicData)
     },
-    [fetchCompanyBranches, withQuoteAddress],
+    [hasPicData, normalizePic],
   )
 
-  const withDefaultPic = useCallback((client) => {
-    if (!client) return null
-    const pics = Array.isArray(client.all_pics) ? client.all_pics : []
-    const selectedPics =
-      Array.isArray(client.selected_pics) && client.selected_pics.length > 0
-        ? client.selected_pics
-        : client.selected_pic
-          ? [client.selected_pic]
-          : pics[0]
-            ? [pics[0]]
-            : []
+  const loadClientDetails = useCallback(
+    async (client, preferredBranch = null) => {
+      if (!client?.company_id) return client
 
-    return {
-      ...client,
-      selected_pic: selectedPics[0] || null,
-      selected_pics: selectedPics,
+      clientDetailsControllerRef.current?.abort()
+      const controller = new AbortController()
+      clientDetailsControllerRef.current = controller
+      setLoadingBranches(true)
+      setLoadingPics(true)
+      setPicLoadError('')
+
+      const [branchResult, picResult] = await Promise.allSettled([
+        fetchCompanyBranches(client.company_id, controller.signal),
+        fetchCompanyPics(client.company_id, controller.signal),
+      ])
+
+      if (controller.signal.aborted) return null
+
+      const branches = branchResult.status === 'fulfilled' ? branchResult.value : []
+      if (branchResult.status === 'rejected') {
+        console.error('Error fetching branches:', branchResult.reason)
+      }
+
+      const previewPics = Array.isArray(client.all_pics) ? client.all_pics : []
+      const pics = picResult.status === 'fulfilled' ? picResult.value : previewPics
+      if (picResult.status === 'rejected') {
+        console.error('Error fetching client contacts:', picResult.reason)
+        setPicLoadError('Could not load all contacts. Showing available preview contacts.')
+      }
+
+      const matchedBranch = preferredBranch?.branch_id
+        ? branches.find((branch) => String(branch.branch_id) === String(preferredBranch.branch_id))
+        : null
+      const detailedClient = {
+        ...client,
+        all_pics: pics,
+        all_branches: branches,
+        selected_branch: matchedBranch || null,
+      }
+
+      if (clientDetailsControllerRef.current === controller) {
+        setLoadingBranches(false)
+        setLoadingPics(false)
+        clientDetailsControllerRef.current = null
+      }
+
+      return withQuoteAddress(detailedClient, matchedBranch || null)
+    },
+    [fetchCompanyBranches, fetchCompanyPics, withQuoteAddress],
+  )
+
+  const matchesPic = useCallback((availablePic, selectedPic) => {
+    if (availablePic?.pic_id != null && selectedPic?.pic_id != null) {
+      return String(availablePic.pic_id) === String(selectedPic.pic_id)
     }
+
+    return (
+      availablePic?.email === selectedPic?.email &&
+      availablePic?.full_name === selectedPic?.full_name &&
+      availablePic?.mobile_number === selectedPic?.mobile_number
+    )
   }, [])
+
+  const withSelectedPics = useCallback(
+    (client, preferredPics = []) => {
+      if (!client) return null
+      const pics = Array.isArray(client.all_pics) ? client.all_pics : []
+      const matchedPics = preferredPics
+        .map((selectedPic) => pics.find((pic) => matchesPic(pic, selectedPic)))
+        .filter(Boolean)
+      const selectedPics = matchedPics.length > 0 ? matchedPics : pics[0] ? [pics[0]] : []
+
+      return {
+        ...client,
+        selected_pic: selectedPics[0] || null,
+        selected_pics: selectedPics,
+      }
+    },
+    [matchesPic],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -297,15 +348,20 @@ const SelectClientCard = ({
                 : opt.data.company_name === lastCreatedClientName,
             )
             if (match) {
-              const withPic = withDefaultPic(match.data)
+              const detailedClient = await loadClientDetails(
+                match.data,
+                currentSelectedClient?.selected_branch,
+              )
+              if (!detailedClient || cancelled) return
+              const withPic = withSelectedPics(
+                detailedClient,
+                getSelectedContacts(currentSelectedClient),
+              )
               if (!cancelled) {
                 setSelectedPicKeys(
                   getSelectedContacts(withPic).map((pic, index) => contactKey(pic, index)),
                 )
-              }
-              const enriched = await withBranches(withPic, currentSelectedClient?.selected_branch)
-              if (!cancelled) {
-                onClientChangeRef.current(enriched)
+                onClientChangeRef.current(withPic)
               }
             }
             clearPendingCreatedClient()
@@ -321,36 +377,18 @@ const SelectClientCard = ({
             if (matchedClientOption) {
               const latestClient = matchedClientOption.data
               const savedPics = getSelectedContacts(currentSelectedClient)
-              const matchedPics = savedPics
-                .map((savedPic) =>
-                  latestClient.all_pics.find(
-                    (pic) => pic.email === savedPic.email && pic.full_name === savedPic.full_name,
-                  ),
-                )
-                .filter(Boolean)
-
-              const hydratedClient = withDefaultPic({
-                ...latestClient,
-                selected_pic: matchedPics[0] || latestClient.all_pics?.[0] || null,
-                selected_pics:
-                  matchedPics.length > 0
-                    ? matchedPics
-                    : latestClient.all_pics?.[0]
-                      ? [latestClient.all_pics[0]]
-                      : [],
-              })
-              const hydratedWithBranches = await withBranches(
-                hydratedClient,
+              const detailedClient = await loadClientDetails(
+                latestClient,
                 currentSelectedClient?.selected_branch,
               )
+              if (!detailedClient || cancelled) return
+              const hydratedClient = withSelectedPics(detailedClient, savedPics)
 
               if (!cancelled) {
                 setSelectedPicKeys(
-                  getSelectedContacts(hydratedWithBranches).map((pic, index) =>
-                    contactKey(pic, index),
-                  ),
+                  getSelectedContacts(hydratedClient).map((pic, index) => contactKey(pic, index)),
                 )
-                onClientChangeRef.current(hydratedWithBranches)
+                onClientChangeRef.current(hydratedClient)
               }
             }
           }
@@ -369,19 +407,37 @@ const SelectClientCard = ({
 
     return () => {
       cancelled = true
+      clientDetailsControllerRef.current?.abort()
     }
-  }, [extractPics, withBranches, withDefaultPic])
+  }, [extractPics, loadClientDetails, withSelectedPics])
 
   const handleClientSelect = async (selectedOption) => {
     if (selectedOption) {
-      const withPic = withDefaultPic(selectedOption.data)
+      const detailedClient = await loadClientDetails(selectedOption.data)
+      if (!detailedClient) return
+      const withPic = withSelectedPics(detailedClient)
       setSelectedPicKeys(getSelectedContacts(withPic).map((pic, index) => contactKey(pic, index)))
-      const enriched = await withBranches(withPic)
-      onClientChange(enriched)
+      onClientChange(withPic)
     } else {
+      clientDetailsControllerRef.current?.abort()
       setSelectedPicKeys([])
+      setLoadingBranches(false)
+      setLoadingPics(false)
+      setPicLoadError('')
       onClientChange(null)
     }
+  }
+
+  const handleRetryPics = async () => {
+    if (!selectedClient) return
+    const savedPics = getSelectedContacts(selectedClient)
+    const detailedClient = await loadClientDetails(selectedClient, selectedClient.selected_branch)
+    if (!detailedClient) return
+    const hydratedClient = withSelectedPics(detailedClient, savedPics)
+    setSelectedPicKeys(
+      getSelectedContacts(hydratedClient).map((pic, index) => contactKey(pic, index)),
+    )
+    onClientChange(hydratedClient)
   }
 
   const setSelectedContacts = (contacts) => {
@@ -461,7 +517,9 @@ const SelectClientCard = ({
 
   const addressOptions = selectedClient ? getAddressOptions(selectedClient) : []
   const hasAddressRadios = addressOptions.length > 1
-  const hasContactOptions = (selectedClient?.all_pics?.length || 0) > 1
+  const contactCount = selectedClient?.all_pics?.length || 0
+  const hasContactOptions = contactCount > 1
+  const hasScrollableContacts = contactCount > 2
   const hideCompanySummary = hasAddressRadios && hasContactOptions
   const selectedClientOption = selectedClient
     ? clientOptions.find((opt) => String(opt.value) === String(selectedClient.company_id)) || {
@@ -491,7 +549,7 @@ const SelectClientCard = ({
             onInputChange={() => setHasTyped(true)}
             placeholder="Search client"
             isClearable
-            isLoading={loadingClients || loadingBranches}
+            isLoading={loadingClients || loadingBranches || loadingPics}
             loadingMessage={() => clientLoadingMessage}
             noOptionsMessage={() =>
               loadingClients ? (
@@ -592,8 +650,32 @@ const SelectClientCard = ({
             </CCol>
 
             <CCol md={5}>
-              <CFormLabel>{contactLabel}</CFormLabel>
-              {selectedClient.all_pics?.length > 1 ? (
+              <CFormLabel>
+                {contactLabel} ({contactCount})
+              </CFormLabel>
+              {picLoadError && (
+                <CAlert
+                  color="warning"
+                  className="d-flex align-items-center justify-content-between gap-2 py-2"
+                >
+                  <span>{picLoadError}</span>
+                  <CButton
+                    type="button"
+                    color="warning"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRetryPics}
+                    disabled={loadingPics}
+                  >
+                    Retry
+                  </CButton>
+                </CAlert>
+              )}
+              {loadingPics ? (
+                <div className="text-muted" aria-live="polite">
+                  Loading client contacts...
+                </div>
+              ) : selectedClient.all_pics?.length > 1 ? (
                 <div className="d-flex flex-column gap-2">
                   <div className="d-flex gap-2 mb-1">
                     <CButton
@@ -613,33 +695,44 @@ const SelectClientCard = ({
                       Primary only
                     </CButton>
                   </div>
-                  {selectedClient.all_pics.map((pic, index) => {
-                    const isSelected = selectedPicKeys.includes(contactKey(pic, index))
-                    return (
-                      <label
-                        key={`${pic.email || 'no-email'}-${pic.full_name || 'no-name'}-${index}`}
-                        className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
-                          isSelected ? 'app-selectable-card--selected' : ''
-                        }`}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <CFormCheck
-                          type="checkbox"
-                          name="contactPic"
-                          checked={isSelected}
-                          onChange={() => handleContactToggle(pic, index)}
-                        />
-                        <div>
-                          <strong>
-                            {pic.full_name || '-'} {pic.position ? `(${pic.position})` : ''}
-                          </strong>
-                          <br />
-                          {pic.email || '-'}{' '}
-                          <small className="text-muted">({pic.mobile_number || '-'})</small>
-                        </div>
-                      </label>
-                    )
-                  })}
+                  <div
+                    className={`d-flex flex-column gap-2 ${
+                      hasScrollableContacts ? 'client-pic-selection-list--scrollable' : ''
+                    }`}
+                    role={hasScrollableContacts ? 'region' : undefined}
+                    aria-label={
+                      hasScrollableContacts ? `${contactCount} client contacts` : undefined
+                    }
+                    tabIndex={hasScrollableContacts ? 0 : undefined}
+                  >
+                    {selectedClient.all_pics.map((pic, index) => {
+                      const isSelected = selectedPicKeys.includes(contactKey(pic, index))
+                      return (
+                        <label
+                          key={`${pic.email || 'no-email'}-${pic.full_name || 'no-name'}-${index}`}
+                          className={`border rounded p-2 d-flex align-items-start gap-2 app-selectable-card ${
+                            isSelected ? 'app-selectable-card--selected' : ''
+                          }`}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <CFormCheck
+                            type="checkbox"
+                            name="contactPic"
+                            checked={isSelected}
+                            onChange={() => handleContactToggle(pic, index)}
+                          />
+                          <div>
+                            <strong>
+                              {pic.full_name || '-'} {pic.position ? `(${pic.position})` : ''}
+                            </strong>
+                            <br />
+                            {pic.email || '-'}{' '}
+                            <small className="text-muted">({pic.mobile_number || '-'})</small>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
               ) : selectedClient.all_pics?.length === 1 ? (
                 <div>
