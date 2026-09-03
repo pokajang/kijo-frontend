@@ -296,7 +296,6 @@ const ModuleNavStripShell = ({
                     type={asNavigation ? undefined : 'button'}
                     color="light"
                     variant="ghost"
-                    data-api-busy-allow="true"
                     className={`module-nav-strip__tab records-service-strip__tab border-0 ${
                       isActive ? 'is-active fw-semibold' : 'text-muted fw-normal'
                     }`}

@@ -49,7 +49,6 @@ const PeriodSelector = ({
     size: 'sm',
     color: buttonColor,
     className: buttonClassName,
-    'data-api-busy-allow': 'true',
     'aria-label': ariaLabel,
   }
 

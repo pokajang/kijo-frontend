@@ -49,6 +49,7 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
   })
   const [requestKey, setRequestKey] = useState(() => newVendorPaymentRequestKey('vendor-payment'))
   const [submitting, setSubmitting] = useState(false)
+  const submitInFlightRef = useRef(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
 
@@ -113,6 +114,8 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
   }
 
   const handleSubmit = async () => {
+    if (submitting || submitInFlightRef.current) return
+
     const validationError = validate()
     if (validationError) {
       setFieldErrors({ [validationError.field]: validationError.message })
@@ -127,6 +130,7 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
       refs[validationError.field]?.current?.focus()
       return
     }
+    submitInFlightRef.current = true
     setSubmitting(true)
     setError('')
     try {
@@ -139,6 +143,7 @@ const RecordVendorPaymentModal = ({ visible, payment, onClose, onRecorded }) => 
           : requestError?.message || 'Unable to record the payment.',
       )
     } finally {
+      submitInFlightRef.current = false
       setSubmitting(false)
     }
   }

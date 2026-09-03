@@ -49,6 +49,7 @@ const VendorPaymentWorkflowCell = ({ payment, actions = [] }) => {
               variant="outline"
               className="py-0 px-2"
               data-no-row-open="true"
+              disabled={action.disabled}
               onMouseDown={stopRowOpen}
               onClick={(event) => {
                 event.stopPropagation()
@@ -77,6 +78,7 @@ VendorPaymentWorkflowCell.propTypes = {
       key: PropTypes.string.isRequired,
       label: PropTypes.string.isRequired,
       color: PropTypes.string,
+      disabled: PropTypes.bool,
       onClick: PropTypes.func.isRequired,
     }),
   ),

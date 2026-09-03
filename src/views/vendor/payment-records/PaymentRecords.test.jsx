@@ -16,12 +16,12 @@ vi.mock('./usePaymentData', () => ({
 }))
 
 vi.mock('./PaymentTable', () => ({
-  default: ({ onCheck, onApprove }) => (
+  default: ({ onCheck, onApprove, busyPaymentIds }) => (
     <>
-      <button type="button" onClick={() => onCheck(123)}>
+      <button type="button" disabled={busyPaymentIds.has('123')} onClick={() => onCheck(123)}>
         review
       </button>
-      <button type="button" onClick={() => onApprove(123)}>
+      <button type="button" disabled={busyPaymentIds.has('123')} onClick={() => onApprove(123)}>
         approve
       </button>
     </>
@@ -90,6 +90,35 @@ describe('PaymentRecords', () => {
     expect(JSON.parse(findFetchCall('vendor-payments/123/check')[1].body)).toEqual({
       remarks: 'Review complete',
     })
+  })
+
+  it('locks only the active payment while its workflow request is running', async () => {
+    let resolveRequest
+    global.fetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRequest = () =>
+            resolve({
+              ok: true,
+              json: () => Promise.resolve({ status: 'success' }),
+            })
+        }),
+    )
+    renderPaymentRecords()
+
+    const approveButton = screen.getByRole('button', { name: 'approve' })
+    fireEvent.click(approveButton)
+
+    await waitFor(() => expect(approveButton).toBeDisabled())
+    fireEvent.click(approveButton)
+    expect(
+      global.fetch.mock.calls.filter(([url]) =>
+        String(url).includes('vendor-payments/123/approve'),
+      ),
+    ).toHaveLength(1)
+
+    resolveRequest()
+    await waitFor(() => expect(approveButton).not.toBeDisabled())
   })
 
   it('shows request payment as a card header action', () => {

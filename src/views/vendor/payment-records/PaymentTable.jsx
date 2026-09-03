@@ -134,6 +134,7 @@ const grandTotal = (payments) =>
 const PaymentTable = ({
   payments = [],
   loading = false,
+  busyPaymentIds = new Set(),
   periodRange,
   onPeriodRangeChange,
   onView,
@@ -304,6 +305,7 @@ const PaymentTable = ({
 
   const getWorkflowActions = (payment) => {
     const paymentId = payment.id || payment.payment_id
+    const isBusy = busyPaymentIds.has(String(paymentId))
     const status = payment.status
     const { canCheck, canApprove, canReturn, canReject } = getVendorPaymentPermissions(payment)
 
@@ -313,6 +315,7 @@ const PaymentTable = ({
             key: 'check',
             label: 'Review',
             color: 'info',
+            disabled: isBusy,
             onClick: () => onCheck(paymentId),
           }
         : null,
@@ -321,6 +324,7 @@ const PaymentTable = ({
             key: 'return',
             label: 'Return',
             color: 'secondary',
+            disabled: isBusy,
             onClick: () => onReturn(paymentId),
           }
         : null,
@@ -329,6 +333,7 @@ const PaymentTable = ({
             key: 'reject',
             label: 'Reject',
             color: 'danger',
+            disabled: isBusy,
             onClick: () => onReject(paymentId),
           }
         : null,
@@ -337,6 +342,7 @@ const PaymentTable = ({
             key: 'approve',
             label: 'Approve',
             color: 'success',
+            disabled: isBusy,
             onClick: () => onApprove(paymentId),
           }
         : null,
@@ -345,6 +351,8 @@ const PaymentTable = ({
 
   const getActions = (payment) => {
     const { canEdit, canCancel, canResubmit } = getVendorPaymentPermissions(payment)
+    const paymentId = payment.id || payment.payment_id
+    const isBusy = busyPaymentIds.has(String(paymentId))
 
     return [
       typeof onView === 'function'
@@ -354,6 +362,7 @@ const PaymentTable = ({
         ? {
             key: 'edit',
             label: 'Edit Payment',
+            disabled: isBusy,
             onClick: () => onEdit(payment),
           }
         : null,
@@ -361,6 +370,7 @@ const PaymentTable = ({
         ? {
             key: 'resubmit',
             label: 'Amend & Resubmit',
+            disabled: isBusy,
             onClick: () => onResubmit(payment),
           }
         : null,
@@ -370,6 +380,7 @@ const PaymentTable = ({
             label: 'Cancel Request',
             danger: true,
             dividerBefore: true,
+            disabled: isBusy,
             onClick: () => onCancel(payment),
           }
         : null,

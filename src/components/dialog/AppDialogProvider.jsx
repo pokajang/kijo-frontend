@@ -609,7 +609,6 @@ const AppDialogProvider = ({ children }) => {
                   disabled={Boolean(action.disabled)}
                   autoFocus={Boolean(action.autoFocus)}
                   data-dialog-choice-key={action.key}
-                  data-api-busy-allow="true"
                   onClick={() => closeWithResult(action.key)}
                 >
                   {action.label}

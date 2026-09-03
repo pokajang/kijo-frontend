@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CAlert,
@@ -118,6 +118,7 @@ const PayVendor = () => {
   const [loadingVendors, setLoadingVendors] = useState(false)
   const [selectionError, setSelectionError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const submitInFlightRef = useRef(false)
   const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey)
 
   const [formData, setFormData] = useState({
@@ -334,6 +335,8 @@ const PayVendor = () => {
   }
 
   const handleSubmitPayment = async () => {
+    if (submitting || submitInFlightRef.current) return
+
     const vendorId = getVendorId(selectedVendor)
     const vendorName = getVendorName(selectedVendor)
     const amount = Number(formData.amount)
@@ -396,6 +399,7 @@ const PayVendor = () => {
         ? `${API_BASE}vendor-payments/${existingRecord.id}`
         : `${API_BASE}vendor-payments`
 
+    submitInFlightRef.current = true
     setSubmitting(true)
     try {
       const res = await apiFetch(endpoint, {
@@ -420,6 +424,7 @@ const PayVendor = () => {
     } catch (err) {
       dialog.alert('Submission failed: ' + err.message)
     } finally {
+      submitInFlightRef.current = false
       setSubmitting(false)
     }
   }

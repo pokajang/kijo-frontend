@@ -23,7 +23,7 @@ const payment = {
 }
 
 describe('RecordVendorPaymentModal', () => {
-  beforeEach(() => mocks.recordPayment.mockClear())
+  beforeEach(() => mocks.recordPayment.mockReset().mockResolvedValue({ status: 'success' }))
   afterEach(cleanup)
 
   it('records structured settlement evidence from the payment request', async () => {
@@ -79,5 +79,36 @@ describe('RecordVendorPaymentModal', () => {
     expect(reference).toHaveFocus()
     expect(screen.getByText('Transaction reference is required.')).toBeInTheDocument()
     expect(mocks.recordPayment).not.toHaveBeenCalled()
+  })
+
+  it('prevents a duplicate settlement submission while the first request is running', async () => {
+    let resolvePayment
+    mocks.recordPayment.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePayment = resolve
+        }),
+    )
+    render(
+      <RecordVendorPaymentModal visible payment={payment} onClose={vi.fn()} onRecorded={vi.fn()} />,
+    )
+
+    fireEvent.change(screen.getByLabelText('Transaction reference'), {
+      target: { value: 'TXN-LOCKED' },
+    })
+    fireEvent.paste(document.body, {
+      clipboardData: {
+        files: [new File(['image'], 'proof.png', { type: 'image/png' })],
+      },
+    })
+    const submitButton = screen.getByRole('button', { name: 'Record Payment' })
+    fireEvent.click(submitButton)
+
+    expect(submitButton).toBeDisabled()
+    fireEvent.click(submitButton)
+    expect(mocks.recordPayment).toHaveBeenCalledTimes(1)
+
+    resolvePayment({ status: 'success' })
+    await waitFor(() => expect(submitButton).not.toBeDisabled())
   })
 })

@@ -1,6 +1,6 @@
 // src/components/PaymentRecords.js
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilPlus } from '@coreui/icons'
@@ -29,6 +29,8 @@ const PaymentRecords = () => {
   const { consumeRouteGroup } = useAppNotifications()
 
   const { staffRoles, allPayments, loading, reloadPayments } = usePaymentData(periodRange)
+  const paymentActionsInFlightRef = useRef(new Set())
+  const [busyPaymentIds, setBusyPaymentIds] = useState(() => new Set())
 
   useEffect(() => {
     consumeRouteGroup({
@@ -36,6 +38,24 @@ const PaymentRecords = () => {
       moduleKeys: ['vendor.payments'],
     }).catch(() => {})
   }, [consumeRouteGroup])
+
+  const runPaymentAction = async (paymentId, action) => {
+    const key = String(paymentId)
+    if (!paymentId || paymentActionsInFlightRef.current.has(key)) return
+
+    paymentActionsInFlightRef.current.add(key)
+    setBusyPaymentIds((current) => new Set(current).add(key))
+    try {
+      return await action()
+    } finally {
+      paymentActionsInFlightRef.current.delete(key)
+      setBusyPaymentIds((current) => {
+        const next = new Set(current)
+        next.delete(key)
+        return next
+      })
+    }
+  }
 
   const handleWorkflowAction = async (paymentId, action, options = {}) => {
     const { confirmMessage, successMessage, body = null } = options
@@ -65,96 +85,102 @@ const PaymentRecords = () => {
     }
   }
 
-  const handleCheck = async (paymentId) => {
-    const remarks = await dialog.prompt('Review remarks', {
-      multiline: true,
-      defaultValue: '',
-    })
-    if (remarks === null) return
-    handleWorkflowAction(paymentId, 'check', {
-      successMessage: 'Payment reviewed.',
-      body: { remarks },
-    })
-  }
-
-  const handleApprove = async (paymentId) => {
-    const remarks = await dialog.prompt('Approval remarks', {
-      multiline: true,
-      defaultValue: '',
-    })
-    if (remarks === null) return
-    handleWorkflowAction(paymentId, 'approve', {
-      successMessage: 'Payment approved.',
-      body: { remarks },
-    })
-  }
-
-  const handleReject = async (paymentId) => {
-    const remarks = await dialog.prompt('Rejection remarks', {
-      multiline: true,
-      required: true,
-    })
-    if (remarks === null) return
-    handleWorkflowAction(paymentId, 'reject', {
-      successMessage: 'Payment rejected.',
-      body: { remarks },
-    })
-  }
-
-  const handleReturn = async (paymentId) => {
-    const remarks = await dialog.prompt('Return remarks', {
-      multiline: true,
-      required: true,
-    })
-    if (remarks === null) return
-    handleWorkflowAction(paymentId, 'return', {
-      successMessage: 'Payment returned.',
-      body: { remarks },
-    })
-  }
-
-  const handleCancel = async (payment) => {
-    const paymentId = payment.id || payment.payment_id
-    const reason = await dialog.prompt('Cancellation reason', {
-      multiline: true,
-      required: true,
-    })
-    if (reason === null) return
-    const voucherIssued = Boolean(payment.voucher || payment.voucher_issued)
-    if (
-      !(await dialog.confirm(
-        voucherIssued
-          ? 'Cancel this payment request? Its issued voucher will be permanently marked VOID and retained for audit.'
-          : 'Cancel this payment request? The record will remain visible for audit.',
-        {
-          confirmText: 'Cancel request',
-          confirmColor: 'danger',
-        },
-      ))
-    )
-      return
-    try {
-      const res = await apiFetch(`${API_BASE}vendor-payments/${paymentId}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ reason, version: Number(payment.version || 1) }),
+  const handleCheck = (paymentId) =>
+    runPaymentAction(paymentId, async () => {
+      const remarks = await dialog.prompt('Review remarks', {
+        multiline: true,
+        defaultValue: '',
       })
-      const data = await res.json()
-      if (res.ok && (data?.status === 'success' || data?.success === true)) {
-        dialog.alert(
+      if (remarks === null) return
+      await handleWorkflowAction(paymentId, 'check', {
+        successMessage: 'Payment reviewed.',
+        body: { remarks },
+      })
+    })
+
+  const handleApprove = (paymentId) =>
+    runPaymentAction(paymentId, async () => {
+      const remarks = await dialog.prompt('Approval remarks', {
+        multiline: true,
+        defaultValue: '',
+      })
+      if (remarks === null) return
+      await handleWorkflowAction(paymentId, 'approve', {
+        successMessage: 'Payment approved.',
+        body: { remarks },
+      })
+    })
+
+  const handleReject = (paymentId) =>
+    runPaymentAction(paymentId, async () => {
+      const remarks = await dialog.prompt('Rejection remarks', {
+        multiline: true,
+        required: true,
+      })
+      if (remarks === null) return
+      await handleWorkflowAction(paymentId, 'reject', {
+        successMessage: 'Payment rejected.',
+        body: { remarks },
+      })
+    })
+
+  const handleReturn = (paymentId) =>
+    runPaymentAction(paymentId, async () => {
+      const remarks = await dialog.prompt('Return remarks', {
+        multiline: true,
+        required: true,
+      })
+      if (remarks === null) return
+      await handleWorkflowAction(paymentId, 'return', {
+        successMessage: 'Payment returned.',
+        body: { remarks },
+      })
+    })
+
+  const handleCancel = (payment) => {
+    const paymentId = payment.id || payment.payment_id
+    return runPaymentAction(paymentId, async () => {
+      const reason = await dialog.prompt('Cancellation reason', {
+        multiline: true,
+        required: true,
+      })
+      if (reason === null) return
+      const voucherIssued = Boolean(payment.voucher || payment.voucher_issued)
+      if (
+        !(await dialog.confirm(
           voucherIssued
-            ? 'Payment request cancelled and its voucher marked VOID.'
-            : 'Payment request cancelled.',
-        )
-        reloadPayments()
-        dispatchAppNotificationsChanged()
-      } else {
-        dialog.alert(data?.message || 'Failed to cancel payment request.')
+            ? 'Cancel this payment request? Its issued voucher will be permanently marked VOID and retained for audit.'
+            : 'Cancel this payment request? The record will remain visible for audit.',
+          {
+            confirmText: 'Cancel request',
+            confirmColor: 'danger',
+          },
+        ))
+      )
+        return
+      try {
+        const res = await apiFetch(`${API_BASE}vendor-payments/${paymentId}/cancel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ reason, version: Number(payment.version || 1) }),
+        })
+        const data = await res.json()
+        if (res.ok && (data?.status === 'success' || data?.success === true)) {
+          dialog.alert(
+            voucherIssued
+              ? 'Payment request cancelled and its voucher marked VOID.'
+              : 'Payment request cancelled.',
+          )
+          reloadPayments()
+          dispatchAppNotificationsChanged()
+        } else {
+          dialog.alert(data?.message || 'Failed to cancel payment request.')
+        }
+      } catch (err) {
+        dialog.alert('Error cancelling payment: ' + err.message)
       }
-    } catch (err) {
-      dialog.alert('Error cancelling payment: ' + err.message)
-    }
+    })
   }
 
   return (
@@ -177,6 +203,7 @@ const PaymentRecords = () => {
           <PaymentTable
             payments={allPayments}
             loading={loading}
+            busyPaymentIds={busyPaymentIds}
             statsVisible={statsVisible}
             controlsVisible={controlsVisible}
             periodRange={periodRange}

@@ -434,7 +434,6 @@ const Dashboard = () => {
         size="sm"
         color="primary"
         variant="outline"
-        data-api-busy-allow="true"
         className="px-3 d-inline-flex align-items-center justify-content-between"
         style={{ width: '148px' }}
         aria-label="Monitoring staff"
@@ -490,7 +489,6 @@ const Dashboard = () => {
           color="primary"
           variant="outline"
           className="px-3"
-          data-api-busy-allow="true"
           onClick={() => {
             window.open(
               buildQueryUrl(`${import.meta.env.VITE_API_BASE}stats/monthly-dashboard-report/pdf`, {

@@ -560,7 +560,6 @@ const SelectClientCard = ({
                   <CButton
                     color="primary"
                     size="sm"
-                    data-api-busy-allow="true"
                     onClick={() => {
                       if (onCreateClient) {
                         onCreateClient()

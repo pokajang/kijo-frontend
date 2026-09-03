@@ -162,13 +162,7 @@ const ClientVendorRegistrationDetailPage = () => {
           <CCard className="mb-4">
             <CCardHeader className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
               <strong>Vendor Registration Details</strong>
-              <CButton
-                size="sm"
-                color="secondary"
-                variant="outline"
-                data-api-busy-allow="true"
-                onClick={goBack}
-              >
+              <CButton size="sm" color="secondary" variant="outline" onClick={goBack}>
                 Back
               </CButton>
             </CCardHeader>
@@ -257,7 +251,6 @@ const ClientVendorRegistrationDetailPage = () => {
                             size="sm"
                             color="secondary"
                             variant="outline"
-                            data-api-busy-allow="true"
                             onClick={() => setShowPortalPassword((current) => !current)}
                           >
                             {showPortalPassword ? 'Hide' : 'Show'}
@@ -266,7 +259,6 @@ const ClientVendorRegistrationDetailPage = () => {
                             size="sm"
                             color="primary"
                             variant="outline"
-                            data-api-busy-allow="true"
                             onClick={copyPortalPassword}
                           >
                             {passwordCopied ? 'Copied' : 'Copy'}
@@ -292,13 +284,7 @@ const ClientVendorRegistrationDetailPage = () => {
                 </CCardHeader>
                 <CCardBody>
                   <div className="d-flex flex-wrap gap-2">
-                    <CButton
-                      size="sm"
-                      color="secondary"
-                      variant="outline"
-                      data-api-busy-allow="true"
-                      onClick={goEdit}
-                    >
+                    <CButton size="sm" color="secondary" variant="outline" onClick={goEdit}>
                       {getVendorRegistrationEditActionLabel(detail.status)}
                     </CButton>
                     {detail.certificateUrl ? (
@@ -306,7 +292,6 @@ const ClientVendorRegistrationDetailPage = () => {
                         size="sm"
                         color="primary"
                         variant="outline"
-                        data-api-busy-allow="true"
                         href={detail.certificateUrl}
                         target="_blank"
                         rel="noreferrer"
@@ -318,7 +303,6 @@ const ClientVendorRegistrationDetailPage = () => {
                       size="sm"
                       color="danger"
                       variant="outline"
-                      data-api-busy-allow="true"
                       onClick={deleteRegistration}
                     >
                       Delete

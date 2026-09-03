@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import {
   CAlert,
@@ -18,6 +18,7 @@ import {
 
 const GeneratePaymentVoucherDialog = ({ visible, payment, onClose, onGenerated }) => {
   const [submitting, setSubmitting] = useState(false)
+  const submitInFlightRef = useRef(false)
   const [error, setError] = useState('')
   const [requestKey, setRequestKey] = useState(() =>
     newVendorPaymentRequestKey('vendor-payment-voucher'),
@@ -30,6 +31,9 @@ const GeneratePaymentVoucherDialog = ({ visible, payment, onClose, onGenerated }
   }, [payment?.id, visible])
 
   const handleGenerate = async () => {
+    if (submitting || submitInFlightRef.current) return
+
+    submitInFlightRef.current = true
     setSubmitting(true)
     setError('')
     try {
@@ -38,6 +42,7 @@ const GeneratePaymentVoucherDialog = ({ visible, payment, onClose, onGenerated }
     } catch (requestError) {
       setError(requestError?.message || 'Unable to generate the payment voucher.')
     } finally {
+      submitInFlightRef.current = false
       setSubmitting(false)
     }
   }

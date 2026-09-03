@@ -220,13 +220,7 @@ const ClientVendorRegistrationFormPage = () => {
             <CCardHeader>
               <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <strong>{pageTitle}</strong>
-                <CButton
-                  size="sm"
-                  color="secondary"
-                  variant="outline"
-                  data-api-busy-allow="true"
-                  onClick={goBack}
-                >
+                <CButton size="sm" color="secondary" variant="outline" onClick={goBack}>
                   Back
                 </CButton>
               </div>
@@ -396,19 +390,12 @@ const ClientVendorRegistrationFormPage = () => {
                 color="secondary"
                 variant="outline"
                 size="sm"
-                data-api-busy-allow="true"
                 onClick={goBack}
                 disabled={saving}
               >
                 Cancel
               </CButton>
-              <CButton
-                color="primary"
-                size="sm"
-                data-api-busy-allow="true"
-                onClick={submitForm}
-                disabled={saving || loading}
-              >
+              <CButton color="primary" size="sm" onClick={submitForm} disabled={saving || loading}>
                 {saving ? 'Saving...' : saveLabel}
               </CButton>
             </div>
