@@ -18,25 +18,6 @@ const AppApiProvider = ({ children }) => {
     return () => window.removeEventListener(apiClientEvents.name, handler)
   }, [])
 
-  useEffect(() => {
-    const controls = Array.from(document.querySelectorAll('button, input[type="submit"]'))
-    if (busyCount <= 0) {
-      controls.forEach((control) => {
-        if (control.dataset.apiBusyDisabled === 'true') {
-          control.disabled = false
-          delete control.dataset.apiBusyDisabled
-        }
-      })
-      return
-    }
-
-    controls.forEach((control) => {
-      if (control.disabled || control.dataset.apiBusyAllow === 'true') return
-      control.disabled = true
-      control.dataset.apiBusyDisabled = 'true'
-    })
-  }, [busyCount])
-
   const value = useMemo(() => ({ busy: busyCount > 0 }), [busyCount])
 
   return <ApiUiContext.Provider value={value}>{children}</ApiUiContext.Provider>
