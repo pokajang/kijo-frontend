@@ -128,6 +128,11 @@
     min-width: var(--app-mobile-touch-target) !important;
   }
 
+  .staff-tasks-view-actions {
+    justify-content: flex-end !important;
+    width: 100%;
+  }
+
   .data-table-card-header__title-group {
     align-items: flex-start;
     flex-direction: column;

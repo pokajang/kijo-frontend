@@ -6,7 +6,7 @@ import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs
 
 const ViewTasks = () => (
   <>
-    <ModuleNavStrip tabs={staffModuleTabs} ariaLabel="Staff sections" />
+    <ModuleNavStrip tabs={staffModuleTabs} ariaLabel="Staff sections" showScrollButtons />
     <CCard>
       <AllTasks />
     </CCard>

@@ -5,6 +5,10 @@ import dialog from '../../components/dialog/dialogService'
 import { fetchJson, findRecordById } from '../../utils/detailPages'
 import { getDetailReturnTo } from '../../utils/navigation/returnTo'
 import { getDaysLapsedInfo, getStatusText } from './actionHandlers'
+import { showToast } from '../../components/toast/toastService'
+import CarryForwardModal from './weekly/CarryForwardModal'
+import TaskActivityList from './weekly/TaskActivityList'
+import WeeklyUpdateModal from './weekly/WeeklyUpdateModal'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -73,6 +77,9 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
   const [task, setTask] = useState(() => normalizeTask(location.state?.record, todayStr))
   const [loading, setLoading] = useState(!location.state?.record)
   const [error, setError] = useState('')
+  const [weeklyUpdateVisible, setWeeklyUpdateVisible] = useState(false)
+  const [carryForwardVisible, setCarryForwardVisible] = useState(false)
+  const [activityRefreshToken, setActivityRefreshToken] = useState(0)
 
   const loadTask = useCallback(async () => {
     setLoading(true)
@@ -119,6 +126,7 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
       if (data.status !== 'success')
         throw new Error(data.message || 'Failed to mark task completed')
       await loadTask()
+      setActivityRefreshToken((value) => value + 1)
     } catch (err) {
       dialog.alert(err?.message || 'Failed to mark task completed.')
     }
@@ -144,10 +152,25 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
     }
   }, [navigate, returnTo, taskId])
 
+  const refreshAfterWeeklyActivity = useCallback(
+    async (data) => {
+      await loadTask()
+      setActivityRefreshToken((value) => value + 1)
+      showToast(data.message || 'Task activity saved.')
+    },
+    [loadTask],
+  )
+
   const actions = useMemo(() => {
     if (isStaffScope || !task || task.statusText.startsWith('Completed')) return []
     return [
+      {
+        key: 'add-weekly-update',
+        label: 'Add Weekly Update',
+        onClick: () => setWeeklyUpdateVisible(true),
+      },
       { key: 'add-comment', label: 'Add Comment', onClick: addComment },
+      { key: 'carry-forward', label: 'Carry Forward', onClick: () => setCarryForwardVisible(true) },
       { key: 'mark-completed', label: 'Mark Completed', onClick: markCompleted },
       {
         key: 'delete',
@@ -188,6 +211,14 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
           },
         ]}
       />
+      <div className="border-top mt-4 pt-3">
+        <h6 className="mb-3">Activity History</h6>
+        <TaskActivityList
+          task={task}
+          showActor={isStaffScope}
+          refreshToken={activityRefreshToken}
+        />
+      </div>
       <div className="border-top mt-4 pt-3">
         <h6 className="mb-3">Classification</h6>
         <DataTableDetailFields
@@ -238,6 +269,22 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
           ]}
         />
       </div>
+      {!isStaffScope ? (
+        <>
+          <WeeklyUpdateModal
+            visible={weeklyUpdateVisible}
+            task={task}
+            onClose={() => setWeeklyUpdateVisible(false)}
+            onSaved={refreshAfterWeeklyActivity}
+          />
+          <CarryForwardModal
+            visible={carryForwardVisible}
+            task={task}
+            onClose={() => setCarryForwardVisible(false)}
+            onSaved={refreshAfterWeeklyActivity}
+          />
+        </>
+      ) : null}
     </DataTableDetailShell>
   )
 }

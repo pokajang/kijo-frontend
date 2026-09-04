@@ -1,6 +1,15 @@
 // src/components/tasks/TaskManager.js
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { CRow, CCol, CModal, CModalBody, CModalHeader, CModalTitle } from '@coreui/react'
+import {
+  CButton,
+  CButtonGroup,
+  CCol,
+  CModal,
+  CModalBody,
+  CModalHeader,
+  CModalTitle,
+  CRow,
+} from '@coreui/react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import CreateTask from './CreateTask'
@@ -18,6 +27,9 @@ import {
 } from './taskApi'
 import { showToast } from '../../components/toast/toastService'
 import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
+import CarryForwardModal from './weekly/CarryForwardModal'
+import WeeklyTaskSummary from './weekly/WeeklyTaskSummary'
+import WeeklyUpdateModal from './weekly/WeeklyUpdateModal'
 
 const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v3'
 const AI_CLASSIFICATION_POLL_INTERVAL_MS = 4000
@@ -148,6 +160,8 @@ const TaskManager = () => {
   const [periodRange, setPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [savingTasks, setSavingTasks] = useState(false)
+  const [weeklyUpdateTask, setWeeklyUpdateTask] = useState(null)
+  const [carryForwardTask, setCarryForwardTask] = useState(null)
   const aiClassificationPollRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
@@ -176,6 +190,17 @@ const TaskManager = () => {
     if (savingTasks) return
     setShowCreateTaskModal(false)
     clearCreateActionParam()
+  }
+
+  const activeView =
+    new URLSearchParams(location.search).get('view') === 'weekly' ? 'weekly' : 'tasks'
+  const setActiveView = (view) => {
+    const params = new URLSearchParams(location.search)
+    if (view === 'weekly') params.set('view', 'weekly')
+    else params.delete('view')
+
+    const search = params.toString()
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
   }
 
   const savedDraftTitle = useCallback(
@@ -570,30 +595,65 @@ const TaskManager = () => {
     }
   }
 
+  const onWeeklyUpdateSaved = async (data) => {
+    await loadTasks()
+    showToast(data.message || 'Weekly update saved.')
+  }
+
+  const onCarryForwardSaved = async (data) => {
+    await loadTasks()
+    showToast(data.message || 'Task carried forward.')
+  }
+
+  const openTask = (task) => {
+    navigate(`/task-manager/${task.id || task.taskId}`, {
+      state: task.id ? { record: task, returnTo: getCurrentReturnTo(location) } : undefined,
+    })
+  }
+
   // — sort for display —
   const sortedTasks = handlers.sortTasks(taskList, todayStr)
 
   return (
     <>
       <CRow className="g-4">
-        {/* Task table */}
         <CCol md={12}>
-          <TaskTable
-            tasks={sortedTasks}
-            todayStr={todayStr}
-            periodRange={periodRange}
-            onPeriodRangeChange={setPeriodRange}
-            getStatusBadge={handlers.getStatusBadge}
-            handleAddComment={onAddComment}
-            handleMarkCompleted={onMarkCompleted}
-            handleDeleteTask={onDeleteTask}
-            onCreateTask={() => setShowCreateTaskModal(true)}
-            onView={(task) =>
-              navigate(`/task-manager/${task.id}`, {
-                state: { record: task, returnTo: getCurrentReturnTo(location) },
-              })
-            }
-          />
+          <CButtonGroup aria-label="Task manager view">
+            <CButton
+              color={activeView === 'tasks' ? 'primary' : 'secondary'}
+              variant={activeView === 'tasks' ? undefined : 'outline'}
+              onClick={() => setActiveView('tasks')}
+            >
+              Tasks
+            </CButton>
+            <CButton
+              color={activeView === 'weekly' ? 'primary' : 'secondary'}
+              variant={activeView === 'weekly' ? undefined : 'outline'}
+              onClick={() => setActiveView('weekly')}
+            >
+              Weekly Summary
+            </CButton>
+          </CButtonGroup>
+        </CCol>
+        <CCol md={12}>
+          {activeView === 'weekly' ? (
+            <WeeklyTaskSummary onOpenTask={openTask} />
+          ) : (
+            <TaskTable
+              tasks={sortedTasks}
+              todayStr={todayStr}
+              periodRange={periodRange}
+              onPeriodRangeChange={setPeriodRange}
+              getStatusBadge={handlers.getStatusBadge}
+              handleAddComment={onAddComment}
+              handleAddWeeklyUpdate={setWeeklyUpdateTask}
+              handleCarryForward={setCarryForwardTask}
+              handleMarkCompleted={onMarkCompleted}
+              handleDeleteTask={onDeleteTask}
+              onCreateTask={() => setShowCreateTaskModal(true)}
+              onView={openTask}
+            />
+          )}
         </CCol>
       </CRow>
 
@@ -621,6 +681,20 @@ const TaskManager = () => {
           />
         </CModalBody>
       </CModal>
+
+      <WeeklyUpdateModal
+        visible={Boolean(weeklyUpdateTask)}
+        task={weeklyUpdateTask}
+        onClose={() => setWeeklyUpdateTask(null)}
+        onSaved={onWeeklyUpdateSaved}
+      />
+
+      <CarryForwardModal
+        visible={Boolean(carryForwardTask)}
+        task={carryForwardTask}
+        onClose={() => setCarryForwardTask(null)}
+        onSaved={onCarryForwardSaved}
+      />
     </>
   )
 }

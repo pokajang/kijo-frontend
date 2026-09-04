@@ -224,8 +224,6 @@ const ModuleNavStripShell = ({
     tabsNode.scrollBy({ left: direction * distance, behavior: reduceMotion ? 'auto' : 'smooth' })
   }
 
-  const hasTabOverflow = tabScrollState.start || tabScrollState.end
-
   return (
     <Container
       className={`module-nav-strip records-service-strip ${
@@ -236,7 +234,7 @@ const ModuleNavStripShell = ({
     >
       <div className="module-nav-strip__inner records-service-strip__inner">
         <div className="module-nav-strip__tab-row">
-          {showScrollButtons && hasTabOverflow ? (
+          {showScrollButtons && tabScrollState.start ? (
             <CButton
               type="button"
               color="light"
@@ -323,7 +321,7 @@ const ModuleNavStripShell = ({
               })}
             </div>
           </div>
-          {showScrollButtons && hasTabOverflow ? (
+          {showScrollButtons && tabScrollState.end ? (
             <CButton
               type="button"
               color="light"

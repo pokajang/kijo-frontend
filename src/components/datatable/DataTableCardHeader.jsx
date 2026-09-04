@@ -2,7 +2,14 @@ import React from 'react'
 import { CCardHeader } from '@coreui/react'
 import { formatStatsScopeLabel } from '../stats/formatStatsScopeLabel'
 
-const DataTableCardHeader = ({ title, scopeLabel = '', children, className = '', ...rest }) => {
+const DataTableCardHeader = ({
+  title,
+  titleAs: TitleTag = 'strong',
+  scopeLabel = '',
+  children,
+  className = '',
+  ...rest
+}) => {
   const displayScopeLabel = formatStatsScopeLabel(scopeLabel)
   const showScopeLabel = Boolean(displayScopeLabel)
 
@@ -12,11 +19,7 @@ const DataTableCardHeader = ({ title, scopeLabel = '', children, className = '',
       {...rest}
     >
       <div className="data-table-card-header__title-group">
-        {typeof title === 'string' || typeof title === 'number' ? (
-          <strong className="data-table-card-header__title">{title}</strong>
-        ) : (
-          <span className="data-table-card-header__title">{title}</span>
-        )}
+        <TitleTag className="data-table-card-header__title">{title}</TitleTag>
         {showScopeLabel ? (
           <span className="data-table-card-header__scope">{displayScopeLabel}</span>
         ) : null}

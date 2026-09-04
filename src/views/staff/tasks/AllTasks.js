@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CAlert,
   CButton,
+  CButtonGroup,
   CCardBody,
   CCol,
   CDropdown,
@@ -45,6 +46,13 @@ import TaskAchievement from './TaskAchievement'
 import { compareTaskPriority } from '../../task-manager/taskPrioritySort'
 import TaskTitleProjectCell from '../../task-manager/TaskTitleProjectCell'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
+import WeeklyTaskSummary from '../../task-manager/weekly/WeeklyTaskSummary'
+import { getWeeklyStaffOptions } from '../../task-manager/weekly/taskUpdateApi'
+import { formatWeekLabel } from '../../task-manager/weekly/taskWeekUtils'
+import {
+  applyWeeklyReviewState,
+  getWeeklyReviewState,
+} from '../../task-manager/weekly/weeklySummaryState'
 
 export const buildAllTasksUrl = (apiBase, periodRange) =>
   appendQueryParams(`${apiBase}tasks`, {
@@ -204,6 +212,32 @@ const toDateOnly = (value) => String(value || '').slice(0, 10)
 const getStaffCode = (task) =>
   task?.staffCode || task?.staff_code || task?.nameCode || task?.staffName
 const getTaskStaffId = (task) => String(task?.staffId || task?.staff_id || '').trim()
+
+export const mergeWeeklyStaffOptions = (directoryStaff = [], taskRows = []) => {
+  const optionsById = new Map()
+
+  const addOption = (value, label) => {
+    const staffId = String(value || '').trim()
+    const staffLabel = String(label || '').trim()
+    if (!staffId || !staffLabel || optionsById.has(staffId)) return
+    optionsById.set(staffId, { value: staffId, label: staffLabel })
+  }
+
+  directoryStaff.forEach((staff) => {
+    const label = staff.label || [staff.code, staff.name].filter(Boolean).join(' - ')
+    addOption(staff.id ?? staff.value, label)
+  })
+
+  taskRows.forEach((task) => {
+    const staffId = getTaskStaffId(task)
+    const name = task?.staffName || task?.staff_name || ''
+    const code = getStaffCode(task)
+    addOption(staffId, code && code !== name ? `${code} - ${name}` : name || code)
+  })
+
+  return Array.from(optionsById.values()).sort((a, b) => a.label.localeCompare(b.label))
+}
+
 const mapTaskToExportRow = (task, todayStr) => {
   const statusText = getStatusText(task, todayStr)
   const daysLapsed = getDaysLapsedInfo(task, todayStr)
@@ -274,6 +308,7 @@ const AllTasks = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const [tasks, setTasks] = useState([])
+  const [weeklyStaffDirectory, setWeeklyStaffDirectory] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const todayStr = formatDateLocal(new Date())
@@ -289,6 +324,7 @@ const AllTasks = () => {
   const [exportStartDate, setExportStartDate] = useState(currentWeek.start)
   const [exportEndDate, setExportEndDate] = useState(currentWeek.end)
   const [exporting, setExporting] = useState(false)
+  const [weeklyStaffOptionsLoaded, setWeeklyStaffOptionsLoaded] = useState(false)
   const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
     useDataTableStatsVisibility('staff.tasks')
 
@@ -332,6 +368,69 @@ const AllTasks = () => {
 
     return Array.from(staffById.values()).sort((a, b) => a.label.localeCompare(b.label))
   }, [tasks])
+
+  const weeklyStaffOptions = useMemo(
+    () => mergeWeeklyStaffOptions(weeklyStaffDirectory, tasks),
+    [tasks, weeklyStaffDirectory],
+  )
+
+  const weeklyReviewState = useMemo(() => getWeeklyReviewState(location.search), [location.search])
+  const isWeeklyView = new URLSearchParams(location.search).get('view') === 'weekly'
+
+  useEffect(() => {
+    let active = true
+
+    getWeeklyStaffOptions()
+      .then((data) => {
+        if (!active || data.status !== 'success') return
+        setWeeklyStaffDirectory(Array.isArray(data.staff) ? data.staff : [])
+        setWeeklyStaffOptionsLoaded(true)
+      })
+      .catch(() => {
+        if (active) {
+          setWeeklyStaffDirectory([])
+          setWeeklyStaffOptionsLoaded(true)
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const changeView = (view) => {
+    const params = new URLSearchParams(location.search)
+    if (view === 'weekly') params.set('view', 'weekly')
+    else params.delete('view')
+    const search = params.toString()
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
+  }
+
+  const updateWeeklyReview = useCallback(
+    (nextState) => {
+      const search = applyWeeklyReviewState(location.search, nextState)
+      navigate(
+        { pathname: location.pathname, search: search ? `?${search}` : '' },
+        { replace: true },
+      )
+    },
+    [location.pathname, location.search, navigate],
+  )
+
+  useEffect(() => {
+    if (!weeklyStaffOptionsLoaded || weeklyReviewState.staffId === 'all') return
+
+    const selectedStaffIsAvailable = weeklyStaffOptions.some(
+      (staff) => String(staff.value) === String(weeklyReviewState.staffId),
+    )
+    if (selectedStaffIsAvailable) return
+
+    updateWeeklyReview({
+      ...weeklyReviewState,
+      staffId: 'all',
+      compareEnabled: false,
+    })
+  }, [updateWeeklyReview, weeklyReviewState, weeklyStaffOptions, weeklyStaffOptionsLoaded])
 
   const staffTasks = useMemo(
     () => (staffFilter === 'all' ? [] : tasks.filter((t) => t.staffName === staffFilter)),
@@ -511,6 +610,27 @@ const AllTasks = () => {
     </CDropdown>
   )
 
+  const renderViewSwitch = () => (
+    <CButtonGroup size="sm" aria-label="All staff task views">
+      <CButton
+        size="sm"
+        color={!isWeeklyView ? 'primary' : 'secondary'}
+        variant={!isWeeklyView ? undefined : 'outline'}
+        onClick={() => changeView('tasks')}
+      >
+        Tasks
+      </CButton>
+      <CButton
+        size="sm"
+        color={isWeeklyView ? 'primary' : 'secondary'}
+        variant={isWeeklyView ? undefined : 'outline'}
+        onClick={() => changeView('weekly')}
+      >
+        Weekly Summary
+      </CButton>
+    </CButtonGroup>
+  )
+
   const renderCell = (task, column) => {
     if (column.key === 'title') {
       return <TaskTitleProjectCell task={task} maxWidth={column.cellMaxWidth} />
@@ -543,201 +663,230 @@ const AllTasks = () => {
   return (
     <>
       <DataTableCardHeader
-        title="All Staff Tasks"
-        scopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        title={isWeeklyView ? 'Weekly Summary' : 'All Staff Tasks'}
+        titleAs={isWeeklyView ? 'h1' : 'strong'}
+        scopeLabel={
+          isWeeklyView
+            ? formatWeekLabel(weeklyReviewState.weekStart)
+            : periodRange
+              ? getPeriodRangeScopeLabel(periodRange)
+              : ''
+        }
       >
-        <DataTableStatsToggle
-          visible={statsVisible}
-          onToggle={toggleStatsVisible}
-          controlsVisible={controlsVisible}
-          onControlsToggle={toggleControlsVisible}
-        />
+        <div className="staff-tasks-view-actions d-flex flex-wrap align-items-center justify-content-end gap-2">
+          <DataTableStatsToggle
+            visible={statsVisible}
+            onToggle={toggleStatsVisible}
+            controlsVisible={controlsVisible}
+            onControlsToggle={toggleControlsVisible}
+            className={isWeeklyView ? 'd-none d-md-inline-flex invisible' : ''}
+          />
+          {renderViewSwitch()}
+        </div>
       </DataTableCardHeader>
-
-      <CCardBody>
-        {error && (
-          <CAlert color="danger" className="mb-3">
-            {error}
-          </CAlert>
-        )}
-
-        {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
-
-        <DataTableRecordControls
-          visible={controlsVisible}
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
-          searchPlaceholder="Search staff, task, project, status, or comment..."
-          showAdvancedFilters={showAdvancedFilters}
-          setShowAdvancedFilters={setShowAdvancedFilters}
-          activeFilterCount={activeFilterCount}
-          activeChips={activeChips}
-          clearChip={clearChip}
-          resetFilters={resetFilters}
-          loading={loading}
-          desktopToolsId="all-staff-tasks-table-tools"
-          mobileToolsId="all-staff-tasks-mobile-table-tools"
-          extraTools={renderExportDropdown()}
-          mobileExtraTools={renderExportDropdown()}
-          inlineFilter={
-            <CFormSelect
-              id="all-tasks-filter-staff"
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              style={{ minWidth: '150px' }}
-            >
-              <option value="all">All Staff</option>
-              {staffOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </CFormSelect>
-          }
-        />
-      </CCardBody>
-
-      {staffFilter !== 'all' && <TaskAchievement tasks={staffTasks} todayStr={todayStr} />}
-
-      <CCardBody>
-        <DataTableRecordList
-          rows={normalizedTasks}
-          dataColumns={dataColumns}
-          defaultVisibleColumns={defaultVisibleColumns}
-          requiredColumns={requiredColumns}
-          storageKey="staff.tasks.all.visible-columns.v7"
-          scrollStorageKey="staff.tasks.all.scroll"
-          idPrefix="all-staff-task"
-          emptyMessage="No staff tasks found."
-          exportFilename={`all-staff-tasks-${new Date().toISOString().slice(0, 10)}.csv`}
-          loading={loading}
-          loadingMessage="Loading staff tasks..."
-          showDesktopSummary={false}
-          showExport={false}
-          desktopUtilityPlacement="portal"
-          desktopUtilityPortalId="all-staff-tasks-table-tools"
-          mobileUtilityPlacement="portal"
-          mobileUtilityPortalId="all-staff-tasks-mobile-table-tools"
-          showMobileUtilityRow={false}
-          renderQuickFilters={() => (
-            <PeriodRangeSelector
-              value={periodRange}
-              onChange={setPeriodRange}
-              className="d-none d-lg-block"
-            />
-          )}
-          getRowKey={(task, index) => task.id || index}
-          renderCell={renderCell}
-          onRowOpen={(task) =>
-            navigate(`/staff/tasks/${task.id}`, {
-              state: { record: task, returnTo: getCurrentReturnTo(location) },
+      {isWeeklyView ? (
+        <WeeklyTaskSummary
+          embedded
+          management
+          staffOptions={weeklyStaffOptions}
+          reviewState={weeklyReviewState}
+          onReviewChange={updateWeeklyReview}
+          onOpenTask={(task) =>
+            navigate(`/staff/tasks/${task.taskId}`, {
+              state: { returnTo: getCurrentReturnTo(location) },
             })
           }
-          getMobileTitle={(task) => task.title}
-          getMobileSubtitle={(task) => task.staffName}
-          getMobileMeta={(task) => `Due ${task.dueDate || '-'}`}
-          getMobileStatus={(task) => task.statusText}
-          getMobileStatusTone={(task) => {
-            if (task.statusText.startsWith('Completed')) return 'success'
-            if (task.statusText.startsWith('Overdue')) return 'danger'
-            return 'info'
-          }}
-          mobileFieldKeys={{
-            title: 'title',
-            subtitle: 'staffName',
-            meta: 'dueDate',
-            status: 'statusText',
-          }}
-          initialSortField="statusText"
-          initialSortDir="asc"
-          initialSortDirByField={{
-            statusText: 'asc',
-            createdAt: 'desc',
-            dueDate: 'asc',
-            daysLapsed: 'desc',
-          }}
-          getSortValue={(task, field) => (field === 'statusText' ? task.statusRank : task[field])}
-          sortComparators={{ statusText: compareTaskPriority }}
-          resetDeps={[staffFilter, periodRange, searchTerm]}
         />
-      </CCardBody>
+      ) : (
+        <>
+          <CCardBody>
+            {error && (
+              <CAlert color="danger" className="mb-3">
+                {error}
+              </CAlert>
+            )}
 
-      <CModal
-        visible={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        alignment="center"
-      >
-        <CModalHeader closeButton>
-          <CModalTitle>Export All Staff Tasks</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <CCol xs={12} className="mb-3">
-            <CFormLabel htmlFor="all-tasks-export-staff">Staff</CFormLabel>
-            <CFormSelect
-              id="all-tasks-export-staff"
-              value={exportStaffId}
-              onChange={(event) => setExportStaffId(event.target.value)}
-            >
-              <option value="all">All Staff</option>
-              {exportStaffOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </CFormSelect>
-          </CCol>
-          <CCol xs={12} className="mb-3">
-            <CFormLabel htmlFor="all-tasks-export-period">Period</CFormLabel>
-            <CFormSelect
-              id="all-tasks-export-period"
-              value={exportPeriod}
-              onChange={(event) => handleExportPeriodChange(event.target.value)}
-            >
-              {exportPeriodOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </CFormSelect>
-          </CCol>
-          {exportPeriod === 'custom' ? (
-            <>
-              <CCol xs={12} className="mb-3">
-                <CFormLabel htmlFor="all-tasks-export-start">Start Date</CFormLabel>
-                <CFormInput
-                  id="all-tasks-export-start"
-                  type="date"
-                  value={exportStartDate}
-                  onChange={(event) => setExportStartDate(event.target.value)}
+            {statsVisible && <StatsStrip items={statsItems} loading={loading} />}
+
+            <DataTableRecordControls
+              visible={controlsVisible}
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder="Search staff, task, project, status, or comment..."
+              showAdvancedFilters={showAdvancedFilters}
+              setShowAdvancedFilters={setShowAdvancedFilters}
+              activeFilterCount={activeFilterCount}
+              activeChips={activeChips}
+              clearChip={clearChip}
+              resetFilters={resetFilters}
+              loading={loading}
+              desktopToolsId="all-staff-tasks-table-tools"
+              mobileToolsId="all-staff-tasks-mobile-table-tools"
+              extraTools={renderExportDropdown()}
+              mobileExtraTools={renderExportDropdown()}
+              inlineFilter={
+                <CFormSelect
+                  id="all-tasks-filter-staff"
+                  value={staffFilter}
+                  onChange={(e) => setStaffFilter(e.target.value)}
+                  style={{ minWidth: '150px' }}
+                >
+                  <option value="all">All Staff</option>
+                  {staffOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </CFormSelect>
+              }
+            />
+          </CCardBody>
+
+          {staffFilter !== 'all' && <TaskAchievement tasks={staffTasks} todayStr={todayStr} />}
+
+          <CCardBody>
+            <DataTableRecordList
+              rows={normalizedTasks}
+              dataColumns={dataColumns}
+              defaultVisibleColumns={defaultVisibleColumns}
+              requiredColumns={requiredColumns}
+              storageKey="staff.tasks.all.visible-columns.v7"
+              scrollStorageKey="staff.tasks.all.scroll"
+              idPrefix="all-staff-task"
+              emptyMessage="No staff tasks found."
+              exportFilename={`all-staff-tasks-${new Date().toISOString().slice(0, 10)}.csv`}
+              loading={loading}
+              loadingMessage="Loading staff tasks..."
+              showDesktopSummary={false}
+              showExport={false}
+              desktopUtilityPlacement="portal"
+              desktopUtilityPortalId="all-staff-tasks-table-tools"
+              mobileUtilityPlacement="portal"
+              mobileUtilityPortalId="all-staff-tasks-mobile-table-tools"
+              showMobileUtilityRow={false}
+              renderQuickFilters={() => (
+                <PeriodRangeSelector
+                  value={periodRange}
+                  onChange={setPeriodRange}
+                  className="d-none d-lg-block"
                 />
-              </CCol>
-              <CCol xs={12}>
-                <CFormLabel htmlFor="all-tasks-export-end">End Date</CFormLabel>
-                <CFormInput
-                  id="all-tasks-export-end"
-                  type="date"
-                  value={exportEndDate}
-                  onChange={(event) => setExportEndDate(event.target.value)}
-                />
-              </CCol>
-            </>
-          ) : null}
-        </CModalBody>
-        <CModalFooter>
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            disabled={exporting}
-            onClick={() => setShowExportModal(false)}
+              )}
+              getRowKey={(task, index) => task.id || index}
+              renderCell={renderCell}
+              onRowOpen={(task) =>
+                navigate(`/staff/tasks/${task.id}`, {
+                  state: { record: task, returnTo: getCurrentReturnTo(location) },
+                })
+              }
+              getMobileTitle={(task) => task.title}
+              getMobileSubtitle={(task) => task.staffName}
+              getMobileMeta={(task) => `Due ${task.dueDate || '-'}`}
+              getMobileStatus={(task) => task.statusText}
+              getMobileStatusTone={(task) => {
+                if (task.statusText.startsWith('Completed')) return 'success'
+                if (task.statusText.startsWith('Overdue')) return 'danger'
+                return 'info'
+              }}
+              mobileFieldKeys={{
+                title: 'title',
+                subtitle: 'staffName',
+                meta: 'dueDate',
+                status: 'statusText',
+              }}
+              initialSortField="statusText"
+              initialSortDir="asc"
+              initialSortDirByField={{
+                statusText: 'asc',
+                createdAt: 'desc',
+                dueDate: 'asc',
+                daysLapsed: 'desc',
+              }}
+              getSortValue={(task, field) =>
+                field === 'statusText' ? task.statusRank : task[field]
+              }
+              sortComparators={{ statusText: compareTaskPriority }}
+              resetDeps={[staffFilter, periodRange, searchTerm]}
+            />
+          </CCardBody>
+
+          <CModal
+            visible={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            alignment="center"
           >
-            Cancel
-          </CButton>
-          <CButton color="primary" size="sm" disabled={exporting} onClick={handleConfirmExport}>
-            {exporting ? 'Exporting...' : `Export ${exportType.toUpperCase()}`}
-          </CButton>
-        </CModalFooter>
-      </CModal>
+            <CModalHeader closeButton>
+              <CModalTitle>Export All Staff Tasks</CModalTitle>
+            </CModalHeader>
+            <CModalBody>
+              <CCol xs={12} className="mb-3">
+                <CFormLabel htmlFor="all-tasks-export-staff">Staff</CFormLabel>
+                <CFormSelect
+                  id="all-tasks-export-staff"
+                  value={exportStaffId}
+                  onChange={(event) => setExportStaffId(event.target.value)}
+                >
+                  <option value="all">All Staff</option>
+                  {exportStaffOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </CFormSelect>
+              </CCol>
+              <CCol xs={12} className="mb-3">
+                <CFormLabel htmlFor="all-tasks-export-period">Period</CFormLabel>
+                <CFormSelect
+                  id="all-tasks-export-period"
+                  value={exportPeriod}
+                  onChange={(event) => handleExportPeriodChange(event.target.value)}
+                >
+                  {exportPeriodOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </CFormSelect>
+              </CCol>
+              {exportPeriod === 'custom' ? (
+                <>
+                  <CCol xs={12} className="mb-3">
+                    <CFormLabel htmlFor="all-tasks-export-start">Start Date</CFormLabel>
+                    <CFormInput
+                      id="all-tasks-export-start"
+                      type="date"
+                      value={exportStartDate}
+                      onChange={(event) => setExportStartDate(event.target.value)}
+                    />
+                  </CCol>
+                  <CCol xs={12}>
+                    <CFormLabel htmlFor="all-tasks-export-end">End Date</CFormLabel>
+                    <CFormInput
+                      id="all-tasks-export-end"
+                      type="date"
+                      value={exportEndDate}
+                      onChange={(event) => setExportEndDate(event.target.value)}
+                    />
+                  </CCol>
+                </>
+              ) : null}
+            </CModalBody>
+            <CModalFooter>
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                disabled={exporting}
+                onClick={() => setShowExportModal(false)}
+              >
+                Cancel
+              </CButton>
+              <CButton color="primary" size="sm" disabled={exporting} onClick={handleConfirmExport}>
+                {exporting ? 'Exporting...' : `Export ${exportType.toUpperCase()}`}
+              </CButton>
+            </CModalFooter>
+          </CModal>
+        </>
+      )}
     </>
   )
 }

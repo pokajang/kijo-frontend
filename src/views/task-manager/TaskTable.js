@@ -230,6 +230,8 @@ const TaskTable = ({
   onPeriodRangeChange,
   getStatusBadge,
   handleAddComment,
+  handleAddWeeklyUpdate,
+  handleCarryForward,
   handleMarkCompleted,
   handleDeleteTask,
   onCreateTask,
@@ -460,9 +462,19 @@ const TaskTable = ({
 
     return [
       {
+        key: 'add-weekly-update',
+        label: 'Add Weekly Update',
+        onClick: () => handleAddWeeklyUpdate?.(task),
+      },
+      {
         key: 'add-comment',
         label: 'Add Comment',
         onClick: () => handleAddComment(task.id),
+      },
+      {
+        key: 'carry-forward',
+        label: 'Carry Forward',
+        onClick: () => handleCarryForward?.(task),
       },
       {
         key: 'mark-completed',

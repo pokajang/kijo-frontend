@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAllTaskStatsItems, buildAllTasksUrl } from './AllTasks'
+import { buildAllTaskStatsItems, buildAllTasksUrl, mergeWeeklyStaffOptions } from './AllTasks'
 
 describe('buildAllTaskStatsItems', () => {
   it('builds exactly four task summary cards without the total tasks card', () => {
@@ -79,5 +79,19 @@ describe('buildAllTasksUrl', () => {
         endDate: '2026-01-31',
       }),
     ).toBe('https://example.test/tasks?start=2025-12-01&end=2026-01-31')
+  })
+})
+
+describe('mergeWeeklyStaffOptions', () => {
+  it('keeps directory staff and adds staff found in the loaded task rows', () => {
+    expect(
+      mergeWeeklyStaffOptions(
+        [{ id: 7, code: 'DIR', name: 'Directory Staff' }],
+        [{ staffId: 42, staffCode: 'AZA', staffName: 'Azam Bin Husain' }],
+      ),
+    ).toEqual([
+      { value: '42', label: 'AZA - Azam Bin Husain' },
+      { value: '7', label: 'DIR - Directory Staff' },
+    ])
   })
 })

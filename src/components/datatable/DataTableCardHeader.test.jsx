@@ -20,6 +20,14 @@ describe('DataTableCardHeader', () => {
     expect(screen.getByText('Quotes')).toBeInTheDocument()
   })
 
+  it('can render a semantic heading without changing the shared title class', () => {
+    render(<DataTableCardHeader title="Weekly Summary" titleAs="h1" />)
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Weekly Summary' })).toHaveClass(
+      'data-table-card-header__title',
+    )
+  })
+
   it('renders a formatted YTD scope label', () => {
     render(<DataTableCardHeader title="Quotes" scopeLabel="YTD 2026" />)
 
