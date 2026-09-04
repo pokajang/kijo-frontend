@@ -42,7 +42,7 @@ import { getRouteNotificationBadge } from '../../notifications/notificationRegis
 
 import AppraisalRecords from '../appraisal/AppraisalRecords'
 import dialog from '../dialog/dialogService'
-const menuSections = [
+export const accountMenuSections = [
   {
     title: 'Off Days',
     headerClass: 'app-header-dropdown-heading',
@@ -136,7 +136,7 @@ const menuSections = [
   },
 ]
 
-const modalMapping = menuSections.reduce((mapping, section) => {
+const modalMapping = accountMenuSections.reduce((mapping, section) => {
   section.items.forEach((item) => {
     if (item.modalTitle && item.component) {
       mapping[item.key] = { title: item.modalTitle, component: item.component }
@@ -148,6 +148,34 @@ const modalMapping = menuSections.reduce((mapping, section) => {
 const defaultModalKey = Object.keys(modalMapping)[0] || null
 const getThemeIcon = (themeToggleLabel = '') =>
   themeToggleLabel.toLowerCase().includes('light') ? cilSun : cilMoon
+
+export const buildAccountUtilitySection = ({ themeToggleLabel, whatsNewLabel }) => ({
+  title: 'Utilities',
+  sectionClass: 'd-md-none',
+  headerClass: 'app-header-dropdown-heading',
+  items: [
+    {
+      key: 'theme',
+      label: 'Theme',
+      icon: getThemeIcon(themeToggleLabel),
+      action: 'toggleTheme',
+      tooltip: themeToggleLabel || 'Toggle theme',
+    },
+    {
+      key: 'whatsNew',
+      label: "What's New",
+      to: '/whats-new',
+      icon: cilGift,
+      tooltip: whatsNewLabel || 'See Latest Updates',
+    },
+    {
+      key: 'submitTicket',
+      label: 'Submit Ticket',
+      icon: cilPaperPlane,
+      action: 'openTicket',
+    },
+  ],
+})
 
 const AppHeaderDropdown = ({
   sessionUser,
@@ -172,33 +200,7 @@ const AppHeaderDropdown = ({
   const isAccountModalActive = modalVisible || signOutModalVisible
   const isAccountActive = isDropdownOpen || isAccountModalActive
 
-  const utilitySection = {
-    title: 'Utilities',
-    sectionClass: 'd-md-none',
-    headerClass: 'app-header-dropdown-heading',
-    items: [
-      {
-        key: 'theme',
-        label: 'Theme',
-        icon: getThemeIcon(themeToggleLabel),
-        action: 'toggleTheme',
-        tooltip: themeToggleLabel || 'Toggle theme',
-      },
-      {
-        key: 'whatsNew',
-        label: "What's New",
-        to: '/whats-new',
-        icon: cilGift,
-        tooltip: whatsNewLabel || 'See Latest Updates',
-      },
-      {
-        key: 'submitTicket',
-        label: 'Submit Ticket',
-        icon: cilPaperPlane,
-        action: 'openTicket',
-      },
-    ],
-  }
+  const utilitySection = buildAccountUtilitySection({ themeToggleLabel, whatsNewLabel })
 
   useEffect(() => {
     onAccountActiveChange?.(isAccountActive)
@@ -268,7 +270,7 @@ const AppHeaderDropdown = ({
         variant="nav-item"
         alignment="end"
         popper={false}
-        className="app-bottom-nav-entry"
+        className="app-bottom-nav-entry d-none d-md-flex"
         visible={isDropdownOpen}
         onShow={() => setIsDropdownOpen(true)}
         onHide={() => setIsDropdownOpen(false)}
@@ -320,7 +322,7 @@ const AppHeaderDropdown = ({
               )}
             </div>
 
-            {[utilitySection, ...menuSections].map((section) => (
+            {[utilitySection, ...accountMenuSections].map((section) => (
               <div
                 key={section.title}
                 className={`app-header-dropdown-section${section.sectionClass ? ` ${section.sectionClass}` : ''}`}

@@ -1,15 +1,33 @@
 /* Mobile: move global top header menu to bottom bar */
 @media (max-width: 767.98px) {
+  // The handbook reminder is rendered inside the fixed mobile header. Reserve its
+  // height globally so page content and floating actions stay above both rows.
+  :root:has(.header.header-sticky .app-global-prompt) {
+    --app-mobile-fixed-bottom-inset: calc(
+      var(--app-mobile-bottom-nav-height) + var(--app-mobile-bottom-safe-area) + 3rem
+    );
+    --app-mobile-floating-action-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 0.75rem);
+  }
+
+  .header.header-sticky:has(.app-global-prompt) {
+    --app-mobile-fixed-bottom-inset: calc(
+      var(--app-mobile-bottom-nav-height) + var(--app-mobile-bottom-safe-area) + 3rem
+    );
+    --app-mobile-floating-action-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 0.75rem);
+  }
+
+  // A required acknowledgement takes precedence over auxiliary floating actions.
+  .header.header-sticky:has(.app-global-prompt) .app-module-search-fab,
+  .header.header-sticky:has(.app-global-prompt) .app-knowledge-header-help {
+    display: none;
+  }
+
   :root,
   .app-main-header,
   .header.header-sticky {
     --app-mobile-floating-action-bottom: calc(
       var(--app-mobile-fixed-header-height, var(--app-mobile-fixed-bottom-inset)) + 0.75rem
     );
-  }
-
-  .app-main-header.app-main-header--sidebar-open {
-    display: none !important;
   }
 
   .header.header-sticky {
@@ -34,7 +52,7 @@
 
   .header.header-sticky > .container-fluid.app-bottom-nav-container {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     align-items: stretch;
     column-gap: 0;
   }
@@ -54,6 +72,9 @@
     min-width: 0;
     font-size: 0.8125rem;
     line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .header.header-sticky .app-global-prompt .btn {
@@ -74,9 +95,9 @@
   }
 
   .app-bottom-nav-actions {
-    grid-column: 2 / span 4;
+    grid-column: 2 / span 5;
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     margin-left: 0 !important;
     align-items: stretch;
   }
@@ -163,6 +184,7 @@
   }
 
   .header.header-sticky .app-bottom-nav-link.active,
+  .header.header-sticky .app-bottom-nav-item.active,
   .header.header-sticky .app-bottom-nav-link--button.active,
   .header.header-sticky .app-bottom-nav-dropdown-toggle.show,
   .header.header-sticky .app-bottom-nav-dropdown-toggle.active {
@@ -171,10 +193,18 @@
   }
 
   .header.header-sticky .app-bottom-nav-link.active .app-bottom-nav-label,
+  .header.header-sticky .app-bottom-nav-item.active .app-bottom-nav-label,
   .header.header-sticky .app-bottom-nav-link--button.active .app-bottom-nav-label,
   .header.header-sticky .app-bottom-nav-dropdown-toggle.show .app-bottom-nav-label,
   .header.header-sticky .app-bottom-nav-dropdown-toggle.active .app-bottom-nav-label {
     font-weight: 600;
+  }
+
+  .header.header-sticky .app-bottom-nav-link--route-muted.active,
+  .header.header-sticky .app-bottom-nav-link--route-muted.active .app-bottom-nav-label {
+    color: var(--cui-secondary-color) !important;
+    font-weight: 500;
+    transform: none;
   }
 
   .app-bottom-nav--ticket-active.header.header-sticky

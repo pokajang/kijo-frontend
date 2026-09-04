@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import PropTypes from 'prop-types'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CAlert, CFormSwitch } from '@coreui/react'
 import RightSideDrawer from '../../components/right-drawer/RightSideDrawer'
@@ -21,13 +22,13 @@ import useKnowledgeAssistantChat from './side-panel/useKnowledgeAssistantChat'
 
 const BASE_ASSISTANT_PROMPTS = ['How do I create a quotation?', 'How do I apply leave?']
 
-const KnowledgeSidePanel = () => {
+const KnowledgeSidePanel = ({ active, embedded = false, initialMode = 'search' }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user } = useAuth()
   const roles = useMemo(() => extractRolesFromSession({ user }), [user])
   const {
-    isOpen,
+    isOpen: drawerIsOpen,
     article,
     articles,
     search,
@@ -37,8 +38,10 @@ const KnowledgeSidePanel = () => {
     closeKnowledgePanel,
     setKnowledgeSearch,
     loadKnowledgeArticle,
+    loadArticles,
   } = useKnowledgePanel()
-  const [mode, setMode] = useState('search')
+  const isOpen = active ?? drawerIsOpen
+  const [mode, setMode] = useState(initialMode)
   const currentAssistantRoute = `${location.pathname || ''}${location.search || ''}`
 
   const assistant = useKnowledgeAssistantChat({
@@ -46,6 +49,13 @@ const KnowledgeSidePanel = () => {
     isAskMode: mode === 'ask',
     isOpen,
   })
+
+  useEffect(() => {
+    if (!isOpen || articles.length > 0) return undefined
+    const controller = new AbortController()
+    loadArticles({ signal: controller.signal })
+    return () => controller.abort()
+  }, [articles.length, isOpen, loadArticles])
 
   const filteredArticles = useMemo(
     () => searchKnowledgeArticles(articles, search, { limit: 20 }),
@@ -131,42 +141,8 @@ const KnowledgeSidePanel = () => {
     </AssistantTooltip>
   )
 
-  return (
-    <RightSideDrawer
-      open={isOpen}
-      title={
-        <span className="knowledge-side-panel-title">
-          Learn <strong>kijo</strong>
-        </span>
-      }
-      onClose={closeKnowledgePanel}
-      width={440}
-      className="knowledge-side-panel"
-      headerActions={
-        <>
-          {mode === 'ask' ? (
-            <KnowledgeAssistantHeaderActions
-              assistantClearing={assistant.assistantClearing}
-              assistantLoading={assistant.assistantLoading}
-              assistantSending={assistant.assistantSending}
-              assistantView={assistant.assistantView}
-              onSetAssistantView={assistant.setAssistantView}
-              onStartNewChat={assistant.startNewAssistantChat}
-            />
-          ) : null}
-          {modeSwitch}
-        </>
-      }
-      bodyClassName={`knowledge-side-panel-body ${
-        mode === 'ask' ? 'knowledge-side-panel-body--ask' : ''
-      }`}
-      beforeBody={
-        mode === 'search' ? (
-          <KnowledgePanelSearchSlot search={search} onSearchChange={setKnowledgeSearch} />
-        ) : null
-      }
-      closeLabel="Close Knowledge panel"
-    >
+  const panelContent = (
+    <>
       {error && <CAlert color="danger">{error}</CAlert>}
 
       {mode === 'ask' ? (
@@ -206,8 +182,84 @@ const KnowledgeSidePanel = () => {
       {mode === 'search' && !hasSearch && !loadingArticle && article && (
         <KnowledgePanelArticle article={article} />
       )}
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div
+        className={`knowledge-side-panel app-mobile-knowledge-view${mode === 'ask' ? ' is-ask' : ''}`}
+      >
+        <div className="app-mobile-knowledge-view__actions">
+          {mode === 'ask' ? (
+            <KnowledgeAssistantHeaderActions
+              assistantClearing={assistant.assistantClearing}
+              assistantLoading={assistant.assistantLoading}
+              assistantSending={assistant.assistantSending}
+              assistantView={assistant.assistantView}
+              onSetAssistantView={assistant.setAssistantView}
+              onStartNewChat={assistant.startNewAssistantChat}
+            />
+          ) : null}
+          {modeSwitch}
+        </div>
+        {mode === 'search' ? (
+          <KnowledgePanelSearchSlot search={search} onSearchChange={setKnowledgeSearch} />
+        ) : null}
+        <div
+          className={`knowledge-side-panel-body${mode === 'ask' ? ' knowledge-side-panel-body--ask' : ''}`}
+        >
+          {panelContent}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <RightSideDrawer
+      open={isOpen}
+      title={
+        <span className="knowledge-side-panel-title">
+          Learn <strong>kijo</strong>
+        </span>
+      }
+      onClose={closeKnowledgePanel}
+      width={440}
+      className="knowledge-side-panel"
+      headerActions={
+        <>
+          {mode === 'ask' ? (
+            <KnowledgeAssistantHeaderActions
+              assistantClearing={assistant.assistantClearing}
+              assistantLoading={assistant.assistantLoading}
+              assistantSending={assistant.assistantSending}
+              assistantView={assistant.assistantView}
+              onSetAssistantView={assistant.setAssistantView}
+              onStartNewChat={assistant.startNewAssistantChat}
+            />
+          ) : null}
+          {modeSwitch}
+        </>
+      }
+      bodyClassName={`knowledge-side-panel-body ${
+        mode === 'ask' ? 'knowledge-side-panel-body--ask' : ''
+      }`}
+      beforeBody={
+        mode === 'search' ? (
+          <KnowledgePanelSearchSlot search={search} onSearchChange={setKnowledgeSearch} />
+        ) : null
+      }
+      closeLabel="Close Knowledge panel"
+    >
+      {panelContent}
     </RightSideDrawer>
   )
+}
+
+KnowledgeSidePanel.propTypes = {
+  active: PropTypes.bool,
+  embedded: PropTypes.bool,
+  initialMode: PropTypes.oneOf(['search', 'ask']),
 }
 
 export default KnowledgeSidePanel

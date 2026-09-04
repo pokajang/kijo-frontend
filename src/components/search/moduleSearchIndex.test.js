@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getModuleSearchResults,
+  getQuickCreateModuleItems,
   getRecentModuleSearchItems,
   moduleSearchItems,
   recordModuleSearchSelection,
@@ -55,6 +56,13 @@ const installLocalStorageMock = () => {
 }
 
 describe('module search index', () => {
+  it('exposes ordered, role-filtered quick-create actions', () => {
+    expect(getQuickCreateModuleItems(['Staff'])).toMatchObject([
+      { label: 'Create Quote', to: '/crm/quotes' },
+      { label: 'Create Task', to: '/task-manager?action=create' },
+    ])
+  })
+
   beforeEach(() => {
     installLocalStorageMock()
   })

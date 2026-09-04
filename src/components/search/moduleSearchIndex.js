@@ -931,6 +931,7 @@ const actionItems = [
     label: 'Create Task',
     group: 'Task Manager',
     to: '/task-manager?action=create',
+    quickCreateOrder: 2,
     aliases: ['new task', 'new todo', 'create todo'],
     intentPhrases: ['add task', 'create reminder', 'new follow up'],
   },
@@ -938,6 +939,7 @@ const actionItems = [
     label: 'Create Quote',
     group: 'CRM Management',
     to: '/crm/quotes',
+    quickCreateOrder: 1,
     aliases: ['new quote', 'new quotation'],
     intentPhrases: ['create quotation', 'create quote', 'proposal price', 'pricing'],
   },
@@ -1045,6 +1047,7 @@ const createItem = ({
   allowedRoles,
   type = 'module',
   action,
+  quickCreateOrder,
   skipEnhancements = false,
 }) => {
   const enhancement =
@@ -1069,6 +1072,7 @@ const createItem = ({
     allowedRoles,
     type,
     action,
+    quickCreateOrder,
     skipEnhancements,
     searchText: normalize(searchText),
   }
@@ -1140,6 +1144,11 @@ export const canAccessSearchItem = (item, roles = []) =>
 
 export const getAccessibleModuleSearchItems = (roles = []) =>
   moduleSearchItems.filter((item) => canAccessSearchItem(item, roles))
+
+export const getQuickCreateModuleItems = (roles = []) =>
+  getAccessibleModuleSearchItems(roles)
+    .filter((item) => Number.isFinite(item.quickCreateOrder))
+    .sort((first, second) => first.quickCreateOrder - second.quickCreateOrder)
 
 const scoreSearchItem = (item, normalizedQuery, queryTokens) => {
   const label = normalize(item.label)

@@ -27,6 +27,7 @@ const fallbackContext = {
   closeKnowledgePanel: noop,
   setKnowledgeSearch: noop,
   loadKnowledgeArticle: noop,
+  loadArticles: noop,
 }
 
 const KnowledgePanelContext = createContext(fallbackContext)
@@ -85,14 +86,6 @@ export const KnowledgePanelProvider = ({ children }) => {
       if (!signal?.aborted) setLoadingArticles(false)
     }
   }, [])
-
-  useEffect(() => {
-    if (!isOpen || articles.length > 0) return undefined
-
-    const controller = new AbortController()
-    loadArticles({ signal: controller.signal })
-    return () => controller.abort()
-  }, [articles.length, isOpen, loadArticles])
 
   const loadKnowledgeArticle = useCallback(async (slugOrId) => {
     if (!slugOrId) return
@@ -158,6 +151,7 @@ export const KnowledgePanelProvider = ({ children }) => {
       closeKnowledgePanel,
       setKnowledgeSearch: setSearch,
       loadKnowledgeArticle,
+      loadArticles,
     }),
     [
       activeSlug,
@@ -167,6 +161,7 @@ export const KnowledgePanelProvider = ({ children }) => {
       error,
       isOpen,
       loadKnowledgeArticle,
+      loadArticles,
       loadingArticle,
       loadingArticles,
       openKnowledgeArticle,

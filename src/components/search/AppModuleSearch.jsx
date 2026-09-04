@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
 import { useNavigate } from 'react-router-dom'
 import { useCombobox } from 'downshift'
 import { CButton, CModal, CModalBody, CModalHeader, CModalTitle, CTooltip } from '@coreui/react'
@@ -10,7 +11,7 @@ import { getModuleSearchResults, recordModuleSearchSelection } from './moduleSea
 
 const itemToString = (item) => (item ? `${item.group}, ${item.label}` : '')
 
-const ModuleSearchBox = ({
+export const ModuleSearchBox = ({
   roles,
   onNavigate,
   autoFocus = false,
@@ -151,7 +152,7 @@ const ModuleSearchBox = ({
   )
 }
 
-const AppModuleSearch = () => {
+const AppModuleSearch = ({ showMobileTrigger = true }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const roles = useMemo(() => extractRolesFromSession({ user }), [user])
@@ -178,18 +179,20 @@ const AppModuleSearch = () => {
         <ModuleSearchBox roles={roles} onNavigate={handleNavigate} />
       </div>
 
-      <CTooltip content="Search modules" placement="left">
-        <CButton
-          ref={triggerRef}
-          type="button"
-          color="primary"
-          className="app-module-search-fab d-md-none"
-          aria-label="Search modules"
-          onClick={() => setMobileSearchVisible(true)}
-        >
-          <CIcon icon={cilSearch} />
-        </CButton>
-      </CTooltip>
+      {showMobileTrigger && (
+        <CTooltip content="Search modules" placement="left">
+          <CButton
+            ref={triggerRef}
+            type="button"
+            color="primary"
+            className="app-module-search-fab d-md-none"
+            aria-label="Search modules"
+            onClick={() => setMobileSearchVisible(true)}
+          >
+            <CIcon icon={cilSearch} />
+          </CButton>
+        </CTooltip>
+      )}
 
       <CModal
         visible={mobileSearchVisible}
@@ -205,6 +208,10 @@ const AppModuleSearch = () => {
       </CModal>
     </>
   )
+}
+
+AppModuleSearch.propTypes = {
+  showMobileTrigger: PropTypes.bool,
 }
 
 export default AppModuleSearch

@@ -1,6 +1,6 @@
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { Provider, useDispatch, useSelector } from 'react-redux'
 
@@ -14,6 +14,8 @@ import { SidebarRightDrawerCoordinator } from '../layout/DefaultLayout'
 import { KnowledgePanelProvider } from '../views/knowledge/KnowledgePanelContext'
 import KnowledgeSidePanel from '../views/knowledge/KnowledgeSidePanel'
 import AppNotificationProvider from '../notifications/AppNotificationProvider'
+import MobileNavSheet from '../components/mobile-navigation/MobileNavSheet'
+import { MobileNavSheetProvider } from '../components/mobile-navigation/MobileNavSheetContext'
 
 vi.mock('../auth/AuthProvider', () => ({
   useAuth: () => ({
@@ -155,7 +157,7 @@ describe('release UI behavior', () => {
     expect(screen.queryByTestId('whats-new-notifier')).not.toBeInTheDocument()
   })
 
-  it('renders five mobile nav actions and hides Theme/News/Ticket in the bottom bar', () => {
+  it('renders six mobile nav actions and opens Create and Tools sheets', async () => {
     vi.stubGlobal('localStorage', {
       getItem: vi.fn(() => null),
       setItem: vi.fn(),
@@ -182,23 +184,28 @@ describe('release UI behavior', () => {
     render(
       <Provider store={store}>
         <MemoryRouter>
-          <AppHeader />
+          <MobileNavSheetProvider>
+            <AppHeader />
+            <MobileNavSheet />
+          </MobileNavSheetProvider>
         </MemoryRouter>
       </Provider>,
     )
 
-    const menuButton = screen.getByRole('button', { name: 'Toggle menu' })
+    const menuButton = screen.getByRole('button', { name: 'Open menu' })
+    const toolsButton = screen.getByRole('button', { name: 'Open tools' })
     const homeLink = screen.getByRole('link', { name: 'Home' })
-    const tasksLink = screen.getByRole('link', { name: 'Tasks' })
-    const alertsButton = screen.getByRole('button', { name: 'Notifications' })
-    const accountButton = screen.getByRole('button', { name: 'Account' })
+    const createButton = screen.getByRole('button', { name: 'Open create menu' })
+    const alertsButton = document.getElementById('mobile-nav-alerts-trigger')
+    const accountButton = document.getElementById('mobile-nav-account-trigger')
     const themeButton = screen.getByRole('button', { name: /switch to (dark|light) mode/i })
     const whatsNewLink = screen.getByRole('link', { name: "What's New" })
     const ticketButton = screen.getByRole('button', { name: 'Open support ticket' })
 
     expect(menuButton).toBeInTheDocument()
+    expect(toolsButton).toBeInTheDocument()
     expect(homeLink).toBeInTheDocument()
-    expect(tasksLink).toBeInTheDocument()
+    expect(createButton).toBeInTheDocument()
     expect(alertsButton).toBeInTheDocument()
     expect(accountButton).toBeInTheDocument()
 
@@ -209,7 +216,46 @@ describe('release UI behavior', () => {
     const mobileVisibleEntries = Array.from(
       document.querySelectorAll('.app-bottom-nav-item, .app-bottom-nav-entry'),
     ).filter((entry) => !entry.classList.contains('d-none'))
-    expect(mobileVisibleEntries).toHaveLength(5)
+    expect(mobileVisibleEntries).toHaveLength(6)
+
+    fireEvent.click(createButton)
+
+    const toolsDialog = await screen.findByRole('dialog')
+    expect(createButton).toHaveClass('active')
+    expect(homeLink).toHaveClass('app-bottom-nav-link--route-muted')
+    expect(within(toolsDialog).getByRole('button', { name: /Create Quotation/ })).toHaveClass(
+      'app-mobile-sheet-card',
+    )
+    expect(within(toolsDialog).getByRole('button', { name: /Create Task/ })).toHaveClass(
+      'app-mobile-sheet-card',
+    )
+
+    fireEvent.click(toolsButton)
+
+    expect(toolsButton).toHaveClass('active')
+    expect(homeLink).toHaveClass('app-bottom-nav-link--route-muted')
+    expect(toolsDialog.querySelector('.modal-dialog-scrollable')).toBeInTheDocument()
+    expect(within(toolsDialog).getByRole('button', { name: /Search modules/ })).toHaveClass(
+      'app-mobile-sheet-card',
+    )
+    expect(within(toolsDialog).getByRole('button', { name: /Ask Kijo/ })).toHaveClass(
+      'app-mobile-sheet-card',
+    )
+
+    fireEvent.click(within(toolsDialog).getByRole('button', { name: /Search modules/ }))
+
+    expect(screen.getByRole('dialog')).toBe(toolsDialog)
+    expect(within(toolsDialog).getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    expect(
+      within(toolsDialog).getByRole('combobox', { name: 'Search modules' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(alertsButton)
+    expect(screen.getByRole('dialog')).toBe(toolsDialog)
+    expect(within(toolsDialog).getByText('Alerts')).toBeInTheDocument()
+    expect(
+      toolsDialog.querySelector('.app-mobile-alerts-grid .app-mobile-sheet-card'),
+    ).toBeInTheDocument()
   })
 
   it('keeps desktop header actions direct in nav (theme, news, ticket)', () => {

@@ -138,4 +138,15 @@ describe('AppModuleSearch', () => {
     expect(within(dialog).getByText('Search Modules')).toBeInTheDocument()
     expect(within(dialog).getByRole('combobox', { name: 'Search modules' })).toBeInTheDocument()
   })
+
+  it('can hide the mobile floating trigger', () => {
+    render(
+      <MemoryRouter>
+        <AppModuleSearch showMobileTrigger={false} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Search modules' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })

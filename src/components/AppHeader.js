@@ -28,11 +28,11 @@ import {
   cilMoon,
   cilPaperPlane,
   cilSpeech,
-  cilSpeedometer,
   cilSun,
 } from '@coreui/icons'
 import { AppHeaderDropdown, AppNotificationsDropdown } from './header/index'
 import AppModuleSearch from './search/AppModuleSearch'
+import MobileBottomNav from './mobile-navigation/MobileBottomNav'
 import HandbookAcknowledgementNotice from './handbook/HandbookAcknowledgementNotice'
 import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
@@ -272,7 +272,7 @@ const AppHeader = () => {
     >
       <CContainer fluid className="border-bottom px-2 px-md-4 app-bottom-nav-container">
         <CHeaderToggler
-          className="app-bottom-nav-item app-bottom-nav-menu"
+          className="app-bottom-nav-item app-bottom-nav-menu d-none d-md-flex"
           onClick={() => dispatch({ type: 'set', sidebarShow: !sidebarShow })}
           aria-label="Toggle menu"
         >
@@ -284,8 +284,8 @@ const AppHeader = () => {
           <span className="app-bottom-nav-label">Menu</span>
         </CHeaderToggler>
 
-        <div className="app-header-search-help">
-          <AppModuleSearch />
+        <div className="app-header-search-help d-none d-md-flex">
+          <AppModuleSearch showMobileTrigger={false} />
           <CTooltip
             content={knowledgePanelOpen ? 'Close Learn Kijo help' : 'Open Learn Kijo help'}
             placement="bottom"
@@ -294,7 +294,9 @@ const AppHeader = () => {
               type="button"
               color="primary"
               variant="outline"
-              className={`app-knowledge-header-help${knowledgePanelOpen ? ' active' : ''}`}
+              className={`app-knowledge-header-help d-none d-md-inline-flex${
+                knowledgePanelOpen ? ' active' : ''
+              }`}
               onPointerDown={handleKnowledgePointerDown}
               onClick={handleKnowledgeClick}
               aria-label={knowledgePanelOpen ? 'Close Knowledge help' : 'Open Knowledge help'}
@@ -306,18 +308,7 @@ const AppHeader = () => {
           </CTooltip>
         </div>
 
-        <CHeaderNav className="d-flex align-items-center ms-auto app-bottom-nav-actions">
-          <CNavItem className="me-2 app-bottom-nav-entry d-md-none">
-            <CNavLink to="/dashboard" as={NavLink} className="app-bottom-nav-link">
-              <CTooltip content="Open Dashboard" placement="bottom">
-                <span className="app-bottom-nav-icon" aria-hidden="true">
-                  <CIcon icon={cilSpeedometer} />
-                </span>
-              </CTooltip>
-              <span className="app-bottom-nav-label">Home</span>
-            </CNavLink>
-          </CNavItem>
-
+        <CHeaderNav className="d-none d-md-flex align-items-center ms-auto app-bottom-nav-actions">
           <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
             <CButton
               type="button"
@@ -355,8 +346,13 @@ const AppHeader = () => {
             </CNavLink>
           </CNavItem>
 
-          <CNavItem className="me-2 app-bottom-nav-entry">
-            <CNavLink to="/task-manager" as={NavLink} className="app-bottom-nav-link">
+          <CNavItem className="me-2 app-bottom-nav-entry d-none d-md-flex">
+            <CNavLink
+              to="/task-manager"
+              as={NavLink}
+              className="app-bottom-nav-link"
+              aria-label="Manage Tasks"
+            >
               <CTooltip content="Manage Tasks" placement="bottom">
                 <span className="app-bottom-nav-icon" aria-hidden="true">
                   <CIcon icon={cilListRich} className="app-bottom-nav-task-icon" />
@@ -395,6 +391,7 @@ const AppHeader = () => {
             onAccountActiveChange={setAccountActive}
           />
         </CHeaderNav>
+        <MobileBottomNav />
       </CContainer>
 
       {signatureMissing && (

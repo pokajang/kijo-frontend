@@ -7,6 +7,11 @@ import { RightDrawerProvider, useRightDrawer } from '../components/right-drawer/
 import { KnowledgePanelProvider, useKnowledgePanel } from '../views/knowledge/KnowledgePanelContext'
 import KnowledgeSidePanel from '../views/knowledge/KnowledgeSidePanel'
 import { GlobalPromptProvider } from '../components/global-prompts/GlobalPromptCoordinator'
+import MobileNavSheet from '../components/mobile-navigation/MobileNavSheet'
+import {
+  MobileNavSheetProvider,
+  useMobileNavSheet,
+} from '../components/mobile-navigation/MobileNavSheetContext'
 
 export const SidebarRightDrawerCoordinator = () => {
   const dispatch = useDispatch()
@@ -41,18 +46,38 @@ export const SidebarRightDrawerCoordinator = () => {
   return null
 }
 
+const MobileSheetCoordinator = () => {
+  const dispatch = useDispatch()
+  const sidebarShow = useSelector((state) => state.sidebarShow)
+  const { activeDrawerId, closeRightDrawer } = useRightDrawer()
+  const { closeSheet, isOpen } = useMobileNavSheet()
+
+  useEffect(() => {
+    if (isOpen) {
+      if (sidebarShow) dispatch({ type: 'set', sidebarShow: false })
+      if (activeDrawerId) closeRightDrawer()
+      return
+    }
+    if (activeDrawerId) closeSheet()
+  }, [activeDrawerId, closeRightDrawer, closeSheet, dispatch, isOpen, sidebarShow])
+
+  return null
+}
+
 const DefaultLayoutShell = () => {
   const { isOpen } = useKnowledgePanel()
 
   return (
     <div>
       <SidebarRightDrawerCoordinator />
+      <MobileSheetCoordinator />
       <WhatsNewNotifier />
       <AppSidebar />
       <div
         className={`wrapper d-flex flex-column min-vh-100${isOpen ? ' knowledge-panel-open' : ''}`}
       >
         <AppHeader />
+        <MobileNavSheet />
         <div className="body flex-grow-1">
           <div className="knowledge-layout-shell">
             <div className="knowledge-layout-main">
@@ -70,11 +95,13 @@ const DefaultLayoutShell = () => {
 
 const DefaultLayout = () => (
   <RightDrawerProvider>
-    <KnowledgePanelProvider>
-      <GlobalPromptProvider>
-        <DefaultLayoutShell />
-      </GlobalPromptProvider>
-    </KnowledgePanelProvider>
+    <MobileNavSheetProvider>
+      <KnowledgePanelProvider>
+        <GlobalPromptProvider>
+          <DefaultLayoutShell />
+        </GlobalPromptProvider>
+      </KnowledgePanelProvider>
+    </MobileNavSheetProvider>
   </RightDrawerProvider>
 )
 
