@@ -211,17 +211,21 @@ export const useApplyLeaveHandlers = ({ onNotify, onSubmitted } = {}) => {
 /**
  * Fetch logged-in staff leave allocations.
  */
-export async function getMyEntitlements() {
-  const result = await fetchLeaveJson(`${import.meta.env.VITE_API_BASE}hr/leaves/entitlements/mine`)
+export async function getMyEntitlements({ signal } = {}) {
+  const result = await fetchLeaveJson(
+    `${import.meta.env.VITE_API_BASE}hr/leaves/entitlements/mine`,
+    { signal },
+  )
   return result.entitlements || []
 }
 
 /**
  * Fetch logged-in staff leave allocation history.
  */
-export async function getMyEntitlementHistory() {
+export async function getMyEntitlementHistory({ signal } = {}) {
   const result = await fetchLeaveJson(
     `${import.meta.env.VITE_API_BASE}hr/leaves/entitlements/history/mine`,
+    { signal },
   )
   return result.history || []
 }

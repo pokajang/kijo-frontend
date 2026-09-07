@@ -199,6 +199,12 @@
   justify-content: center;
 }
 
+@media (max-width: 767.98px) {
+  .records-filter-search-input {
+    min-height: var(--app-mobile-touch-target);
+  }
+}
+
 .period-range-selector__toggle {
   max-width: 11rem;
   min-width: 7.5rem;
@@ -226,4 +232,3 @@
     margin-left: 0.35rem;
   }
 }
-

@@ -92,11 +92,70 @@ const defaultVisibleColumns = {
 }
 
 const requiredColumns = new Set(['leaveType', 'status'])
+const shortMonthNames = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
 
 const formatTime = (value) => {
   if (!value) return '-'
   const text = String(value)
   return text.length >= 5 ? text.slice(0, 5) : text
+}
+
+const formatLeaveDate = (value) => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return value || '-'
+
+  const [, year, month, day] = match
+  return `${Number(day)} ${shortMonthNames[Number(month) - 1] || month} ${year}`
+}
+
+const formatLeavePeriod = (record) => {
+  const startDate = formatLeaveDate(record.startDate)
+  const endDate = formatLeaveDate(record.endDate)
+  const startTime = formatTime(record.startTime)
+  const endTime = formatTime(record.endTime)
+
+  if (record.startDate && record.startDate === record.endDate) {
+    return `${startDate} · ${startTime}–${endTime}`
+  }
+
+  return `${startDate}, ${startTime} – ${endDate}, ${endTime}`
+}
+
+const formatLeaveDateRange = (record) => {
+  const startDate = formatLeaveDate(record.startDate)
+  const endDate = formatLeaveDate(record.endDate)
+
+  return record.startDate && record.startDate === record.endDate
+    ? startDate
+    : `${startDate} \u2013 ${endDate}`
+}
+
+const formatLeaveTimeRange = (record) =>
+  `${formatTime(record.startTime)}\u2013${formatTime(record.endTime)}`
+
+const formatLeaveCompactPeriod = (record) => (
+  <>
+    {formatLeaveDateRange(record)}
+    <span className="leave-record-compact-time">{` \u00b7 ${formatLeaveTimeRange(record)}`}</span>
+  </>
+)
+
+const formatDurationLabel = (value) => {
+  const duration = Number(value || 0)
+  return `${value ?? 0} day${duration === 1 ? '' : 's'}`
 }
 
 const getStatusTone = (status, getStatusBadge) => {
@@ -105,8 +164,13 @@ const getStatusTone = (status, getStatusBadge) => {
   return 'info'
 }
 
-const buildWorkflowStep = ({ label, at, status, remarks }) =>
-  [`${label}: ${status || '-'}`, at ? `at ${at}` : '', remarks ? `Remarks: ${remarks}` : '']
+const buildWorkflowStep = ({ label, at, actor, status, remarks }) =>
+  [
+    `${label}: ${status || '-'}`,
+    at ? `at ${at}` : '',
+    actor ? `by ${actor}` : '',
+    remarks ? `Remarks: ${remarks}` : '',
+  ]
     .filter(Boolean)
     .join(' ')
 
@@ -135,6 +199,7 @@ export const getPersonalLeaveWorkflowSteps = (record = {}) => {
       ? buildWorkflowStep({
           label: 'Cancellation',
           at: record.cancelledAt,
+          actor: record.cancelledBy,
           status: 'Cancelled',
         })
       : '',
@@ -215,9 +280,7 @@ const LeaveRecordTable = ({
       filteredRecords.map((record) => ({
         ...record,
         durationValue: Number(record.duration || 0),
-        durationMeta: `${record.startDate} ${formatTime(record.startTime)} to ${record.endDate} ${formatTime(
-          record.endTime,
-        )}`,
+        durationMeta: formatLeavePeriod(record),
         workflowSteps: getPersonalLeaveWorkflowSteps(record),
         workflow: getPersonalLeaveWorkflowSteps(record).join('\n'),
       })),
@@ -233,9 +296,9 @@ const LeaveRecordTable = ({
 
         if (priorityCompare !== 0) return priorityCompare
 
-        const rightApplied = Date.parse(rightRecord.appliedAt || '') || 0
-        const leftApplied = Date.parse(leftRecord.appliedAt || '') || 0
-        return rightApplied - leftApplied
+        const rightDate = Date.parse(getLeaveRecordScopeDate(rightRecord) || '') || 0
+        const leftDate = Date.parse(getLeaveRecordScopeDate(leftRecord) || '') || 0
+        return rightDate - leftDate
       },
     }),
     [],
@@ -348,6 +411,7 @@ const LeaveRecordTable = ({
       </DataTableRecordControls>
 
       <DataTableRecordList
+        className="leave-records-table"
         rows={normalizedRecords}
         loading={loading}
         loadingMessage="Loading leave records..."
@@ -364,14 +428,23 @@ const LeaveRecordTable = ({
         getActions={getActions}
         onRowOpen={onView}
         actionColumnWidth="56px"
-        getMobileTitle={(record) => record.leaveType}
-        getMobileSubtitle={(record) => record.status}
-        getMobileMeta={(record) => record.durationMeta}
-        getMobileStatus={(record) => record.status}
-        getMobileStatusTone={(record) => getStatusTone(record.status, getStatusBadge)}
+        mobileRecord={{
+          title: (record) => record.leaveType,
+          subtitle: formatLeaveCompactPeriod,
+          summary: (record) => formatDurationLabel(record.duration),
+          layout: 'compact',
+          badges: (record) => [
+            {
+              key: 'status',
+              label: record.status,
+              tone: getStatusTone(record.status, getStatusBadge),
+            },
+          ],
+        }}
+        showMobileRowIndex={false}
         mobileFieldKeys={{
           title: 'leaveType',
-          subtitle: 'status',
+          subtitle: 'duration',
           meta: 'duration',
           status: 'status',
         }}
@@ -399,6 +472,10 @@ const LeaveRecordTable = ({
         mobileUtilityPlacement="portal"
         mobileUtilityPortalId="leave-record-mobile-table-tools"
         showMobileUtilityRow={false}
+        mobilePaginationMode="load-more"
+        mobileLoadMorePageSize={10}
+        mobileLoadMoreLabel="Load more leave records"
+        mobileLoadMoreSummaryLabel="leave records"
       />
     </>
   )

@@ -214,6 +214,56 @@ describe('datatable shared components', () => {
     expect(within(mobileRow).getByRole('button', { name: 'Actions' })).toBeInTheDocument()
   })
 
+  it('can hide the mobile row index without replacing the standard mobile renderer', () => {
+    render(
+      <DataTableRecordList
+        rows={rows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        showMobileRowIndex={false}
+        mobileRecord={{ title: (row) => row.name }}
+      />,
+    )
+
+    const mobileRow = document.querySelector('.data-table-mobile-item')
+    expect(mobileRow).toHaveTextContent('Alpha')
+    expect(mobileRow).not.toHaveTextContent('#1')
+  })
+
+  it('places a structured summary below the header and status beside the row action', () => {
+    render(
+      <DataTableRecordList
+        rows={rows}
+        dataColumns={columns}
+        defaultVisibleColumns={{ name: true }}
+        exportFilename="records.csv"
+        showMobileRowIndex={false}
+        getActions={() => [{ key: 'view', label: 'View', onClick: vi.fn() }]}
+        mobileRecord={{
+          title: (row) => row.name,
+          subtitle: () => '4 Sep 2026',
+          meta: () => '08:30-17:30',
+          summary: () => '1.0 day',
+          layout: 'compact',
+          badgePlacement: 'actions',
+          badges: () => [{ key: 'status', label: 'Pending', tone: 'warning' }],
+        }}
+      />,
+    )
+
+    const mobileRow = document.querySelector('.data-table-mobile-item')
+    const summary = within(mobileRow).getByText('1.0 day')
+    const status = within(mobileRow).getByText('Pending')
+
+    expect(summary).toHaveClass('records-mobile-summary-value')
+    expect(summary.closest('.records-mobile-compact-summary')).toBeTruthy()
+    expect(status.closest('.records-mobile-head-actions')).toContainElement(
+      within(mobileRow).getByRole('button', { name: 'Actions' }),
+    )
+    expect(mobileRow).toHaveTextContent('08:30-17:30')
+  })
+
   it('keeps existing records visible while a refresh is loading', () => {
     const { rerender } = render(
       <DataTableRecordList

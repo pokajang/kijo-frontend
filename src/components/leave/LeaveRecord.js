@@ -1,18 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CAlert, CBadge, CButton, CFormLabel, CFormSelect } from '@coreui/react'
+import { CAlert, CBadge, CButton, CFormLabel } from '@coreui/react'
 import { getMyEntitlementHistory, getMyEntitlements } from './actionHandlers'
 import { useLeaveRecordHandlers } from './actionHandlersRecords'
 import LeaveRecordTable from './LeaveRecordTable'
 import { useAppNotifications } from '../../notifications/AppNotificationProvider'
 import { getPeriodRangePreset, getPeriodRangeScopeLabel } from '../filters'
 import {
-  allLeaveTypesValue,
   buildLeaveBalanceSummary,
   getDefaultLeaveType,
   getLeaveTypeOptions,
 } from './leaveBalanceSummary'
 import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
+import { DataTableOptionMenu } from '../datatable'
 
 const currentYear = new Date().getFullYear()
 
@@ -47,9 +47,10 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
 
     const loadRecordsAndConsumeNotifications = async () => {
-      const recordsLoaded = await fetchLeaveRecords()
+      const recordsLoaded = await fetchLeaveRecords({ signal: controller.signal })
       if (cancelled || !recordsLoaded) return
 
       consumeRouteGroup({
@@ -62,19 +63,22 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [consumeRouteGroup, fetchLeaveRecords])
 
   useEffect(() => {
     let cancelled = false
+    const controller = new AbortController()
 
     const fetchEntitlements = async () => {
       try {
         setLoadingEntitlements(true)
         setEntitlementsError('')
-        const items = await getMyEntitlements()
+        const items = await getMyEntitlements({ signal: controller.signal })
         if (!cancelled) setEntitlements(items)
       } catch (err) {
+        if (controller.signal.aborted) return
         console.error(err)
         if (!cancelled) setEntitlementsError(err?.message || 'Could not load leave balances.')
       } finally {
@@ -86,23 +90,26 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [])
 
   useEffect(() => {
     if (!assignmentHistoryVisible || assignmentHistoryLoaded) return undefined
     let cancelled = false
+    const controller = new AbortController()
 
     const fetchAssignmentHistory = async () => {
       try {
         setLoadingAssignmentHistory(true)
         setAssignmentHistoryError('')
-        const items = await getMyEntitlementHistory()
+        const items = await getMyEntitlementHistory({ signal: controller.signal })
         if (!cancelled) {
           setAssignmentHistory(items)
           setAssignmentHistoryLoaded(true)
         }
       } catch (err) {
+        if (controller.signal.aborted) return
         console.error(err)
         if (!cancelled) {
           setAssignmentHistoryError(err?.message || 'Could not load assignment history.')
@@ -117,6 +124,7 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [assignmentHistoryLoaded, assignmentHistoryVisible])
 
@@ -140,59 +148,60 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
   return (
     <>
       {recordsError && (
-        <CAlert color="danger" className="mb-3">
+        <CAlert color="danger" className="mb-3" role="alert">
           {recordsError}
         </CAlert>
       )}
       {entitlementsError && (
-        <CAlert color="warning" className="mb-3">
+        <CAlert color="warning" className="mb-3" role="alert">
           {entitlementsError}
         </CAlert>
       )}
       {assignmentHistoryError && assignmentHistoryVisible && (
-        <CAlert color="warning" className="mb-3">
+        <CAlert color="warning" className="mb-3" role="alert">
           {assignmentHistoryError}
         </CAlert>
       )}
 
       {statsVisible && (
         <div className="leave-record-balance-section mb-3">
+          <h2 className="leave-record-section-heading">Leave balance</h2>
           <div className="leave-record-balance-toolbar">
-            <div className="leave-record-balance-toolbar-head">
+            <div className="leave-record-balance-context">
               <CFormLabel htmlFor="leave-record-balance-type" className="mb-0">
-                Leave Balance
+                Balance
               </CFormLabel>
-              <CButton
-                type="button"
-                color="secondary"
-                variant="outline"
-                size="sm"
-                onClick={() => setAssignmentHistoryVisible((visible) => !visible)}
-              >
-                {assignmentHistoryVisible ? 'Hide Assignment History' : 'Assignment History'}
-              </CButton>
+              <DataTableOptionMenu
+                id="leave-record-balance-type"
+                className="leave-record-balance-type-select"
+                value={effectiveLeaveType}
+                options={leaveTypeOptions}
+                onChange={setSelectedLeaveType}
+                ariaLabel="Leave balance type"
+                placeholder={loadingEntitlements ? 'Loading...' : 'No leave types'}
+                disabled={loadingEntitlements || leaveTypeOptions.length === 0}
+              />
             </div>
-            <CFormSelect
-              id="leave-record-balance-type"
+            <CButton
+              type="button"
+              color="secondary"
+              variant="ghost"
               size="sm"
-              className="leave-record-balance-type-select"
-              value={effectiveLeaveType}
-              onChange={(event) => setSelectedLeaveType(event.target.value)}
-              disabled={loadingEntitlements || leaveTypeOptions.length === 0}
+              className="leave-assignment-history-toggle"
+              aria-label={
+                assignmentHistoryVisible ? 'Hide Assignment History' : 'Assignment History'
+              }
+              aria-expanded={assignmentHistoryVisible}
+              aria-controls="leave-assignment-history-panel"
+              onClick={() => setAssignmentHistoryVisible((visible) => !visible)}
             >
-              {leaveTypeOptions.length === 0 && (
-                <option value={allLeaveTypesValue}>No leave types</option>
-              )}
-              {leaveTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </CFormSelect>
+              {assignmentHistoryVisible ? 'Hide history' : 'History'}
+            </CButton>
           </div>
           <div
             className="leave-balance-grid leave-record-balance-grid"
             aria-busy={loadingEntitlements ? 'true' : undefined}
+            aria-live="polite"
           >
             {balanceSummary.map((card) => (
               <div key={card.key} className="leave-balance-card leave-record-balance-card">
@@ -217,9 +226,11 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
             ))}
           </div>
           {assignmentHistoryVisible && (
-            <div className="leave-assignment-history-panel">
+            <div id="leave-assignment-history-panel" className="leave-assignment-history-panel">
               {loadingAssignmentHistory ? (
-                <div className="small text-muted">Loading assignment history...</div>
+                <div className="small text-muted" role="status">
+                  Loading assignment history...
+                </div>
               ) : assignmentHistory.length === 0 ? (
                 <div className="leave-balance-empty text-muted">
                   No leave assignment history found.
@@ -255,20 +266,23 @@ const LeaveRecord = ({ onScopeLabelChange, statsVisible = true, controlsVisible 
         </div>
       )}
 
-      <LeaveRecordTable
-        controlsVisible={controlsVisible}
-        leaveRecords={leaveRecords}
-        periodRange={periodRange}
-        onPeriodRangeChange={setPeriodRange}
-        loading={loadingRecords}
-        handleCancel={handleCancel}
-        getStatusBadge={getStatusBadge}
-        onView={(record) =>
-          navigate(`/my/leaves/records/${record.id}`, {
-            state: { record, returnTo: getCurrentReturnTo(location) },
-          })
-        }
-      />
+      <section className="leave-records-section" aria-label="Leave records">
+        <h2 className="leave-record-section-heading d-md-none">Leave records</h2>
+        <LeaveRecordTable
+          controlsVisible={controlsVisible}
+          leaveRecords={leaveRecords}
+          periodRange={periodRange}
+          onPeriodRangeChange={setPeriodRange}
+          loading={loadingRecords}
+          handleCancel={handleCancel}
+          getStatusBadge={getStatusBadge}
+          onView={(record) =>
+            navigate(`/my/leaves/records/${record.id}`, {
+              state: { record, returnTo: getCurrentReturnTo(location) },
+            })
+          }
+        />
+      </section>
     </>
   )
 }

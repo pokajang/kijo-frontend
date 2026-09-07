@@ -63,7 +63,7 @@ export const normalizeLeaveRecordForFilters = (record = {}) => ({
 
 export const getLeaveRecordScopeDate = (record = {}) => {
   const normalized = normalizeLeaveRecordForFilters(record)
-  return normalized.appliedAt || normalized.startDate || null
+  return normalized.startDate || normalized.appliedAt || null
 }
 
 export const getLeaveRecordYearGroupKey = (record = {}) => {

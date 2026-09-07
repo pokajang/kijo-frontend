@@ -44,6 +44,7 @@ const hasPositiveBalance = (entitlement) => getEntitlementRemaining(entitlement)
 const ApplyLeave = ({ onViewRecords }) => {
   const [entitlements, setEntitlements] = useState([])
   const [loadingEntitlements, setLoadingEntitlements] = useState(true)
+  const [entitlementsError, setEntitlementsError] = useState('')
   const [notice, setNotice] = useState({
     visible: false,
     message: '',
@@ -66,21 +67,20 @@ const ApplyLeave = ({ onViewRecords }) => {
     setNotice((prev) => ({ ...prev, visible: false }))
   }
 
-  const loadEntitlements = useCallback(
-    async ({ showLoading = true } = {}) => {
-      if (showLoading) setLoadingEntitlements(true)
-      try {
-        const items = await getMyEntitlements()
-        setEntitlements(items)
-      } catch (err) {
-        console.error(err)
-        showNotice('error', 'Could not load your leave balances.', { scope: 'load' })
-      } finally {
-        if (showLoading) setLoadingEntitlements(false)
-      }
-    },
-    [showNotice],
-  )
+  const loadEntitlements = useCallback(async ({ showLoading = true, signal } = {}) => {
+    if (showLoading) setLoadingEntitlements(true)
+    setEntitlementsError('')
+    try {
+      const items = await getMyEntitlements({ signal })
+      setEntitlements(items)
+    } catch (err) {
+      if (signal?.aborted) return
+      console.error(err)
+      setEntitlementsError(err?.message || 'Could not load your leave balances.')
+    } finally {
+      if (showLoading && !signal?.aborted) setLoadingEntitlements(false)
+    }
+  }, [])
 
   const {
     leaveFormData,
@@ -97,7 +97,9 @@ const ApplyLeave = ({ onViewRecords }) => {
   })
 
   useEffect(() => {
-    loadEntitlements()
+    const controller = new AbortController()
+    loadEntitlements({ signal: controller.signal })
+    return () => controller.abort()
   }, [loadEntitlements])
 
   const currentYearEntitlements = useMemo(() => {
@@ -183,19 +185,35 @@ const ApplyLeave = ({ onViewRecords }) => {
   const showSubmissionPanel = isSubmitting || (notice.visible && notice.scope === 'submission')
 
   return (
-    <>
+    <div className="leave-apply">
       {loadingEntitlements ? (
         <DataTableLoadingState message="Loading leave balances..." />
       ) : (
         <>
           <div className="leave-balance-section mb-3">
-            <CFormLabel className="mb-2">Leave Balance</CFormLabel>
-            {hasCurrentYearEntitlements ? (
-              <div className="leave-balance-grid">
+            <h2 className="leave-section-heading">Leave Balance</h2>
+            {entitlementsError ? (
+              <CAlert color="warning" className="leave-balance-load-error mb-0" role="alert">
+                <div>
+                  Leave balances are unavailable. You can still apply for Unpaid Leave or Others.
+                </div>
+                <CButton
+                  type="button"
+                  color="warning"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadEntitlements()}
+                >
+                  Retry balances
+                </CButton>
+              </CAlert>
+            ) : hasCurrentYearEntitlements ? (
+              <div className="leave-balance-grid" role="list" aria-label="Current leave balances">
                 {currentYearEntitlements.map((entitlement) => (
                   <div
                     key={`${entitlement.id ?? entitlement.leave_type}-${entitlement.year}`}
                     className="leave-balance-card"
+                    role="listitem"
                   >
                     <div className="leave-balance-card-title">{entitlement.leave_type}</div>
                     <div className="leave-balance-card-value">
@@ -254,7 +272,7 @@ const ApplyLeave = ({ onViewRecords }) => {
               )}
             </>
           ) : (
-            <CForm onSubmit={handleValidatedSubmit}>
+            <CForm className="leave-apply-form" onSubmit={handleValidatedSubmit}>
               <CRow>
                 <CCol xs={12} className="mb-3">
                   <CFormLabel htmlFor="typeOfLeave" className="mb-1">
@@ -289,8 +307,8 @@ const ApplyLeave = ({ onViewRecords }) => {
                 </CCol>
               </CRow>
 
-              <CRow>
-                <CCol xs={6} md={3} className="mb-3">
+              <CRow className="leave-apply-date-row">
+                <CCol xs={12} sm={6} md={3} className="mb-3">
                   <CFormLabel htmlFor="startDate" className="mb-1">
                     Start Date
                   </CFormLabel>
@@ -305,7 +323,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                   />
                 </CCol>
 
-                <CCol xs={6} md={3} className="mb-3">
+                <CCol xs={12} sm={6} md={3} className="mb-3">
                   <CFormLabel htmlFor="startTime" className="mb-1">
                     Start Time
                   </CFormLabel>
@@ -320,7 +338,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                   </CFormSelect>
                 </CCol>
 
-                <CCol xs={6} md={3} className="mb-3">
+                <CCol xs={12} sm={6} md={3} className="mb-3">
                   <CFormLabel htmlFor="endDate" className="mb-1">
                     End Date
                   </CFormLabel>
@@ -335,7 +353,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                   />
                 </CCol>
 
-                <CCol xs={6} md={3} className="mb-3">
+                <CCol xs={12} sm={6} md={3} className="mb-3">
                   <CFormLabel htmlFor="endTime" className="mb-1">
                     End Time
                   </CFormLabel>
@@ -354,8 +372,12 @@ const ApplyLeave = ({ onViewRecords }) => {
               {duration > 0 && (
                 <CRow>
                   <CCol>
-                    <CAlert color="primary">
-                      Applying leave for <strong>{duration} days</strong>.
+                    <CAlert color="primary" role="status" className="leave-apply-duration">
+                      Applying leave for{' '}
+                      <strong>
+                        {duration} {duration === 1 ? 'day' : 'days'}
+                      </strong>
+                      .
                     </CAlert>
                   </CCol>
                 </CRow>
@@ -385,6 +407,7 @@ const ApplyLeave = ({ onViewRecords }) => {
                 type="submit"
                 color="primary"
                 size="sm"
+                className="leave-apply-submit"
                 disabled={isSubmitting || Boolean(balanceValidationMessage)}
               >
                 Submit
@@ -393,7 +416,7 @@ const ApplyLeave = ({ onViewRecords }) => {
           )}
         </>
       )}
-    </>
+    </div>
   )
 }
 

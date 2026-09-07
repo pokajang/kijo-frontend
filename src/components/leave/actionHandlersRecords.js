@@ -31,17 +31,23 @@ const fetchLeaveJson = async (url, options = {}) => {
   return result
 }
 
+const formatStaffIdentity = (name, code, fallback) => {
+  if (name && code) return `${name} (${code})`
+  return name || code || fallback || ''
+}
+
 export const useLeaveRecordHandlers = () => {
   const [leaveRecords, setLeaveRecords] = useState([])
   const [loadingRecords, setLoadingRecords] = useState(false)
   const [recordsError, setRecordsError] = useState('')
 
-  const fetchLeaveRecords = useCallback(async () => {
+  const fetchLeaveRecords = useCallback(async ({ signal } = {}) => {
     try {
       setLoadingRecords(true)
       setRecordsError('')
       const result = await fetchLeaveJson(`${import.meta.env.VITE_API_BASE}hr/leaves/personal`, {
         method: 'GET',
+        signal,
       })
 
       const mapped = (result.leaves || []).map((row) => ({
@@ -61,17 +67,22 @@ export const useLeaveRecordHandlers = () => {
         approvedStatus: row.approved_status,
         approvedRemarks: row.approved_remarks,
         approvedAt: row.approved_at,
-        cancelledBy: row.cancelled_by,
-        cancelledAt: row.cancelled_at,
+        cancelledBy: formatStaffIdentity(
+          row.canceller_name,
+          row.canceller_code,
+          row.cancelled_by ?? row.cancelledBy,
+        ),
+        cancelledAt: row.cancelled_at || row.cancelledAt,
       }))
       setLeaveRecords(mapped)
       return true
     } catch (err) {
+      if (signal?.aborted || err?.name === 'AbortError') return false
       console.error('Fetch error:', err)
       setRecordsError(err?.message || 'Could not load leave records.')
       return false
     } finally {
-      setLoadingRecords(false)
+      if (!signal?.aborted) setLoadingRecords(false)
     }
   }, [])
 

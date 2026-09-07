@@ -145,6 +145,7 @@ const DataTableRecordList = ({
   getMobileStatusTone,
   mobileFieldKeys = {},
   mobileRecord,
+  showMobileRowIndex = true,
   initialSortField,
   initialSortDir = 'asc',
   initialSortDirByField = {},
@@ -745,6 +746,7 @@ const DataTableRecordList = ({
           showSubtitle={isMobileFieldVisible(mobileFieldKeys.subtitle)}
           showMeta={isMobileFieldVisible(mobileFieldKeys.meta)}
           showStatus={isMobileFieldVisible(mobileFieldKeys.status)}
+          showRowIndex={showMobileRowIndex}
           emptyMessage={emptyMessage}
           rowProps={getMergedRowProps}
           mobileRecord={mobileRecord}

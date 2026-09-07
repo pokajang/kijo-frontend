@@ -21,6 +21,7 @@ const DataTableMobileList = ({
   showSubtitle = true,
   showMeta = true,
   showStatus = true,
+  showRowIndex = true,
   emptyMessage = 'No records to display.',
   desktopBreakpoint = 'lg',
   rowProps,
@@ -90,6 +91,11 @@ const DataTableMobileList = ({
             : getSubtitle?.(row)
           const meta = structured ? resolveMobileValue(mobileRecord.meta) : getMeta?.(row)
           const kv = structured ? resolveMobileValue(mobileRecord.kv) || [] : []
+          const summary = structured ? resolveMobileValue(mobileRecord.summary) : null
+          const badgePlacement = structured ? mobileRecord.badgePlacement || 'inline' : 'inline'
+          const isCompactLayout = structured && mobileRecord.layout === 'compact'
+          const actionBadges = badgePlacement === 'actions' ? badges : []
+          const inlineBadges = badgePlacement === 'actions' ? [] : badges
           const customActions =
             typeof renderActions === 'function'
               ? renderActions(row, `${getRowKey(row, recordIndex)}-mobile`)
@@ -101,7 +107,9 @@ const DataTableMobileList = ({
           return (
             <div
               key={getRowKey(row, recordIndex)}
-              className={`data-table-mobile-item records-mobile-item ${mobileRowClassName}`.trim()}
+              className={`data-table-mobile-item records-mobile-item ${
+                isCompactLayout ? 'records-mobile-item--compact' : ''
+              } ${mobileRowClassName}`.trim()}
             >
               <div className="records-mobile-item-head">
                 <div
@@ -110,14 +118,16 @@ const DataTableMobileList = ({
                 >
                   {eyebrow && <div className="small text-muted text-truncate">{eyebrow}</div>}
                   <div className="d-flex align-items-center gap-2 min-w-0">
-                    <span className="records-mobile-row-index text-muted">
-                      #{resetRowIndexOnGroup ? displayRowIndex + 1 : pageStart + recordIndex + 1}
-                    </span>
+                    {showRowIndex && (
+                      <span className="records-mobile-row-index text-muted">
+                        #{resetRowIndexOnGroup ? displayRowIndex + 1 : pageStart + recordIndex + 1}
+                      </span>
+                    )}
                     {showTitle && (structured || getTitle) && (
                       <span className="records-mobile-quote-id text-truncate">{title || '-'}</span>
                     )}
                     {showStatus &&
-                      badges.map((badge) => (
+                      inlineBadges.map((badge) => (
                         <DataTableStatusBadge
                           key={badge.key || badge.label}
                           tone={badge.tone || 'info'}
@@ -126,14 +136,31 @@ const DataTableMobileList = ({
                         </DataTableStatusBadge>
                       ))}
                   </div>
-                  {showSubtitle && (structured || getSubtitle) && subtitle && (
-                    <div className="records-mobile-subtitle mt-1 text-truncate">{subtitle}</div>
-                  )}
-                  {showMeta && (structured || getMeta) && meta && (
+                  {(!summary || isCompactLayout) &&
+                    showSubtitle &&
+                    (structured || getSubtitle) &&
+                    subtitle && (
+                      <div className="records-mobile-subtitle mt-1 text-truncate">{subtitle}</div>
+                    )}
+                  {(!summary || isCompactLayout) && showMeta && (structured || getMeta) && meta && (
                     <div className="records-mobile-client mt-1">{meta}</div>
                   )}
                 </div>
+                {isCompactLayout && summary && (
+                  <div className="records-mobile-compact-summary">
+                    <div className="records-mobile-summary-value">{summary}</div>
+                  </div>
+                )}
                 <div className="records-mobile-head-actions d-flex align-items-start gap-2 ms-2">
+                  {showStatus &&
+                    actionBadges.map((badge) => (
+                      <DataTableStatusBadge
+                        key={badge.key || badge.label}
+                        tone={badge.tone || 'info'}
+                      >
+                        {badge.label}
+                      </DataTableStatusBadge>
+                    ))}
                   {actions.length > 0 && (
                     <DataTableActionMenu
                       record={row}
@@ -144,6 +171,17 @@ const DataTableMobileList = ({
                   {customActions}
                 </div>
               </div>
+              {summary && !isCompactLayout && (
+                <div className="records-mobile-item-summary">
+                  {showSubtitle && (structured || getSubtitle) && subtitle && (
+                    <div className="records-mobile-subtitle">{subtitle}</div>
+                  )}
+                  <div className="records-mobile-summary-value">{summary}</div>
+                </div>
+              )}
+              {summary && showMeta && (structured || getMeta) && meta && (
+                <div className="records-mobile-client mt-1">{meta}</div>
+              )}
               {kv.length > 0 && (
                 <div className="records-mobile-kv-grid mt-2">
                   {kv.map((item) => (

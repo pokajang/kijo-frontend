@@ -9,7 +9,12 @@ import { dispatchAppNotificationsChanged } from '../../notifications/appNotifica
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const mapPersonalLeave = (row) => {
+const formatStaffIdentity = (name, code, fallback) => {
+  if (name && code) return `${name} (${code})`
+  return name || code || fallback || ''
+}
+
+export const mapPersonalLeave = (row) => {
   if (!row) return null
   return {
     id: row.id,
@@ -28,6 +33,12 @@ const mapPersonalLeave = (row) => {
     approvedStatus: row.approved_status || row.approvedStatus,
     approvedRemarks: row.approved_remarks || row.approvedRemarks,
     approvedAt: row.approved_at || row.approvedAt,
+    cancelledBy: formatStaffIdentity(
+      row.canceller_name || row.cancellerName,
+      row.canceller_code || row.cancellerCode,
+      row.cancelled_by ?? row.cancelledBy,
+    ),
+    cancelledAt: row.cancelled_at || row.cancelledAt,
   }
 }
 
@@ -151,7 +162,11 @@ const LeaveRecordDetailPage = () => {
             value: `${record?.startDate || '-'} ${record?.startTime || ''}`,
           },
           { key: 'end', label: 'End', value: `${record?.endDate || '-'} ${record?.endTime || ''}` },
-          { key: 'duration', label: 'Duration', value: `${record?.duration || 0} days` },
+          {
+            key: 'duration',
+            label: 'Duration',
+            value: `${record?.duration || 0} ${Number(record?.duration) === 1 ? 'day' : 'days'}`,
+          },
           {
             key: 'status',
             label: 'Status',
@@ -178,6 +193,20 @@ const LeaveRecordDetailPage = () => {
             value: record?.approvedRemarks || '-',
             xs: 12,
           },
+          ...(record?.status === 'Cancelled' || record?.cancelledAt || record?.cancelledBy
+            ? [
+                {
+                  key: 'cancelledBy',
+                  label: 'Cancelled By',
+                  value: record?.cancelledBy || 'Not recorded (legacy record)',
+                },
+                {
+                  key: 'cancelledAt',
+                  label: 'Cancelled At',
+                  value: record?.cancelledAt || 'Not recorded (legacy record)',
+                },
+              ]
+            : []),
         ]}
       />
     </DataTableDetailShell>

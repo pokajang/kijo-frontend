@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { getPeriodRangePreset } from '../filters'
 import {
   getLeaveRecordScopeDate,
@@ -48,13 +48,13 @@ afterEach(() => {
 })
 
 describe('LeaveRecordTable', () => {
-  it('filters personal leave records by applied date', () => {
+  it('filters personal leave records by leave start date', () => {
     expect(
       getLeaveRecordScopeDate({
         appliedAt: '2026-05-20 09:15:00',
         startDate: '2026-08-01',
       }),
-    ).toBe('2026-05-20 09:15:00')
+    ).toBe('2026-08-01')
   })
 
   it('prioritizes pending personal leave records before completed statuses', () => {
@@ -108,7 +108,7 @@ describe('LeaveRecordTable', () => {
     expect(screen.queryByText('Annual 2026 leave')).not.toBeInTheDocument()
   })
 
-  it('uses applied date for personal period filtering', () => {
+  it('uses the managed leave period for personal period filtering', () => {
     renderTable({
       periodRange: {
         preset: 'custom',
@@ -117,8 +117,8 @@ describe('LeaveRecordTable', () => {
       },
     })
 
-    expect(screen.getAllByText('Medical 2025 leave').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Annual 2026 leave')).not.toBeInTheDocument()
+    expect(screen.getAllByText('Annual 2026 leave').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Medical 2025 leave')).not.toBeInTheDocument()
   })
 
   it('renders all-time year separators for personal records', () => {
@@ -128,6 +128,23 @@ describe('LeaveRecordTable', () => {
     expect(groupRows).toHaveLength(2)
     expect(groupRows[0]).toHaveTextContent('2026')
     expect(groupRows[1]).toHaveTextContent('2025')
+  })
+
+  it('renders concise mobile leave records through the shared descriptor', () => {
+    const { container } = renderTable({ periodRange: getPeriodRangePreset('all') })
+    const mobileRows = Array.from(container.querySelectorAll('.data-table-mobile-item'))
+    const annualRow = mobileRows.find((row) => row.textContent.includes('Annual'))
+
+    expect(annualRow).toBeTruthy()
+    expect(annualRow).not.toHaveTextContent('#1')
+    expect(annualRow).toHaveClass('records-mobile-item--compact')
+    expect(annualRow).toHaveTextContent('3 days')
+    expect(annualRow).toHaveTextContent('10 Jan 2026 \u2013 12 Jan 2026 \u00b7 08:30\u201317:30')
+    expect(annualRow).not.toHaveTextContent('Applied 2025-12-20 09:15:00')
+    const status = within(annualRow).getByText('Approved')
+    expect(status).toHaveClass('records-status-badge--info')
+    expect(status.closest('.records-mobile-item-main')).toBeTruthy()
+    expect(within(annualRow).getByText('3 days')).toHaveClass('records-mobile-summary-value')
   })
 
   it('offers cancellation only for pending records and revoke for approved records', async () => {

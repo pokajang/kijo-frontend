@@ -39,21 +39,21 @@ describe('leaveRecordFilters', () => {
     })
   })
 
-  it('uses applied date as the scope date', () => {
+  it('uses the leave start date as the business scope date', () => {
     expect(
       getLeaveRecordScopeDate({
         appliedAt: '2026-05-20 09:15:00',
         startDate: '2026-08-01',
       }),
-    ).toBe('2026-05-20 09:15:00')
+    ).toBe('2026-08-01')
   })
 
-  it('falls back to leave start date when applied date is missing', () => {
+  it('falls back to applied date for legacy records without a start date', () => {
     expect(
       getLeaveRecordScopeDate({
-        startDate: '2026-08-01',
+        applied_at: '2026-05-20 09:15:00',
       }),
-    ).toBe('2026-08-01')
+    ).toBe('2026-05-20 09:15:00')
   })
 
   it('filters by leave start date, type, status, and exact staff id', () => {

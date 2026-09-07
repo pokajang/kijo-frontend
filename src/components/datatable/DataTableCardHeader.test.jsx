@@ -45,6 +45,26 @@ describe('DataTableCardHeader', () => {
     expect(screen.getByRole('button').closest('.data-table-card-header__actions')).toBeTruthy()
   })
 
+  it('adds the shared actions-only mobile presentation without removing desktop context', () => {
+    render(
+      <DataTableCardHeader
+        title="Leave Records"
+        scopeLabel="YTD 2026"
+        mobilePresentation="actions-only"
+        data-testid="leave-records-header"
+      >
+        <button type="button">Apply</button>
+      </DataTableCardHeader>,
+    )
+
+    expect(screen.getByTestId('leave-records-header')).toHaveClass(
+      'data-table-card-header--mobile-actions-only',
+    )
+    expect(screen.getByText('Leave Records')).toBeInTheDocument()
+    expect(screen.getByText('1 Jan - 30 May 2026')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument()
+  })
+
   it('omits the scope element for an empty label', () => {
     const { container } = render(<DataTableCardHeader title="Quotes" scopeLabel="" />)
 

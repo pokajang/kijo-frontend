@@ -54,3 +54,40 @@
   margin: 0.12rem 0;
 }
 
+.data-table-option-menu {
+  min-width: 0;
+}
+
+.data-table-option-menu__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.data-table-option-menu__toggle::after {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.data-table-option-menu--read-only .data-table-option-menu__toggle:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.data-table-option-menu__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-table-option-menu__menu {
+  min-width: 0;
+  max-width: calc(100vw - 1rem);
+  max-height: min(22rem, calc(100vh - 2rem));
+  overflow-y: auto;
+}

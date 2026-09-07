@@ -20,6 +20,69 @@ describe('ApplyLeave', () => {
     vi.restoreAllMocks()
   })
 
+  it('aborts the entitlement request when the form unmounts', async () => {
+    let requestSignal
+    const fetchMock = vi.fn((_url, options = {}) => {
+      requestSignal = options.signal
+      return new Promise((_resolve, reject) => {
+        requestSignal.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+        })
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { unmount } = render(<ApplyLeave />)
+
+    await waitFor(() => expect(requestSignal).toBeInstanceOf(AbortSignal))
+    unmount()
+
+    expect(requestSignal.aborted).toBe(true)
+  })
+
+  it('distinguishes an entitlement outage from an empty allocation and supports retry', async () => {
+    const currentYear = new Date().getFullYear()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: 'error', message: 'Balance service unavailable' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 'success',
+            entitlements: [
+              {
+                id: 9,
+                leave_type: 'Annual',
+                year: currentYear,
+                total_days: 10,
+                used_days: 2,
+                remaining: 8,
+              },
+            ],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ApplyLeave />)
+
+    expect(await screen.findByText(/Leave balances are unavailable/i)).toBeInTheDocument()
+    expect(screen.queryByText(`No leave allocated for ${currentYear}.`)).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Unpaid Leave' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry balances' }))
+
+    expect(await screen.findByText('Annual')).toBeInTheDocument()
+    expect(screen.queryByText(/Leave balances are unavailable/i)).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('allows unpaid leave applications when the staff member has no current-year entitlement', async () => {
     const fetchMock = vi.fn(async (url, options = {}) => {
       if (String(url).includes('hr/leaves/entitlements/mine')) {

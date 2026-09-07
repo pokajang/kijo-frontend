@@ -63,6 +63,31 @@
   gap: 0.5rem;
 }
 
+.records-mobile-item--compact .records-mobile-item-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.records-mobile-item--compact .records-mobile-item-main {
+  width: auto;
+}
+
+.records-mobile-item--compact .records-mobile-subtitle {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.records-mobile-compact-summary {
+  align-self: center;
+}
+
+.records-mobile-item--compact .records-mobile-head-actions {
+  margin-left: 0 !important;
+  padding-right: 0;
+}
+
 .records-mobile-item-main {
   color: inherit;
   flex: 1 1 auto;
@@ -86,6 +111,27 @@
   color: var(--cui-body-color, var(--app-text-base));
   font-size: var(--cui-body-font-size);
   line-height: 1.15;
+}
+
+.records-mobile-item-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.records-mobile-item-summary .records-mobile-subtitle {
+  min-width: 0;
+}
+
+.records-mobile-summary-value {
+  color: var(--cui-body-color, var(--app-text-base));
+  font-size: var(--cui-body-font-size);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .records-mobile-client {
@@ -186,6 +232,22 @@
   white-space: nowrap;
 }
 
+.data-table-mobile-load-more {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.5rem 0;
+  border-top: 1px solid var(--cui-border-color, var(--app-border-card));
+  text-align: center;
+}
+
+.data-table-mobile-load-more .btn {
+  min-height: 2rem;
+  padding-inline: 0.85rem;
+}
+
 .records-mobile-rows-select {
   height: 1.8rem;
   min-height: 1.8rem;
@@ -204,4 +266,3 @@
   min-width: 1.8rem;
   padding: 0.1rem 0.25rem;
 }
-

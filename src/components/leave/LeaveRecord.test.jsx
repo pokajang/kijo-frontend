@@ -69,20 +69,34 @@ describe('LeaveRecord', () => {
       </MemoryRouter>,
     )
 
-    await screen.findByText('Annual')
+    await screen.findByRole('button', { name: 'Leave balance type: Annual' })
+    expect(screen.getByRole('heading', { name: 'Leave balance' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Leave records' })).toBeInTheDocument()
+    expect(AH.getMyEntitlements).toHaveBeenCalledWith({
+      signal: expect.any(AbortSignal),
+    })
     expect(AH.getMyEntitlementHistory).not.toHaveBeenCalled()
     expect(screen.queryByText(/Assigned leave entitlement #4/i)).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Assignment History' }))
+    const historyButton = screen.getByRole('button', { name: 'Assignment History' })
+    expect(historyButton).toHaveAttribute('aria-expanded', 'false')
+    expect(historyButton).toHaveAttribute('aria-controls', 'leave-assignment-history-panel')
+    fireEvent.click(historyButton)
 
     await waitFor(() => {
       expect(AH.getMyEntitlementHistory).toHaveBeenCalledTimes(1)
+    })
+    expect(AH.getMyEntitlementHistory).toHaveBeenCalledWith({
+      signal: expect.any(AbortSignal),
     })
     expect(screen.getByText('Annual - 2026')).toBeInTheDocument()
     expect(screen.getAllByText(/12\.2 days/).length).toBeGreaterThan(0)
     expect(screen.getByText(/By HR User \(HR1\)/)).toBeInTheDocument()
     expect(screen.getByText(/Assigned leave entitlement #4/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Hide Assignment History' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hide Assignment History' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
   })
 
   it('builds type-scoped this-year, last-year, and all-time balance summaries', () => {

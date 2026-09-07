@@ -42,20 +42,23 @@ const LeaveWorkspace = ({ routeSection }) => {
       <DataTableCardHeader
         title={activeConfig.title}
         scopeLabel={activeSection === 'records' ? headerScopeLabel : ''}
-        className="leave-workspace-header"
+        mobilePresentation={activeSection === 'records' ? 'actions-only' : 'default'}
+        className={`leave-workspace-header${
+          activeSection === 'records' ? '' : ' leave-workspace-header--apply'
+        }`}
       >
-        <div className="leave-workspace-action-cluster">
+        <div className="mobile-workspace-action-row leave-workspace-action-cluster">
           {activeSection === 'records' ? (
-            <DataTableStatsToggle
-              visible={statsVisible}
-              onToggle={toggleStatsVisible}
-              controlsVisible={controlsVisible}
-              onControlsToggle={toggleControlsVisible}
-            />
-          ) : null}
-          {activeSection === 'records' ? (
-            <CButton color="primary" size="sm" onClick={() => navigate(sectionPath('apply'))}>
-              Apply Leave
+            <CButton
+              color="primary"
+              variant="outline"
+              size="sm"
+              className="mobile-workspace-primary-action rounded-pill"
+              aria-label="Apply Leave"
+              onClick={() => navigate(sectionPath('apply'))}
+            >
+              <span className="d-sm-none">Apply</span>
+              <span className="d-none d-sm-inline">Apply Leave</span>
             </CButton>
           ) : (
             <CButton
@@ -67,6 +70,14 @@ const LeaveWorkspace = ({ routeSection }) => {
               Back
             </CButton>
           )}
+          {activeSection === 'records' ? (
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
+            />
+          ) : null}
         </div>
       </DataTableCardHeader>
       <CCardBody>

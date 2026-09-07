@@ -6,16 +6,19 @@ const DataTableCardHeader = ({
   title,
   titleAs: TitleTag = 'strong',
   scopeLabel = '',
+  mobilePresentation = 'default',
   children,
   className = '',
   ...rest
 }) => {
   const displayScopeLabel = formatStatsScopeLabel(scopeLabel)
   const showScopeLabel = Boolean(displayScopeLabel)
+  const mobilePresentationClass =
+    mobilePresentation === 'actions-only' ? 'data-table-card-header--mobile-actions-only' : ''
 
   return (
     <CCardHeader
-      className={`data-table-card-header records-page-card-header ${className}`.trim()}
+      className={`data-table-card-header records-page-card-header ${mobilePresentationClass} ${className}`.trim()}
       {...rest}
     >
       <div className="data-table-card-header__title-group">
