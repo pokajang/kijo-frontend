@@ -3,6 +3,15 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import SalaryWorkspace from './SalaryWorkspace'
 
+vi.mock('../../../auth/AuthProvider', async (importOriginal) => {
+  const actual = await importOriginal()
+
+  return {
+    ...actual,
+    useAuth: () => ({ user: { staff_id: 10 } }),
+  }
+})
+
 vi.mock('../../../components/salary/ApplySalary', () => ({
   default: () => <div>Apply Salary Mock</div>,
 }))
@@ -142,6 +151,9 @@ describe('SalaryWorkspace', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/my/salary/records')
     expect(screen.getByText('Salary Records Mock')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Apply Salary' })).toBeInTheDocument()
+    expect(document.querySelector('.salary-workspace-header')).toHaveClass(
+      'data-table-card-header--mobile-actions-only',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply Salary' }))
     expect(screen.getByTestId('location')).toHaveTextContent('/my/salary/apply')

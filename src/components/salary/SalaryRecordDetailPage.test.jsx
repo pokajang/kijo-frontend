@@ -102,6 +102,36 @@ describe('SalaryRecordDetailPage', () => {
     expect(screen.getAllByText('-RM 374.05').length).toBeGreaterThan(0)
   })
 
+  it('labels a legacy record snapshot without presenting it as a historical declaration', async () => {
+    apiMock.apiJson.mockResolvedValue({
+      record: {
+        ...record,
+        salaryProfileSnapshot: {
+          source: 'legacy_record',
+          salaryMonth: '2025-12',
+          basicSalary: '3100.00',
+          recordedAt: '2025-12-31T10:00:00',
+          note: 'Captured from the submitted legacy salary record.',
+        },
+      },
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/my/salary/records/10']}>
+        <Routes>
+          <Route path="/my/salary/records/:salaryRecordId" element={<SalaryRecordDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Legacy salary record snapshot')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Salary month')).toBeInTheDocument()
+    expect(screen.getByText('Recorded basic salary')).toBeInTheDocument()
+    expect(screen.queryByText('Salary setting used')).not.toBeInTheDocument()
+  })
+
   it('wires detail action card export claims, edit, and delete actions', async () => {
     const LocationProbe = () => {
       const location = useLocation()
@@ -155,17 +185,33 @@ describe('SalaryRecordDetailPage', () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Payroll adjustment/).length).toBeGreaterThan(0)
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    dialog.prompt.mockResolvedValue('Duplicate submission')
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw' }))
 
     await waitFor(() => {
-      expect(dialog.confirm).toHaveBeenCalledWith('Delete June 2026 salary application?', {
-        title: 'Delete Salary Record',
-        confirmText: 'Delete',
-        confirmColor: 'danger',
-      })
+      expect(dialog.prompt).toHaveBeenCalledWith(
+        'Enter a reason to withdraw the June 2026 salary application. Its workflow history will be retained.',
+        {
+          title: 'Withdraw Salary Record',
+          confirmText: 'Withdraw Record',
+          confirmColor: 'danger',
+          required: true,
+          multiline: true,
+          rows: 4,
+          placeholder: 'Reason for withdrawing this salary record',
+        },
+      )
       expect(apiMock.apiJson).toHaveBeenCalledWith(
         expect.stringContaining('hr/salary/records/10'),
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            confirmation: 'DELETE',
+            record_version: 1,
+            reason: 'Duplicate submission',
+          }),
+        },
       )
     })
     expect(screen.getByTestId('location')).toHaveTextContent('/my/salary/records')

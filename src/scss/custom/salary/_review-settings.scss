@@ -223,7 +223,8 @@
   margin-top: 1rem;
 }
 
-.salary-settings-calculation-settings > summary {
+.salary-settings-calculation-settings > summary,
+.salary-settings-history-details > summary {
   color: var(--cui-secondary-color);
   cursor: pointer;
   font-size: 0.8125rem;
@@ -231,9 +232,45 @@
 }
 
 .salary-settings-calculation-settings > summary:focus-visible,
+.salary-settings-history-details > summary:focus-visible,
 .salary-settings-advanced > summary:focus-visible {
   outline: 2px solid rgba(var(--cui-primary-rgb), 0.45);
   outline-offset: 0.2rem;
+}
+
+.salary-settings-history-entry + .salary-settings-history-entry {
+  margin-top: 1.25rem;
+}
+
+.salary-settings-history-details {
+  margin-top: 0.875rem;
+}
+
+.salary-settings-history-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.salary-settings-history-allowances {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  color: var(--cui-secondary-color);
+  font-size: 0.75rem;
+}
+
+.salary-settings-history-allowances > ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: 0.8125rem;
+}
+
+.salary-settings-history-allowances > strong {
+  color: var(--app-text-strong, var(--cui-body-color));
+  font-size: 0.8125rem;
 }
 
 .salary-settings-summary-item {
@@ -318,6 +355,10 @@
 
   .salary-settings-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .salary-settings-history-detail-grid {
+    grid-template-columns: 1fr;
   }
 
   .salary-settings-section-heading-row {

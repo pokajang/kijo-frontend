@@ -46,6 +46,20 @@ const formatMonthLabel = (month) => {
   })
 }
 
+const formatDeclarationTime = (value) => {
+  if (!value) return 'Legacy setting'
+  const date = new Date(String(value).replace(' ', 'T'))
+  if (Number.isNaN(date.getTime())) return String(value)
+
+  return new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 const buildAllowanceMeta = (allowance) => {
   const meta = []
   const startMonth = formatMonthLabel(allowance.startMonth)
@@ -645,6 +659,81 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
           </details>
         </CCardBody>
       </CCard>
+      <CCard className="salary-settings-card">
+        <CCardHeader className="salary-section-header">
+          <div>
+            <h2 className="salary-form-panel-heading mb-0">Salary setting history</h2>
+            <div className="text-muted small">
+              Each save creates a dated declaration. Salary periods use the latest declaration
+              effective for that month.
+            </div>
+          </div>
+        </CCardHeader>
+        <CCardBody className="salary-section-body">
+          {profile.history.length ? (
+            <div className="salary-settings-history-list" aria-label="Salary setting history">
+              {profile.history.map((declaration) => (
+                <div className="salary-settings-history-entry" key={declaration.id}>
+                  <div className="salary-settings-summary-grid">
+                    <div className="salary-settings-summary-item">
+                      <span>Effective from</span>
+                      <strong>{formatMonthLabel(declaration.effectiveMonth) || 'Not set'}</strong>
+                    </div>
+                    <div className="salary-settings-summary-item">
+                      <span>Basic salary</span>
+                      <strong>{formatMoney(declaration.basicSalary || 0)}</strong>
+                    </div>
+                    <div className="salary-settings-summary-item">
+                      <span>Mileage rate</span>
+                      <strong>{formatMoney(declaration.defaultMileageRate || 0)} / KM</strong>
+                    </div>
+                    <div className="salary-settings-summary-item">
+                      <span>Medical entitlement</span>
+                      <strong>{formatMoney(declaration.yearlyMedicalClaim || 0)}</strong>
+                    </div>
+                    <div className="salary-settings-summary-item">
+                      <span>Declared</span>
+                      <strong>{formatDeclarationTime(declaration.declaredAt)}</strong>
+                    </div>
+                  </div>
+                  <details className="salary-settings-history-details">
+                    <summary>Declaration details</summary>
+                    <div className="salary-settings-history-detail-grid">
+                      <div className="salary-settings-summary-item">
+                        <span>Vehicle</span>
+                        <strong>{declaration.vehicle || 'Not specified'}</strong>
+                      </div>
+                      <div className="salary-settings-summary-item">
+                        <span>Notes</span>
+                        <strong>{declaration.notes || 'None'}</strong>
+                      </div>
+                    </div>
+                    <div className="salary-settings-history-allowances">
+                      <span>Recurring monthly additions</span>
+                      {declaration.recurringAllowances.length ? (
+                        <ul>
+                          {declaration.recurringAllowances.map((allowance) => (
+                            <li key={allowance.id}>
+                              {allowance.description}: {formatMoney(allowance.amount)}
+                              {allowance.startMonth
+                                ? ` (starts ${formatMonthLabel(allowance.startMonth)})`
+                                : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <strong>None</strong>
+                      )}
+                    </div>
+                  </details>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted small">No salary declarations have been recorded yet.</span>
+          )}
+        </CCardBody>
+      </CCard>
     </div>
   )
 
@@ -655,7 +744,7 @@ const SalarySettings = ({ medicalEntitlementSetup = false, onMedicalEntitlementS
           <div>
             <h2 className="salary-form-panel-heading mb-0">Edit salary settings</h2>
             <div className="text-muted small">
-              Changes are used for future salary applications and claims.
+              Saving adds a dated declaration; earlier declarations remain in your history.
             </div>
           </div>
         </CCardHeader>

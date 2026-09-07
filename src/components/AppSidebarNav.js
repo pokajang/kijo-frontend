@@ -7,7 +7,7 @@ import 'simplebar-react/dist/simplebar.min.css'
 
 import { CBadge, CNavLink, CSidebarNav } from '@coreui/react'
 
-export const AppSidebarNav = ({ items }) => {
+export const AppSidebarNav = ({ items, onNavigate, className = '' }) => {
   const location = useLocation()
   const navRef = useRef(null)
 
@@ -84,6 +84,10 @@ export const AppSidebarNav = ({ items }) => {
             className={baseClassName}
             {...(rest.to && { active: isActive })}
             {...rest}
+            onClick={(event) => {
+              rest.onClick?.(event)
+              if (!event.defaultPrevented) onNavigate?.(item)
+            }}
           >
             {navLink(name, icon, badge, indent)}
           </CNavLink>
@@ -114,7 +118,7 @@ export const AppSidebarNav = ({ items }) => {
   }
 
   return (
-    <CSidebarNav as={SimpleBar} ref={navRef}>
+    <CSidebarNav as={SimpleBar} ref={navRef} className={className}>
       {items &&
         items.map((item, index) => (item.items ? navGroup(item, index) : navItem(item, index)))}
     </CSidebarNav>
@@ -123,4 +127,6 @@ export const AppSidebarNav = ({ items }) => {
 
 AppSidebarNav.propTypes = {
   items: PropTypes.arrayOf(PropTypes.any).isRequired,
+  onNavigate: PropTypes.func,
+  className: PropTypes.string,
 }

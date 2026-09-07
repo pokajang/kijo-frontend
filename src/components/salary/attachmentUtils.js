@@ -1,6 +1,6 @@
 export const salaryAttachmentAccept = '.pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf'
 
-export const maxSalaryAttachmentBytes = 2 * 1024 * 1024
+export const maxSalaryAttachmentBytes = 5 * 1024 * 1024
 
 const imageTypes = new Set(['image/jpeg', 'image/png'])
 const allowedExtensions = new Set(['pdf', 'png', 'jpg', 'jpeg'])
@@ -104,6 +104,10 @@ export const prepareSalaryAttachment = async (file) => {
     imageTypes.has(file.type) || ['jpg', 'jpeg', 'png'].includes(getExtension(file.name))
   const shouldCompress = isImage && file.size > maxSalaryAttachmentBytes
   const preparedFile = shouldCompress ? await compressImageFile(file) : file
+
+  if (preparedFile.size > maxSalaryAttachmentBytes) {
+    throw new Error('Attachment must be 5 MB or smaller.')
+  }
   const dataUrl = await fileToDataUrl(preparedFile)
 
   return {

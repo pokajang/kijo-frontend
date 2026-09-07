@@ -425,6 +425,20 @@ commits while retaining the additive audit/snapshot tables. Do not roll back or
 drop summary tables after a live summary has been issued without a database
 backup and an explicit retention decision from Finance.
 
+### Salary Declaration History and Email Delivery Tracking (2026-09-04)
+
+The coordinated Salary follow-up stores each employee declaration as history,
+snapshots the declaration used by each salary application, preserves honest
+legacy record snapshots, and tracks workflow email through queue processing and
+SMTP transport handoff. It adds three migrations and requires the backend to be
+deployed before the matching frontend build.
+
+Follow the release-specific
+[salary declaration history and email delivery tracking note](deployment/release-notes/salary-declaration-history-and-email-delivery.md)
+for the backup scope, exact migration order, legacy-data guarantees, queue
+backlog safety gate, verification, and rollback constraints. Do not start a
+stopped production queue worker until existing queued mail has been reviewed.
+
 ### Quotation and Equipment Commercial-Cycle DOCX Export
 
 The DOCX export is a coordinated backend and frontend release. It adds the

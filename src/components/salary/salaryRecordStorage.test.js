@@ -45,7 +45,7 @@ describe('salaryRecordStorage API adapter', () => {
     ])
   })
 
-  it('normalizes salary details to payroll allowance rows only', async () => {
+  it('preserves every historical salary claim row and its stored total', async () => {
     apiMock.apiJson.mockResolvedValueOnce({
       record: {
         id: 10,
@@ -66,8 +66,11 @@ describe('salaryRecordStorage API adapter', () => {
     await expect(findSalaryRecord(10)).resolves.toEqual(
       expect.objectContaining({
         id: 10,
-        claimsTotal: 25,
-        claims: [expect.objectContaining({ description: 'Payroll adjustment' })],
+        claimsTotal: 75,
+        claims: [
+          expect.objectContaining({ description: 'Parking' }),
+          expect.objectContaining({ description: 'Payroll adjustment' }),
+        ],
       }),
     )
     expect(apiMock.apiJson).toHaveBeenCalledWith(expect.stringContaining('hr/salary/records/10'), {
@@ -196,10 +199,12 @@ describe('salaryRecordStorage API adapter', () => {
   it('deletes salary records through the API', async () => {
     apiMock.apiJson.mockResolvedValueOnce({ status: 'success' })
 
-    await removeSalaryRecord(10)
+    await removeSalaryRecord({ id: 10, recordVersion: 3 })
 
     expect(apiMock.apiJson).toHaveBeenCalledWith(expect.stringContaining('hr/salary/records/10'), {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirmation: 'DELETE', record_version: 3, reason: '' }),
     })
   })
 

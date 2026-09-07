@@ -15,6 +15,7 @@ const apiBase = `${baseUrl}/proxy`
 const applicantEmail = process.env.SMOKE_EMAIL || 'azam@amiosh.com'
 const applicantPassword = process.env.SMOKE_PASSWORD
 const financePassword = process.env.SALARY_UAT_PASSWORD
+const forceFresh = process.env.SALARY_UAT_FORCE_FRESH === '1'
 const reviewerEmail = 'salary.reviewer@amiosh.test'
 const approverEmail = 'salary.approver@amiosh.test'
 const evidencePath =
@@ -270,12 +271,14 @@ try {
 
   await step('applicant creates and submits salary adjustment with PDF evidence', async () => {
     const own = (await applicant.api('hr/salary/records')).payload?.records || []
-    for (const summary of own) {
-      const detail = (await applicant.api(`hr/salary/records/${summary.id}`)).payload?.record
-      if (detail?.claims?.some((claim) => String(claim.description || '').startsWith('UAT '))) {
-        records.salaryId = detail.id
-        records.salaryMonth = detail.salaryMonthValue
-        return `reusing UAT record=${detail.id}; month=${detail.salaryMonthValue}; status=${detail.status}`
+    if (!forceFresh) {
+      for (const summary of own) {
+        const detail = (await applicant.api(`hr/salary/records/${summary.id}`)).payload?.record
+        if (detail?.claims?.some((claim) => String(claim.description || '').startsWith('UAT '))) {
+          records.salaryId = detail.id
+          records.salaryMonth = detail.salaryMonthValue
+          return `reusing UAT record=${detail.id}; month=${detail.salaryMonthValue}; status=${detail.status}`
+        }
       }
     }
     const usedMonths = new Set(
@@ -471,16 +474,19 @@ try {
   await step('applicant creates and submits an other claim with PDF evidence', async () => {
     const description = `${runLabel} other allowance`
     const ownClaims = (await applicant.api('hr/salary/other-claims')).payload?.records || []
-    for (const summary of ownClaims) {
-      const existing = (await applicant.api(`hr/salary/other-claims/${summary.id}`)).payload?.record
-      if (
-        existing?.claims?.some((claim) =>
-          /^UAT .* other allowance$/.test(String(claim.description || '')),
-        )
-      ) {
-        records.claimId = existing.id
-        records.claimMonth = existing.claimMonthValue
-        return `reusing UAT record=${existing.id}; month=${existing.claimMonthValue}; status=${existing.status}`
+    if (!forceFresh) {
+      for (const summary of ownClaims) {
+        const existing = (await applicant.api(`hr/salary/other-claims/${summary.id}`)).payload
+          ?.record
+        if (
+          existing?.claims?.some((claim) =>
+            /^UAT .* other allowance$/.test(String(claim.description || '')),
+          )
+        ) {
+          records.claimId = existing.id
+          records.claimMonth = existing.claimMonthValue
+          return `reusing UAT record=${existing.id}; month=${existing.claimMonthValue}; status=${existing.status}`
+        }
       }
     }
     records.claimMonth = monthValue(0)
@@ -716,6 +722,7 @@ try {
         baseUrl,
         browser: 'Chromium',
         viewport: '1440x900',
+        forceFresh,
         accounts: { applicant: applicantEmail, reviewer: reviewerEmail, approver: approverEmail },
         records,
         results,

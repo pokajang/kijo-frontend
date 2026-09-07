@@ -49,33 +49,6 @@
     white-space: nowrap;
   }
 
-  .salary-workspace-action-cluster {
-    flex: 0 0 auto;
-    justify-content: flex-end;
-    gap: 0.35rem;
-    margin-right: -0.25rem;
-  }
-
-  .salary-workspace-action-cluster .data-table-stats-toggle,
-  .salary-workspace-action-cluster .salary-workspace-apply-button {
-    height: 2rem !important;
-    min-height: 2rem !important;
-  }
-
-  .salary-workspace-action-cluster .data-table-stats-toggle {
-    margin-inline-end: 0;
-    width: 2rem;
-    min-width: 2rem !important;
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .salary-workspace-action-cluster .salary-workspace-apply-button {
-    min-width: auto !important;
-    padding-inline: 0.65rem !important;
-  }
-
   .salary-section-header.card-header {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -262,28 +235,6 @@
 
   .salary-workspace-title-group {
     display: none;
-  }
-
-  .salary-workspace-action-cluster {
-    display: flex;
-    justify-content: space-between;
-    margin-right: 0;
-    width: 100%;
-  }
-
-  .salary-records-table .data-table-mobile-load-more {
-    align-items: center;
-    border-top: 1px solid var(--cui-border-color, var(--app-border-card));
-    display: grid;
-    gap: 0.5rem;
-    justify-items: center;
-    margin-top: 0.75rem;
-    padding: 0.75rem 0.5rem 0;
-  }
-
-  .salary-records-table .data-table-mobile-load-more .btn {
-    min-height: 2rem !important;
-    padding-inline: 0.85rem !important;
   }
 
   .salary-records-table .records-mobile-subtitle {

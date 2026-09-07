@@ -4,14 +4,14 @@
   // height globally so page content and floating actions stay above both rows.
   :root:has(.header.header-sticky .app-global-prompt) {
     --app-mobile-fixed-bottom-inset: calc(
-      var(--app-mobile-bottom-nav-height) + var(--app-mobile-bottom-safe-area) + 3rem
+      var(--app-mobile-bottom-nav-height) + var(--app-mobile-bottom-safe-area) + 3.75rem
     );
     --app-mobile-floating-action-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 0.75rem);
   }
 
   .header.header-sticky:has(.app-global-prompt) {
     --app-mobile-fixed-bottom-inset: calc(
-      var(--app-mobile-bottom-nav-height) + var(--app-mobile-bottom-safe-area) + 3rem
+      var(--app-mobile-bottom-nav-height) + var(--app-mobile-bottom-safe-area) + 3.75rem
     );
     --app-mobile-floating-action-bottom: calc(var(--app-mobile-fixed-bottom-inset) + 0.75rem);
   }
@@ -59,16 +59,24 @@
 
   .header.header-sticky .app-global-prompt > .container-fluid {
     flex-wrap: nowrap !important;
-    min-height: 3rem;
+    max-width: 100%;
+    min-height: 3.75rem;
     padding: 0.45rem max(0.75rem, env(safe-area-inset-right)) 0.45rem
       max(0.75rem, env(safe-area-inset-left)) !important;
   }
 
   .header.header-sticky .app-global-prompt {
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     order: -1;
+    padding: 0;
   }
 
   .header.header-sticky .app-global-prompt strong {
+    flex: 1 1 0;
     min-width: 0;
     font-size: 0.8125rem;
     line-height: 1.2;
@@ -79,12 +87,18 @@
 
   .header.header-sticky .app-global-prompt .btn {
     flex: 0 0 auto;
-    margin-left: auto !important;
+    margin-left: 0 !important;
+    min-height: var(--app-mobile-touch-target);
     white-space: nowrap;
   }
 
   .header.header-sticky .app-global-prompt .btn-close {
+    box-sizing: border-box;
     flex: 0 0 auto;
+    width: var(--app-mobile-touch-target);
+    height: var(--app-mobile-touch-target);
+    padding: 0.75rem;
+    background-size: 0.75rem;
   }
 
   .app-bottom-nav-menu {

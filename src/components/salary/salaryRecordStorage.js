@@ -48,6 +48,7 @@ const normalizeAttachment = (attachment) => {
 
 const normalizeClaim = (claim = {}) => ({
   id: claim.id,
+  clientId: claim.clientId || claim.client_claim_id || '',
   type: claim.type,
   date: claim.date || '',
   description: claim.description || '',
@@ -61,13 +62,7 @@ const normalizeClaim = (claim = {}) => ({
   attachment: normalizeAttachment(claim.attachment),
 })
 
-const salaryClaimsForRecord = (claims) =>
-  Array.isArray(claims)
-    ? claims.map(normalizeClaim).filter((claim) => salaryClaimTypes.has(claim.type))
-    : []
-
-const salaryClaimsTotal = (claims) =>
-  claims.reduce((total, claim) => total + Number(claim.amount || 0), 0)
+const claimsForRecord = (claims) => (Array.isArray(claims) ? claims.map(normalizeClaim) : [])
 
 export const normalizeSalaryStatus = (status) => {
   if (status === 'Prepared') return 'Submitted'
@@ -76,23 +71,25 @@ export const normalizeSalaryStatus = (status) => {
 
 const normalizeRecord = (record = {}) => {
   const hasClaimDetails = Array.isArray(record.claims)
-  const salaryClaims = salaryClaimsForRecord(record.claims)
+  const claims = claimsForRecord(record.claims)
 
   return {
     id: record.id,
     salaryMonth: record.salaryMonth || formatSalaryMonth(record.salaryMonthValue),
     salaryMonthValue: record.salaryMonthValue || '',
     basicSalary: Number(record.basicSalary || 0),
-    claimsTotal: hasClaimDetails
-      ? salaryClaimsTotal(salaryClaims)
-      : Number(record.claimsTotal || 0),
+    claimsTotal: Number(record.claimsTotal || 0),
     medicalClaimsTotal: 0,
     employeeDeductions: Number(record.employeeDeductions || 0),
     employerContributions: Number(record.employerContributions || 0),
     payableSalary: Number(record.payableSalary || 0),
     status: normalizeSalaryStatus(record.status || 'Submitted'),
-    claims: salaryClaims,
+    claims,
     deductions: record.deductions || {},
+    salaryProfileSnapshot:
+      record.salaryProfileSnapshot && typeof record.salaryProfileSnapshot === 'object'
+        ? record.salaryProfileSnapshot
+        : null,
     draftPayload:
       record.draftPayload &&
       typeof record.draftPayload === 'object' &&
@@ -301,7 +298,7 @@ const serverDraftPayload = (value) => {
   )
 }
 
-export const saveSalaryApplicationDraft = async (draft) => {
+export const saveSalaryApplicationDraft = async (draft, { signal } = {}) => {
   const formData = new FormData()
   const claims = Array.isArray(draft.claims)
     ? draft.claims.filter((claim) => claim?.type === 'Allowance').filter(isServerSafeDraftClaim)
@@ -324,6 +321,7 @@ export const saveSalaryApplicationDraft = async (draft) => {
     method: 'POST',
     body: formData,
     silentError: true,
+    signal,
   })
   dispatchRecordsChanged()
   return payload.record ? normalizeRecord(payload.record) : null
@@ -342,16 +340,18 @@ export const clearSalaryApplicationServerDraft = async (salaryMonth) => {
   dispatchRecordsChanged()
 }
 
-export const removeSalaryRecord = async (id, reason = '') => {
+export const removeSalaryRecord = async (record, reason = '') => {
+  const id = typeof record === 'object' ? record?.id : record
+  const recordVersion = typeof record === 'object' ? Number(record?.recordVersion || 0) : 0
   const trimmedReason = String(reason || '').trim()
   await apiJson(`${API_BASE}hr/salary/records/${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    ...(trimmedReason
-      ? {
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: trimmedReason }),
-        }
-      : {}),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      confirmation: 'DELETE',
+      record_version: recordVersion,
+      reason: trimmedReason,
+    }),
   })
   dispatchRecordsChanged()
   dispatchAppNotificationsChanged()

@@ -1,4 +1,4 @@
-export const SALARY_APPLICATION_DRAFT_VERSION = 'v1'
+export const SALARY_APPLICATION_DRAFT_VERSION = 'v2'
 
 const getStorage = (storage) => {
   if (storage) return storage
@@ -7,8 +7,8 @@ const getStorage = (storage) => {
 
 const isDraftObject = (value) => value && typeof value === 'object' && !Array.isArray(value)
 
-export const getSalaryApplicationDraftKey = (salaryMonth = '') =>
-  `salaryApplicationDraft:${SALARY_APPLICATION_DRAFT_VERSION}:${salaryMonth || 'current'}`
+export const getSalaryApplicationDraftKey = (salaryMonth = '', staffId = '') =>
+  `salaryApplicationDraft:${SALARY_APPLICATION_DRAFT_VERSION}:${staffId || 'anonymous'}:${salaryMonth || 'current'}`
 
 const removeDraft = (key, storage) => {
   const activeStorage = getStorage(storage)
@@ -21,9 +21,9 @@ const removeDraft = (key, storage) => {
   }
 }
 
-export const readSalaryApplicationDraft = ({ salaryMonth = '', storage } = {}) => {
+export const readSalaryApplicationDraft = ({ salaryMonth = '', staffId = '', storage } = {}) => {
   const activeStorage = getStorage(storage)
-  const key = getSalaryApplicationDraftKey(salaryMonth)
+  const key = getSalaryApplicationDraftKey(salaryMonth, staffId)
   if (!activeStorage || typeof activeStorage.getItem !== 'function') return null
 
   try {
@@ -43,7 +43,12 @@ export const readSalaryApplicationDraft = ({ salaryMonth = '', storage } = {}) =
   }
 }
 
-export const writeSalaryApplicationDraft = ({ salaryMonth = '', draft, storage } = {}) => {
+export const writeSalaryApplicationDraft = ({
+  salaryMonth = '',
+  staffId = '',
+  draft,
+  storage,
+} = {}) => {
   if (!isDraftObject(draft)) return false
 
   const activeStorage = getStorage(storage)
@@ -51,7 +56,7 @@ export const writeSalaryApplicationDraft = ({ salaryMonth = '', draft, storage }
 
   try {
     activeStorage.setItem(
-      getSalaryApplicationDraftKey(salaryMonth || draft.formData?.salaryMonth),
+      getSalaryApplicationDraftKey(salaryMonth || draft.formData?.salaryMonth, staffId),
       JSON.stringify({
         ...draft,
         savedAt: new Date().toISOString(),
@@ -63,6 +68,6 @@ export const writeSalaryApplicationDraft = ({ salaryMonth = '', draft, storage }
   }
 }
 
-export const clearSalaryApplicationDraft = ({ salaryMonth = '', storage } = {}) => {
-  removeDraft(getSalaryApplicationDraftKey(salaryMonth), storage)
+export const clearSalaryApplicationDraft = ({ salaryMonth = '', staffId = '', storage } = {}) => {
+  removeDraft(getSalaryApplicationDraftKey(salaryMonth, staffId), storage)
 }

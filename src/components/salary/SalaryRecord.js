@@ -381,19 +381,17 @@ const SalaryRecord = ({
     if (!record?.id) return
     if (paidStatuses.has(record.status)) return
     let cancellationReason = ''
-    if (reviewedMutableStatuses.has(record.status)) {
+    if (record.status !== 'Draft') {
       const reason = await dialog.prompt(
-        `${record.salaryMonth} has already been ${displayStatus(
-          record.status,
-        ).toLowerCase()}. Enter a reason to cancel this salary record.`,
+        `Enter a reason to withdraw the ${record.salaryMonth} salary application. Its workflow history will be retained.`,
         {
-          title: 'Cancel Reviewed Salary Record',
-          confirmText: 'Cancel Record',
+          title: 'Withdraw Salary Record',
+          confirmText: 'Withdraw Record',
           confirmColor: 'danger',
           required: true,
           multiline: true,
           rows: 4,
-          placeholder: 'Reason for cancelling this salary record',
+          placeholder: 'Reason for withdrawing this salary record',
         },
       )
       if (reason === null) return
@@ -410,7 +408,7 @@ const SalaryRecord = ({
     }
 
     try {
-      await removeSalaryRecord(record.id, cancellationReason)
+      await removeSalaryRecord(record, cancellationReason)
       await refreshRecords()
     } catch (err) {
       setError(err?.message || 'Unable to delete salary record.')
@@ -480,7 +478,7 @@ const SalaryRecord = ({
       },
       {
         key: 'delete',
-        label: 'Delete',
+        label: record.status === 'Draft' ? 'Delete draft' : 'Withdraw',
         danger: true,
         disabled: isFinal,
         tooltip: isPaid

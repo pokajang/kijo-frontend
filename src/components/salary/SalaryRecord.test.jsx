@@ -132,7 +132,7 @@ describe('SalaryRecord', () => {
     expect(screen.queryByText('revise rejected records')).not.toBeInTheDocument()
   })
 
-  it('wires dropdown export claims, edit, and delete actions', async () => {
+  it('wires dropdown export claims, edit, and withdrawal actions', async () => {
     const LocationProbe = () => {
       const location = useLocation()
 
@@ -190,17 +190,24 @@ describe('SalaryRecord', () => {
 
     await screen.findAllByText('June 2026')
     fireEvent.click(screen.getAllByLabelText('Actions')[0])
-    fireEvent.click(within(await getOpenActionMenu()).getByText('Delete'))
+    fireEvent.click(within(await getOpenActionMenu()).getByText('Withdraw'))
 
     await waitFor(() => {
-      expect(dialog.confirm).toHaveBeenCalledWith('Delete June 2026 salary application?', {
-        title: 'Delete Salary Record',
-        confirmText: 'Delete',
-        confirmColor: 'danger',
-      })
+      expect(dialog.prompt).toHaveBeenCalledWith(
+        expect.stringContaining('workflow history will be retained'),
+        expect.objectContaining({ title: 'Withdraw Salary Record', required: true }),
+      )
       expect(apiMock.apiJson).toHaveBeenCalledWith(
         expect.stringContaining('hr/salary/records/10'),
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            confirmation: 'DELETE',
+            record_version: 1,
+            reason: 'Corrected amount',
+          }),
+        },
       )
     })
   })
@@ -242,7 +249,7 @@ describe('SalaryRecord', () => {
     expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled()
   })
 
-  it('prompts for reviewed salary edit and delete reasons', async () => {
+  it('prompts for reviewed salary edit and withdrawal reasons', async () => {
     const LocationProbe = () => {
       const location = useLocation()
 
@@ -302,7 +309,7 @@ describe('SalaryRecord', () => {
 
     await screen.findAllByText('June 2026')
     fireEvent.click(screen.getAllByLabelText('Actions')[0])
-    fireEvent.click(within(await getOpenActionMenu()).getByText('Delete'))
+    fireEvent.click(within(await getOpenActionMenu()).getByText('Withdraw'))
 
     await waitFor(() => {
       expect(apiMock.apiJson).toHaveBeenCalledWith(
@@ -310,13 +317,17 @@ describe('SalaryRecord', () => {
         {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: 'Corrected amount' }),
+          body: JSON.stringify({
+            confirmation: 'DELETE',
+            record_version: 1,
+            reason: 'Corrected amount',
+          }),
         },
       )
     })
   })
 
-  it('shows paid salary edit and delete actions disabled', async () => {
+  it('shows paid salary edit and withdrawal actions disabled', async () => {
     apiMock.apiJson.mockResolvedValue({
       records: [{ ...detailRecord, status: 'Paid', claims: undefined }],
     })
@@ -332,7 +343,7 @@ describe('SalaryRecord', () => {
     const menu = await getOpenActionMenu()
 
     expect(within(menu).getByText('Edit').closest('button, a')).toHaveAttribute('aria-disabled')
-    expect(within(menu).getByText('Delete').closest('button, a')).toHaveAttribute('aria-disabled')
+    expect(within(menu).getByText('Withdraw').closest('button, a')).toHaveAttribute('aria-disabled')
   })
 
   it('keeps the payslip row action visible but inactive before the salary month closes', async () => {

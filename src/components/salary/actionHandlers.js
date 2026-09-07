@@ -18,7 +18,7 @@ import {
 } from './salaryRecordStorage'
 
 const getCurrentSalaryMonth = () => new Date().toLocaleDateString('en-CA').slice(0, 7)
-const staffMutableStatuses = new Set(['Draft', 'Submitted', 'Prepared', 'Rejected'])
+const staffMutableStatuses = new Set(['Draft', 'Submitted', 'Prepared', 'Returned'])
 const staffLockedStatuses = new Set(['Checked', 'Approved', 'Paid'])
 
 const normalizeEditableClaim = (claim = {}) => ({
@@ -66,6 +66,28 @@ const serializeDraftItem = (item) => ({
 
 const normalizeDraftItems = (items) =>
   Array.isArray(items) ? items.map((item) => normalizeEditableClaim(item)) : []
+
+const mergeCanonicalAllowanceItems = (items = [], canonicalClaims = []) => {
+  const canonicalAllowances = canonicalClaims.filter((claim) => claim?.type === 'Allowance')
+  const canonicalById = new Map(
+    canonicalAllowances
+      .filter((claim) => claim?.id)
+      .map((claim) => [String(claim.clientId || claim.id), claim]),
+  )
+  let fallbackIndex = 0
+
+  return items.map((item) => {
+    if (item.source === 'profile') return item
+
+    const canonical = canonicalById.get(String(item.id)) || canonicalAllowances[fallbackIndex++]
+    if (!canonical) return item
+
+    return {
+      ...item,
+      attachment: canonical.attachment || item.attachment || null,
+    }
+  })
+}
 
 const createStateFromDraft = (draft = {}, fallbackMonth = getCurrentSalaryMonth()) => ({
   formData: {
@@ -283,11 +305,14 @@ export const useApplySalaryHandlers = ({
   onSubmitted,
   initialRecord,
   amendmentReason = '',
+  draftOwnerId = '',
 } = {}) => {
   const initialDraftRef = useRef(null)
   const [initialSalaryState] = useState(() => {
     const salaryMonth = initialRecord?.salaryMonthValue || getCurrentSalaryMonth()
-    const draft = initialRecord ? null : readSalaryApplicationDraft({ salaryMonth })
+    const draft = initialRecord
+      ? null
+      : readSalaryApplicationDraft({ salaryMonth, staffId: draftOwnerId })
     initialDraftRef.current = draft
     return createInitialSalaryState(initialRecord, draft)
   })
@@ -308,6 +333,9 @@ export const useApplySalaryHandlers = ({
   const isInitialDraftRecordRef = useRef(initialRecord?.status === 'Draft')
   const initialSalaryMonthRef = useRef(initialSalaryState.formData.salaryMonth)
   const draftSaveTimerRef = useRef(null)
+  const draftRequestRef = useRef(null)
+  const draftSaveRevisionRef = useRef(0)
+  const lastSyncedFingerprintRef = useRef(null)
   const hasSubmittedRef = useRef(false)
   const amendmentReasonRef = useRef(String(amendmentReason || '').trim())
   const hasPersistedDraftRef = useRef(
@@ -320,6 +348,7 @@ export const useApplySalaryHandlers = ({
     initialDraftRef.current ? 'restored' : 'idle',
   )
   const [draftSaveError, setDraftSaveError] = useState('')
+  const [draftRetryNonce, setDraftRetryNonce] = useState(0)
 
   const notify = useCallback(
     (type, message, options = {}) => {
@@ -332,7 +361,7 @@ export const useApplySalaryHandlers = ({
     let isMounted = true
 
     Promise.all([
-      fetchSalaryProfile(),
+      fetchSalaryProfile(initialSalaryMonthRef.current),
       getSalaryRecords().catch(() => []),
       initialRecordRef.current
         ? Promise.resolve(null)
@@ -357,6 +386,10 @@ export const useApplySalaryHandlers = ({
           hasPersistedDraftRef.current = true
           activeRecordVersionRef.current = Number(serverDraft.recordVersion || 0) || null
           if (shouldUseServerDraft) {
+            restoredDraftState.allowanceItems = mergeCanonicalAllowanceItems(
+              restoredDraftState.allowanceItems,
+              serverDraft.claims || [],
+            )
             setDraftSaveState('restored')
           }
         }
@@ -405,6 +438,7 @@ export const useApplySalaryHandlers = ({
       if (draftSaveTimerRef.current) {
         window.clearTimeout(draftSaveTimerRef.current)
       }
+      draftRequestRef.current?.abort()
     }
   }, [notify])
 
@@ -438,19 +472,19 @@ export const useApplySalaryHandlers = ({
   }
 
   const applyCleanMonthState = useCallback(
-    (salaryMonth) => {
+    (salaryMonth, profileForMonth = salaryProfile) => {
       initialRecordRef.current = null
       isInitialDraftRecordRef.current = false
       setActiveRecordId(null)
       activeRecordVersionRef.current = null
       setFormData({
         salaryMonth,
-        basicSalary: salaryProfile?.basicSalary || '',
-        mileageRate: salaryProfile?.defaultMileageRate || '',
+        basicSalary: profileForMonth?.basicSalary || '',
+        mileageRate: profileForMonth?.defaultMileageRate || '',
         ...createEmptyClaimFields(),
       })
       setAllowanceItems(
-        salaryProfile ? getActiveRecurringAllowances(salaryProfile, salaryMonth) : [],
+        profileForMonth ? getActiveRecurringAllowances(profileForMonth, salaryMonth) : [],
       )
       setExpenseItems([])
       setMileageItems([])
@@ -466,21 +500,27 @@ export const useApplySalaryHandlers = ({
   )
 
   const applyDraftMonthState = useCallback(
-    (salaryMonth, draftState, recordId = null, recordVersion = null) => {
+    (
+      salaryMonth,
+      draftState,
+      recordId = null,
+      recordVersion = null,
+      profileForMonth = salaryProfile,
+    ) => {
       initialRecordRef.current = null
       isInitialDraftRecordRef.current = Boolean(recordId)
       setActiveRecordId(recordId)
       activeRecordVersionRef.current = Number(recordVersion || 0) || null
       setFormData({
         salaryMonth,
-        basicSalary: draftState?.formData?.basicSalary || salaryProfile?.basicSalary || '',
-        mileageRate: draftState?.formData?.mileageRate || salaryProfile?.defaultMileageRate || '',
+        basicSalary: draftState?.formData?.basicSalary || profileForMonth?.basicSalary || '',
+        mileageRate: draftState?.formData?.mileageRate || profileForMonth?.defaultMileageRate || '',
         ...createEmptyClaimFields(),
         ...(draftState?.formData || {}),
       })
       setAllowanceItems([
         ...(draftState?.allowanceItems || []).filter((item) => item.source !== 'profile'),
-        ...(salaryProfile ? getActiveRecurringAllowances(salaryProfile, salaryMonth) : []),
+        ...(profileForMonth ? getActiveRecurringAllowances(profileForMonth, salaryMonth) : []),
       ])
       setExpenseItems(draftState?.expenseItems || [])
       setMileageItems(draftState?.mileageItems || [])
@@ -522,7 +562,7 @@ export const useApplySalaryHandlers = ({
   )
 
   const loadDraftForSalaryMonth = useCallback(
-    async (salaryMonth) => {
+    async (salaryMonth, profileForMonth = salaryProfile) => {
       const serverDraft = await fetchSalaryApplicationDraft(salaryMonth).catch(() => null)
       const serverDraftState = serverDraft?.draftPayload
         ? createStateFromDraft(serverDraft.draftPayload, salaryMonth)
@@ -531,24 +571,35 @@ export const useApplySalaryHandlers = ({
           : null
 
       if (serverDraftState) {
+        serverDraftState.allowanceItems = mergeCanonicalAllowanceItems(
+          serverDraftState.allowanceItems,
+          serverDraft?.claims || [],
+        )
         applyDraftMonthState(
           salaryMonth,
           serverDraftState,
           serverDraft?.id || null,
           serverDraft?.recordVersion || null,
+          profileForMonth,
         )
         return true
       }
 
-      const localDraft = readSalaryApplicationDraft({ salaryMonth })
+      const localDraft = readSalaryApplicationDraft({ salaryMonth, staffId: draftOwnerId })
       if (localDraft) {
-        applyDraftMonthState(salaryMonth, createStateFromDraft(localDraft, salaryMonth), null)
+        applyDraftMonthState(
+          salaryMonth,
+          createStateFromDraft(localDraft, salaryMonth),
+          null,
+          null,
+          profileForMonth,
+        )
         return true
       }
 
       return false
     },
-    [applyDraftMonthState],
+    [applyDraftMonthState, draftOwnerId, salaryProfile],
   )
 
   const handleSalaryMonthSelect = useCallback(
@@ -556,6 +607,8 @@ export const useApplySalaryHandlers = ({
       if (!salaryMonth || salaryMonth === formData.salaryMonth || isSwitchingSalaryMonth) return
       setIsSwitchingSalaryMonth(true)
       try {
+        const profileForMonth = await fetchSalaryProfile(salaryMonth)
+        setSalaryProfile(profileForMonth)
         const monthRecord = salaryRecords.find((record) => record.salaryMonthValue === salaryMonth)
         const monthStatus = monthRecord?.status || ''
 
@@ -567,9 +620,9 @@ export const useApplySalaryHandlers = ({
           return
         }
 
-        const hasDraft = await loadDraftForSalaryMonth(salaryMonth)
+        const hasDraft = await loadDraftForSalaryMonth(salaryMonth, profileForMonth)
         if (!hasDraft) {
-          applyCleanMonthState(salaryMonth)
+          applyCleanMonthState(salaryMonth, profileForMonth)
         }
       } finally {
         setIsSwitchingSalaryMonth(false)
@@ -589,9 +642,11 @@ export const useApplySalaryHandlers = ({
     const salaryMonth = formData.salaryMonth || getCurrentSalaryMonth()
     setIsSwitchingSalaryMonth(true)
     try {
-      const hasDraft = await loadDraftForSalaryMonth(salaryMonth)
+      const profileForMonth = await fetchSalaryProfile(salaryMonth)
+      setSalaryProfile(profileForMonth)
+      const hasDraft = await loadDraftForSalaryMonth(salaryMonth, profileForMonth)
       if (!hasDraft) {
-        applyCleanMonthState(salaryMonth)
+        applyCleanMonthState(salaryMonth, profileForMonth)
       }
     } finally {
       setIsSwitchingSalaryMonth(false)
@@ -981,6 +1036,10 @@ export const useApplySalaryHandlers = ({
     () => draftHasContent(applicationDraftPayload),
     [applicationDraftPayload],
   )
+  const draftFingerprint = useMemo(
+    () => JSON.stringify(applicationDraftPayload),
+    [applicationDraftPayload],
+  )
 
   useEffect(() => {
     if (
@@ -994,22 +1053,28 @@ export const useApplySalaryHandlers = ({
     )
       return undefined
 
+    if (draftFingerprint === lastSyncedFingerprintRef.current) return undefined
+
     const salaryMonth = applicationDraftPayload.formData.salaryMonth || getCurrentSalaryMonth()
+    const saveRevision = ++draftSaveRevisionRef.current
     if (draftSaveTimerRef.current) {
       window.clearTimeout(draftSaveTimerRef.current)
     }
 
     if (!hasApplicationDraftContent) {
-      clearSalaryApplicationDraft({ salaryMonth })
+      clearSalaryApplicationDraft({ salaryMonth, staffId: draftOwnerId })
       if (hasPersistedDraftRef.current) {
         draftSaveTimerRef.current = window.setTimeout(() => {
           clearSalaryApplicationServerDraft(salaryMonth)
             .then(() => {
+              if (saveRevision !== draftSaveRevisionRef.current) return
               hasPersistedDraftRef.current = false
+              lastSyncedFingerprintRef.current = draftFingerprint
               setDraftSaveError('')
               setDraftSaveState('idle')
             })
             .catch((error) => {
+              if (saveRevision !== draftSaveRevisionRef.current) return
               setDraftSaveError(error?.message || 'Could not clear the server draft.')
               setDraftSaveState('error')
             })
@@ -1022,25 +1087,46 @@ export const useApplySalaryHandlers = ({
       }
     }
 
-    writeSalaryApplicationDraft({ salaryMonth, draft: applicationDraftPayload })
-    setDraftSaveError('')
+    const savedLocally = writeSalaryApplicationDraft({
+      salaryMonth,
+      staffId: draftOwnerId,
+      draft: applicationDraftPayload,
+    })
+    if (!savedLocally) {
+      setDraftSaveError('Could not save this draft on this device.')
+    } else {
+      setDraftSaveError('')
+    }
     setDraftSaveState('dirty')
     draftSaveTimerRef.current = window.setTimeout(() => {
+      const controller = typeof AbortController === 'undefined' ? null : new AbortController()
+      draftRequestRef.current?.abort()
+      draftRequestRef.current = controller
       setDraftSaveState('saving')
-      saveSalaryApplicationDraft({
-        salaryMonthValue: salaryMonth,
-        recordVersion: activeRecordVersionRef.current,
-        basicSalary: summary.basicSalary,
-        claims: mapClaimItems(allowanceItems, 'Allowance').filter(isCompleteDraftClaim),
-        draftPayload: applicationDraftPayload,
-      })
+      saveSalaryApplicationDraft(
+        {
+          salaryMonthValue: salaryMonth,
+          recordVersion: activeRecordVersionRef.current,
+          basicSalary: summary.basicSalary,
+          claims: mapClaimItems(allowanceItems, 'Allowance').filter(isCompleteDraftClaim),
+          draftPayload: applicationDraftPayload,
+        },
+        { signal: controller?.signal },
+      )
         .then((savedDraft) => {
+          if (saveRevision !== draftSaveRevisionRef.current || hasSubmittedRef.current) return
           activeRecordVersionRef.current = Number(savedDraft?.recordVersion || 0) || null
           hasPersistedDraftRef.current = true
+          if (savedDraft) lastSyncedFingerprintRef.current = draftFingerprint
+          if (Array.isArray(savedDraft?.claims)) {
+            setAllowanceItems((items) => mergeCanonicalAllowanceItems(items, savedDraft.claims))
+          }
           setDraftSaveError('')
           setDraftSaveState('saved')
         })
         .catch((error) => {
+          if (controller?.signal.aborted || error?.name === 'AbortError') return
+          if (saveRevision !== draftSaveRevisionRef.current) return
           setDraftSaveError(error?.message || 'Could not sync the draft to the server.')
           setDraftSaveState('error')
         })
@@ -1052,6 +1138,9 @@ export const useApplySalaryHandlers = ({
   }, [
     allowanceItems,
     applicationDraftPayload,
+    draftFingerprint,
+    draftOwnerId,
+    draftRetryNonce,
     expenseItems,
     hasApplicationDraftContent,
     isLoadingProfile,
@@ -1095,7 +1184,7 @@ export const useApplySalaryHandlers = ({
     initialRecordRef.current = null
     isInitialDraftRecordRef.current = false
     hasSubmittedRef.current = false
-    clearSalaryApplicationDraft({ salaryMonth: previousSalaryMonth })
+    clearSalaryApplicationDraft({ salaryMonth: previousSalaryMonth, staffId: draftOwnerId })
     clearSalaryApplicationServerDraft(previousSalaryMonth)
       .then(() => {
         hasPersistedDraftRef.current = false
@@ -1137,23 +1226,10 @@ export const useApplySalaryHandlers = ({
     if (draftSaveState !== 'error') return
 
     const salaryMonth = applicationDraftPayload.formData.salaryMonth || getCurrentSalaryMonth()
+    lastSyncedFingerprintRef.current = null
     setDraftSaveError('')
-    setDraftSaveState('saving')
-    try {
-      const savedDraft = await saveSalaryApplicationDraft({
-        salaryMonthValue: salaryMonth,
-        recordVersion: activeRecordVersionRef.current,
-        basicSalary: summary.basicSalary,
-        claims: mapClaimItems(allowanceItems, 'Allowance').filter(isCompleteDraftClaim),
-        draftPayload: applicationDraftPayload,
-      })
-      activeRecordVersionRef.current = Number(savedDraft?.recordVersion || 0) || null
-      hasPersistedDraftRef.current = true
-      setDraftSaveState('saved')
-    } catch (error) {
-      setDraftSaveError(error?.message || 'Could not sync the draft to the server.')
-      setDraftSaveState('error')
-    }
+    setDraftSaveState('dirty')
+    setDraftRetryNonce((value) => value + 1)
   }
 
   const handleSubmit = async (e) => {
@@ -1243,7 +1319,7 @@ export const useApplySalaryHandlers = ({
           { scope: 'submission-success' },
         )
       }
-      clearSalaryApplicationDraft({ salaryMonth: formData.salaryMonth })
+      clearSalaryApplicationDraft({ salaryMonth: formData.salaryMonth, staffId: draftOwnerId })
       clearSalaryApplicationServerDraft(formData.salaryMonth).catch(() => {})
       hasPersistedDraftRef.current = false
       setDraftSaveError('')
@@ -1265,6 +1341,7 @@ export const useApplySalaryHandlers = ({
   return {
     formData,
     allowanceItems,
+    salaryRecords,
     expenseItems,
     mileageItems,
     medicalItems,

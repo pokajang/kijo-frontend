@@ -16,6 +16,7 @@ import SalaryRecord from '../../../components/salary/SalaryRecord'
 import SalaryRecordDetailPage from '../../../components/salary/SalaryRecordDetailPage'
 import SalarySettings from '../../../components/salary/SalarySettings'
 import { useDataTableStatsVisibility } from '../../../hooks/datatable'
+import { useAuth } from '../../../auth/AuthProvider'
 
 const sections = [
   {
@@ -56,6 +57,7 @@ const validSectionKeys = new Set(sections.map((section) => section.key))
 const SalaryWorkspace = ({ routeSection }) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
   const [salaryAdjustmentsVisible, setSalaryAdjustmentsVisible] = useState(
     Boolean(location.state?.editRecord),
   )
@@ -187,7 +189,7 @@ const SalaryWorkspace = ({ routeSection }) => {
       color="primary"
       variant="outline"
       size="sm"
-      className="salary-workspace-apply-button rounded-pill"
+      className="mobile-workspace-primary-action rounded-pill"
       aria-label={activeSection === 'records' ? 'Apply Salary' : 'Apply Other Claim'}
       onClick={() =>
         navigate(activeSection === 'records' ? '/my/salary/apply' : '/my/salary/other-claims/apply')
@@ -208,9 +210,9 @@ const SalaryWorkspace = ({ routeSection }) => {
     />
   )
   const recordActions = (
-    <div className="salary-workspace-action-cluster">
-      {isMobileViewport ? applyAction : tableDisplayAction}
-      {isMobileViewport ? tableDisplayAction : applyAction}
+    <div className="mobile-workspace-action-row salary-workspace-action-cluster">
+      {applyAction}
+      {tableDisplayAction}
     </div>
   )
 
@@ -240,10 +242,11 @@ const SalaryWorkspace = ({ routeSection }) => {
         <CCard
           className={`mb-4 records-page-card salary-workspace-card salary-workspace-card--${activeSection}`}
         >
-          {isRecordList && !isMobileViewport && (
+          {isRecordList && (
             <DataTableCardHeader
               title={activeConfig.title}
               scopeLabel={recordScopeLabel}
+              mobilePresentation="actions-only"
               className="salary-workspace-header"
             >
               {recordActions}
@@ -251,9 +254,6 @@ const SalaryWorkspace = ({ routeSection }) => {
           )}
           <CCardBody className="records-page-card-body">
             <main className="salary-workspace">
-              {isRecordList && isMobileViewport && (
-                <header className="salary-workspace-header">{recordActions}</header>
-              )}
               {activeSection === 'apply' || activeSection === 'other-claim-apply' ? (
                 <ActiveComponent
                   onViewRecords={() =>
@@ -306,6 +306,7 @@ const SalaryWorkspace = ({ routeSection }) => {
                       : undefined
                   }
                   statsVisible
+                  draftOwnerId={user?.staff_id || ''}
                 />
               ) : (
                 <div className="salary-workspace-panel" role="tabpanel">

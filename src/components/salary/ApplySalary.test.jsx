@@ -281,11 +281,7 @@ describe('ApplySalary', () => {
     await addSalaryAdjustment({ description: 'Draft payroll adjustment' })
 
     expect(
-      await screen.findByText(
-        'Your entries remain saved on this device. Server sync failed: Network unavailable',
-        {},
-        { timeout: 3000 },
-      ),
+      await screen.findByText('Draft sync failed: Network unavailable', {}, { timeout: 3000 }),
     ).toBeInTheDocument()
     expect(screen.getByText('Saved on this device, but not synced to server')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled()

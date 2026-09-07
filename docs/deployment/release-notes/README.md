@@ -25,3 +25,4 @@ Use it only when the deployed release explicitly requires it.
 - [Workload classification and snapshots](workload-classification-and-snapshots.md)
 - [Dashboard monthly report generation](dashboard-monthly-report.md)
 - [IH invoice calculation metadata and vendor-payment lifecycle](ih-invoice-and-vendor-payment-lifecycle.md)
+- [Salary declaration history and email delivery tracking](salary-declaration-history-and-email-delivery.md)

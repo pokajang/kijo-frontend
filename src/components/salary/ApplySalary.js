@@ -246,6 +246,7 @@ const ApplySalary = ({
   amendmentReason = '',
   showAdjustments: controlledShowAdjustments,
   onShowAdjustmentsChange,
+  draftOwnerId = '',
   showAddAdjustmentAction = false,
 }) => {
   const initialEditClaimType = firstEditableClaimType(editRecord)
@@ -298,6 +299,7 @@ const ApplySalary = ({
   const {
     formData,
     allowanceItems,
+    salaryRecords,
     attachmentInputVersion,
     attachmentProcessing,
     summary,
@@ -325,6 +327,7 @@ const ApplySalary = ({
     onNotify: showNotice,
     initialRecord: editRecord,
     amendmentReason,
+    draftOwnerId,
   })
 
   useEffect(() => {
@@ -343,7 +346,17 @@ const ApplySalary = ({
       restored: 'Draft restored',
       error: 'Saved on this device, but not synced to server',
     }[draftSaveState] || ''
-  const salaryMonthOptions = useMemo(() => buildSalaryMonthOptions(), [])
+  const salaryMonthOptions = useMemo(() => {
+    const options = new Map(buildSalaryMonthOptions().map((option) => [option.value, option]))
+    salaryRecords.forEach((record) => {
+      if (!record?.salaryMonthValue || options.has(record.salaryMonthValue)) return
+      options.set(record.salaryMonthValue, {
+        value: record.salaryMonthValue,
+        label: formatSalaryPeriod(record.salaryMonthValue),
+      })
+    })
+    return [...options.values()].sort((left, right) => right.value.localeCompare(left.value))
+  }, [salaryRecords])
   const selectedSalaryPeriod = formatSalaryPeriod(
     formData.salaryMonth || salaryMonthOptions[0]?.value,
   )
@@ -926,9 +939,7 @@ const ApplySalary = ({
           draftSaveError &&
           !(notice.visible && notice.scope === 'submission-error') && (
             <CAlert color="warning" className="py-2" role="alert">
-              <div>
-                Your entries remain saved on this device. Server sync failed: {draftSaveError}
-              </div>
+              <div>Draft sync failed: {draftSaveError}</div>
               <CButton
                 color="warning"
                 variant="outline"

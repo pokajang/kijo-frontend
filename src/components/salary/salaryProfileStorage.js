@@ -31,6 +31,9 @@ export const createDefaultSalaryProfile = () => ({
   yearlyMedicalClaim: '0.00',
   notes: '',
   recurringAllowances: [],
+  selectedSalaryMonth: getCurrentMonth(),
+  selectedDeclaration: null,
+  history: [],
   previousYearSnapshot: createDefaultPreviousYearSnapshot(),
 })
 
@@ -77,6 +80,33 @@ export const normalizeSalaryProfile = (profile = {}) => {
     recurringAllowances: Array.isArray(profile.recurringAllowances)
       ? profile.recurringAllowances.map(normalizeAllowance)
       : [],
+    selectedSalaryMonth: String(profile.selectedSalaryMonth || effectiveMonth),
+    selectedDeclaration:
+      profile.selectedDeclaration && typeof profile.selectedDeclaration === 'object'
+        ? {
+            id: String(profile.selectedDeclaration.id || ''),
+            effectiveMonth: String(profile.selectedDeclaration.effectiveMonth || effectiveMonth),
+            declaredAt: String(profile.selectedDeclaration.declaredAt || ''),
+            declaredBy: profile.selectedDeclaration.declaredBy ?? null,
+            source: String(profile.selectedDeclaration.source || ''),
+          }
+        : null,
+    history: Array.isArray(profile.history)
+      ? profile.history.map((declaration) => ({
+          id: String(declaration.id || ''),
+          effectiveMonth: String(declaration.effectiveMonth || ''),
+          basicSalary: String(declaration.basicSalary ?? ''),
+          vehicle: String(declaration.vehicle || ''),
+          defaultMileageRate: String(declaration.defaultMileageRate ?? ''),
+          yearlyMedicalClaim: String(declaration.yearlyMedicalClaim ?? ''),
+          notes: String(declaration.notes || ''),
+          recurringAllowances: Array.isArray(declaration.recurringAllowances)
+            ? declaration.recurringAllowances.map(normalizeAllowance)
+            : [],
+          declaredAt: String(declaration.declaredAt || ''),
+          declaredBy: declaration.declaredBy ?? null,
+        }))
+      : [],
     previousYearSnapshot: normalizePreviousYearSnapshot(
       profile.previousYearSnapshot,
       effectiveMonth,
@@ -88,8 +118,11 @@ export const getSalaryProfile = () => {
   return createDefaultSalaryProfile()
 }
 
-export const fetchSalaryProfile = async () => {
-  const payload = await apiJson(`${API_BASE}hr/salary/profile`)
+export const fetchSalaryProfile = async (salaryMonth = '') => {
+  const query = /^\d{4}-\d{2}$/.test(String(salaryMonth))
+    ? `?salary_month=${encodeURIComponent(salaryMonth)}`
+    : ''
+  const payload = await apiJson(`${API_BASE}hr/salary/profile${query}`)
   return normalizeSalaryProfile(payload.profile)
 }
 

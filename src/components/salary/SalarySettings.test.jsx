@@ -302,6 +302,51 @@ describe('SalarySettings', () => {
     expect(screen.queryByRole('button', { name: 'Apply Salary' })).not.toBeInTheDocument()
   })
 
+  it('shows an effective-dated declaration history without replacing earlier settings', async () => {
+    profile = {
+      ...defaultProfile(),
+      history: [
+        {
+          id: 'declaration-2',
+          effectiveMonth: '2026-06',
+          basicSalary: '4600',
+          vehicle: 'VAA 1234',
+          defaultMileageRate: '0.70',
+          yearlyMedicalClaim: '1200',
+          notes: 'Promotion declaration',
+          recurringAllowances: [
+            {
+              id: 'allowance-2',
+              description: 'Internet allowance',
+              amount: '160',
+              startMonth: '2026-06',
+            },
+          ],
+          declaredAt: '2026-05-30 09:00:00',
+        },
+        {
+          id: 'declaration-1',
+          effectiveMonth: '2026-05',
+          basicSalary: '4200',
+          declaredAt: '2026-04-28 09:00:00',
+        },
+      ],
+    }
+
+    render(<SalarySettings />)
+
+    expect(await screen.findByText('Salary setting history')).toBeInTheDocument()
+    expect(screen.getByText('Jun 2026')).toBeInTheDocument()
+    expect(screen.getAllByText('May 2026').length).toBeGreaterThan(0)
+    expect(screen.getByText('RM 4,600.00')).toBeInTheDocument()
+    expect(screen.getByText('RM 4,200.00')).toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByText('Declaration details')[0])
+    expect(screen.getByText('VAA 1234')).toBeInTheDocument()
+    expect(screen.getByText('Promotion declaration')).toBeInTheDocument()
+    expect(screen.getByText(/Internet allowance: RM 160.00/)).toBeInTheDocument()
+  })
+
   it('renders approved December previous-year snapshot values as read-only', async () => {
     profile = {
       ...defaultProfile(),

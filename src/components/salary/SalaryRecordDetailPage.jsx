@@ -270,7 +270,7 @@ const SalaryRecordDetailPage = () => {
 
   const actions = useMemo(() => {
     const isPaid = paidStatuses.has(record?.status)
-    const isFinal = isPaid || record?.status === 'Rejected'
+    const isFinal = isPaid || ['Rejected', 'Cancelled'].includes(record?.status)
     const payslipAvailability = getSalaryPayslipAvailability(record)
     const exportingClaims = exportingPdfAction === 'claims'
     const exportingPayslip = exportingPdfAction === 'payslip'
@@ -343,7 +343,9 @@ const SalaryRecordDetailPage = () => {
           ? 'Paid records cannot be changed.'
           : record?.status === 'Rejected'
             ? 'Rejected records have a final decision.'
-            : '',
+            : record?.status === 'Cancelled'
+              ? 'Withdrawn records are retained for audit and cannot be changed.'
+              : '',
         onClick: async (salaryRecord) => {
           if (paidStatuses.has(salaryRecord?.status)) return
           let amendmentReason = ''
@@ -370,28 +372,30 @@ const SalaryRecordDetailPage = () => {
       },
       {
         key: 'delete',
-        label: 'Delete',
+        label: record?.status === 'Draft' ? 'Delete draft' : 'Withdraw',
         danger: true,
         disabled: isFinal,
         tooltip: isPaid
           ? 'Paid records cannot be changed.'
           : record?.status === 'Rejected'
             ? 'Rejected records have a final decision.'
-            : '',
+            : record?.status === 'Cancelled'
+              ? 'Withdrawn records are retained for audit and cannot be changed.'
+              : '',
         onClick: async (salaryRecord) => {
           if (paidStatuses.has(salaryRecord?.status)) return
           let cancellationReason = ''
-          if (reviewedMutableStatuses.has(salaryRecord.status)) {
+          if (salaryRecord.status !== 'Draft') {
             const reason = await dialog.prompt(
-              `${salaryRecord.salaryMonth} has already been ${salaryRecord.status.toLowerCase()}. Enter a reason to cancel this salary record.`,
+              `Enter a reason to withdraw the ${salaryRecord.salaryMonth} salary application. Its workflow history will be retained.`,
               {
-                title: 'Cancel Reviewed Salary Record',
-                confirmText: 'Cancel Record',
+                title: 'Withdraw Salary Record',
+                confirmText: 'Withdraw Record',
                 confirmColor: 'danger',
                 required: true,
                 multiline: true,
                 rows: 4,
-                placeholder: 'Reason for cancelling this salary record',
+                placeholder: 'Reason for withdrawing this salary record',
               },
             )
             if (reason === null) return
@@ -408,7 +412,7 @@ const SalaryRecordDetailPage = () => {
           }
 
           try {
-            await removeSalaryRecord(salaryRecord.id, cancellationReason)
+            await removeSalaryRecord(salaryRecord, cancellationReason)
             navigate(returnTo)
           } catch (err) {
             setError(err?.message || 'Unable to delete salary record.')
@@ -482,6 +486,57 @@ const SalaryRecordDetailPage = () => {
       <section aria-label="Salary summary">
         <SalaryPayablePreviewTable rows={summaryRows} payableSalary={record?.payableSalary || 0} />
       </section>
+      {record?.salaryProfileSnapshot && (
+        <section className="mt-4" aria-labelledby="salaryProfileSnapshotHeading">
+          <h3 className="salary-form-panel-heading mb-3" id="salaryProfileSnapshotHeading">
+            {record.salaryProfileSnapshot.source === 'legacy_record'
+              ? 'Legacy salary record snapshot'
+              : 'Salary setting used'}
+          </h3>
+          {record.salaryProfileSnapshot.source === 'legacy_record' && (
+            <p className="text-body-secondary small mb-3">
+              {record.salaryProfileSnapshot.note ||
+                'The original record values are preserved. A separate salary declaration was not stored for this legacy record.'}
+            </p>
+          )}
+          <div className="salary-settings-summary-grid">
+            <div className="salary-settings-summary-item">
+              <span>
+                {record.salaryProfileSnapshot.source === 'legacy_record'
+                  ? 'Salary month'
+                  : 'Effective from'}
+              </span>
+              <strong>
+                {record.salaryProfileSnapshot.source === 'legacy_record'
+                  ? record.salaryProfileSnapshot.salaryMonth
+                  : record.salaryProfileSnapshot.effectiveMonth}
+              </strong>
+            </div>
+            <div className="salary-settings-summary-item">
+              <span>
+                {record.salaryProfileSnapshot.source === 'legacy_record'
+                  ? 'Recorded basic salary'
+                  : 'Declared basic salary'}
+              </span>
+              <strong>{formatMoney(record.salaryProfileSnapshot.basicSalary || 0)}</strong>
+            </div>
+            <div className="salary-settings-summary-item">
+              <span>
+                {record.salaryProfileSnapshot.source === 'legacy_record'
+                  ? 'Recorded at'
+                  : 'Declared at'}
+              </span>
+              <strong>
+                {formatDateTime(
+                  record.salaryProfileSnapshot.source === 'legacy_record'
+                    ? record.salaryProfileSnapshot.recordedAt
+                    : record.salaryProfileSnapshot.declaredAt,
+                )}
+              </strong>
+            </div>
+          </div>
+        </section>
+      )}
       <section className="mt-4" aria-labelledby="salaryWorkflowHeading">
         <h3 className="salary-form-panel-heading mb-3" id="salaryWorkflowHeading">
           Workflow history
