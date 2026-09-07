@@ -36,6 +36,8 @@ sql/
 # local logs, notes, and audit artifacts
 *.log
 audit-screenshots/
+/audit-reports/
+/beta-test-reports/
 google cloud project api.txt
 IMPORTANT MAINTENANCE_DEPLOYMENT NOTES.txt
 randomnotes.txt
