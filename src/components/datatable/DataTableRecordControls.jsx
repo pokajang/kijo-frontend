@@ -42,7 +42,12 @@ const DataTableRecordControls = ({
 
   return (
     <>
-      <CRow className="data-table-filter-row records-filter-row mb-3 g-2 align-items-center flex-nowrap">
+      <CRow
+        className={joinClassNames(
+          'data-table-filter-row records-filter-row mb-3 g-2 align-items-center flex-nowrap',
+          inlineFilter && 'records-filter-row--with-inline-filter',
+        )}
+      >
         <CCol
           {...searchColProps}
           className={joinClassNames('data-table-filter-search-col', searchColProps.className)}
@@ -57,7 +62,11 @@ const DataTableRecordControls = ({
             />
           </CInputGroup>
         </CCol>
-        {inlineFilter && <CCol xs="auto">{inlineFilter}</CCol>}
+        {inlineFilter && (
+          <CCol xs="auto" className="data-table-filter-inline-col">
+            {inlineFilter}
+          </CCol>
+        )}
         <CCol
           {...actionColProps}
           className={joinClassNames('data-table-filter-action-col', actionColProps.className)}

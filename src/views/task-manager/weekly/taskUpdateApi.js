@@ -17,11 +17,18 @@ export const carryTaskForward = (taskId, newDueDate) =>
     body: JSON.stringify({ new_due_date: newDueDate }),
   })
 
-export const getWeeklySummary = ({ weekStart, staffId } = {}) =>
+export const completeTask = (taskId, completedAt) =>
+  fetchJson(`${API_BASE}tasks/${encodeURIComponent(taskId)}/complete`, {
+    method: 'PATCH',
+    body: JSON.stringify({ completed_at: completedAt }),
+  })
+
+export const getWeeklySummary = ({ weekStart, staffId, scope } = {}) =>
   fetchJson(
     appendQueryParams(`${API_BASE}tasks/weekly-summary`, {
       week_start: weekStart,
-      staff_id: staffId && staffId !== 'all' ? staffId : '',
+      staff_id: staffId || '',
+      scope: scope || '',
     }),
   )
 

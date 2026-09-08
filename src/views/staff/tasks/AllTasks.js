@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CAlert,
   CButton,
-  CButtonGroup,
   CCardBody,
   CCol,
   CDropdown,
@@ -20,7 +19,6 @@ import {
   CModalTitle,
 } from '@coreui/react'
 import {
-  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
   DataTableStatsToggle,
@@ -47,6 +45,11 @@ import { compareTaskPriority } from '../../task-manager/taskPrioritySort'
 import TaskTitleProjectCell from '../../task-manager/TaskTitleProjectCell'
 import { getCurrentReturnTo } from '../../../utils/navigation/returnTo'
 import WeeklyTaskSummary from '../../task-manager/weekly/WeeklyTaskSummary'
+import TaskWorkspaceHeader from '../../task-manager/shared/TaskWorkspaceHeader'
+import {
+  applyTaskWorkspaceView,
+  getTaskWorkspaceView,
+} from '../../task-manager/shared/taskWorkspaceState'
 import { getWeeklyStaffOptions } from '../../task-manager/weekly/taskUpdateApi'
 import { formatWeekLabel } from '../../task-manager/weekly/taskWeekUtils'
 import {
@@ -375,7 +378,8 @@ const AllTasks = () => {
   )
 
   const weeklyReviewState = useMemo(() => getWeeklyReviewState(location.search), [location.search])
-  const isWeeklyView = new URLSearchParams(location.search).get('view') === 'weekly'
+  const activeView = getTaskWorkspaceView(location.search)
+  const isWeeklyView = activeView === 'weekly'
 
   useEffect(() => {
     let active = true
@@ -399,10 +403,7 @@ const AllTasks = () => {
   }, [])
 
   const changeView = (view) => {
-    const params = new URLSearchParams(location.search)
-    if (view === 'weekly') params.set('view', 'weekly')
-    else params.delete('view')
-    const search = params.toString()
+    const search = applyTaskWorkspaceView(location.search, view)
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
   }
 
@@ -610,27 +611,6 @@ const AllTasks = () => {
     </CDropdown>
   )
 
-  const renderViewSwitch = () => (
-    <CButtonGroup size="sm" aria-label="All staff task views">
-      <CButton
-        size="sm"
-        color={!isWeeklyView ? 'primary' : 'secondary'}
-        variant={!isWeeklyView ? undefined : 'outline'}
-        onClick={() => changeView('tasks')}
-      >
-        Tasks
-      </CButton>
-      <CButton
-        size="sm"
-        color={isWeeklyView ? 'primary' : 'secondary'}
-        variant={isWeeklyView ? undefined : 'outline'}
-        onClick={() => changeView('weekly')}
-      >
-        Weekly Summary
-      </CButton>
-    </CButtonGroup>
-  )
-
   const renderCell = (task, column) => {
     if (column.key === 'title') {
       return <TaskTitleProjectCell task={task} maxWidth={column.cellMaxWidth} />
@@ -662,31 +642,24 @@ const AllTasks = () => {
 
   return (
     <>
-      <DataTableCardHeader
-        title={isWeeklyView ? 'Weekly Summary' : 'All Staff Tasks'}
-        titleAs={isWeeklyView ? 'h1' : 'strong'}
-        scopeLabel={
-          isWeeklyView
-            ? formatWeekLabel(weeklyReviewState.weekStart)
-            : periodRange
-              ? getPeriodRangeScopeLabel(periodRange)
-              : ''
-        }
-      >
-        <div className="staff-tasks-view-actions d-flex flex-wrap align-items-center justify-content-end gap-2">
+      <TaskWorkspaceHeader
+        view={activeView}
+        taskTitle="All Staff Tasks"
+        taskScopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+        weeklyScopeLabel={formatWeekLabel(weeklyReviewState.weekStart)}
+        onViewChange={changeView}
+        switchAriaLabel="All staff task views"
+        displayControl={
           <DataTableStatsToggle
             visible={statsVisible}
             onToggle={toggleStatsVisible}
             controlsVisible={controlsVisible}
             onControlsToggle={toggleControlsVisible}
-            className={isWeeklyView ? 'd-none d-md-inline-flex invisible' : ''}
           />
-          {renderViewSwitch()}
-        </div>
-      </DataTableCardHeader>
+        }
+      />
       {isWeeklyView ? (
         <WeeklyTaskSummary
-          embedded
           management
           staffOptions={weeklyStaffOptions}
           reviewState={weeklyReviewState}
@@ -713,6 +686,7 @@ const AllTasks = () => {
               searchValue={searchTerm}
               onSearchChange={setSearchTerm}
               searchPlaceholder="Search staff, task, project, status, or comment..."
+              searchAriaLabel="Search staff tasks"
               showAdvancedFilters={showAdvancedFilters}
               setShowAdvancedFilters={setShowAdvancedFilters}
               activeFilterCount={activeFilterCount}

@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { DataTableDetailFields, DataTableDetailShell } from '../../components/datatable'
+import {
+  DataTableDetailFields,
+  DataTableDetailShell,
+  DataTableStatusBadge,
+} from '../../components/datatable'
 import dialog from '../../components/dialog/dialogService'
 import { fetchJson, findRecordById } from '../../utils/detailPages'
 import { getDetailReturnTo } from '../../utils/navigation/returnTo'
@@ -9,6 +13,7 @@ import { showToast } from '../../components/toast/toastService'
 import CarryForwardModal from './weekly/CarryForwardModal'
 import TaskActivityList from './weekly/TaskActivityList'
 import WeeklyUpdateModal from './weekly/WeeklyUpdateModal'
+import { formatDisplayDate } from './weekly/taskWeekUtils'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -40,6 +45,11 @@ const aiStatusLabels = {
 
 const formatSource = (source) => sourceLabels[String(source || '').trim()] || source || '-'
 const formatAiStatus = (status) => aiStatusLabels[String(status || '').trim()] || status || '-'
+const getTaskStatusTone = (status = '') => {
+  if (status.startsWith('Completed')) return 'success'
+  if (status.startsWith('Overdue')) return 'danger'
+  return 'info'
+}
 const formatScore = (score) => {
   const value = Number(score)
   if (!Number.isFinite(value)) return '-'
@@ -192,16 +202,31 @@ const TaskDetailPage = ({ scope = 'personal' }) => {
       record={task}
       actions={actions}
       emptyMessage="Task record not found."
+      mobileFlat
     >
       <DataTableDetailFields
         fields={[
           { key: 'title', label: 'Task', value: task?.title, xs: 12 },
           { key: 'staff', label: 'Staff', value: task?.staffName, hidden: !isStaffScope },
           { key: 'project', label: 'Project', value: task?.projectName || '-' },
-          { key: 'status', label: 'Status', value: task?.statusText },
-          { key: 'created', label: 'Created On', value: task?.createdAt },
-          { key: 'due', label: 'Due Date', value: task?.dueDate },
-          { key: 'completed', label: 'Completed At', value: task?.completedAt },
+          {
+            key: 'status',
+            label: 'Status',
+            value: task?.statusText ? (
+              <DataTableStatusBadge tone={getTaskStatusTone(task.statusText)}>
+                {task.statusText}
+              </DataTableStatusBadge>
+            ) : (
+              '-'
+            ),
+          },
+          { key: 'created', label: 'Created On', value: formatDisplayDate(task?.createdAt) },
+          { key: 'due', label: 'Due Date', value: formatDisplayDate(task?.dueDate) },
+          {
+            key: 'completed',
+            label: 'Completed At',
+            value: formatDisplayDate(task?.completedAt),
+          },
           { key: 'days', label: 'Days Lapsed', value: task?.daysLapsed },
           {
             key: 'comments',

@@ -1,15 +1,6 @@
 // src/components/tasks/TaskManager.js
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  CButton,
-  CButtonGroup,
-  CCol,
-  CModal,
-  CModalBody,
-  CModalHeader,
-  CModalTitle,
-  CRow,
-} from '@coreui/react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { CButton, CCard, CModal, CModalBody, CModalHeader, CModalTitle } from '@coreui/react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import CreateTask from './CreateTask'
@@ -18,7 +9,13 @@ import * as handlers from './actionHandlers'
 import dialog from '../../components/dialog/dialogService'
 import { stripExactProjectMention } from '../../utils/projectMentionText'
 import { listActiveProjectOptions } from '../project/manage/projectApi'
-import { getPeriodDateParams, getPeriodRangePreset } from '../../components/filters'
+import {
+  getPeriodDateParams,
+  getPeriodRangePreset,
+  getPeriodRangeScopeLabel,
+} from '../../components/filters'
+import { DataTableStatsToggle } from '../../components/datatable'
+import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { appendQueryParams } from '../../utils/detailPages'
 import {
   defaultTaskPreview,
@@ -30,11 +27,25 @@ import { getCurrentReturnTo } from '../../utils/navigation/returnTo'
 import CarryForwardModal from './weekly/CarryForwardModal'
 import WeeklyTaskSummary from './weekly/WeeklyTaskSummary'
 import WeeklyUpdateModal from './weekly/WeeklyUpdateModal'
+import { completeTask, createTaskUpdate } from './weekly/taskUpdateApi'
+import { formatWeekLabel } from './weekly/taskWeekUtils'
+import { applyWeeklyReviewState, getWeeklyReviewState } from './weekly/weeklySummaryState'
+import TaskWorkspaceHeader from './shared/TaskWorkspaceHeader'
+import { applyTaskWorkspaceView, getTaskWorkspaceView } from './shared/taskWorkspaceState'
 
 const TASK_DRAFT_STORAGE_KEY = 'task-manager.create-task-drafts.v3'
 const AI_CLASSIFICATION_POLL_INTERVAL_MS = 4000
 const AI_CLASSIFICATION_POLL_TIMEOUT_MS = 30000
 const ACTIVE_AI_CLASSIFICATION_STATUSES = new Set(['pending', 'queued', 'processing'])
+
+const isAbortedRequest = (error, signal) =>
+  signal?.aborted ||
+  (typeof document !== 'undefined' && document.visibilityState === 'hidden') ||
+  error?.name === 'AbortError' ||
+  error?.code === 20 ||
+  String(error?.message || '')
+    .toLowerCase()
+    .includes('abort')
 
 export const buildPersonalTasksUrl = (apiBase, periodRange) =>
   appendQueryParams(`${apiBase}tasks/personal`, {
@@ -162,7 +173,11 @@ const TaskManager = () => {
   const [savingTasks, setSavingTasks] = useState(false)
   const [weeklyUpdateTask, setWeeklyUpdateTask] = useState(null)
   const [carryForwardTask, setCarryForwardTask] = useState(null)
+  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
+    useDataTableStatsVisibility('task-manager.tasks')
   const aiClassificationPollRef = useRef(null)
+  const createTaskTriggerRef = useRef(null)
+  const createTaskWasVisibleRef = useRef(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -192,16 +207,29 @@ const TaskManager = () => {
     clearCreateActionParam()
   }
 
-  const activeView =
-    new URLSearchParams(location.search).get('view') === 'weekly' ? 'weekly' : 'tasks'
-  const setActiveView = (view) => {
-    const params = new URLSearchParams(location.search)
-    if (view === 'weekly') params.set('view', 'weekly')
-    else params.delete('view')
+  const activeView = getTaskWorkspaceView(location.search)
+  const weeklyReviewState = useMemo(
+    () => getWeeklyReviewState(location.search, undefined, { allowPersonalComparison: true }),
+    [location.search],
+  )
 
-    const search = params.toString()
+  const setActiveView = (view) => {
+    const search = applyTaskWorkspaceView(location.search, view)
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true })
   }
+
+  const updateWeeklyReview = useCallback(
+    (nextState) => {
+      const search = applyWeeklyReviewState(location.search, nextState, {
+        allowPersonalComparison: true,
+      })
+      navigate(
+        { pathname: location.pathname, search: search ? `?${search}` : '' },
+        { replace: true },
+      )
+    },
+    [location.pathname, location.search, navigate],
+  )
 
   const savedDraftTitle = useCallback(
     (task) => {
@@ -315,24 +343,30 @@ const TaskManager = () => {
   }
 
   // — fetch & load all tasks for this staff —
-  const loadTasks = useCallback(async () => {
-    try {
-      const res = await fetch(buildPersonalTasksUrl(import.meta.env.VITE_API_BASE, periodRange), {
-        credentials: 'include',
-      })
-      const json = await res.json()
-      if (json.status === 'success') {
-        const tasks = Array.isArray(json.tasks) ? json.tasks : []
-        setTaskList(tasks)
-        return tasks
-      } else {
-        console.error('Failed to load tasks:', json.message)
+  const loadTasks = useCallback(
+    async ({ signal } = {}) => {
+      try {
+        const res = await fetch(buildPersonalTasksUrl(import.meta.env.VITE_API_BASE, periodRange), {
+          credentials: 'include',
+          signal,
+        })
+        const json = await res.json()
+        if (signal?.aborted) return null
+        if (json.status === 'success') {
+          const tasks = Array.isArray(json.tasks) ? json.tasks : []
+          setTaskList(tasks)
+          return tasks
+        } else {
+          console.error('Failed to load tasks:', json.message)
+        }
+      } catch (err) {
+        if (isAbortedRequest(err, signal)) return null
+        console.error('Network error loading tasks', err)
       }
-    } catch (err) {
-      console.error('Network error loading tasks', err)
-    }
-    return null
-  }, [periodRange])
+      return null
+    },
+    [periodRange],
+  )
 
   const clearAiClassificationPolling = useCallback(() => {
     if (aiClassificationPollRef.current) {
@@ -378,15 +412,29 @@ const TaskManager = () => {
 
   // load on mount
   useEffect(() => {
-    loadTasks()
+    const controller = new AbortController()
+    const abortRequest = () => controller.abort()
+    window.addEventListener('beforeunload', abortRequest, { once: true })
+    window.addEventListener('pagehide', abortRequest, { once: true })
+    loadTasks({ signal: controller.signal })
+
+    return () => {
+      window.removeEventListener('beforeunload', abortRequest)
+      window.removeEventListener('pagehide', abortRequest)
+      controller.abort()
+    }
   }, [loadTasks])
 
   useEffect(() => clearAiClassificationPolling, [clearAiClassificationPolling])
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
+    const abortRequest = () => controller.abort()
+    window.addEventListener('beforeunload', abortRequest, { once: true })
+    window.addEventListener('pagehide', abortRequest, { once: true })
 
-    listActiveProjectOptions()
+    listActiveProjectOptions({ signal: controller.signal })
       .then((projects) => {
         if (!active) return
         setProjectOptions(
@@ -402,13 +450,16 @@ const TaskManager = () => {
         )
       })
       .catch((err) => {
-        if (!active) return
+        if (!active || isAbortedRequest(err, controller.signal)) return
         console.error('Failed to load project options:', err)
         setProjectOptions([])
       })
 
     return () => {
       active = false
+      window.removeEventListener('beforeunload', abortRequest)
+      window.removeEventListener('pagehide', abortRequest)
+      controller.abort()
     }
   }, [])
 
@@ -418,6 +469,18 @@ const TaskManager = () => {
       setShowCreateTaskModal(true)
     }
   }, [location.search])
+
+  useEffect(() => {
+    if (showCreateTaskModal) {
+      createTaskWasVisibleRef.current = true
+      return undefined
+    }
+    if (!createTaskWasVisibleRef.current) return undefined
+
+    createTaskWasVisibleRef.current = false
+    const focusTimer = window.setTimeout(() => createTaskTriggerRef.current?.focus(), 180)
+    return () => window.clearTimeout(focusTimer)
+  }, [showCreateTaskModal])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -502,16 +565,7 @@ const TaskManager = () => {
       return
     }
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_API_BASE}tasks/${encodeURIComponent(id)}/complete`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ task_id: id }),
-        },
-      )
-      const json = await resp.json()
+      const json = await completeTask(id, formatDateLocal(new Date()))
       if (json.status === 'success') {
         // reload so the updated status shows up
         loadTasks()
@@ -522,6 +576,23 @@ const TaskManager = () => {
       console.error(err)
       dialog.alert('Network error, try again')
     }
+  }
+
+  const onQuickUpdate = async (taskId, payload) => {
+    const data = await createTaskUpdate(taskId, payload)
+    if (data.status !== 'success') throw new Error(data.message || 'Unable to save task update.')
+
+    showToast(data.message || 'Task update saved.')
+    return data
+  }
+
+  const onQuickComplete = async (taskId, completedAt) => {
+    const data = await completeTask(taskId, completedAt)
+    if (data.status !== 'success') throw new Error(data.message || 'Unable to complete task.')
+
+    await loadTasks()
+    showToast('Task completed.')
+    return data
   }
 
   // — add comment —
@@ -616,52 +687,67 @@ const TaskManager = () => {
 
   return (
     <>
-      <CRow className="g-4">
-        <CCol md={12}>
-          <CButtonGroup aria-label="Task manager view">
-            <CButton
-              color={activeView === 'tasks' ? 'primary' : 'secondary'}
-              variant={activeView === 'tasks' ? undefined : 'outline'}
-              onClick={() => setActiveView('tasks')}
-            >
-              Tasks
-            </CButton>
-            <CButton
-              color={activeView === 'weekly' ? 'primary' : 'secondary'}
-              variant={activeView === 'weekly' ? undefined : 'outline'}
-              onClick={() => setActiveView('weekly')}
-            >
-              Weekly Summary
-            </CButton>
-          </CButtonGroup>
-        </CCol>
-        <CCol md={12}>
-          {activeView === 'weekly' ? (
-            <WeeklyTaskSummary onOpenTask={openTask} />
-          ) : (
-            <TaskTable
-              tasks={sortedTasks}
-              todayStr={todayStr}
-              periodRange={periodRange}
-              onPeriodRangeChange={setPeriodRange}
-              getStatusBadge={handlers.getStatusBadge}
-              handleAddComment={onAddComment}
-              handleAddWeeklyUpdate={setWeeklyUpdateTask}
-              handleCarryForward={setCarryForwardTask}
-              handleMarkCompleted={onMarkCompleted}
-              handleDeleteTask={onDeleteTask}
-              onCreateTask={() => setShowCreateTaskModal(true)}
-              onView={openTask}
+      <CCard className="task-workspace records-page-card">
+        <TaskWorkspaceHeader
+          view={activeView}
+          taskTitle="My Tasks"
+          taskScopeLabel={periodRange ? getPeriodRangeScopeLabel(periodRange) : ''}
+          weeklyScopeLabel={formatWeekLabel(weeklyReviewState.weekStart)}
+          onViewChange={setActiveView}
+          switchAriaLabel="My task views"
+          displayControl={
+            <DataTableStatsToggle
+              visible={statsVisible}
+              onToggle={toggleStatsVisible}
+              controlsVisible={controlsVisible}
+              onControlsToggle={toggleControlsVisible}
             />
-          )}
-        </CCol>
-      </CRow>
+          }
+          primaryAction={
+            <CButton
+              ref={createTaskTriggerRef}
+              color="primary"
+              variant="outline"
+              size="sm"
+              className="mobile-workspace-primary-action rounded-pill"
+              onClick={() => setShowCreateTaskModal(true)}
+            >
+              Create Task
+            </CButton>
+          }
+        />
+        {activeView === 'weekly' ? (
+          <WeeklyTaskSummary
+            reviewState={weeklyReviewState}
+            onReviewChange={updateWeeklyReview}
+            onOpenTask={openTask}
+          />
+        ) : (
+          <TaskTable
+            tasks={sortedTasks}
+            todayStr={todayStr}
+            periodRange={periodRange}
+            onPeriodRangeChange={setPeriodRange}
+            getStatusBadge={handlers.getStatusBadge}
+            handleAddComment={onAddComment}
+            handleAddWeeklyUpdate={setWeeklyUpdateTask}
+            handleCarryForward={setCarryForwardTask}
+            handleMarkCompleted={onMarkCompleted}
+            handleDeleteTask={onDeleteTask}
+            onView={openTask}
+            statsVisible={statsVisible}
+            controlsVisible={controlsVisible}
+          />
+        )}
+      </CCard>
 
       <CModal
         visible={showCreateTaskModal}
         onClose={closeCreateTaskModal}
         alignment="center"
         size="lg"
+        scrollable
+        className="create-task-modal"
       >
         <CModalHeader closeButton>
           <CModalTitle>Create Task</CModalTitle>
@@ -678,6 +764,9 @@ const TaskManager = () => {
             onReset={resetCreateTaskForm}
             onCancel={closeCreateTaskModal}
             saving={savingTasks}
+            openTasks={sortedTasks}
+            onQuickUpdate={onQuickUpdate}
+            onQuickComplete={onQuickComplete}
           />
         </CModalBody>
       </CModal>

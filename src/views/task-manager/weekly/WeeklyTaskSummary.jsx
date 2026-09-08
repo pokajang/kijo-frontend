@@ -4,9 +4,7 @@ import {
   CBadge,
   CButton,
   CButtonGroup,
-  CCard,
   CCardBody,
-  CCardHeader,
   CCol,
   CDropdown,
   CDropdownDivider,
@@ -25,7 +23,6 @@ import { getWeeklySummary } from './taskUpdateApi'
 import {
   formatDateOnly,
   formatDisplayDate,
-  formatWeekLabel,
   getRecentWeekOptions,
   getWeekStart,
   shiftWeekStart,
@@ -61,10 +58,8 @@ const normalizeSummary = (data) => ({
 })
 
 const WeeklyTaskSummary = ({
-  embedded = false,
   management = false,
   staffOptions = [],
-  headerActions,
   onOpenTask,
   reviewState,
   onReviewChange,
@@ -83,7 +78,7 @@ const WeeklyTaskSummary = ({
 
   const activeReview = reviewState || localReview
   const { weekStart, staffId, compareEnabled, compareWeekStart } = activeReview
-  const canCompare = management && staffId !== 'all'
+  const canCompare = !management || staffId !== 'all'
   const showComparison = canCompare && compareEnabled
   const recentWeekOptions = useMemo(() => getRecentWeekOptions(new Date(), 8), [])
 
@@ -93,7 +88,7 @@ const WeeklyTaskSummary = ({
 
   const updateReview = (changes) => {
     const next = { ...activeReview, ...changes }
-    if (next.staffId === 'all') next.compareEnabled = false
+    if (management && next.staffId === 'all') next.compareEnabled = false
     if (next.compareWeekStart >= next.weekStart)
       next.compareWeekStart = shiftWeekStart(next.weekStart, -1)
     if (!reviewState) setLocalReview(next)
@@ -104,9 +99,17 @@ const WeeklyTaskSummary = ({
     let active = true
     setLoading(true)
     setError('')
-    const selectedRequest = getWeeklySummary({ weekStart, staffId: management ? staffId : '' })
+    const selectedRequest = getWeeklySummary({
+      weekStart,
+      staffId: management && staffId !== 'all' ? staffId : '',
+      scope: management && staffId === 'all' ? 'all' : '',
+    })
     const comparisonRequest = showComparison
-      ? getWeeklySummary({ weekStart: compareWeekStart, staffId })
+      ? getWeeklySummary({
+          weekStart: compareWeekStart,
+          staffId: management ? staffId : '',
+          scope: '',
+        })
       : Promise.resolve(null)
 
     Promise.all([selectedRequest, comparisonRequest])
@@ -215,7 +218,7 @@ const WeeklyTaskSummary = ({
           ) : null}
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
-          <CButtonGroup aria-label="Quick weekly summary periods">
+          <CButtonGroup role="group" aria-label="Quick weekly summary periods">
             {[0, -1].map((offset) => {
               const value = shiftWeekStart(currentWeek, offset)
               const label = offset === 0 ? 'This Week' : offset === -1 ? 'Last Week' : '2 Weeks Ago'
@@ -233,40 +236,38 @@ const WeeklyTaskSummary = ({
                 </CButton>
               )
             })}
-            {management ? (
-              <CButton
-                size="sm"
-                color={showComparison ? 'primary' : 'secondary'}
-                variant={showComparison ? undefined : 'outline'}
-                aria-pressed={showComparison}
-                disabled={!canCompare}
-                title={
-                  canCompare
-                    ? 'Show the selected week beside the immediately preceding week.'
-                    : 'Select one staff member to view two weeks side by side.'
-                }
-                onClick={() =>
-                  updateReview({
-                    compareEnabled: true,
-                    compareWeekStart: shiftWeekStart(weekStart, -1),
-                  })
-                }
-              >
-                2 Week View
-              </CButton>
-            ) : null}
+            <CButton
+              size="sm"
+              color={showComparison ? 'primary' : 'secondary'}
+              variant={showComparison ? undefined : 'outline'}
+              aria-pressed={showComparison}
+              disabled={!canCompare}
+              title={
+                canCompare
+                  ? 'Show the selected week beside the immediately preceding week.'
+                  : 'Select one staff member to view two weeks side by side.'
+              }
+              onClick={() =>
+                updateReview({
+                  compareEnabled: true,
+                  compareWeekStart: shiftWeekStart(weekStart, -1),
+                })
+              }
+            >
+              2 Week View
+            </CButton>
           </CButtonGroup>
           <CDropdown>
             <CDropdownToggle size="sm" color="secondary" variant="outline">
               More
             </CDropdownToggle>
             <CDropdownMenu>
-              {recentWeekOptions.slice(3).map((option, index) => (
+              {recentWeekOptions.slice(2).map((option, index) => (
                 <CDropdownItem
                   key={option.value}
                   onClick={() => updateReview({ weekStart: option.value, compareEnabled: false })}
                 >
-                  {index + 3} Weeks Ago
+                  {index + 2} Weeks Ago
                 </CDropdownItem>
               ))}
               <CDropdownDivider />
@@ -319,20 +320,7 @@ const WeeklyTaskSummary = ({
     </>
   )
 
-  if (embedded) return <CCardBody>{content}</CCardBody>
-
-  return (
-    <CCard>
-      <CCardHeader className="d-flex flex-wrap align-items-start justify-content-between gap-2">
-        <div>
-          <h1 className="h5 mb-1">Weekly Summary</h1>
-          <div className="small text-body-secondary">{formatWeekLabel(weekStart)}</div>
-        </div>
-        {headerActions ? <div className="d-flex flex-wrap gap-2">{headerActions}</div> : null}
-      </CCardHeader>
-      <CCardBody>{content}</CCardBody>
-    </CCard>
-  )
+  return <CCardBody>{content}</CCardBody>
 }
 
 export default WeeklyTaskSummary

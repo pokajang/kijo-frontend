@@ -648,6 +648,25 @@ describe('datatable shared components', () => {
     expect(clearChip).toHaveBeenCalledWith('status')
   })
 
+  it('marks controls with inline selectors for the shared mobile search-first layout', () => {
+    const { container } = render(
+      <DataTableRecordControls
+        searchValue=""
+        onSearchChange={vi.fn()}
+        inlineFilter={
+          <select aria-label="Staff">
+            <option>All staff</option>
+          </select>
+        }
+      />,
+    )
+
+    expect(container.querySelector('.records-filter-row--with-inline-filter')).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Staff' }).closest('.col-auto')).toHaveClass(
+      'data-table-filter-inline-col',
+    )
+  })
+
   it('keeps record controls visible during quiet loading by default', () => {
     render(
       <DataTableRecordControls loading searchValue="alpha" onSearchChange={vi.fn()}>

@@ -80,6 +80,7 @@ describe('WeeklyTaskSummary', () => {
     expect(screen.getAllByText('Waiting on access.').length).toBeGreaterThan(0)
     expect(api.getWeeklySummary).toHaveBeenCalledTimes(2)
     expect(screen.getByLabelText('Two week task comparison')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Comparison week display' })).toBeInTheDocument()
   })
 
   it('starts a side-by-side view from the compact two-week control', async () => {
@@ -137,5 +138,52 @@ describe('WeeklyTaskSummary', () => {
     expect(
       screen.getAllByRole('button', { name: '2 Week View' }).some((button) => button.disabled),
     ).toBe(true)
+    expect(api.getWeeklySummary).toHaveBeenCalledWith(
+      expect.objectContaining({ staffId: '', scope: 'all' }),
+    )
+  })
+
+  it('keeps the worker summary scoped to the signed-in staff member', async () => {
+    api.getWeeklySummary.mockResolvedValue({
+      status: 'success',
+      achievements: [],
+      hiccups: [],
+      nextWeek: [],
+    })
+
+    render(<WeeklyTaskSummary />)
+
+    await screen.findAllByText('No achievements recorded for this week.')
+    expect(api.getWeeklySummary).toHaveBeenCalledWith(
+      expect.objectContaining({ staffId: '', scope: '' }),
+    )
+  })
+
+  it('renders the management comparison view for a worker without requesting team scope', async () => {
+    api.getWeeklySummary.mockReset()
+    api.getWeeklySummary.mockResolvedValue({
+      status: 'success',
+      achievements: [],
+      hiccups: [],
+      nextWeek: [],
+    })
+
+    render(
+      <WeeklyTaskSummary
+        reviewState={{
+          staffId: 'all',
+          weekStart: '2026-08-31',
+          compareEnabled: true,
+          compareWeekStart: '2026-08-24',
+        }}
+      />,
+    )
+
+    expect(await screen.findByLabelText('Two week task comparison')).toBeInTheDocument()
+    expect(api.getWeeklySummary).toHaveBeenCalledTimes(2)
+    expect(api.getWeeklySummary).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ staffId: '', scope: '' }),
+    )
   })
 })

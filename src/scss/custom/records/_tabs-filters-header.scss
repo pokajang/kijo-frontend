@@ -90,6 +90,30 @@
   justify-content: flex-end;
 }
 
+.task-workspace-header__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  justify-content: flex-end;
+  min-height: calc(1.8125rem + 2px);
+}
+
+html:has(.task-workspace) {
+  scrollbar-gutter: stable;
+}
+
+.task-workspace-header__display-placeholder {
+  flex: 0 0 calc(1.8125rem + 2px);
+  height: calc(1.8125rem + 2px);
+  margin-inline-end: 0.5rem;
+  width: calc(1.8125rem + 2px);
+}
+
+.task-workspace-view-switch {
+  flex: 0 0 auto;
+}
+
 .mobile-workspace-action-row {
   display: inline-flex;
   align-items: center;

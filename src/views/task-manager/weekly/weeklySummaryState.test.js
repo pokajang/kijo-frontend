@@ -22,6 +22,20 @@ describe('weekly summary review state', () => {
     ).toBe('view=weekly&week=2026-08-17')
   })
 
+  it('preserves URL-backed comparison for the personal task workspace', () => {
+    const options = { allowPersonalComparison: true }
+    const state = getWeeklyReviewState('?week=2026-08-17&compare=1', undefined, options)
+
+    expect(state).toMatchObject({
+      staffId: 'all',
+      compareEnabled: true,
+      compareWeekStart: '2026-08-10',
+    })
+    expect(applyWeeklyReviewState('?view=weekly', state, options)).toBe(
+      'view=weekly&week=2026-08-17&compare=1&compare_week=2026-08-10',
+    )
+  })
+
   it('keeps comparison before the selected week when a URL requests a later week', () => {
     expect(
       getWeeklyReviewState('?staff_id=42&week=2026-08-17&compare=1&compare_week=2026-08-24'),

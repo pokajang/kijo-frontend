@@ -10,8 +10,7 @@ const projectOptions = [
 ]
 const projectProgressNote =
   'Tagged tasks will be inserted as project progress tracking in Manage Project as "Ongoing" tasks.'
-const projectTagHint = 'New: type @ in the task field to tag an active project linked to you.'
-const taskPlaceholder = 'E.g. Prepare gantt chart...'
+const taskPlaceholder = 'Describe a task… Type @ to link an active project.'
 const projectIdentity = (clientName, projectId) =>
   `${clientName} ${String.fromCharCode(183)} #${projectId}`
 
@@ -24,6 +23,7 @@ const renderCreateTask = ({
   initialTask,
   onDraftChange = vi.fn(),
   projectOptionsOverride = projectOptions,
+  openTasks = [],
 } = {}) => {
   const Harness = () => {
     const [task, setTask] = useState(
@@ -58,6 +58,7 @@ const renderCreateTask = ({
         onRemoveDraft={vi.fn()}
         onSaveTasks={vi.fn()}
         onReset={vi.fn()}
+        openTasks={openTasks}
       />
     )
   }
@@ -66,6 +67,12 @@ const renderCreateTask = ({
 }
 
 describe('CreateTask', () => {
+  it('exposes its mobile job switch as a named control group', () => {
+    renderCreateTask()
+
+    expect(screen.getByRole('group', { name: 'Task modal section' })).toBeInTheDocument()
+  })
+
   it('tags a project inline from @ search and stores title plus project id', () => {
     const onDraftChange = vi.fn()
     renderCreateTask({ onDraftChange })
@@ -388,14 +395,32 @@ describe('CreateTask', () => {
     expect(screen.queryByText(/Default:/i)).not.toBeInTheDocument()
   })
 
-  it('shows a dismissible project tag hint', () => {
+  it('puts the project-tag guidance in the task placeholder without an alert', () => {
     renderCreateTask()
 
-    expect(screen.getByText(projectTagHint)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(taskPlaceholder)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 
-    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+  it('switches between mobile task jobs without clearing the draft', () => {
+    renderCreateTask({
+      openTasks: [
+        {
+          id: 42,
+          title: 'Prepare management report',
+          status: 'Ongoing',
+          dueDate: '2026-09-10',
+        },
+      ],
+    })
 
-    expect(screen.queryByText(projectTagHint)).not.toBeInTheDocument()
+    const taskInput = screen.getByPlaceholderText(taskPlaceholder)
+    fireEvent.change(taskInput, { target: { value: 'Draft retained between panes' } })
+    fireEvent.click(screen.getByRole('button', { name: /Quick Update 1/i }))
+    expect(screen.getByText('Prepare management report')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'New Tasks' }))
+    expect(taskInput).toHaveValue('Draft retained between panes')
   })
 
   it('shows one project progress note when any task row is tagged', () => {

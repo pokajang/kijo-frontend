@@ -133,7 +133,7 @@ const WeeklyComparisonGrid = ({
       </div>
 
       <div className="d-lg-none">
-        <CButtonGroup className="w-100 mb-3" aria-label="Comparison week display">
+        <CButtonGroup role="group" className="w-100 mb-3" aria-label="Comparison week display">
           <CButton
             color={mobileWeek === 'previous' ? 'primary' : 'secondary'}
             variant={mobileWeek === 'previous' ? undefined : 'outline'}

@@ -156,10 +156,14 @@ const AuthProvider = ({ children }) => {
         handleUnauthorized()
         return false
       } catch (err) {
+        const errorMessage = String(err?.message || '').toLowerCase()
         const isSuppressedAbort =
           signal?.aborted ||
+          (typeof document !== 'undefined' && document.visibilityState === 'hidden') ||
           err?.name === 'AbortError' ||
-          (err instanceof TypeError && String(err.message || '').includes('Failed to fetch'))
+          err?.code === 20 ||
+          errorMessage.includes('abort') ||
+          errorMessage.includes('cancel')
 
         if (suppressAbortLog && isSuppressedAbort) {
           return false
@@ -265,21 +269,28 @@ const AuthProvider = ({ children }) => {
     }
 
     const controller = new AbortController()
+    const abortRequest = () => controller.abort()
+    window.addEventListener('beforeunload', abortRequest, { once: true })
+    window.addEventListener('pagehide', abortRequest, { once: true })
     checkSession({ signal: controller.signal, suppressAbortLog: true })
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkSession()
+        checkSession({ signal: controller.signal, suppressAbortLog: true })
       }
     }
 
     const checkWhenActive = () => {
-      if (document.visibilityState !== 'hidden') checkSession()
+      if (document.visibilityState !== 'hidden') {
+        checkSession({ signal: controller.signal, suppressAbortLog: true })
+      }
     }
     const intervalId = window.setInterval(checkWhenActive, SESSION_CHECK_INTERVAL_MS)
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     return () => {
+      window.removeEventListener('beforeunload', abortRequest)
+      window.removeEventListener('pagehide', abortRequest)
       controller.abort()
       window.clearInterval(intervalId)
       document.removeEventListener('visibilitychange', onVisibilityChange)

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 
 import TaskManager, { buildPersonalTasksUrl } from './TaskManager'
+import { formatWeekLabel } from './weekly/taskWeekUtils'
 import dialog from '../../components/dialog/dialogService'
 import { toastEvents } from '../../components/toast/toastService'
 import { setCsrfToken } from '../../api/apiClient'
@@ -13,20 +14,24 @@ const projectApiMocks = vi.hoisted(() => ({
 }))
 
 vi.mock('./TaskTable', () => ({
-  default: ({ tasks = [], onCreateTask }) => (
-    <>
-      <button type="button" onClick={onCreateTask}>
-        Open Create Task
-      </button>
-      <div data-testid="task-table-statuses">
-        {tasks.map((task) => `${task.id}:${task.aiClassificationStatus || ''}`).join('|')}
-      </div>
-    </>
+  default: ({ tasks = [] }) => (
+    <div data-testid="task-table-statuses">
+      {tasks.map((task) => `${task.id}:${task.aiClassificationStatus || ''}`).join('|')}
+    </div>
   ),
 }))
 
 vi.mock('./CreateTask', () => ({
-  default: ({ taskDrafts, projectOptions, onCancel, onDraftChange, onSaveTasks }) => (
+  default: ({
+    taskDrafts,
+    projectOptions,
+    openTasks,
+    onCancel,
+    onDraftChange,
+    onSaveTasks,
+    onQuickUpdate,
+    onQuickComplete,
+  }) => (
     <>
       <div data-testid="project-option-count">{projectOptions.length}</div>
       <div data-testid="project-option-client">{projectOptions[0]?.clientName || ''}</div>
@@ -90,6 +95,26 @@ vi.mock('./CreateTask', () => ({
       <button type="button" onClick={onSaveTasks}>
         Save Task
       </button>
+      <div data-testid="quick-open-task-count">{openTasks.length}</div>
+      {openTasks[0] ? (
+        <>
+          <button
+            type="button"
+            onClick={() =>
+              onQuickUpdate(openTasks[0].id, {
+                update_type: 'progress',
+                reporting_date: '2026-09-04',
+                note: 'Quick progress note',
+              })
+            }
+          >
+            Quick Update Mock
+          </button>
+          <button type="button" onClick={() => onQuickComplete(openTasks[0].id, '2026-09-05')}>
+            Quick Complete Mock
+          </button>
+        </>
+      ) : null}
     </>
   ),
 }))
@@ -194,7 +219,7 @@ describe('TaskManager route actions', () => {
   it('opens create task modal from action=create and clears the query when closed', async () => {
     renderTaskManager('/task-manager?action=create')
 
-    expect(await screen.findByText('Create Task')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Create Task' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel Task' }))
 
@@ -203,10 +228,100 @@ describe('TaskManager route actions', () => {
     })
   })
 
+  it('uses one responsive card header for task and weekly contexts', async () => {
+    const { container } = renderTaskManager('/task-manager?week=2026-08-31')
+
+    expect(screen.getByRole('heading', { level: 1, name: 'My Tasks' })).toBeInTheDocument()
+    expect(container.querySelectorAll('.task-workspace')).toHaveLength(1)
+    expect(container.querySelectorAll('.data-table-card-header')).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Weekly Summary' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/task-manager?week=2026-08-31&view=weekly',
+      )
+      expect(screen.getByRole('heading', { level: 1, name: 'Weekly Summary' })).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(formatWeekLabel('2026-08-31'))).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create Task' })).not.toBeInTheDocument()
+    expect(container.querySelectorAll('.data-table-card-header')).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tasks' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/task-manager?week=2026-08-31')
+      expect(screen.getByRole('heading', { level: 1, name: 'My Tasks' })).toBeInTheDocument()
+    })
+  })
+
+  it('wires quick progress and dated completion through the create modal', async () => {
+    const openTask = {
+      id: 77,
+      title: 'Prepare quick report',
+      status: 'Ongoing',
+      createdAt: '2026-09-01 09:00:00',
+      dueDate: '2026-09-10',
+      commentLogs: [],
+    }
+    let personalLoadCount = 0
+    global.fetch.mockImplementation(async (url, init = {}) => {
+      const requestUrl = String(url)
+      if (requestUrl.includes('tasks/personal')) {
+        personalLoadCount += 1
+        return jsonResponse({ status: 'success', tasks: personalLoadCount > 1 ? [] : [openTask] })
+      }
+      if (requestUrl.includes('/updates')) {
+        return jsonResponse({ status: 'success', message: 'Weekly progress saved.' })
+      }
+      if (requestUrl.includes('/complete')) {
+        return jsonResponse({ status: 'success', completed_at: '2026-09-05' })
+      }
+      return jsonResponse({ status: 'success', tasks: [] })
+    })
+
+    renderTaskManager('/task-manager')
+    fireEvent.click(await screen.findByRole('button', { name: 'Create Task' }))
+    expect(await screen.findByTestId('quick-open-task-count')).toHaveTextContent('1')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Update Mock' }))
+    await waitFor(() => {
+      const updateCall = global.fetch.mock.calls.find(([url]) => String(url).includes('/updates'))
+      expect(JSON.parse(updateCall[1].body)).toEqual({
+        update_type: 'progress',
+        reporting_date: '2026-09-04',
+        note: 'Quick progress note',
+      })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Complete Mock' }))
+    await waitFor(() => {
+      const completeCall = global.fetch.mock.calls.find(([url]) =>
+        String(url).includes('/complete'),
+      )
+      expect(JSON.parse(completeCall[1].body)).toEqual({ completed_at: '2026-09-05' })
+      expect(screen.getByTestId('quick-open-task-count')).toHaveTextContent('0')
+    })
+  })
+
+  it('keeps the worker two-week comparison in URL state', async () => {
+    renderTaskManager('/task-manager?view=weekly&week=2026-08-31')
+
+    fireEvent.click(await screen.findByRole('button', { name: '2 Week View' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/task-manager?view=weekly&week=2026-08-31&compare=1&compare_week=2026-08-24',
+      )
+      expect(screen.getByLabelText('Two week task comparison')).toBeInTheDocument()
+    })
+  })
+
   it('saves inline project mention title with project id', async () => {
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     await waitFor(() => {
       expect(screen.getByTestId('project-option-count')).toHaveTextContent('1')
       expect(screen.getByTestId('project-option-client')).toHaveTextContent('Alpha Client')
@@ -236,7 +351,7 @@ describe('TaskManager route actions', () => {
     projectApiMocks.listActiveProjectOptions.mockResolvedValue([])
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Saved Project Task' }))
 
     await waitFor(() => {
@@ -265,7 +380,7 @@ describe('TaskManager route actions', () => {
   it('saves untagged task titles unchanged', async () => {
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Plain Task' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save Task' }))
 
@@ -345,7 +460,7 @@ describe('TaskManager route actions', () => {
 
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Plain Task' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save Task' }))
 
@@ -394,7 +509,7 @@ describe('TaskManager route actions', () => {
   it('requests backend classification after the draft title debounce', async () => {
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Training Task' }))
 
     expect(screen.getByTestId('draft-classification-status')).toHaveTextContent('pending')
@@ -426,7 +541,7 @@ describe('TaskManager route actions', () => {
     )
 
     renderTaskManager('/task-manager')
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
 
     await waitFor(() => {
       expect(screen.getByTestId('draft-project-client')).toHaveTextContent('Saved Client')
@@ -436,7 +551,7 @@ describe('TaskManager route actions', () => {
   it('classifies the saved title without the visible project mention', async () => {
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     await waitFor(() => {
       expect(screen.getByTestId('project-option-count')).toHaveTextContent('1')
     })
@@ -470,7 +585,7 @@ describe('TaskManager route actions', () => {
 
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Training Task' }))
 
     await waitFor(() => {
@@ -518,7 +633,7 @@ describe('TaskManager route actions', () => {
   it('blocks invalid due date values before posting the batch request', async () => {
     renderTaskManager('/task-manager')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Create Task' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create Task' }))
     fireEvent.click(await screen.findByRole('button', { name: 'Set Invalid Date Task' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save Task' }))
 
@@ -528,6 +643,48 @@ describe('TaskManager route actions', () => {
 
     const batchCall = global.fetch.mock.calls.find(([url]) => String(url).includes('tasks/batch'))
     expect(batchCall).toBeUndefined()
+  })
+
+  it('cancels initial task and project reads without logging false network errors', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const abortableRequest = (signal) =>
+      new Promise((resolve, reject) => {
+        signal.addEventListener(
+          'abort',
+          () => reject(new DOMException('The operation was aborted.', 'AbortError')),
+          { once: true },
+        )
+      })
+
+    global.fetch.mockImplementation((url, init = {}) =>
+      String(url).includes('tasks/personal')
+        ? abortableRequest(init.signal)
+        : Promise.resolve(jsonResponse({ status: 'success' })),
+    )
+    projectApiMocks.listActiveProjectOptions.mockImplementation(({ signal }) =>
+      abortableRequest(signal),
+    )
+
+    const { unmount } = renderTaskManager('/task-manager')
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled()
+      expect(projectApiMocks.listActiveProjectOptions).toHaveBeenCalledWith({
+        signal: expect.any(AbortSignal),
+      })
+    })
+
+    const taskSignal = global.fetch.mock.calls.find(([url]) =>
+      String(url).includes('tasks/personal'),
+    )[1].signal
+    const projectSignal = projectApiMocks.listActiveProjectOptions.mock.calls[0][0].signal
+
+    unmount()
+
+    expect(taskSignal.aborted).toBe(true)
+    expect(projectSignal.aborted).toBe(true)
+    await waitFor(() => expect(consoleError).not.toHaveBeenCalled())
+    consoleError.mockRestore()
   })
 })
 

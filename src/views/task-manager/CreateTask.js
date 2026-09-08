@@ -1,9 +1,9 @@
 // src/components/tasks/CreateTask.js
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-  CAlert,
   CBadge,
   CButton,
+  CButtonGroup,
   CCard,
   CCardBody,
   CCardHeader,
@@ -16,10 +16,10 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilPlus, cilTrash, cilX } from '@coreui/icons'
 import { stripExactProjectMention } from '../../utils/projectMentionText'
+import QuickTaskUpdateList from './QuickTaskUpdateList'
 
 const PROJECT_TRIGGER_PATTERN = /(^|\s)([@/])([^@/]*)$/
-const TASK_PLACEHOLDER = 'E.g. Prepare gantt chart...'
-const PROJECT_TAG_HINT = 'New: type @ in the task field to tag an active project linked to you.'
+const TASK_PLACEHOLDER = 'Describe a task… Type @ to link an active project.'
 const PROJECT_PROGRESS_NOTE =
   'Tagged tasks will be inserted as project progress tracking in Manage Project as "Ongoing" tasks.'
 const PROJECT_META_SEPARATOR = ' \u00b7 '
@@ -408,8 +408,11 @@ const CreateTask = ({
   onCancel,
   saving = false,
   embedded = false,
+  openTasks = [],
+  onQuickUpdate,
+  onQuickComplete,
 }) => {
-  const [showProjectTagHint, setShowProjectTagHint] = useState(true)
+  const [mobilePane, setMobilePane] = useState('create')
   const projectLabelById = useMemo(
     () =>
       new Map(
@@ -427,164 +430,204 @@ const CreateTask = ({
     ).trim(),
   ).length
   const hasTaggedProject = taskDrafts.some((task) => task.projectId)
+  const openTaskCount = openTasks.filter(
+    (task) =>
+      String(task?.status || '')
+        .trim()
+        .toLowerCase() === 'ongoing',
+  ).length
   const saveLabel = saving
     ? 'Saving...'
     : `Save ${validTaskCount || ''} Task${validTaskCount === 1 ? '' : 's'}`
 
   const content = (
     <>
-      {showProjectTagHint ? (
-        <CAlert
-          color="primary"
-          dismissible
-          onClose={() => setShowProjectTagHint(false)}
-          className="create-task-project-tag-alert mb-3 py-2"
+      <CButtonGroup
+        size="sm"
+        role="group"
+        className="create-task-mobile-mode d-sm-none mb-3"
+        aria-label="Task modal section"
+      >
+        <CButton
+          color={mobilePane === 'create' ? 'primary' : 'secondary'}
+          variant={mobilePane === 'create' ? undefined : 'outline'}
+          aria-pressed={mobilePane === 'create'}
+          onClick={() => setMobilePane('create')}
         >
-          {PROJECT_TAG_HINT}
-        </CAlert>
-      ) : null}
+          New Tasks
+        </CButton>
+        <CButton
+          color={mobilePane === 'update' ? 'primary' : 'secondary'}
+          variant={mobilePane === 'update' ? undefined : 'outline'}
+          aria-pressed={mobilePane === 'update'}
+          onClick={() => setMobilePane('update')}
+        >
+          Quick Update{' '}
+          <CBadge color="light" textColor="dark" className="ms-1">
+            {openTaskCount}
+          </CBadge>
+        </CButton>
+      </CButtonGroup>
 
-      <div className="d-grid gap-3">
-        {taskDrafts.map((task, index) => (
-          <div key={task.id}>
-            <CRow className="align-items-start g-3 flex-md-nowrap">
-              <CCol xs={12} md={embedded ? true : 8} className={embedded ? 'min-w-0' : undefined}>
-                {index === 0 ? (
-                  <CFormLabel htmlFor={`task-title-${task.id}`}>Task</CFormLabel>
-                ) : null}
-                <InlineProjectTaskInput
-                  id={`task-title-${task.id}`}
-                  title={task.title}
-                  projectId={task.projectId || ''}
-                  projectLabel={task.projectLabel || ''}
-                  projectClientName={task.projectClientName || ''}
-                  options={projectOptions}
-                  disabled={saving}
-                  onTitleChange={(title) => onDraftChange(task.id, 'title', title)}
-                  onProjectChange={(projectId, projectLabel = '', projectClientName = '') => {
-                    onDraftChange(task.id, 'projectId', projectId)
-                    onDraftChange(task.id, 'projectLabel', projectId ? projectLabel : '')
-                    onDraftChange(task.id, 'projectClientName', projectId ? projectClientName : '')
-                  }}
-                />
-                {task.title.trim() && task.classificationStatus === 'pending' ? (
-                  <div className="small text-body-secondary mt-1">Deciding task type...</div>
-                ) : null}
-                {task.title.trim() && task.classificationStatus !== 'pending' ? (
-                  <div className="small text-body-secondary mt-1">
-                    {taskTypeDisplayMode(task)}:{' '}
-                    <span
-                      className={`fw-semibold ${isZeroRatedTask(task) ? 'text-warning' : 'text-body'}`}
-                    >
-                      {taskTypeLabel(task)} ({taskTypeEffortScore(task)})
+      <div className={mobilePane === 'create' ? '' : 'd-none d-sm-block'}>
+        <div className="d-grid gap-3">
+          {taskDrafts.map((task, index) => (
+            <div key={task.id}>
+              <CRow className="align-items-start g-3 flex-md-nowrap">
+                <CCol xs={12} md={embedded ? true : 8} className={embedded ? 'min-w-0' : undefined}>
+                  {index === 0 ? (
+                    <CFormLabel htmlFor={`task-title-${task.id}`}>Task</CFormLabel>
+                  ) : null}
+                  <InlineProjectTaskInput
+                    id={`task-title-${task.id}`}
+                    title={task.title}
+                    projectId={task.projectId || ''}
+                    projectLabel={task.projectLabel || ''}
+                    projectClientName={task.projectClientName || ''}
+                    options={projectOptions}
+                    disabled={saving}
+                    onTitleChange={(title) => onDraftChange(task.id, 'title', title)}
+                    onProjectChange={(projectId, projectLabel = '', projectClientName = '') => {
+                      onDraftChange(task.id, 'projectId', projectId)
+                      onDraftChange(task.id, 'projectLabel', projectId ? projectLabel : '')
+                      onDraftChange(
+                        task.id,
+                        'projectClientName',
+                        projectId ? projectClientName : '',
+                      )
+                    }}
+                  />
+                  {task.title.trim() && task.classificationStatus === 'pending' ? (
+                    <div className="small text-body-secondary mt-1">Deciding task type...</div>
+                  ) : null}
+                  {task.title.trim() && task.classificationStatus !== 'pending' ? (
+                    <div className="small text-body-secondary mt-1">
+                      {taskTypeDisplayMode(task)}:{' '}
+                      <span
+                        className={`fw-semibold ${isZeroRatedTask(task) ? 'text-warning' : 'text-body'}`}
+                      >
+                        {taskTypeLabel(task)} ({taskTypeEffortScore(task)})
+                      </span>
+                      <span className="text-muted"> &bull; {workTypeLabel(task)}</span>
+                    </div>
+                  ) : null}
+                  {task.title.trim() &&
+                  task.classificationStatus !== 'pending' &&
+                  isNonRatedTask(task) ? (
+                    <div className="small text-warning mt-1">
+                      Are you sure you want to include this task? It will be saved as non-rated and
+                      will not add workload score.
+                    </div>
+                  ) : null}
+                  {task.title.trim() &&
+                  task.classificationStatus !== 'pending' &&
+                  isUnclearTask(task) ? (
+                    <div className="small text-warning mt-1">
+                      Task is too vague. Add a work action such as prepare, review, follow up,
+                      submit, develop, reconcile, or audit for fair workload grading. It can still
+                      be saved but will not add workload score.
+                    </div>
+                  ) : null}
+                </CCol>
+
+                <CCol
+                  xs={9}
+                  md={embedded ? 'auto' : 3}
+                  style={embedded ? { width: '190px' } : null}
+                >
+                  {index === 0 ? (
+                    <CFormLabel htmlFor={`task-due-${task.id}`}>Due Date</CFormLabel>
+                  ) : null}
+                  <CFormInput
+                    id={`task-due-${task.id}`}
+                    type="date"
+                    value={task.dueDate}
+                    disabled={saving}
+                    onChange={(event) => onDraftChange(task.id, 'dueDate', event.target.value)}
+                  />
+                </CCol>
+
+                <CCol xs={3} md="auto" className="d-flex justify-content-end ps-md-1 pt-md-4">
+                  <CTooltip content="Remove task" placement="top">
+                    <span className="d-inline-flex">
+                      <CButton
+                        color="danger"
+                        variant="ghost"
+                        aria-label={`Remove task ${index + 1}`}
+                        disabled={saving || taskDrafts.length === 1}
+                        onClick={() => onRemoveDraft(task.id)}
+                      >
+                        <CIcon icon={cilTrash} className="text-danger" />
+                      </CButton>
                     </span>
-                    <span className="text-muted"> &bull; {workTypeLabel(task)}</span>
-                  </div>
-                ) : null}
-                {task.title.trim() &&
-                task.classificationStatus !== 'pending' &&
-                isNonRatedTask(task) ? (
-                  <div className="small text-warning mt-1">
-                    Are you sure you want to include this task? It will be saved as non-rated and
-                    will not add workload score.
-                  </div>
-                ) : null}
-                {task.title.trim() &&
-                task.classificationStatus !== 'pending' &&
-                isUnclearTask(task) ? (
-                  <div className="small text-warning mt-1">
-                    Task is too vague. Add a work action such as prepare, review, follow up, submit,
-                    develop, reconcile, or audit for fair workload grading. It can still be saved
-                    but will not add workload score.
-                  </div>
-                ) : null}
-              </CCol>
+                  </CTooltip>
+                </CCol>
+              </CRow>
+            </div>
+          ))}
+        </div>
 
-              <CCol xs={9} md={embedded ? 'auto' : 3} style={embedded ? { width: '190px' } : null}>
-                {index === 0 ? (
-                  <CFormLabel htmlFor={`task-due-${task.id}`}>Due Date</CFormLabel>
-                ) : null}
-                <CFormInput
-                  id={`task-due-${task.id}`}
-                  type="date"
-                  value={task.dueDate}
-                  disabled={saving}
-                  onChange={(event) => onDraftChange(task.id, 'dueDate', event.target.value)}
-                />
-              </CCol>
+        {hasTaggedProject ? (
+          <div className="small text-body-secondary fst-italic mt-2">{PROJECT_PROGRESS_NOTE}</div>
+        ) : null}
 
-              <CCol xs={3} md="auto" className="d-flex justify-content-end ps-md-1 pt-md-4">
-                <CTooltip content="Remove task" placement="top">
-                  <span className="d-inline-flex">
-                    <CButton
-                      color="danger"
-                      variant="ghost"
-                      aria-label={`Remove task ${index + 1}`}
-                      disabled={saving || taskDrafts.length === 1}
-                      onClick={() => onRemoveDraft(task.id)}
-                    >
-                      <CIcon icon={cilTrash} className="text-danger" />
-                    </CButton>
-                  </span>
-                </CTooltip>
-              </CCol>
-            </CRow>
-          </div>
-        ))}
+        <CRow className="mt-3">
+          <CCol className="create-task-actions d-flex flex-wrap gap-2">
+            <CButton
+              color="secondary"
+              size="sm"
+              variant="outline"
+              onClick={onAddDraft}
+              disabled={saving}
+            >
+              <CIcon icon={cilPlus} className="me-1" />
+              Add Row
+            </CButton>
+            {onBack ? (
+              <CButton
+                color="secondary"
+                size="sm"
+                variant="outline"
+                onClick={onBack}
+                disabled={saving}
+              >
+                Back
+              </CButton>
+            ) : null}
+            {onCancel ? (
+              <CButton
+                color="secondary"
+                size="sm"
+                variant="outline"
+                onClick={onCancel}
+                disabled={saving}
+              >
+                Cancel
+              </CButton>
+            ) : null}
+            <CButton color="danger" size="sm" variant="outline" onClick={onReset} disabled={saving}>
+              Reset
+            </CButton>
+            <CButton
+              color="primary"
+              size="sm"
+              className="ms-sm-auto"
+              onClick={onSaveTasks}
+              disabled={saving || validTaskCount === 0}
+            >
+              {saveLabel}
+            </CButton>
+          </CCol>
+        </CRow>
       </div>
 
-      {hasTaggedProject ? (
-        <div className="small text-body-secondary fst-italic mt-2">{PROJECT_PROGRESS_NOTE}</div>
-      ) : null}
-
-      <CRow className="mt-3">
-        <CCol className="d-flex flex-wrap gap-2">
-          <CButton
-            color="secondary"
-            size="sm"
-            variant="outline"
-            onClick={onAddDraft}
-            disabled={saving}
-          >
-            <CIcon icon={cilPlus} className="me-1" />
-            Add Row
-          </CButton>
-          {onBack ? (
-            <CButton
-              color="secondary"
-              size="sm"
-              variant="outline"
-              onClick={onBack}
-              disabled={saving}
-            >
-              Back
-            </CButton>
-          ) : null}
-          {onCancel ? (
-            <CButton
-              color="secondary"
-              size="sm"
-              variant="outline"
-              onClick={onCancel}
-              disabled={saving}
-            >
-              Cancel
-            </CButton>
-          ) : null}
-          <CButton color="danger" size="sm" variant="outline" onClick={onReset} disabled={saving}>
-            Reset
-          </CButton>
-          <CButton
-            color="primary"
-            size="sm"
-            className="ms-sm-auto"
-            onClick={onSaveTasks}
-            disabled={saving || validTaskCount === 0}
-          >
-            {saveLabel}
-          </CButton>
-        </CCol>
-      </CRow>
+      <div className={mobilePane === 'update' ? '' : 'd-none d-sm-block'}>
+        <QuickTaskUpdateList
+          tasks={openTasks}
+          onSaveUpdate={onQuickUpdate}
+          onCompleteTask={onQuickComplete}
+        />
+      </div>
     </>
   )
 

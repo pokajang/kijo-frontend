@@ -64,6 +64,24 @@
     --cui-gutter-y: 0.6rem;
   }
 
+  .records-filter-row--with-inline-filter {
+    flex-wrap: wrap !important;
+
+    .data-table-filter-search-col {
+      flex: 1 0 100%;
+      max-width: 100%;
+    }
+
+    .data-table-filter-inline-col {
+      flex: 1 1 12rem;
+      min-width: 0;
+
+      > * {
+        width: 100%;
+      }
+    }
+  }
+
   .records-filter-row .form-label,
   .records-filter-advanced .form-label {
     font-size: 0.76rem;

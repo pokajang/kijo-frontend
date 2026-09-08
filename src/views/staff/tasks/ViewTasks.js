@@ -7,7 +7,7 @@ import { staffModuleTabs } from '../../../components/navigation/moduleNavConfigs
 const ViewTasks = () => (
   <>
     <ModuleNavStrip tabs={staffModuleTabs} ariaLabel="Staff sections" showScrollButtons />
-    <CCard>
+    <CCard className="task-workspace records-page-card">
       <AllTasks />
     </CCard>
   </>

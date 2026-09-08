@@ -2,7 +2,6 @@
 import React, { useMemo, useState } from 'react'
 import {
   CButton,
-  CCard,
   CCardBody,
   CCol,
   CDropdown,
@@ -20,28 +19,25 @@ import {
 } from '@coreui/react'
 import {
   DataTableActionMenu,
-  DataTableCardHeader,
   DataTableRecordControls,
   DataTableRecordList,
-  DataTableStatsToggle,
   DataTableTextCell,
 } from '../../components/datatable'
 import {
   PeriodRangeSelector,
   getPeriodRangeLabel,
   getPeriodRangePreset,
-  getPeriodRangeScopeLabel,
   isDateInPeriodRange,
   isDefaultPeriodRange,
 } from '../../components/filters'
 import { StatsStrip } from '../../components/stats'
-import { useDataTableStatsVisibility } from '../../hooks/datatable'
 import { countByPredicate, formatCount, sumBy } from '../../utils/stats/formatStats'
 import { buildCsv, downloadCsv } from '../../utils/datatable/csv'
 import dialog from '../../components/dialog/dialogService'
 import { getDaysLapsedInfo, getStatusText } from './actionHandlers'
 import { compareTaskPriority } from './taskPrioritySort'
 import TaskTitleProjectCell from './TaskTitleProjectCell'
+import { formatDisplayDate } from './weekly/taskWeekUtils'
 
 const onTimeBadge = String.fromCodePoint(0x1f407)
 const lateBadge = String.fromCodePoint(0x1f40c)
@@ -223,6 +219,12 @@ const getStatusRank = (statusText) => {
   return 99
 }
 
+const getTaskStatusTone = (statusText) => {
+  if (statusText.startsWith('Completed')) return 'success'
+  if (statusText.startsWith('Overdue')) return 'danger'
+  return 'info'
+}
+
 const TaskTable = ({
   tasks = [],
   todayStr,
@@ -234,8 +236,9 @@ const TaskTable = ({
   handleCarryForward,
   handleMarkCompleted,
   handleDeleteTask,
-  onCreateTask,
   onView,
+  statsVisible,
+  controlsVisible,
 }) => {
   const currentWeek = useMemo(() => getCurrentWeekRange(todayStr), [todayStr])
   const [localPeriodRange, setLocalPeriodRange] = useState(() => getPeriodRangePreset('ytd'))
@@ -249,9 +252,6 @@ const TaskTable = ({
   const [exportStartDate, setExportStartDate] = useState(currentWeek.start)
   const [exportEndDate, setExportEndDate] = useState(currentWeek.end)
   const [exporting, setExporting] = useState(false)
-  const { statsVisible, toggleStatsVisible, controlsVisible, toggleControlsVisible } =
-    useDataTableStatsVisibility('task-manager.tasks')
-
   const filteredTasks = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
 
@@ -346,7 +346,7 @@ const TaskTable = ({
   }
 
   const hasCustomPeriod = selectedPeriodRange && !isDefaultPeriodRange(selectedPeriodRange)
-  const activeFilterCount = 0
+  const activeFilterCount = hasCustomPeriod ? 1 : 0
 
   const activeChips = useMemo(
     () =>
@@ -536,22 +536,8 @@ const TaskTable = ({
   }
 
   return (
-    <CCard>
-      <DataTableCardHeader
-        title="My Tasks"
-        scopeLabel={selectedPeriodRange ? getPeriodRangeScopeLabel(selectedPeriodRange) : ''}
-      >
-        <DataTableStatsToggle
-          visible={statsVisible}
-          onToggle={toggleStatsVisible}
-          controlsVisible={controlsVisible}
-          onControlsToggle={toggleControlsVisible}
-        />
-        <CButton color="primary" size="sm" onClick={onCreateTask}>
-          Create Task
-        </CButton>
-      </DataTableCardHeader>
-      <CCardBody>
+    <>
+      <CCardBody className="records-page-card-body">
         {statsVisible && <StatsStrip items={statsItems} />}
 
         <DataTableRecordControls
@@ -569,7 +555,16 @@ const TaskTable = ({
           mobileToolsId="task-manager-tasks-mobile-table-tools"
           extraTools={renderExportDropdown()}
           mobileExtraTools={renderExportDropdown()}
-        />
+        >
+          <CCol xs={12} className="d-lg-none">
+            <CFormLabel>Period</CFormLabel>
+            <PeriodRangeSelector
+              value={selectedPeriodRange}
+              onChange={handlePeriodRangeChange}
+              className="task-records-mobile-period"
+            />
+          </CCol>
+        </DataTableRecordControls>
 
         <DataTableRecordList
           rows={normalizedTasks}
@@ -601,14 +596,24 @@ const TaskTable = ({
           getActions={getActions}
           renderActions={renderActions}
           onRowOpen={onView}
-          getMobileTitle={(task) => task.title}
-          getMobileSubtitle={(task) => task.statusText}
-          getMobileMeta={(task) => `Due ${task.dueDate || '-'}`}
-          mobileFieldKeys={{
-            title: 'title',
-            subtitle: 'statusText',
-            meta: 'dueDate',
+          showMobileRowIndex={false}
+          mobileRecord={{
+            title: (task) => task.title,
+            badges: (task) => [
+              {
+                key: 'status',
+                label: task.statusText,
+                tone: getTaskStatusTone(task.statusText),
+              },
+            ],
+            subtitle: (task) => `Due ${formatDisplayDate(task.dueDate)}`,
+            meta: (task) => task.projectName || null,
+            summary: (task) => task.daysLapsedDisplay,
           }}
+          mobilePaginationMode="load-more"
+          mobileLoadMorePageSize={10}
+          mobileLoadMoreLabel="Load more tasks"
+          mobileLoadMoreSummaryLabel="tasks"
           initialSortField="statusText"
           initialSortDir="asc"
           initialSortDirByField={{
@@ -683,7 +688,7 @@ const TaskTable = ({
           </CButton>
         </CModalFooter>
       </CModal>
-    </CCard>
+    </>
   )
 }
 

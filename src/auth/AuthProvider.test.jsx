@@ -84,4 +84,33 @@ describe('AuthProvider session refresh', () => {
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
     expect(fetch).toHaveBeenCalledTimes(1)
   })
+
+  it('silently cancels the initial session check when the page is being replaced', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let sessionSignal
+    fetch.mockImplementation((url, { signal } = {}) => {
+      sessionSignal = signal
+      return new Promise((resolve, reject) => {
+        signal.addEventListener(
+          'abort',
+          () => reject(new Error('Network request cancelled during navigation.')),
+          { once: true },
+        )
+      })
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <AuthProvider>
+          <Probe />
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(sessionSignal).toBeInstanceOf(AbortSignal))
+    window.dispatchEvent(new Event('pagehide'))
+
+    await waitFor(() => expect(sessionSignal.aborted).toBe(true))
+    expect(consoleError).not.toHaveBeenCalled()
+  })
 })
