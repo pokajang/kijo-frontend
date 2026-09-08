@@ -146,8 +146,11 @@ const HandbookAcknowledgementNotice = ({ staffId = null }) => {
       color="warning"
       className="mb-0 rounded-0 border-0 app-global-prompt app-global-prompt--handbook"
     >
-      <CContainer fluid className="px-4 d-flex flex-wrap align-items-center gap-2">
-        <strong>Handbook acknowledgement required.</strong>
+      <CContainer fluid className="px-2 px-md-4 d-flex flex-wrap align-items-center gap-1 gap-md-2">
+        <strong>
+          <span className="d-none d-md-inline">Handbook acknowledgement required.</span>
+          <span className="d-md-none">Handbook sign-off required.</span>
+        </strong>
         <span className="text-muted d-none d-md-inline">
           Review and sign {versionLabel || 'the current handbook version'} to complete your
           acknowledgement.

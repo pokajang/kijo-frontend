@@ -34,6 +34,7 @@ import { AppHeaderDropdown, AppNotificationsDropdown } from './header/index'
 import AppModuleSearch from './search/AppModuleSearch'
 import MobileBottomNav from './mobile-navigation/MobileBottomNav'
 import HandbookAcknowledgementNotice from './handbook/HandbookAcknowledgementNotice'
+import { clearMobileHeaderInset, syncMobileHeaderInset } from './navigation/mobileHeaderInset'
 import { useAuth } from '../auth/AuthProvider'
 import { submitFeedback } from '../views/feedback/actionHandlers'
 import dialog from './dialog/dialogService'
@@ -98,10 +99,7 @@ const AppHeader = () => {
     if (!header || typeof ResizeObserver === 'undefined') return undefined
 
     const updateMobileHeaderHeight = () => {
-      document.documentElement.style.setProperty(
-        '--app-mobile-fixed-header-height',
-        `${Math.ceil(header.getBoundingClientRect().height)}px`,
-      )
+      syncMobileHeaderInset(header)
     }
     const observer = new ResizeObserver(updateMobileHeaderHeight)
 
@@ -110,7 +108,7 @@ const AppHeader = () => {
 
     return () => {
       observer.disconnect()
-      document.documentElement.style.removeProperty('--app-mobile-fixed-header-height')
+      clearMobileHeaderInset()
     }
   }, [])
 

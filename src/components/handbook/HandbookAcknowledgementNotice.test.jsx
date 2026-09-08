@@ -122,7 +122,7 @@ describe('HandbookAcknowledgementNotice', () => {
     renderNotice()
 
     await act(async () => {})
-    expect(screen.getByText('Handbook acknowledgement required.')).toBeInTheDocument()
+    expect(screen.getByText('Handbook sign-off required.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     fireEvent.click(
       screen.getByRole('button', { name: 'Dismiss handbook acknowledgement reminder' }),
