@@ -693,6 +693,7 @@ export async function fetchSpecialQuotes() {
           ? Number(row.price_exception_request_id)
           : null,
         activeNegotiationRequestCount: Number(row.active_price_exception_request_count || 0),
+        issuanceContext: row.issuance_context || null,
 
         // --- Client details ---
         clientDetails: {
@@ -718,6 +719,8 @@ export async function fetchSpecialQuotes() {
           serviceTitle: row.service_title || '',
           serviceCode: row.service_code || '',
           estimated_cost: estimatedCost,
+          estimatedTotalCost: estimatedCost,
+          trafficLightRuleVersion: row.traffic_light_rule_version || null,
           generalRemarks: row.general_remarks || '',
           discount: parseFloat(row.discount ?? 0),
           sstPercent: parseFloat(row.sst_percent ?? 0),

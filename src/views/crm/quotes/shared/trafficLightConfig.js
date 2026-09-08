@@ -22,6 +22,12 @@ const MANPOWER_THRESHOLD = {
   green: 35,
 }
 
+const SPECIAL_THRESHOLD = {
+  red: 25,
+  yellow: 25,
+  green: 40,
+}
+
 const normalizePositiveNumber = (value) => {
   if (value === '' || value === null || value === undefined) {
     return null
@@ -32,7 +38,7 @@ const normalizePositiveNumber = (value) => {
     return null
   }
 
-  return parsed
+  return Math.round((parsed + Number.EPSILON) * 100) / 100
 }
 
 export const normalizeTrafficLightAmount = (value) => normalizePositiveNumber(value)
@@ -44,6 +50,7 @@ export const TRAFFIC_LIGHT_RULES_BY_SERVICE = {
   ih: IH_THRESHOLD,
   equipment: EQUIPMENT_THRESHOLD,
   manpower: MANPOWER_THRESHOLD,
+  special: SPECIAL_THRESHOLD,
 }
 
 export const DEFAULT_TRAFFIC_LIGHT_RULE = TRAINING_THRESHOLD

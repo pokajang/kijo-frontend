@@ -283,6 +283,306 @@ For every applicable data operation:
 - Keep repair/inference backfills out of migrations unless the release design
   intentionally requires an automatic transactional transformation.
 
+### Special Quotation Traffic-Light Approval (2026-09-07)
+
+This is a coordinated backend-and-frontend release. It gives Special
+quotations the same estimated-cost and traffic-light workflow as Training:
+Green at markup greater than or equal to 40%, Yellow from 25% to below 40%,
+and Red below 25%. Yellow requires HOD approval and Red requires BD approval.
+
+Apply this additive migration:
+
+```text
+database/migrations/2026_09_07_010000_add_traffic_light_fields_to_special_quotes.php
+```
+
+The migration adds nullable `quotes_special.estimated_total_cost` and
+`quotes_special.traffic_light_rule_version` columns. It intentionally performs
+no data backfill and does not change stored prices, discounts, SST, totals,
+statuses, revisions, approval requests, notification records, or generated
+documents.
+
+#### Historical-data compatibility and backfill decision
+
+No estimated-cost backfill is required or safe for this release. Historical
+Special quotations did not capture internal cost, and it must not be inferred
+from selling price or margin because that would create invented financial data.
+The application identifies a legacy Special quotation using the durable schema
+state `estimated_total_cost IS NULL (or <= 0)` together with an empty
+`traffic_light_rule_version`. This does not depend on a calendar cutoff or the
+actual production deployment time.
+
+Compatibility behavior is deliberate:
+
+- Existing quotation amounts, statuses, PDFs/Word documents, and project or
+  commercial links remain unchanged and readable.
+- An existing current Special approval request whose stored commercial
+  fingerprint still matches the quote retains its pending, approved, or
+  rejected state until the quotation is edited. A mismatched fingerprint is
+  treated as a real commercial change and reevaluated instead of carrying a
+  stale decision. A cancelled request on an open quote continues to follow the
+  existing reopen/re-request policy. The deployment itself does not create
+  duplicate requests, badges, or emails.
+- A historical Special quotation without a current approval continues through
+  the prior conservative BD approval route when issuance or award is attempted.
+- Records and edit loading tolerate null cost/version fields. The edit screen
+  explains that cost is required on the next save; cancelling leaves the row
+  untouched.
+- The first successful edit must provide a positive estimated cost. The server
+  then stores `traffic-light-special-202609-v1`, evaluates the current matrix,
+  and creates or supersedes approval only when the resulting commercial
+  fingerprint requires it.
+- Every new Special quotation requires a positive estimated cost and receives
+  the server-owned rule version. Client-provided rule versions are ignored.
+
+Do **not** mass-update old rows with a guessed cost, zero, selling price, or the
+new rule version. In particular, assigning the new rule version while cost is
+missing intentionally removes the legacy marker and will make the quote fail
+current profitability validation. If Finance later supplies an audited actual
+cost for a specific historical quote, update it only through the normal edit
+workflow so revision, approval, audit, notification, and project-value rules
+remain enforced.
+
+One conditional approval-state reconciliation is required for deployments that
+already contain approval rows for quotations deleted by an older application
+version. Older deletion code could preserve the approval audit row with
+`is_current = 1` after the quote itself was gone. The current application
+retires every current request on deletion, preserves its decision history,
+cancels a pending request, and resolves associated in-app notifications.
+
+Dry-run this query before deployment:
+
+```sql
+SELECT
+  qar.id AS approval_id,
+  qar.quote_id,
+  qar.quote_ref_no,
+  qar.status,
+  qar.zone,
+  qar.required_step,
+  qar.requested_at
+FROM quote_approval_requests qar
+LEFT JOIN quotes_special qs ON qs.id = qar.quote_id
+WHERE qar.service = 'special'
+  AND qar.is_current = 1
+  AND qs.id IS NULL
+ORDER BY qar.id;
+```
+
+If it returns zero rows, do not run a write. If it returns rows, retain the
+result with the deployment evidence, confirm that every quote is genuinely
+absent, back up `quote_approval_requests` and `in_app_notifications`, and run
+the following transaction. It does not delete approval history or invent a
+decision:
+
+```sql
+START TRANSACTION;
+
+UPDATE in_app_notifications notification
+JOIN quote_approval_requests qar
+  ON qar.id = notification.entity_id
+ AND notification.module_key = 'crm.quote-approvals'
+LEFT JOIN quotes_special qs ON qs.id = qar.quote_id
+SET
+  notification.resolved_at = COALESCE(notification.resolved_at, NOW()),
+  notification.updated_at = NOW()
+WHERE qar.service = 'special'
+  AND qar.is_current = 1
+  AND qs.id IS NULL;
+
+UPDATE quote_approval_requests qar
+LEFT JOIN quotes_special qs ON qs.id = qar.quote_id
+SET
+  qar.is_current = 0,
+  qar.status = CASE
+    WHEN qar.status = 'pending' THEN 'cancelled'
+    ELSE qar.status
+  END,
+  qar.decision_remarks = CASE
+    WHEN qar.status = 'pending' THEN COALESCE(
+      NULLIF(qar.decision_remarks, ''),
+      'Quotation deleted before approval-state retirement was introduced.'
+    )
+    ELSE qar.decision_remarks
+  END,
+  qar.decided_at = CASE
+    WHEN qar.status = 'pending' THEN COALESCE(qar.decided_at, NOW())
+    ELSE qar.decided_at
+  END,
+  qar.updated_at = NOW()
+WHERE qar.service = 'special'
+  AND qar.is_current = 1
+  AND qs.id IS NULL;
+
+COMMIT;
+```
+
+Repeat the dry-run query after the transaction; it must return zero rows. This
+reconciliation is separate from estimated cost: do not modify
+`estimated_total_cost`, `traffic_light_rule_version`, quote totals, or valid
+approval rows for existing quotations.
+
+#### Production rollout
+
+Keep the frontend maintenance page enabled for the coordinated rollout. Back
+up at minimum `quotes_special`, `quotes_special_items`,
+`quote_approval_requests`, `in_app_notifications`, and the migrations table.
+Review the existing population before changing the schema:
+
+```sql
+SELECT COUNT(*) AS special_quote_count FROM quotes_special;
+
+SELECT status, COUNT(*) AS quote_count
+FROM quotes_special
+GROUP BY status
+ORDER BY status;
+
+SELECT qar.status, qar.zone, COUNT(*) AS request_count
+FROM quote_approval_requests qar
+WHERE qar.service = 'special' AND qar.is_current = 1
+GROUP BY qar.status, qar.zone
+ORDER BY qar.status, qar.zone;
+
+SELECT quote_id, COUNT(*) AS current_request_count
+FROM quote_approval_requests
+WHERE service = 'special' AND is_current = 1
+GROUP BY quote_id
+HAVING COUNT(*) > 1;
+
+SELECT qs.id, qs.quote_ref_no, qs.approval_request_id
+FROM quotes_special qs
+LEFT JOIN quote_approval_requests qar
+  ON qar.id = qs.approval_request_id
+ AND qar.service = 'special'
+ AND qar.quote_id = qs.id
+WHERE qs.approval_request_id IS NOT NULL
+  AND qar.id IS NULL;
+
+SELECT qar.id, qar.quote_id, qar.quote_ref_no, qar.status
+FROM quote_approval_requests qar
+LEFT JOIN quotes_special qs ON qs.id = qar.quote_id
+WHERE qar.service = 'special'
+  AND qar.is_current = 1
+  AND qs.id IS NULL;
+
+SELECT
+  qs.id,
+  qs.quote_ref_no,
+  qs.sp_id,
+  COALESCE(items.item_count, 0) AS item_count,
+  qs.sub_total AS stored_subtotal,
+  GREATEST(0, COALESCE(items.line_total, 0) - COALESCE(qs.discount, 0)) AS calculated_subtotal,
+  qs.grand_total AS stored_grand_total,
+  COALESCE(qs.sub_total, 0) + COALESCE(qs.sst_amount, 0) AS calculated_grand_total
+FROM quotes_special qs
+LEFT JOIN (
+  SELECT quote_id, COUNT(*) AS item_count, SUM(line_total) AS line_total
+  FROM quotes_special_items
+  GROUP BY quote_id
+) items ON items.quote_id = qs.id
+WHERE qs.sp_id IS NULL
+   OR COALESCE(items.item_count, 0) = 0
+   OR ABS(
+        COALESCE(qs.sub_total, 0)
+        - GREATEST(0, COALESCE(items.line_total, 0) - COALESCE(qs.discount, 0))
+      ) > 0.01
+   OR ABS(
+        COALESCE(qs.grand_total, 0)
+        - (COALESCE(qs.sub_total, 0) + COALESCE(qs.sst_amount, 0))
+      ) > 0.01;
+```
+
+Deploy backend code and run only the release migration if other pending
+migrations are not part of the approved release:
+
+```bash
+cd ~/kijo-laravel
+
+php artisan migrate:status
+php artisan migrate \
+  --path=database/migrations/2026_09_07_010000_add_traffic_light_fields_to_special_quotes.php \
+  --force
+php artisan migrate:status | grep 2026_09_07_010000_add_traffic_light_fields_to_special_quotes
+```
+
+Audit the resulting classification with read-only queries. The legacy count is
+expected to include all old rows that never stored a cost; it is not an error
+and must not be reduced merely to make the count zero:
+
+```sql
+SELECT
+  COUNT(*) AS total_special_quotes,
+  SUM(CASE
+      WHEN (estimated_total_cost IS NULL OR estimated_total_cost <= 0)
+       AND COALESCE(TRIM(traffic_light_rule_version), '') = ''
+      THEN 1 ELSE 0 END) AS legacy_no_cost_quotes,
+  SUM(CASE
+      WHEN estimated_total_cost > 0
+       AND COALESCE(TRIM(traffic_light_rule_version), '') <> ''
+      THEN 1 ELSE 0 END) AS current_versioned_quotes,
+  SUM(CASE
+      WHEN estimated_total_cost > 0
+       AND COALESCE(TRIM(traffic_light_rule_version), '') = ''
+      THEN 1 ELSE 0 END) AS review_cost_without_version,
+  SUM(CASE
+      WHEN (estimated_total_cost IS NULL OR estimated_total_cost <= 0)
+       AND COALESCE(TRIM(traffic_light_rule_version), '') <> ''
+      THEN 1 ELSE 0 END) AS invalid_version_without_cost
+FROM quotes_special;
+```
+
+Release stop conditions are duplicate current requests, orphaned/mismatched
+`approval_request_id` pointers, a non-zero `invalid_version_without_cost`
+count, unexpected `review_cost_without_version` rows, missing Special services
+or line items, or stored totals that differ from their saved line-item totals.
+The last query is important because opening legacy pricing after cost entry
+recalculates the visible totals; reconcile any listed record against its issued
+document before allowing it to be revised. Investigate anomalies against audit
+history and source documentation; do not normalize them in bulk. For a database
+that never had these columns before this release, both cost/version review
+counts should be zero immediately after migration.
+
+Clear and rebuild Laravel caches, restart the queue worker, then deploy the
+matching frontend build. There is no Special backfill command to run and no
+`QUOTE_APPROVAL_SPECIAL_COST_CUTOFF` environment setting is required.
+
+#### Post-deploy smoke and notifications
+
+Use disposable/anonymized data and redirect mail to controlled staging inboxes
+for approval-path testing:
+
+- Open an old no-cost Special quote and confirm its prior approval badge and
+  issue/award behavior are unchanged. Enter edit mode, confirm the legacy-cost
+  warning, then cancel and verify no row or approval request changed.
+- Create a Green quote and confirm it saves as `GREEN · approved`, is issuable,
+  appears in Special Records, and does not add a pending approval notification
+  or approval email.
+- Create a Yellow quote and confirm one current HOD request is shown in Records,
+  the configured HOD and System Admin receive the standard in-app badge/email,
+  and approval resolves those badges and notifies the requester.
+- Create a Red quote and repeat the same checks for the configured BD step.
+- Reopen the Green quote, confirm cost and rule version load correctly, change
+  cost into Yellow without saving, and confirm the action changes to
+  `Update & Apply Approval`.
+- Confirm the queue drains and no notification mail failed:
+
+```bash
+php artisan queue:restart
+php artisan queue:monitor database:default --max=25
+php artisan queue:failed
+```
+
+#### Rollback
+
+Prefer reverting the coordinated frontend and backend application commits
+while retaining both additive columns; the previous application ignores them.
+Do not run the migration `down()` after any Special quotation has been created
+or edited under this release, because that would discard captured internal cost
+and policy provenance. A database rollback is acceptable only from the
+pre-release backup after confirming no post-migration Special writes need to be
+retained. Rebuild caches, restart the queue worker, and redeploy the matching
+frontend build after an application rollback.
+
 ### Salary and Other Claims Workflow and Payment Summaries (2026-08-30)
 
 This is a coordinated backend-and-frontend release. It completes salary and

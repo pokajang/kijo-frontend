@@ -345,6 +345,10 @@ export const serviceConfig = {
         subTotal: toFloat(pick(row, 'subTotal', 'sub_total'), 0),
         sstAmount: toFloat(pick(row, 'sstAmount', 'sst_amount'), 0),
         grandTotal: toFloat(pick(row, 'grandTotal', 'grand_total'), 0),
+        estimatedTotalCost: toFloatOrEmpty(pick(row, 'estimatedTotalCost', 'estimated_total_cost')),
+        trafficLightRuleVersion:
+          pick(row, 'trafficLightRuleVersion', 'traffic_light_rule_version') || null,
+        issuanceContext: pick(row, 'issuanceContext', 'issuance_context') || null,
 
         attachProposal: toBool(pick(row, 'attachProposal', 'attach_proposal')),
         proposalLanguage: pick(row, 'proposalLanguage', 'proposal_language') || 'en',

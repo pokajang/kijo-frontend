@@ -10,6 +10,7 @@ import {
   QuoteReviewTable,
 } from '../shared/QuoteReviewComponents'
 import { formatMoney } from '../../../../utils/formatters/numberFormatters'
+import TrafficLightDecisionBadge from '../shared/TrafficLightDecisionBadge'
 
 export default function ReviewSpecialQuoteCard({
   selectedClient,
@@ -165,7 +166,14 @@ export default function ReviewSpecialQuoteCard({
               <strong>Grand Total (RM)</strong>
             </CTableHeaderCell>
             <CTableDataCell>
-              <strong>{formatMoney(grandTotal)}</strong>
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <strong>{formatMoney(grandTotal)}</strong>
+                <TrafficLightDecisionBadge
+                  serviceKey="special"
+                  estimatedTotalCost={formData.estimatedTotalCost}
+                  quoteTotal={grandTotal}
+                />
+              </div>
             </CTableDataCell>
           </CTableRow>
         </CTableBody>

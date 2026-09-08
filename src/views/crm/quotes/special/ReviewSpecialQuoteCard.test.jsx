@@ -22,6 +22,7 @@ const baseFormData = {
   subTotal: 75,
   sstAmount: 0,
   attachProposal: true,
+  estimatedTotalCost: 50,
   lineItems: [
     {
       title: 'Custom service',
@@ -57,5 +58,6 @@ describe('ReviewSpecialQuoteCard', () => {
     expect(screen.getByText('Discount (RM)')).toBeInTheDocument()
     expect(screen.getByText('- RM 25.00')).toBeInTheDocument()
     expect(screen.getAllByText('RM 75.00').length).toBeGreaterThan(0)
+    expect(screen.getByText('Green — You can issue this')).toBeInTheDocument()
   })
 })

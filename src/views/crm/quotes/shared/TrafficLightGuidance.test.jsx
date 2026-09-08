@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import TrafficLightCard from './TrafficLightCard'
 import TrafficLightDecisionBadge from './TrafficLightDecisionBadge'
+import { getTrafficLightStatus } from './trafficLightConfig'
 
 describe('traffic-light guidance', () => {
   afterEach(() => cleanup())
@@ -80,6 +81,9 @@ describe('traffic-light guidance', () => {
     ['manpower', 135, 'Green — You can issue this'],
     ['manpower', 120, 'Yellow — Need HOD approval first'],
     ['manpower', 119.99, 'Red — Need BD final approval first'],
+    ['special', 140, 'Green — You can issue this'],
+    ['special', 125, 'Yellow — Need HOD approval first'],
+    ['special', 124.99, 'Red — Need BD final approval first'],
   ])('shows the right decision for %s', (serviceKey, quoteTotal, expectedLabel) => {
     render(
       <TrafficLightDecisionBadge
@@ -96,5 +100,16 @@ describe('traffic-light guidance', () => {
     render(<TrafficLightDecisionBadge serviceKey="training" quoteTotal={140} />)
 
     expect(screen.getByText('Estimated cost required')).toBeInTheDocument()
+  })
+
+  it('normalizes entered costs to stored currency precision before deciding a boundary', () => {
+    const decision = getTrafficLightStatus({
+      serviceKey: 'special',
+      estimatedTotalCost: '100.004',
+      quoteTotal: 125,
+    })
+
+    expect(decision.estimatedTotalCost).toBe(100)
+    expect(decision.status).toBe('yellow')
   })
 })

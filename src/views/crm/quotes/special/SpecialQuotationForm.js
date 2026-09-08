@@ -1,7 +1,7 @@
 // src/views/crm/quotes/special/SpecialQuotationForm.js
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { CCol } from '@coreui/react'
+import { CAlert, CCol } from '@coreui/react'
 import SpecialDetailsCard from './SpecialDetailsCard'
 import PricingCard from './PricingCard'
 import ReviewSpecialQuoteCard from './ReviewSpecialQuoteCard'
@@ -14,7 +14,26 @@ import {
 import { buildPicPayload } from '../quoteContactUtils'
 import { useQuoteRouteParams } from '../helpers/quoteRouteParams'
 import { useQuoteSave } from '../helpers/useQuoteSave'
+import TrafficLightCard from '../shared/TrafficLightCard'
+import { getTrafficLightStatus, normalizeTrafficLightAmount } from '../shared/trafficLightConfig'
 import dialog from '../../../../components/dialog/dialogService'
+
+const MAX_ESTIMATED_TOTAL_COST = 9999999999999.99
+
+const toNumberOrEmpty = (value) => {
+  if (value === '' || value === null || value === undefined) return ''
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : ''
+}
+
+export const mergeSpecialQuoteDraft = (defaultForm, draft) =>
+  draft
+    ? {
+        ...defaultForm,
+        ...draft,
+        estimatedTotalCost: toNumberOrEmpty(draft.estimatedTotalCost),
+      }
+    : defaultForm
 
 export const SPECIAL_QUOTE_DRAFT_KEY = LEGACY_QUOTE_SERVICE_DRAFT_KEYS.special
 
@@ -66,6 +85,7 @@ export default function SpecialQuotationForm({
       sstPercent: 0,
       subTotal: 0,
       sstAmount: 0,
+      estimatedTotalCost: '',
       attachProposal: true,
       proposalMode: '',
       hasAppendableProposal: null,
@@ -94,7 +114,8 @@ export default function SpecialQuotationForm({
     !hasPriceExceptionRequestId &&
     readQuoteServiceDraft({ serviceKey: 'special', ...draftContext })
   const matchingDraft = Number(draft?.categoryId) === Number(specialCategoryId) ? draft : null
-  const [formData, setFormData] = useState(matchingDraft || defaultForm)
+  const initialForm = mergeSpecialQuoteDraft(defaultForm, matchingDraft)
+  const [formData, setFormData] = useState(initialForm)
   const previousProposalLanguageRef = useRef(formData.proposalLanguage || proposalLanguage)
   const [initialized, setInitialized] = useState(false)
 
@@ -140,6 +161,8 @@ export default function SpecialQuotationForm({
       sstPercent: parseFloat(initialFormData.sstPercent) || 0,
       subTotal: parseFloat(initialFormData.subTotal) || 0,
       sstAmount: parseFloat(initialFormData.sstAmount) || 0,
+      estimatedTotalCost: toNumberOrEmpty(initialFormData.estimatedTotalCost),
+      issuanceContext: initialFormData.issuanceContext || null,
       attachProposal: Boolean(initialFormData.attachProposal),
       proposalMode: initialFormData.proposalMode || '',
       hasAppendableProposal: initialFormData.hasAppendableProposal ?? null,
@@ -232,6 +255,15 @@ export default function SpecialQuotationForm({
     const subTotal = parseFloat(formData.subTotal || 0)
     const sstAmount = parseFloat(formData.sstAmount || 0)
     const grandTotal = parseFloat((subTotal + sstAmount).toFixed(2))
+    const estimatedTotalCost = normalizeTrafficLightAmount(formData.estimatedTotalCost)
+    if (estimatedTotalCost === null || estimatedTotalCost < 0.01) {
+      dialog.alert('Please enter a traffic-light estimated cost of at least RM 0.01 before saving.')
+      return
+    }
+    if (estimatedTotalCost > MAX_ESTIMATED_TOTAL_COST) {
+      dialog.alert('Estimated total cost exceeds the supported amount.')
+      return
+    }
     const { primaryPIC, pic_name, pic_email, pic_phone, pic_position } =
       buildPicPayload(selectedClient)
 
@@ -276,6 +308,7 @@ export default function SpecialQuotationForm({
       sub_total: subTotal,
       sst_amount: sstAmount,
       grand_total: grandTotal,
+      estimated_total_cost: estimatedTotalCost,
       attach_proposal: formData.attachProposal ? 1 : 0,
       proposal_language: formData.proposalLanguage || proposalLanguage,
     }
@@ -296,15 +329,27 @@ export default function SpecialQuotationForm({
   }
 
   // Determine render gates
-  const showPricing =
-    isEditMode || (selectedClient && formData.specialId && formData.lineItems.length > 0)
-  const showReview = isEditMode || parseFloat(formData.subTotal || 0) > 0
-  const requiresApproval = true
+  const hasSpecialDetails = Boolean(
+    selectedClient && formData.specialId && formData.lineItems.length > 0,
+  )
+  const normalizedEstimatedCost = normalizeTrafficLightAmount(formData.estimatedTotalCost)
+  const hasEstimatedCost = normalizedEstimatedCost !== null && normalizedEstimatedCost >= 0.01
+  const showPricing = hasSpecialDetails && hasEstimatedCost
+  const showReview = showPricing && parseFloat(formData.subTotal || 0) > 0
+  const quoteGrandTotal = Number(formData.subTotal || 0) + Number(formData.sstAmount || 0)
+  const trafficStatus = getTrafficLightStatus({
+    serviceKey: 'special',
+    quoteTotal: quoteGrandTotal,
+    estimatedTotalCost: formData.estimatedTotalCost,
+  }).status
+  const requiresApproval = trafficStatus === 'yellow' || trafficStatus === 'red'
   const saveLabel = requiresApproval
     ? isEditMode
       ? 'Update & Apply Approval'
       : 'Save & Apply Approval'
-    : 'Save Quote'
+    : isEditMode
+      ? 'Update Quote'
+      : 'Save Quote'
 
   return (
     <CCol xs={12}>
@@ -319,6 +364,25 @@ export default function SpecialQuotationForm({
           specialCategoryId={formData.categoryId}
           specialCategoryName={formData.categoryName}
         />
+
+        {isEditMode && initialFormData?.issuanceContext?.requires_cost_on_edit && (
+          <CAlert color="warning" className="mb-0" role="status">
+            <strong>Estimated internal cost required.</strong> Saving this legacy quotation will
+            move it to the current approval policy. Enter an estimated total cost to continue;
+            cancelling leaves the original quotation unchanged.
+          </CAlert>
+        )}
+
+        {hasSpecialDetails && (
+          <TrafficLightCard
+            serviceKey="special"
+            estimatedTotalCost={formData.estimatedTotalCost}
+            onEstimatedTotalCostChange={(value) =>
+              setFormData((prev) => ({ ...prev, estimatedTotalCost: value }))
+            }
+            inputPlaceholder="Enter estimated internal cost first"
+          />
+        )}
 
         {showPricing && (
           <>
